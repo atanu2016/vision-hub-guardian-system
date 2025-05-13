@@ -5,34 +5,25 @@ import { Input } from "@/components/ui/input";
 import { PlusCircle, Search, SlidersHorizontal } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import CameraGrid from "@/components/cameras/CameraGrid";
-import { mockCameras } from "@/data/mockData";
 import AddCameraModal from "@/components/cameras/AddCameraModal";
 import { Camera } from "@/types/camera";
 import { useToast } from "@/hooks/use-toast";
+import { getCameras, saveCameras, getCameraGroups } from "@/data/mockData";
 
 const Cameras = () => {
   const { toast } = useToast();
-  const [cameras, setCameras] = useState<Camera[]>(mockCameras);
+  const [cameras, setCameras] = useState<Camera[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   
+  // Load cameras from storage on component mount
+  useEffect(() => {
+    setCameras(getCameras());
+  }, []);
+  
   // Generate groups dynamically based on camera data
   const cameraGroups = useMemo(() => {
-    const groups: { [key: string]: Camera[] } = {};
-    
-    cameras.forEach(camera => {
-      const groupName = camera.group || "Ungrouped";
-      if (!groups[groupName]) {
-        groups[groupName] = [];
-      }
-      groups[groupName].push(camera);
-    });
-    
-    return Object.entries(groups).map(([name, groupCameras]) => ({
-      id: name.toLowerCase().replace(/\s+/g, '-'),
-      name,
-      cameras: groupCameras
-    }));
+    return getCameraGroups();
   }, [cameras]);
   
   // Get unique group names for the dropdown
@@ -50,30 +41,36 @@ const Cameras = () => {
       cameras: group.cameras.filter(camera => 
         camera.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         camera.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        camera.ipAddress.includes(searchQuery)
+        (camera.ipAddress && camera.ipAddress.includes(searchQuery)) ||
+        (camera.manufacturer && camera.manufacturer.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (camera.model && camera.model.toLowerCase().includes(searchQuery.toLowerCase()))
       )
     })).filter(group => group.cameras.length > 0);
   }, [cameraGroups, searchQuery]);
 
   const handleAddCamera = (newCamera: Omit<Camera, "id">) => {
-    // In a real app, this would call an API to add the camera
+    // Generate a unique ID
     const camera: Camera = {
       ...newCamera,
-      id: `cam-${Date.now()}`, // Generate a unique ID
+      id: `cam-${Date.now()}`,
     };
     
-    setCameras([...cameras, camera]);
+    // Add to cameras list
+    const updatedCameras = [...cameras, camera];
+    setCameras(updatedCameras);
+    
+    // Save to storage
+    saveCameras(updatedCameras);
+    
     toast({
       title: "Camera Added",
       description: `${camera.name} has been added successfully`,
     });
-    
-    setIsAddModalOpen(false);
   };
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-full">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-2 md:space-y-0">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Cameras</h1>
@@ -119,7 +116,9 @@ const Cameras = () => {
             <div className="text-center py-12">
               <h3 className="text-lg font-medium">No cameras found</h3>
               <p className="text-muted-foreground mt-2">
-                Try adjusting your search or add a new camera
+                {cameras.length === 0 
+                  ? "Add a camera to get started" 
+                  : "Try adjusting your search or add a new camera"}
               </p>
               <Button 
                 className="mt-4"

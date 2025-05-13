@@ -22,22 +22,60 @@ import {
   PlaySquare,
   Layers,
   ChevronRight,
+  HardDrive,
+  User,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const Sidebar = () => {
   const location = useLocation();
   const [isSettingsExpanded, setIsSettingsExpanded] = useState(
     location.pathname.startsWith("/settings") || 
-    location.pathname.startsWith("/recordings") || 
-    location.pathname.startsWith("/alerts") || 
-    location.pathname.startsWith("/storage")
+    location.pathname.startsWith("/settings/recordings") || 
+    location.pathname.startsWith("/settings/alerts") || 
+    location.pathname.startsWith("/settings/storage")
   );
+
+  // Update expanded state when route changes
+  useEffect(() => {
+    setIsSettingsExpanded(
+      location.pathname.startsWith("/settings") || 
+      location.pathname.startsWith("/settings/recordings") || 
+      location.pathname.startsWith("/settings/alerts") || 
+      location.pathname.startsWith("/settings/storage")
+    );
+  }, [location.pathname]);
 
   const isActive = (path: string) => {
     return location.pathname === path;
   };
+
+  // Get camera groups from localStorage
+  const [cameraGroups, setCameraGroups] = useState<string[]>([]);
+  
+  useEffect(() => {
+    const getCameraGroupsFromStorage = () => {
+      const storedCameras = localStorage.getItem('cameras');
+      if (storedCameras) {
+        const cameras = JSON.parse(storedCameras);
+        const groups = Array.from(new Set(cameras.map((c: any) => c.group || "Ungrouped")))
+          .filter((group: string) => group !== "Ungrouped");
+        setCameraGroups(groups);
+      }
+    };
+    
+    // Get initial groups
+    getCameraGroupsFromStorage();
+    
+    // Set up listener for changes
+    window.addEventListener('storage', getCameraGroupsFromStorage);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('storage', getCameraGroupsFromStorage);
+    };
+  }, []);
 
   return (
     <SidebarComponent>
@@ -77,10 +115,7 @@ const Sidebar = () => {
                 <SidebarMenuButton 
                   onClick={() => setIsSettingsExpanded(!isSettingsExpanded)} 
                   isActive={
-                    isActive("/settings") || 
-                    isActive("/recordings") || 
-                    isActive("/alerts") || 
-                    isActive("/storage")
+                    location.pathname.startsWith("/settings")
                   }
                 >
                   <Settings />
@@ -109,10 +144,10 @@ const Sidebar = () => {
                   <SidebarMenuItem>
                     <SidebarMenuButton 
                       asChild 
-                      isActive={isActive("/recordings")}
+                      isActive={isActive("/settings/recordings")}
                       className="pl-8"
                     >
-                      <Link to="/recordings">
+                      <Link to="/settings/recordings">
                         <PlaySquare />
                         <span>Recordings</span>
                       </Link>
@@ -122,10 +157,10 @@ const Sidebar = () => {
                   <SidebarMenuItem>
                     <SidebarMenuButton 
                       asChild 
-                      isActive={isActive("/alerts")}
+                      isActive={isActive("/settings/alerts")}
                       className="pl-8"
                     >
-                      <Link to="/alerts">
+                      <Link to="/settings/alerts">
                         <Bell />
                         <span>Alerts</span>
                       </Link>
@@ -135,45 +170,52 @@ const Sidebar = () => {
                   <SidebarMenuItem>
                     <SidebarMenuButton 
                       asChild 
-                      isActive={isActive("/storage")}
+                      isActive={isActive("/settings/storage")}
                       className="pl-8"
                     >
-                      <Link to="/storage">
-                        <Archive />
+                      <Link to="/settings/storage">
+                        <HardDrive />
                         <span>Storage</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </>
               )}
+              
+              <SidebarMenuItem>
+                <SidebarMenuButton 
+                  asChild 
+                  isActive={isActive("/profile-settings")}
+                >
+                  <Link to="/profile-settings">
+                    <User />
+                    <span>Profile Settings</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Camera Groups</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link to="/groups/indoor">
-                    <Layers />
-                    <span>Indoor</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link to="/groups/outdoor">
-                    <Layers />
-                    <span>Outdoor</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {cameraGroups.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Camera Groups</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {cameraGroups.map(group => (
+                  <SidebarMenuItem key={group}>
+                    <SidebarMenuButton asChild>
+                      <Link to={`/cameras?group=${encodeURIComponent(group.toLowerCase())}`}>
+                        <Layers />
+                        <span>{group}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="p-4">

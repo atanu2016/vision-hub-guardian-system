@@ -1,4 +1,5 @@
 
+import { useState, useEffect } from "react";
 import { Camera, Cpu, HardDrive, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,12 +8,30 @@ import { Progress } from "@/components/ui/progress";
 import AppLayout from "@/components/layout/AppLayout";
 import CameraGrid from "@/components/cameras/CameraGrid";
 import StatsCard from "@/components/dashboard/StatsCard";
-import { mockCameras, getSystemStats } from "@/data/mockData";
+import { getCameras, getSystemStats } from "@/data/mockData";
 
 const Dashboard = () => {
-  const stats = getSystemStats();
-  const onlineCameras = mockCameras.filter(camera => camera.status === "online");
-  const offlineCameras = mockCameras.filter(camera => camera.status === "offline");
+  const [stats, setStats] = useState(getSystemStats());
+  const [cameras, setCameras] = useState(getCameras());
+  
+  // Refresh data periodically
+  useEffect(() => {
+    // Get initial data
+    setCameras(getCameras());
+    setStats(getSystemStats());
+    
+    // Set up refresh interval
+    const interval = setInterval(() => {
+      setCameras(getCameras());
+      setStats(getSystemStats());
+    }, 5000); // Refresh every 5 seconds
+    
+    return () => clearInterval(interval);
+  }, []);
+  
+  const onlineCameras = cameras.filter(camera => camera.status === "online");
+  const offlineCameras = cameras.filter(camera => camera.status === "offline");
+  const recordingCameras = cameras.filter(camera => camera.recording);
   
   return (
     <AppLayout>
@@ -25,7 +44,7 @@ const Dashboard = () => {
             </p>
           </div>
           <div>
-            <Button>
+            <Button onClick={() => window.location.href = "/cameras"}>
               <Camera className="mr-2 h-4 w-4" /> Add Camera
             </Button>
           </div>
@@ -42,7 +61,7 @@ const Dashboard = () => {
             title="Online Cameras"
             value={stats.onlineCameras}
             icon={<Cpu className="h-4 w-4 text-green-500" />}
-            description={`${Math.round((stats.onlineCameras / stats.totalCameras) * 100)}% online`}
+            description={`${stats.totalCameras > 0 ? Math.round((stats.onlineCameras / stats.totalCameras) * 100) : 0}% online`}
             trend={{
               value: "1",
               positive: true,
@@ -69,7 +88,12 @@ const Dashboard = () => {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-lg font-medium">Storage Usage</CardTitle>
-            <Button variant="ghost" size="sm" className="gap-1">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="gap-1" 
+              onClick={() => window.location.href = "/settings/storage"}
+            >
               <HardDrive className="h-4 w-4" /> Details
             </Button>
           </CardHeader>
@@ -105,7 +129,7 @@ const Dashboard = () => {
               <TabsTrigger value="recording">Recording</TabsTrigger>
             </TabsList>
             <TabsContent value="all" className="mt-4">
-              <CameraGrid cameras={mockCameras} />
+              <CameraGrid cameras={cameras} />
             </TabsContent>
             <TabsContent value="online" className="mt-4">
               <CameraGrid cameras={onlineCameras} />
@@ -114,7 +138,7 @@ const Dashboard = () => {
               <CameraGrid cameras={offlineCameras} />
             </TabsContent>
             <TabsContent value="recording" className="mt-4">
-              <CameraGrid cameras={mockCameras.filter(c => c.recording)} />
+              <CameraGrid cameras={recordingCameras} />
             </TabsContent>
           </Tabs>
         </div>

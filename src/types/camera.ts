@@ -12,13 +12,31 @@ export interface Camera {
   lastSeen?: string;
   recording?: boolean;
   thumbnail?: string;
-  group?: string; // Add group property
+  group?: string;
+  connectionType: CameraConnectionType;
+  password?: string;
+  rtmpUrl?: string;
+  onvifPath?: string;
 }
 
 export type CameraStatus = 'online' | 'offline' | 'error';
+export type CameraConnectionType = 'ip' | 'onvif' | 'rtmp';
 
 export interface CameraGroup {
   id: string;
   name: string;
   cameras: Camera[];
+}
+
+export interface StorageSettings {
+  type: 'local' | 'nas' | 'cloud';
+  path?: string;
+  nasAddress?: string;
+  nasUsername?: string;
+  nasPassword?: string;
+  cloudProvider?: string;
+  cloudKey?: string;
+  cloudSecret?: string;
+  cloudBucket?: string;
+  cloudRegion?: string;
 }

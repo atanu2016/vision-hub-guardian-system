@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +14,10 @@ import Auth from "./pages/Auth";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Admin from "./pages/Admin";
+import ProfileSettings from "./pages/ProfileSettings";
+import RecordingsPage from "./pages/settings/RecordingsPage";
+import AlertsPage from "./pages/settings/AlertsPage";
+import StorageSettings from "./pages/settings/StorageSettings";
 
 const queryClient = new QueryClient();
 
@@ -30,59 +35,53 @@ const App = () => (
             {/* Protected Routes */}
             <Route path="/" element={
               <ProtectedRoute>
-                <AppLayout><Dashboard /></AppLayout>
+                <Dashboard />
               </ProtectedRoute>
             } />
             <Route path="/cameras" element={
               <ProtectedRoute>
-                <AppLayout><Cameras /></AppLayout>
+                <Cameras />
               </ProtectedRoute>
             } />
             <Route path="/cameras/:id" element={
               <ProtectedRoute>
-                <AppLayout><CameraDetail /></AppLayout>
+                <CameraDetail />
               </ProtectedRoute>
             } />
             <Route path="/settings" element={
               <ProtectedRoute>
-                <AppLayout><Settings /></AppLayout>
+                <Settings />
+              </ProtectedRoute>
+            } />
+            <Route path="/settings/recordings" element={
+              <ProtectedRoute>
+                <RecordingsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/settings/alerts" element={
+              <ProtectedRoute>
+                <AlertsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/settings/storage" element={
+              <ProtectedRoute>
+                <StorageSettings />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile-settings" element={
+              <ProtectedRoute>
+                <ProfileSettings />
               </ProtectedRoute>
             } />
             <Route path="/admin" element={
               <ProtectedRoute requireAdmin={true}>
-                <AppLayout><Admin /></AppLayout>
-              </ProtectedRoute>
-            } />
-            
-            {/* Update these routes to be real components instead of redirects */}
-            <Route path="/recordings" element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <h1 className="text-2xl font-bold tracking-tight mb-4">Recordings</h1>
-                  <p className="text-muted-foreground">Manage and access your camera recordings</p>
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/alerts" element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <h1 className="text-2xl font-bold tracking-tight mb-4">Alerts</h1>
-                  <p className="text-muted-foreground">View and manage camera alerts and notifications</p>
-                </AppLayout>
-              </ProtectedRoute>
-            } />
-            <Route path="/storage" element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <h1 className="text-2xl font-bold tracking-tight mb-4">Storage Management</h1>
-                  <p className="text-muted-foreground">Configure and monitor storage for your camera recordings</p>
-                </AppLayout>
+                <Admin />
               </ProtectedRoute>
             } />
             
             <Route path="*" element={
               <ProtectedRoute>
-                <AppLayout><NotFound /></AppLayout>
+                <NotFound />
               </ProtectedRoute>
             } />
           </Routes>

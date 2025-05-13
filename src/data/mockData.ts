@@ -1,120 +1,116 @@
 
-import { Camera, CameraGroup } from "@/types/camera";
+import { Camera, CameraGroup, StorageSettings } from "@/types/camera";
 
-export const mockCameras: Camera[] = [
-  {
-    id: "cam-1",
-    name: "Front Door",
-    location: "Main Entrance",
-    ipAddress: "192.168.1.100",
-    port: 8080,
-    username: "admin",
-    status: "online",
-    model: "Hikvision DS-2CD2385G1-I",
-    manufacturer: "Hikvision",
-    lastSeen: new Date().toISOString(),
-    recording: true,
-    thumbnail: "/placeholder.svg"
-  },
-  {
-    id: "cam-2",
-    name: "Back Yard",
-    location: "Pool Area",
-    ipAddress: "192.168.1.101",
-    port: 8080,
-    username: "admin",
-    status: "online",
-    model: "Reolink RLC-810A",
-    manufacturer: "Reolink",
-    lastSeen: new Date().toISOString(),
-    recording: false,
-    thumbnail: "/placeholder.svg"
-  },
-  {
-    id: "cam-3",
-    name: "Garage",
-    location: "Garage Entrance",
-    ipAddress: "192.168.1.102",
-    port: 8080,
-    username: "admin",
-    status: "offline",
-    model: "Amcrest IP2M-841",
-    manufacturer: "Amcrest",
-    lastSeen: new Date(Date.now() - 3600000).toISOString()
-  },
-  {
-    id: "cam-4",
-    name: "Side Gate",
-    location: "East Fence",
-    ipAddress: "192.168.1.103",
-    port: 8080,
-    username: "admin",
-    status: "online",
-    model: "Reolink RLC-511W",
-    manufacturer: "Reolink",
-    lastSeen: new Date().toISOString(),
-    recording: false,
-    thumbnail: "/placeholder.svg"
-  },
-  {
-    id: "cam-5",
-    name: "Living Room",
-    location: "Main Floor",
-    ipAddress: "192.168.1.104",
-    port: 8080,
-    username: "admin",
-    status: "online",
-    model: "Wyze Cam v3",
-    manufacturer: "Wyze",
-    lastSeen: new Date().toISOString(),
-    recording: false,
-    thumbnail: "/placeholder.svg"
-  },
-  {
-    id: "cam-6",
-    name: "Kitchen",
-    location: "Main Floor",
-    ipAddress: "192.168.1.105",
-    port: 8080,
-    username: "admin",
-    status: "offline",
-    model: "Wyze Cam v3",
-    manufacturer: "Wyze",
-    lastSeen: new Date(Date.now() - 7200000).toISOString()
-  }
-];
+// Empty camera templates - we'll load real data from storage/backend
+export const mockCameras: Camera[] = [];
 
-export const mockCameraGroups: CameraGroup[] = [
-  {
-    id: "group-1",
-    name: "Outdoor",
-    cameras: mockCameras.filter(camera => 
-      ["Front Door", "Back Yard", "Side Gate"].includes(camera.name)
-    )
-  },
-  {
-    id: "group-2",
-    name: "Indoor",
-    cameras: mockCameras.filter(camera => 
-      ["Living Room", "Kitchen", "Garage"].includes(camera.name)
-    )
+// Empty group templates - we'll load real data from storage/backend
+export const mockCameraGroups: CameraGroup[] = [];
+
+// Instead of using mock data directly, let's create utility functions
+// to get cameras, either from localStorage or from an API in the future
+export const getCameras = (): Camera[] => {
+  const storedCameras = localStorage.getItem('cameras');
+  if (storedCameras) {
+    return JSON.parse(storedCameras);
   }
-];
+  return [];
+};
+
+export const saveCameras = (cameras: Camera[]): void => {
+  localStorage.setItem('cameras', JSON.stringify(cameras));
+};
+
+export const getCameraGroups = (): CameraGroup[] => {
+  // First get all cameras
+  const cameras = getCameras();
+  
+  // Generate groups dynamically from camera data
+  const groupMap: Record<string, Camera[]> = {};
+  
+  // Group cameras by their group property
+  cameras.forEach(camera => {
+    const groupName = camera.group || "Ungrouped";
+    if (!groupMap[groupName]) {
+      groupMap[groupName] = [];
+    }
+    groupMap[groupName].push(camera);
+  });
+  
+  // Convert the map to an array of CameraGroup objects
+  return Object.entries(groupMap).map(([name, groupCameras]) => ({
+    id: name.toLowerCase().replace(/\s+/g, '-'),
+    name,
+    cameras: groupCameras
+  }));
+};
+
+export const saveStorageSettings = (settings: StorageSettings): void => {
+  localStorage.setItem('storageSettings', JSON.stringify(settings));
+};
+
+export const getStorageSettings = (): StorageSettings => {
+  const storedSettings = localStorage.getItem('storageSettings');
+  if (storedSettings) {
+    return JSON.parse(storedSettings);
+  }
+  return {
+    type: 'local',
+    path: '/recordings'
+  };
+};
 
 export const getSystemStats = () => {
-  const totalCameras = mockCameras.length;
-  const onlineCameras = mockCameras.filter(cam => cam.status === "online").length;
-  const recordingCameras = mockCameras.filter(cam => cam.recording).length;
+  const cameras = getCameras();
+  const totalCameras = cameras.length;
+  const onlineCameras = cameras.filter(cam => cam.status === "online").length;
+  const recordingCameras = cameras.filter(cam => cam.recording).length;
   const offlineCameras = totalCameras - onlineCameras;
+  
+  // Get storage settings
+  const storageSettings = getStorageSettings();
+  
+  // For demonstration, using localStorage to store these stats
+  // In a real app, these would come from server monitoring
+  const storedStats = localStorage.getItem('systemStats');
+  let stats = storedStats ? JSON.parse(storedStats) : {
+    storageUsed: "0 GB",
+    storageTotal: "1 TB",
+    storagePercentage: 0,
+    uptimeHours: 0,
+  };
   
   return {
     totalCameras,
     onlineCameras,
     offlineCameras,
     recordingCameras,
-    storageUsed: "128.5 GB",
-    storageTotal: "1 TB",
-    storagePercentage: 12.85,
-    uptimeHours: 72,
+    storageUsed: stats.storageUsed,
+    storageTotal: stats.storageTotal,
+    storagePercentage: stats.storagePercentage,
+    uptimeHours: stats.uptimeHours,
   };
 };
+
+// Save initial system stats if none exist
+if (!localStorage.getItem('systemStats')) {
+  localStorage.setItem('systemStats', JSON.stringify({
+    storageUsed: "0 GB",
+    storageTotal: "1 TB",
+    storagePercentage: 0,
+    uptimeHours: 0,
+  }));
+}
+
+// Initialize empty cameras array if none exists
+if (!localStorage.getItem('cameras')) {
+  localStorage.setItem('cameras', JSON.stringify([]));
+}
+
+// Initialize default storage settings if none exist
+if (!localStorage.getItem('storageSettings')) {
+  localStorage.setItem('storageSettings', JSON.stringify({
+    type: 'local',
+    path: '/recordings'
+  }));
+}
