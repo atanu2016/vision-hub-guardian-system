@@ -58,10 +58,23 @@ const Sidebar = () => {
     const getCameraGroupsFromStorage = () => {
       const storedCameras = localStorage.getItem('cameras');
       if (storedCameras) {
-        const cameras = JSON.parse(storedCameras);
-        const groups = Array.from(new Set(cameras.map((c: any) => c.group || "Ungrouped")))
-          .filter((group: string) => group !== "Ungrouped");
-        setCameraGroups(groups);
+        try {
+          const cameras = JSON.parse(storedCameras);
+          // Explicitly type and filter the groups to ensure they're strings
+          const groups = Array.from(
+            new Set(
+              cameras
+                .map((c: any) => c.group || "Ungrouped")
+                .filter((group: unknown): group is string => 
+                  typeof group === 'string' && group !== "Ungrouped"
+                )
+            )
+          );
+          setCameraGroups(groups);
+        } catch (err) {
+          console.error("Error parsing camera data:", err);
+          setCameraGroups([]);
+        }
       }
     };
     
