@@ -125,4 +125,31 @@
   .status-recording {
     @apply bg-red-500 animate-pulse;
   }
+  
+  /* Card hover effects */
+  .hover-card {
+    @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
+  }
+  
+  /* Section styles */
+  .section-container {
+    @apply space-y-6 pb-8;
+  }
+  
+  .section-header {
+    @apply flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6;
+  }
+  
+  .section-title {
+    @apply text-2xl font-bold tracking-tight;
+  }
+  
+  .section-description {
+    @apply text-muted-foreground max-w-2xl;
+  }
+  
+  /* Glass panel effect */
+  .glass-panel {
+    @apply bg-background/80 border border-border backdrop-blur-sm rounded-lg;
+  }
 }
