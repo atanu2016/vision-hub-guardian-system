@@ -1,12 +1,76 @@
 
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PlusCircle, Search, SlidersHorizontal } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import CameraGrid from "@/components/cameras/CameraGrid";
-import { mockCameraGroups, mockCameras } from "@/data/mockData";
+import { mockCameras } from "@/data/mockData";
+import AddCameraModal from "@/components/cameras/AddCameraModal";
+import { Camera } from "@/types/camera";
+import { useToast } from "@/hooks/use-toast";
 
 const Cameras = () => {
+  const { toast } = useToast();
+  const [cameras, setCameras] = useState<Camera[]>(mockCameras);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  
+  // Generate groups dynamically based on camera data
+  const cameraGroups = useMemo(() => {
+    const groups: { [key: string]: Camera[] } = {};
+    
+    cameras.forEach(camera => {
+      const groupName = camera.group || "Ungrouped";
+      if (!groups[groupName]) {
+        groups[groupName] = [];
+      }
+      groups[groupName].push(camera);
+    });
+    
+    return Object.entries(groups).map(([name, groupCameras]) => ({
+      id: name.toLowerCase().replace(/\s+/g, '-'),
+      name,
+      cameras: groupCameras
+    }));
+  }, [cameras]);
+  
+  // Get unique group names for the dropdown
+  const existingGroups = useMemo(() => {
+    return Array.from(new Set(cameras.map(c => c.group || "Ungrouped")))
+      .filter(group => group !== "Ungrouped");
+  }, [cameras]);
+
+  // Filter cameras based on search query
+  const filteredCameraGroups = useMemo(() => {
+    if (!searchQuery) return cameraGroups;
+    
+    return cameraGroups.map(group => ({
+      ...group,
+      cameras: group.cameras.filter(camera => 
+        camera.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        camera.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        camera.ipAddress.includes(searchQuery)
+      )
+    })).filter(group => group.cameras.length > 0);
+  }, [cameraGroups, searchQuery]);
+
+  const handleAddCamera = (newCamera: Omit<Camera, "id">) => {
+    // In a real app, this would call an API to add the camera
+    const camera: Camera = {
+      ...newCamera,
+      id: `cam-${Date.now()}`, // Generate a unique ID
+    };
+    
+    setCameras([...cameras, camera]);
+    toast({
+      title: "Camera Added",
+      description: `${camera.name} has been added successfully`,
+    });
+    
+    setIsAddModalOpen(false);
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -28,12 +92,14 @@ const Cameras = () => {
                 type="search"
                 placeholder="Search cameras..."
                 className="w-full md:w-64 pl-8 bg-secondary/50"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             <Button variant="outline" size="icon">
               <SlidersHorizontal className="h-4 w-4" />
             </Button>
-            <Button>
+            <Button onClick={() => setIsAddModalOpen(true)}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Camera
             </Button>
@@ -41,24 +107,38 @@ const Cameras = () => {
         </div>
         
         <div className="space-y-8">
-          {mockCameraGroups.map((group) => (
+          {filteredCameraGroups.map((group) => (
             <CameraGrid
               key={group.id}
               cameras={group.cameras}
               title={group.name}
             />
           ))}
-
-          <CameraGrid
-            cameras={mockCameras.filter((camera) => 
-              !mockCameraGroups.some((group) => 
-                group.cameras.some((c) => c.id === camera.id)
-              )
-            )}
-            title="Ungrouped"
-          />
+          
+          {filteredCameraGroups.length === 0 && (
+            <div className="text-center py-12">
+              <h3 className="text-lg font-medium">No cameras found</h3>
+              <p className="text-muted-foreground mt-2">
+                Try adjusting your search or add a new camera
+              </p>
+              <Button 
+                className="mt-4"
+                onClick={() => setIsAddModalOpen(true)}
+              >
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Camera
+              </Button>
+            </div>
+          )}
         </div>
       </div>
+      
+      <AddCameraModal 
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onAdd={handleAddCamera}
+        existingGroups={existingGroups}
+      />
     </AppLayout>
   );
 };

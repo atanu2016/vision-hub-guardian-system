@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -54,9 +53,33 @@ const App = () => (
                 <AppLayout><Admin /></AppLayout>
               </ProtectedRoute>
             } />
-            <Route path="/recordings" element={<Navigate to="/" />} />
-            <Route path="/alerts" element={<Navigate to="/" />} />
-            <Route path="/storage" element={<Navigate to="/" />} />
+            
+            {/* Update these routes to be real components instead of redirects */}
+            <Route path="/recordings" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <h1 className="text-2xl font-bold tracking-tight mb-4">Recordings</h1>
+                  <p className="text-muted-foreground">Manage and access your camera recordings</p>
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/alerts" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <h1 className="text-2xl font-bold tracking-tight mb-4">Alerts</h1>
+                  <p className="text-muted-foreground">View and manage camera alerts and notifications</p>
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            <Route path="/storage" element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <h1 className="text-2xl font-bold tracking-tight mb-4">Storage Management</h1>
+                  <p className="text-muted-foreground">Configure and monitor storage for your camera recordings</p>
+                </AppLayout>
+              </ProtectedRoute>
+            } />
+            
             <Route path="*" element={
               <ProtectedRoute>
                 <AppLayout><NotFound /></AppLayout>

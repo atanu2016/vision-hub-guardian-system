@@ -12,6 +12,7 @@ export interface Camera {
   lastSeen?: string;
   recording?: boolean;
   thumbnail?: string;
+  group?: string; // Add group property
 }
 
 export type CameraStatus = 'online' | 'offline' | 'error';

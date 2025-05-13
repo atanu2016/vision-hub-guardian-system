@@ -21,11 +21,19 @@ import {
   Archive,
   PlaySquare,
   Layers,
+  ChevronRight,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useState } from "react";
 
 const Sidebar = () => {
   const location = useLocation();
+  const [isSettingsExpanded, setIsSettingsExpanded] = useState(
+    location.pathname.startsWith("/settings") || 
+    location.pathname.startsWith("/recordings") || 
+    location.pathname.startsWith("/alerts") || 
+    location.pathname.startsWith("/storage")
+  );
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -66,40 +74,78 @@ const Sidebar = () => {
               </SidebarMenuItem>
 
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/recordings")}>
-                  <Link to="/recordings">
-                    <PlaySquare />
-                    <span>Recordings</span>
-                  </Link>
+                <SidebarMenuButton 
+                  onClick={() => setIsSettingsExpanded(!isSettingsExpanded)} 
+                  isActive={
+                    isActive("/settings") || 
+                    isActive("/recordings") || 
+                    isActive("/alerts") || 
+                    isActive("/storage")
+                  }
+                >
+                  <Settings />
+                  <span>Settings</span>
+                  <ChevronRight 
+                    className={`ml-auto h-4 w-4 transition-transform ${isSettingsExpanded ? "rotate-90" : ""}`} 
+                  />
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              
+              {isSettingsExpanded && (
+                <>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      asChild 
+                      isActive={isActive("/settings")}
+                      className="pl-8"
+                    >
+                      <Link to="/settings">
+                        <Settings />
+                        <span>General Settings</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
 
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/alerts")}>
-                  <Link to="/alerts">
-                    <Bell />
-                    <span>Alerts</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      asChild 
+                      isActive={isActive("/recordings")}
+                      className="pl-8"
+                    >
+                      <Link to="/recordings">
+                        <PlaySquare />
+                        <span>Recordings</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
 
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/storage")}>
-                  <Link to="/storage">
-                    <Archive />
-                    <span>Storage</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      asChild 
+                      isActive={isActive("/alerts")}
+                      className="pl-8"
+                    >
+                      <Link to="/alerts">
+                        <Bell />
+                        <span>Alerts</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
 
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/settings")}>
-                  <Link to="/settings">
-                    <Settings />
-                    <span>Settings</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      asChild 
+                      isActive={isActive("/storage")}
+                      className="pl-8"
+                    >
+                      <Link to="/storage">
+                        <Archive />
+                        <span>Storage</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
