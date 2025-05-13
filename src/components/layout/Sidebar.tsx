@@ -60,7 +60,7 @@ const Sidebar = () => {
       if (storedCameras) {
         try {
           const cameras = JSON.parse(storedCameras);
-          // Explicitly type and filter the groups to ensure they're strings
+          // Filter and map to get only valid string groups
           const groups = Array.from(
             new Set(
               cameras
@@ -69,7 +69,8 @@ const Sidebar = () => {
                   typeof group === 'string' && group !== "Ungrouped"
                 )
             )
-          );
+          ) as string[]; // Explicitly cast the result to string[]
+          
           setCameraGroups(groups);
         } catch (err) {
           console.error("Error parsing camera data:", err);
