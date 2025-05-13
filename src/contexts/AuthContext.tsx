@@ -18,7 +18,6 @@ type AuthContextType = {
   isLoading: boolean;
   isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
 };
@@ -95,23 +94,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string) => {
-    try {
-      const { error } = await supabase.auth.signUp({ 
-        email, 
-        password,
-        options: { 
-          data: { full_name: fullName } 
-        }
-      });
-      if (error) throw error;
-      toast.success('Registration successful! Please check your email to verify your account.');
-    } catch (error: any) {
-      toast.error(error.message || 'Error signing up');
-      throw error;
-    }
-  };
-
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
@@ -145,7 +127,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         isAdmin: !!profile?.is_admin,
         signIn,
-        signUp,
         signOut,
         resetPassword,
       }}

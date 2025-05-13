@@ -18,31 +18,18 @@ const loginSchema = z.object({
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
 });
 
-const signupSchema = loginSchema.extend({
-  fullName: z.string().min(2, { message: 'Full name must be at least 2 characters' }),
-  confirmPassword: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
-
 const resetSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
 });
 
 const Auth = () => {
-  const { signIn, signUp, resetPassword, user, isLoading } = useAuth();
+  const { signIn, resetPassword, user, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('login');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
-  });
-
-  const signupForm = useForm<z.infer<typeof signupSchema>>({
-    resolver: zodResolver(signupSchema),
-    defaultValues: { email: '', password: '', confirmPassword: '', fullName: '' },
   });
 
   const resetForm = useForm<z.infer<typeof resetSchema>>({
@@ -54,16 +41,6 @@ const Auth = () => {
     setIsSubmitting(true);
     try {
       await signIn(values.email, values.password);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleSignup = async (values: z.infer<typeof signupSchema>) => {
-    setIsSubmitting(true);
-    try {
-      await signUp(values.email, values.password, values.fullName);
-      setActiveTab('login');
     } finally {
       setIsSubmitting(false);
     }
@@ -113,9 +90,8 @@ const Auth = () => {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3 mb-6">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="signup">Register</TabsTrigger>
                 <TabsTrigger value="reset">Reset</TabsTrigger>
               </TabsList>
 
@@ -156,75 +132,6 @@ const Auth = () => {
                         </>
                       ) : (
                         'Log in'
-                      )}
-                    </Button>
-                  </form>
-                </Form>
-              </TabsContent>
-
-              <TabsContent value="signup">
-                <Form {...signupForm}>
-                  <form onSubmit={signupForm.handleSubmit(handleSignup)} className="space-y-4">
-                    <FormField
-                      control={signupForm.control}
-                      name="fullName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Full Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="John Doe" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signupForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input placeholder="mail@example.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signupForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="********" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signupForm.control}
-                      name="confirmPassword"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Confirm Password</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="********" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="submit" className="w-full" disabled={isSubmitting}>
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Creating account...
-                        </>
-                      ) : (
-                        'Create account'
                       )}
                     </Button>
                   </form>
