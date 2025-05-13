@@ -8,6 +8,7 @@ import {
   Search,
   Settings,
   User,
+  UserCog,
 } from "lucide-react";
 import { 
   DropdownMenu, 
@@ -113,14 +114,24 @@ const TopBar = () => {
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/profile">Profile Settings</Link>
+                  <Link to="/profile-settings">
+                    <UserCog className="mr-2 h-4 w-4" />
+                    Profile Settings
+                  </Link>
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/settings">System Settings</Link>
+                  <Link to="/settings">
+                    <Settings className="mr-2 h-4 w-4" />
+                    System Settings
+                  </Link>
                 </DropdownMenuItem>
                 {isAdmin && (
                   <DropdownMenuItem asChild>
-                    <Link to="/admin">Admin Panel</Link>
+                    <Link to="/admin">
+                      <User className="mr-2 h-4 w-4" />
+                      Admin Panel
+                    </Link>
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />

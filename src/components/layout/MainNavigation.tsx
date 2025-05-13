@@ -8,7 +8,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { Home, Camera, User } from "lucide-react";
+import { Home, Camera } from "lucide-react";
 import SettingsMenuSection from "./SettingsMenuSection";
 
 interface MainNavigationProps {
@@ -40,18 +40,6 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
           </SidebarMenuItem>
 
           <SettingsMenuSection isActive={isActive} />
-          
-          <SidebarMenuItem>
-            <SidebarMenuButton 
-              asChild 
-              isActive={isActive("/profile-settings")}
-            >
-              <Link to="/profile-settings">
-                <User />
-                <span>Profile Settings</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>

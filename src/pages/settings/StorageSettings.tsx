@@ -17,6 +17,8 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { getStorageSettings, saveStorageSettings } from "@/data/mockData";
 import { StorageSettings as StorageSettingsType } from "@/types/camera";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const StorageSettings = () => {
   const { toast } = useToast();
@@ -39,14 +41,34 @@ const StorageSettings = () => {
     overwriteOldest: true,
     retentionDays: "30"
   });
+  
+  // Validation state
+  const [validationErrors, setValidationErrors] = useState<{
+    nasAddress?: string;
+    cloudCredentials?: string;
+    path?: string;
+  }>({});
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear validation error when user starts typing
+    if (name in validationErrors) {
+      setValidationErrors(prev => {
+        const newErrors = {...prev};
+        delete newErrors[name as keyof typeof validationErrors];
+        return newErrors;
+      });
+    }
   };
 
   const handleSelectChange = (name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear validation errors when changing type
+    if (name === 'type') {
+      setValidationErrors({});
+    }
   };
 
   const handleSwitchChange = (name: string, checked: boolean) => {
@@ -54,39 +76,40 @@ const StorageSettings = () => {
   };
 
   const validateSettings = () => {
+    const newErrors: {
+      nasAddress?: string;
+      cloudCredentials?: string;
+      path?: string;
+    } = {};
+    
     if (formData.type === 'local') {
       if (!formData.path) {
-        toast({
-          title: "Validation Error",
-          description: "Local path is required",
-          variant: "destructive",
-        });
-        return false;
+        newErrors.path = "Local path is required";
       }
     } else if (formData.type === 'nas') {
       if (!formData.nasAddress) {
-        toast({
-          title: "Validation Error",
-          description: "NAS server address is required",
-          variant: "destructive",
-        });
-        return false;
+        newErrors.nasAddress = "NAS server address is required";
+      } else if (!formData.nasAddress.includes(':') && !formData.nasAddress.includes('/')) {
+        newErrors.nasAddress = "Invalid NAS address format. Expected format: server:/path or server/path";
       }
     } else if (formData.type === 'cloud') {
-      if (!formData.cloudKey || !formData.cloudSecret || !formData.cloudBucket) {
-        toast({
-          title: "Validation Error",
-          description: "Cloud credentials and bucket name are required",
-          variant: "destructive",
-        });
-        return false;
+      const hasAllCloudFields = formData.cloudKey && formData.cloudSecret && formData.cloudBucket;
+      if (!hasAllCloudFields) {
+        newErrors.cloudCredentials = "Cloud credentials and bucket name are required";
       }
     }
-    return true;
+    
+    setValidationErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSaveSettings = () => {
     if (!validateSettings()) {
+      toast({
+        title: "Validation Error",
+        description: "Please correct the errors before saving",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -157,7 +180,11 @@ const StorageSettings = () => {
                   value={formData.path}
                   onChange={handleInputChange}
                   placeholder="/recordings"
+                  className={validationErrors.path ? "border-destructive" : ""}
                 />
+                {validationErrors.path && (
+                  <p className="text-sm text-destructive">{validationErrors.path}</p>
+                )}
               </div>
             )}
             
@@ -171,7 +198,14 @@ const StorageSettings = () => {
                     value={formData.nasAddress}
                     onChange={handleInputChange}
                     placeholder="192.168.1.100:/share"
+                    className={validationErrors.nasAddress ? "border-destructive" : ""}
                   />
+                  {validationErrors.nasAddress && (
+                    <p className="text-sm text-destructive">{validationErrors.nasAddress}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Format: server:/path or server/path (e.g., 192.168.1.100:/share)
+                  </p>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
@@ -245,6 +279,7 @@ const StorageSettings = () => {
                     value={formData.cloudBucket}
                     onChange={handleInputChange}
                     placeholder="my-recordings-bucket"
+                    className={validationErrors.cloudCredentials ? "border-destructive" : ""}
                   />
                 </div>
                 
@@ -257,6 +292,7 @@ const StorageSettings = () => {
                       value={formData.cloudKey}
                       onChange={handleInputChange}
                       placeholder="AKIAIOSFODNN7EXAMPLE"
+                      className={validationErrors.cloudCredentials ? "border-destructive" : ""}
                     />
                   </div>
                   <div className="space-y-2">
@@ -268,9 +304,19 @@ const StorageSettings = () => {
                       value={formData.cloudSecret}
                       onChange={handleInputChange}
                       placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+                      className={validationErrors.cloudCredentials ? "border-destructive" : ""}
                     />
                   </div>
                 </div>
+                
+                {validationErrors.cloudCredentials && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      {validationErrors.cloudCredentials}
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
             )}
             
