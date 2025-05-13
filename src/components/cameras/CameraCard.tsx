@@ -16,7 +16,7 @@ const CameraCard = ({ camera }: CameraCardProps) => {
   return (
     <Link to={`/cameras/${camera.id}`}>
       <Card className="camera-card h-full">
-        <div className="camera-feed">
+        <div className="camera-feed group">
           {isOnline ? (
             <>
               <div className={`status-indicator ${isRecording ? "status-recording" : "status-online"}`}></div>

@@ -48,7 +48,7 @@ const Sidebar = () => {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild active={isActive("/")}>
+                <SidebarMenuButton asChild isActive={isActive("/")}>
                   <Link to="/">
                     <Home />
                     <span>Dashboard</span>
@@ -57,7 +57,7 @@ const Sidebar = () => {
               </SidebarMenuItem>
               
               <SidebarMenuItem>
-                <SidebarMenuButton asChild active={isActive("/cameras")}>
+                <SidebarMenuButton asChild isActive={isActive("/cameras")}>
                   <Link to="/cameras">
                     <CameraIcon />
                     <span>Cameras</span>
@@ -66,7 +66,7 @@ const Sidebar = () => {
               </SidebarMenuItem>
 
               <SidebarMenuItem>
-                <SidebarMenuButton asChild active={isActive("/recordings")}>
+                <SidebarMenuButton asChild isActive={isActive("/recordings")}>
                   <Link to="/recordings">
                     <PlaySquare />
                     <span>Recordings</span>
@@ -75,7 +75,7 @@ const Sidebar = () => {
               </SidebarMenuItem>
 
               <SidebarMenuItem>
-                <SidebarMenuButton asChild active={isActive("/alerts")}>
+                <SidebarMenuButton asChild isActive={isActive("/alerts")}>
                   <Link to="/alerts">
                     <Bell />
                     <span>Alerts</span>
@@ -84,7 +84,7 @@ const Sidebar = () => {
               </SidebarMenuItem>
 
               <SidebarMenuItem>
-                <SidebarMenuButton asChild active={isActive("/storage")}>
+                <SidebarMenuButton asChild isActive={isActive("/storage")}>
                   <Link to="/storage">
                     <Archive />
                     <span>Storage</span>
@@ -93,7 +93,7 @@ const Sidebar = () => {
               </SidebarMenuItem>
 
               <SidebarMenuItem>
-                <SidebarMenuButton asChild active={isActive("/settings")}>
+                <SidebarMenuButton asChild isActive={isActive("/settings")}>
                   <Link to="/settings">
                     <Settings />
                     <span>Settings</span>
