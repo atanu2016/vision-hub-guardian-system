@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -30,6 +31,8 @@ import AppLayout from "@/components/layout/AppLayout";
 import DatabaseSettings from "@/components/settings/DatabaseSettings";
 import { useNotifications } from "@/hooks/useNotifications";
 import { HardDrive, Server, Cloud, Info } from "lucide-react";
+import { getStorageSettings, saveStorageSettings } from "@/services/apiService";
+import { StorageSettings as StorageSettingsType } from "@/types/camera";
 
 const localStorageSchema = z.object({
   type: z.literal("local"),
@@ -77,86 +80,99 @@ type StorageFormValues = z.infer<typeof storageSchema>;
 const StorageSettings = () => {
   const { toast } = useToast();
   const { addNotification } = useNotifications();
-  const [activeTab, setActiveTab] = useState("local");
+  const [activeTab, setActiveTab] = useState<"local" | "nas" | "cloud">("local");
   const [isSaving, setIsSaving] = useState(false);
   const [isConnectionTesting, setIsConnectionTesting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Get initial form values from localStorage or use defaults
-  const getInitialValues = (): StorageFormValues => {
-    const savedSettings = localStorage.getItem("vision-hub-storage-settings");
-    if (savedSettings) {
-      try {
-        const parsed = JSON.parse(savedSettings);
-        setActiveTab(parsed.type);
-        return parsed;
-      } catch (error) {
-        console.error("Failed to parse saved storage settings:", error);
-      }
-    }
-    
-    return {
+  // Initialize form values from API/localStorage
+  const form = useForm<StorageFormValues>({
+    resolver: zodResolver(storageSchema),
+    defaultValues: {
       type: "local",
       path: "/var/lib/vision-hub/recordings",
       retentionDays: 30,
       overwriteOldest: true,
-    };
-  };
-  
-  const form = useForm<StorageFormValues>({
-    resolver: zodResolver(storageSchema),
-    defaultValues: getInitialValues(),
+    }
   });
+  
+  // Load storage settings from API/localStorage on component mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        setIsLoading(true);
+        const settings = await getStorageSettings();
+        
+        // Set active tab based on settings type
+        if (settings.type) {
+          setActiveTab(settings.type);
+        }
+        
+        // Reset form with loaded settings
+        form.reset(settings as StorageFormValues);
+      } catch (error) {
+        console.error("Error loading storage settings:", error);
+        toast({
+          title: "Error Loading Settings",
+          description: "Failed to load storage settings. Using default values.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadSettings();
+  }, []);
   
   const watchStorageType = form.watch("type");
 
   // Update form values when tab changes
   const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    
-    // Set default values based on tab
-    if (value === "local" && watchStorageType !== "local") {
-      form.reset({
-        type: "local",
-        path: "/var/lib/vision-hub/recordings",
-        retentionDays: 30,
-        overwriteOldest: true,
-      });
-    } else if (value === "nas" && watchStorageType !== "nas") {
-      form.reset({
-        type: "nas",
-        nasAddress: "",
-        nasPath: "/recordings",
-        nasUsername: "",
-        nasPassword: "",
-        retentionDays: 30,
-        overwriteOldest: true,
-      });
-    } else if (value === "cloud" && watchStorageType !== "cloud") {
-      form.reset({
-        type: "cloud",
-        cloudProvider: "aws",
-        cloudRegion: "us-east-1",
-        cloudBucket: "",
-        cloudKey: "",
-        cloudSecret: "",
-        retentionDays: 30,
-        overwriteOldest: true,
-      });
+    if (value === "local" || value === "nas" || value === "cloud") {
+      setActiveTab(value);
+      
+      // Set default values based on tab
+      if (value === "local" && watchStorageType !== "local") {
+        form.reset({
+          type: "local",
+          path: "/var/lib/vision-hub/recordings",
+          retentionDays: 30,
+          overwriteOldest: true,
+        });
+      } else if (value === "nas" && watchStorageType !== "nas") {
+        form.reset({
+          type: "nas",
+          nasAddress: "",
+          nasPath: "/recordings",
+          nasUsername: "",
+          nasPassword: "",
+          retentionDays: 30,
+          overwriteOldest: true,
+        });
+      } else if (value === "cloud" && watchStorageType !== "cloud") {
+        form.reset({
+          type: "cloud",
+          cloudProvider: "aws",
+          cloudRegion: "us-east-1",
+          cloudBucket: "",
+          cloudKey: "",
+          cloudSecret: "",
+          retentionDays: 30,
+          overwriteOldest: true,
+        });
+      }
+      
+      // Reset form validation state
+      form.clearErrors();
     }
-    
-    // Reset form validation state
-    form.clearErrors();
   };
 
-  const onSubmit = (data: StorageFormValues) => {
+  const onSubmit = async (data: StorageFormValues) => {
     setIsSaving(true);
     
-    // Simulate API call delay
-    setTimeout(() => {
-      // Store in localStorage
-      localStorage.setItem("vision-hub-storage-settings", JSON.stringify(data));
-      
-      setIsSaving(false);
+    try {
+      await saveStorageSettings(data);
       
       toast({
         title: "Storage Settings Saved",
@@ -172,7 +188,17 @@ const StorageSettings = () => {
         }`,
         type: "success"
       });
-    }, 1000);
+    } catch (error) {
+      console.error("Error saving storage settings:", error);
+      
+      toast({
+        title: "Error Saving Settings",
+        description: "Failed to save storage configuration.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
   
   const testNasConnection = () => {
@@ -180,6 +206,17 @@ const StorageSettings = () => {
     
     // Get current NAS settings
     const nasData = form.getValues();
+    
+    // Validate NAS settings
+    if (nasData.type !== "nas" || !nasData.nasAddress || !nasData.nasPath) {
+      toast({
+        title: "Error",
+        description: "Please enter valid NAS settings before testing connection.",
+        variant: "destructive"
+      });
+      setIsConnectionTesting(false);
+      return;
+    }
     
     // Simulate connection test
     setTimeout(() => {
@@ -198,26 +235,40 @@ const StorageSettings = () => {
     // Get current cloud settings
     const cloudData = form.getValues();
     
-    // Check if the current type is cloud before accessing cloud-specific properties
-    if (cloudData.type === "cloud") {
-      // Simulate connection test
-      setTimeout(() => {
-        setIsConnectionTesting(false);
-        
-        toast({
-          title: "Cloud Connection Test",
-          description: `Successfully connected to ${cloudData.cloudProvider} cloud storage`,
-        });
-      }, 1500);
-    } else {
-      setIsConnectionTesting(false);
+    // Check if the current type is cloud and required fields are present
+    if (cloudData.type !== "cloud" || !cloudData.cloudProvider || !cloudData.cloudBucket) {
       toast({
         title: "Error",
-        description: "Cannot test connection: not in cloud storage mode",
+        description: "Please enter valid cloud settings before testing connection.",
         variant: "destructive"
       });
+      setIsConnectionTesting(false);
+      return;
     }
+    
+    // Simulate connection test
+    setTimeout(() => {
+      setIsConnectionTesting(false);
+      
+      toast({
+        title: "Cloud Connection Test",
+        description: `Successfully connected to ${cloudData.cloudProvider} cloud storage`,
+      });
+    }, 1500);
   };
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center h-[70vh]">
+          <div className="flex flex-col items-center gap-2">
+            <div className="h-8 w-8 border-4 border-t-primary border-vision-dark-500 rounded-full animate-spin"></div>
+            <p>Loading storage settings...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>

@@ -37,17 +37,28 @@ const CameraStreamPlayer = ({ camera, autoPlay = true, className = "" }: CameraS
           const streamUrl = camera.rtmpUrl || '';
           
           // If the URL is an HLS stream and browser supports HLS.js
-          if (streamUrl.includes('.m3u8') && Hls.isSupported()) {
+          if (streamUrl && (streamUrl.includes('.m3u8') || streamUrl.includes('.flv')) && Hls.isSupported()) {
+            // Destroy any existing HLS instance
+            if (hlsRef.current) {
+              hlsRef.current.destroy();
+            }
+            
             hlsRef.current = new Hls({
               enableWorker: true,
               lowLatencyMode: true,
-              backBufferLength: 90
+              backBufferLength: 90,
+              maxBufferLength: 30,
+              maxMaxBufferLength: 60,
+              maxBufferSize: 60 * 1000 * 1000, // 60MB max buffer size
+              maxBufferHole: 0.5
             });
             
+            console.log(`Loading HLS stream: ${streamUrl}`);
             hlsRef.current.loadSource(streamUrl);
             hlsRef.current.attachMedia(videoElement);
             
             hlsRef.current.on(Hls.Events.MANIFEST_PARSED, () => {
+              console.log("HLS manifest parsed successfully");
               setIsLoading(false);
               if (isPlaying) {
                 videoElement.play().catch(e => {
@@ -58,6 +69,7 @@ const CameraStreamPlayer = ({ camera, autoPlay = true, className = "" }: CameraS
             });
             
             hlsRef.current.on(Hls.Events.ERROR, (_, data) => {
+              console.error("HLS error:", data);
               if (data.fatal) {
                 console.error("Fatal HLS error:", data);
                 setError("Stream unavailable");
@@ -69,6 +81,19 @@ const CameraStreamPlayer = ({ camera, autoPlay = true, className = "" }: CameraS
                     variant: "destructive",
                   });
                 }
+                
+                // Try to recover on fatal errors
+                switch (data.type) {
+                  case Hls.ErrorTypes.NETWORK_ERROR:
+                    hlsRef.current?.startLoad();
+                    break;
+                  case Hls.ErrorTypes.MEDIA_ERROR:
+                    hlsRef.current?.recoverMediaError();
+                    break;
+                  default:
+                    // Cannot recover
+                    break;
+                }
               }
             });
             
@@ -78,12 +103,36 @@ const CameraStreamPlayer = ({ camera, autoPlay = true, className = "" }: CameraS
                 hlsRef.current = null;
               }
             };
+          } else if (streamUrl) {
+            // For direct video sources
+            videoElement.src = streamUrl;
+            videoElement.onloadeddata = () => {
+              console.log("Direct video stream loaded");
+              setIsLoading(false);
+              if (isPlaying) {
+                videoElement.play().catch(e => {
+                  console.warn("Autoplay prevented:", e);
+                  setIsPlaying(false);
+                });
+              }
+            };
+            
+            videoElement.onerror = (e) => {
+              console.error("Video error:", e);
+              setError("Stream unavailable");
+              setIsPlaying(false);
+            };
+            
+            cleanup = () => {
+              videoElement.src = '';
+              videoElement.load();
+            };
           } else {
-            // For other stream types or direct video
+            // For other stream types via API service
             cleanup = setupCameraStream(camera, videoElement, (err) => {
+              console.error("Stream setup error via API service:", err);
               setError("Unable to play stream");
               setIsPlaying(false);
-              console.error(err);
             });
             
             videoElement.onloadeddata = () => {
@@ -111,7 +160,7 @@ const CameraStreamPlayer = ({ camera, autoPlay = true, className = "" }: CameraS
     return () => {
       cleanup();
     };
-  }, [camera, toast]);
+  }, [camera, toast, isPlaying]);
   
   const togglePlay = () => {
     if (!videoRef.current) return;
@@ -169,6 +218,29 @@ const CameraStreamPlayer = ({ camera, autoPlay = true, className = "" }: CameraS
               The camera stream is currently unavailable. 
               {camera.status === 'offline' ? " The camera is offline." : " Please try again later."}
             </p>
+            <Button 
+              className="mt-4"
+              variant="outline"
+              onClick={() => {
+                setError(null);
+                setIsLoading(true);
+                // Force reload the stream
+                if (hlsRef.current) {
+                  hlsRef.current.destroy();
+                  hlsRef.current = null;
+                }
+                setTimeout(() => {
+                  if (videoRef.current) {
+                    videoRef.current.load();
+                    if (isPlaying) {
+                      videoRef.current.play().catch(console.error);
+                    }
+                  }
+                }, 500);
+              }}
+            >
+              Retry Connection
+            </Button>
           </div>
         </div>
       )}

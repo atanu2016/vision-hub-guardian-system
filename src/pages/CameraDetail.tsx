@@ -7,16 +7,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import AppLayout from "@/components/layout/AppLayout";
 import { useState, useEffect } from "react";
-import { getCameras } from "@/data/mockData";
+import { getCameras, saveCameraToAPI } from "@/services/apiService";
 import { Camera } from "@/types/camera";
 import { useToast } from "@/hooks/use-toast";
 import CameraStreamPlayer from "@/components/cameras/CameraStreamPlayer";
+import CameraSettings from "@/components/cameras/CameraSettings";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const CameraDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [isStreaming, setIsStreaming] = useState(true);
   const [camera, setCamera] = useState<Camera | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("live");
+  const [showSettings, setShowSettings] = useState(false);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -54,11 +58,39 @@ const CameraDetail = () => {
   };
   
   const handleTakeSnapshot = () => {
+    if (!isStreaming || !camera?.status === 'online') {
+      toast({
+        title: "Cannot take snapshot",
+        description: "Camera must be online and streaming to take a snapshot.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Implementation would capture a frame from the video
     toast({
       title: "Snapshot taken",
       description: "Screenshot saved to recordings folder.",
     });
+  };
+
+  const handleSaveSettings = async (updatedCamera: Camera) => {
+    try {
+      await saveCameraToAPI(updatedCamera);
+      setCamera(updatedCamera);
+      setShowSettings(false);
+      toast({
+        title: "Settings saved",
+        description: "Camera settings updated successfully.",
+      });
+    } catch (error) {
+      console.error("Error saving camera settings:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save camera settings.",
+        variant: "destructive",
+      });
+    }
   };
   
   if (loading) {
@@ -124,10 +156,12 @@ const CameraDetail = () => {
             <Button variant="outline" size="sm">
               <Share2 className="mr-2 h-4 w-4" /> Share
             </Button>
-            <Button variant="outline" size="sm" asChild>
-              <Link to={`/cameras/${id}/settings`}>
-                <Settings className="mr-2 h-4 w-4" /> Configure
-              </Link>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowSettings(true)}
+            >
+              <Settings className="mr-2 h-4 w-4" /> Configure
             </Button>
           </div>
         </div>
@@ -252,11 +286,19 @@ const CameraDetail = () => {
                   className="w-full" 
                   variant="outline"
                   onClick={() => {
-                    // Implementation would open fullscreen mode
-                    toast({
-                      title: "Feature not available",
-                      description: "Full screen view is not yet implemented.",
-                    });
+                    // Open in fullscreen mode
+                    const videoElement = document.querySelector('video');
+                    if (videoElement) {
+                      if (videoElement.requestFullscreen) {
+                        videoElement.requestFullscreen();
+                      } 
+                    } else {
+                      toast({
+                        title: "Full screen error",
+                        description: "Unable to enter full screen mode.",
+                        variant: "destructive",
+                      });
+                    }
                   }}
                   disabled={!isOnline}
                 >
@@ -266,12 +308,20 @@ const CameraDetail = () => {
                   className="w-full" 
                   variant="outline"
                   onClick={() => {
-                    // Implementation would toggle recording
-                    toast({
-                      title: camera.recording ? "Recording stopped" : "Recording started",
-                      description: camera.recording ? 
-                        "Camera recording has been stopped." : 
-                        "Camera has started recording.",
+                    // Toggle recording state
+                    const updatedCamera = {
+                      ...camera,
+                      recording: !camera.recording
+                    };
+                    
+                    setCamera(updatedCamera);
+                    saveCameraToAPI(updatedCamera).then(() => {
+                      toast({
+                        title: updatedCamera.recording ? "Recording started" : "Recording stopped",
+                        description: updatedCamera.recording ? 
+                          "Camera has started recording." : 
+                          "Camera recording has been stopped.",
+                      });
                     });
                   }}
                   disabled={!isOnline}
@@ -281,21 +331,22 @@ const CameraDetail = () => {
                 <Button 
                   className="w-full" 
                   variant="outline"
-                  onClick={() => {
-                    // Implementation would open motion detection settings
-                    toast({
-                      title: "Feature not available",
-                      description: "Motion detection settings are not yet implemented.",
-                    });
-                  }}
+                  onClick={() => setShowSettings(true)}
                 >
-                  Configure Motion Detection
+                  Configure Camera Settings
                 </Button>
               </div>
             </div>
           </div>
         </div>
       </div>
+      
+      <Dialog open={showSettings} onOpenChange={setShowSettings}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <h2 className="text-2xl font-bold mb-4">Camera Settings: {camera.name}</h2>
+          <CameraSettings camera={camera} onSave={handleSaveSettings} />
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 };
