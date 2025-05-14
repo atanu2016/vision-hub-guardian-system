@@ -1,106 +1,129 @@
 
+import { 
+  getCamerasFromAPI, 
+  saveCameraToAPI, 
+  getCameraGroupsFromAPI, 
+  getStorageSettingsFromAPI,
+  saveStorageSettingsToAPI,
+  getSystemStatsFromAPI
+} from "@/services/apiService";
 import { Camera, CameraGroup, StorageSettings } from "@/types/camera";
 
-// Empty camera templates - we'll load real data from storage/backend
+// Empty camera templates - we'll load real data from API/storage
 export const mockCameras: Camera[] = [];
 
-// Empty group templates - we'll load real data from storage/backend
+// Empty group templates - we'll load real data from API/storage
 export const mockCameraGroups: CameraGroup[] = [];
 
-// Instead of using mock data directly, let's create utility functions
-// to get cameras, either from localStorage or from an API in the future
-export const getCameras = (): Camera[] => {
-  const storedCameras = localStorage.getItem('cameras');
-  if (storedCameras) {
-    return JSON.parse(storedCameras);
-  }
-  return [];
-};
-
-export const saveCameras = (cameras: Camera[]): void => {
-  localStorage.setItem('cameras', JSON.stringify(cameras));
-};
-
-export const getCameraGroups = (): CameraGroup[] => {
-  // First get all cameras
-  const cameras = getCameras();
-  
-  // Generate groups dynamically from camera data
-  const groupMap: Record<string, Camera[]> = {};
-  
-  // Group cameras by their group property
-  cameras.forEach(camera => {
-    const groupName = camera.group || "Ungrouped";
-    if (!groupMap[groupName]) {
-      groupMap[groupName] = [];
+// Get cameras from API, fallback to localStorage
+export const getCameras = async (): Promise<Camera[]> => {
+  try {
+    return await getCamerasFromAPI();
+  } catch (error) {
+    console.error('Error getting cameras from API, falling back to localStorage:', error);
+    const storedCameras = localStorage.getItem('cameras');
+    if (storedCameras) {
+      return JSON.parse(storedCameras);
     }
-    groupMap[groupName].push(camera);
-  });
-  
-  // Convert the map to an array of CameraGroup objects
-  return Object.entries(groupMap).map(([name, groupCameras]) => ({
-    id: name.toLowerCase().replace(/\s+/g, '-'),
-    name,
-    cameras: groupCameras
-  }));
-};
-
-export const saveStorageSettings = (settings: StorageSettings): void => {
-  localStorage.setItem('storageSettings', JSON.stringify(settings));
-};
-
-export const getStorageSettings = (): StorageSettings => {
-  const storedSettings = localStorage.getItem('storageSettings');
-  if (storedSettings) {
-    return JSON.parse(storedSettings);
+    return [];
   }
-  return {
-    type: 'local',
-    path: '/recordings'
-  };
 };
 
-export const getSystemStats = () => {
-  const cameras = getCameras();
-  const totalCameras = cameras.length;
-  const onlineCameras = cameras.filter(cam => cam.status === "online").length;
-  const recordingCameras = cameras.filter(cam => cam.recording).length;
-  const offlineCameras = totalCameras - onlineCameras;
+export const saveCameras = async (cameras: Camera[]): Promise<void> => {
+  // For bulk save, we'd typically use a different endpoint
+  // But for this example, we'll just update localStorage
+  localStorage.setItem('cameras', JSON.stringify(cameras));
   
-  // Get storage settings
-  const storageSettings = getStorageSettings();
-  
-  // For demonstration, using localStorage to store these stats
-  // In a real app, these would come from server monitoring
-  const storedStats = localStorage.getItem('systemStats');
-  let stats = storedStats ? JSON.parse(storedStats) : {
-    storageUsed: "0 GB",
-    storageTotal: "1 TB",
-    storagePercentage: 0,
-    uptimeHours: 0,
-  };
-  
-  return {
-    totalCameras,
-    onlineCameras,
-    offlineCameras,
-    recordingCameras,
-    storageUsed: stats.storageUsed,
-    storageTotal: stats.storageTotal,
-    storagePercentage: stats.storagePercentage,
-    uptimeHours: stats.uptimeHours,
-  };
+  // In a real implementation, you might do something like:
+  // await fetch('/api/cameras/bulk', {
+  //   method: 'PUT',
+  //   body: JSON.stringify(cameras),
+  // });
 };
 
-// Save initial system stats if none exist
-if (!localStorage.getItem('systemStats')) {
-  localStorage.setItem('systemStats', JSON.stringify({
-    storageUsed: "0 GB",
-    storageTotal: "1 TB",
-    storagePercentage: 0,
-    uptimeHours: 0,
-  }));
-}
+export const saveCamera = async (camera: Camera): Promise<Camera> => {
+  return await saveCameraToAPI(camera);
+};
+
+export const getCameraGroups = async (): Promise<CameraGroup[]> => {
+  try {
+    return await getCameraGroupsFromAPI();
+  } catch (error) {
+    console.error('Error getting camera groups from API, generating from cameras:', error);
+    // Generate groups dynamically from camera data (fallback)
+    const cameras = await getCameras();
+    
+    const groupMap: Record<string, Camera[]> = {};
+    
+    cameras.forEach(camera => {
+      const groupName = camera.group || "Ungrouped";
+      if (!groupMap[groupName]) {
+        groupMap[groupName] = [];
+      }
+      groupMap[groupName].push(camera);
+    });
+    
+    return Object.entries(groupMap).map(([name, groupCameras]) => ({
+      id: name.toLowerCase().replace(/\s+/g, '-'),
+      name,
+      cameras: groupCameras
+    }));
+  }
+};
+
+export const saveStorageSettings = async (settings: StorageSettings): Promise<StorageSettings> => {
+  return await saveStorageSettingsToAPI(settings);
+};
+
+export const getStorageSettings = async (): Promise<StorageSettings> => {
+  try {
+    return await getStorageSettingsFromAPI();
+  } catch (error) {
+    console.error('Error getting storage settings from API, falling back to localStorage:', error);
+    const storedSettings = localStorage.getItem('storageSettings');
+    if (storedSettings) {
+      return JSON.parse(storedSettings);
+    }
+    return {
+      type: 'local',
+      path: '/recordings'
+    };
+  }
+};
+
+export const getSystemStats = async () => {
+  try {
+    return await getSystemStatsFromAPI();
+  } catch (error) {
+    console.error('Error getting system stats from API, falling back to localStorage:', error);
+    // Get cameras for stats calculation
+    const cameras = await getCameras();
+    const totalCameras = cameras.length;
+    const onlineCameras = cameras.filter(cam => cam.status === "online").length;
+    const recordingCameras = cameras.filter(cam => cam.recording).length;
+    const offlineCameras = totalCameras - onlineCameras;
+    
+    // For demonstration, using localStorage to store these stats
+    const storedStats = localStorage.getItem('systemStats');
+    let stats = storedStats ? JSON.parse(storedStats) : {
+      storageUsed: "0 GB",
+      storageTotal: "1 TB",
+      storagePercentage: 0,
+      uptimeHours: 0,
+    };
+    
+    return {
+      totalCameras,
+      onlineCameras,
+      offlineCameras,
+      recordingCameras,
+      storageUsed: stats.storageUsed,
+      storageTotal: stats.storageTotal,
+      storagePercentage: stats.storagePercentage,
+      uptimeHours: stats.uptimeHours,
+    };
+  }
+};
 
 // Initialize empty cameras array if none exists
 if (!localStorage.getItem('cameras')) {
@@ -112,5 +135,15 @@ if (!localStorage.getItem('storageSettings')) {
   localStorage.setItem('storageSettings', JSON.stringify({
     type: 'local',
     path: '/recordings'
+  }));
+}
+
+// Initialize system stats if none exist
+if (!localStorage.getItem('systemStats')) {
+  localStorage.setItem('systemStats', JSON.stringify({
+    storageUsed: "0 GB",
+    storageTotal: "1 TB",
+    storagePercentage: 0,
+    uptimeHours: 0,
   }));
 }

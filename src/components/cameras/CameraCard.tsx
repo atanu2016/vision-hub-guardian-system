@@ -15,16 +15,17 @@ const CameraCard = ({ camera }: CameraCardProps) => {
 
   return (
     <Link to={`/cameras/${camera.id}`}>
-      <Card className="camera-card h-full">
-        <div className="camera-feed group">
+      <Card className="camera-card h-full hover:shadow-md transition-all duration-200">
+        <div className="camera-feed group aspect-video relative">
           {isOnline ? (
             <>
-              <div className={`status-indicator ${isRecording ? "status-recording" : "status-online"}`}></div>
+              <div className={`absolute top-2 left-2 z-10 h-2 w-2 rounded-full ${isRecording ? "bg-red-500 animate-pulse" : "bg-green-500"}`}></div>
               {camera.thumbnail ? (
                 <img 
                   src={camera.thumbnail} 
                   alt={camera.name} 
                   className="w-full h-full object-cover"
+                  loading="lazy"
                 />
               ) : (
                 <div className="w-full h-full bg-vision-dark-800 flex items-center justify-center">
@@ -33,8 +34,8 @@ const CameraCard = ({ camera }: CameraCardProps) => {
               )}
             </>
           ) : (
-            <div className="camera-feed-offline">
-              <div className="status-indicator status-offline"></div>
+            <div className="camera-feed-offline w-full h-full bg-vision-dark-900 flex items-center justify-center">
+              <div className="absolute top-2 left-2 z-10 h-2 w-2 rounded-full bg-red-500"></div>
               <div className="flex flex-col items-center">
                 <CameraOff size={32} className="mb-2" />
                 <span>Camera offline</span>

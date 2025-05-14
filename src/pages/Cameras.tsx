@@ -8,22 +8,62 @@ import CameraGrid from "@/components/cameras/CameraGrid";
 import AddCameraModal from "@/components/cameras/AddCameraModal";
 import { Camera } from "@/types/camera";
 import { useToast } from "@/hooks/use-toast";
-import { getCameras, saveCameras, getCameraGroups } from "@/data/mockData";
+import { getCameras, saveCamera, getCameraGroups } from "@/data/mockData";
 
 const Cameras = () => {
   const { toast } = useToast();
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   
-  // Load cameras from storage on component mount
+  // Load cameras from API on component mount
   useEffect(() => {
-    setCameras(getCameras());
-  }, []);
+    const fetchCameras = async () => {
+      setLoading(true);
+      try {
+        const camerasData = await getCameras();
+        setCameras(camerasData);
+      } catch (error) {
+        console.error('Error fetching cameras:', error);
+        toast({
+          title: "Error loading cameras",
+          description: "Could not load cameras from the server. Using cached data.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchCameras();
+  }, [toast]);
   
   // Generate groups dynamically based on camera data
   const cameraGroups = useMemo(() => {
-    return getCameraGroups();
+    // Create an empty array of groups
+    const groups: { id: string; name: string; cameras: Camera[] }[] = [];
+    
+    // Group cameras by their group property
+    const groupMap: Record<string, Camera[]> = {};
+    cameras.forEach(camera => {
+      const groupName = camera.group || "Ungrouped";
+      if (!groupMap[groupName]) {
+        groupMap[groupName] = [];
+      }
+      groupMap[groupName].push(camera);
+    });
+    
+    // Convert the map to an array of group objects
+    Object.entries(groupMap).forEach(([name, groupCameras]) => {
+      groups.push({
+        id: name.toLowerCase().replace(/\s+/g, '-'),
+        name,
+        cameras: groupCameras
+      });
+    });
+    
+    return groups;
   }, [cameras]);
   
   // Get unique group names for the dropdown
@@ -48,24 +88,32 @@ const Cameras = () => {
     })).filter(group => group.cameras.length > 0);
   }, [cameraGroups, searchQuery]);
 
-  const handleAddCamera = (newCamera: Omit<Camera, "id">) => {
-    // Generate a unique ID
-    const camera: Camera = {
-      ...newCamera,
-      id: `cam-${Date.now()}`,
-    };
-    
-    // Add to cameras list
-    const updatedCameras = [...cameras, camera];
-    setCameras(updatedCameras);
-    
-    // Save to storage
-    saveCameras(updatedCameras);
-    
-    toast({
-      title: "Camera Added",
-      description: `${camera.name} has been added successfully`,
-    });
+  const handleAddCamera = async (newCamera: Omit<Camera, "id">) => {
+    try {
+      // Add to cameras list
+      const camera: Camera = {
+        ...newCamera,
+        id: `cam-${Date.now()}`, // Temporary ID that will be replaced by the API
+      };
+      
+      // Call API to save the camera
+      const savedCamera = await saveCamera(camera);
+      
+      // Update the local state with the saved camera
+      setCameras(prev => [...prev, savedCamera]);
+      
+      toast({
+        title: "Camera Added",
+        description: `${savedCamera.name} has been added successfully`,
+      });
+    } catch (error) {
+      console.error('Error adding camera:', error);
+      toast({
+        title: "Error Adding Camera",
+        description: "Could not add camera. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -103,33 +151,39 @@ const Cameras = () => {
           </div>
         </div>
         
-        <div className="space-y-8">
-          {filteredCameraGroups.map((group) => (
-            <CameraGrid
-              key={group.id}
-              cameras={group.cameras}
-              title={group.name}
-            />
-          ))}
-          
-          {filteredCameraGroups.length === 0 && (
-            <div className="text-center py-12">
-              <h3 className="text-lg font-medium">No cameras found</h3>
-              <p className="text-muted-foreground mt-2">
-                {cameras.length === 0 
-                  ? "Add a camera to get started" 
-                  : "Try adjusting your search or add a new camera"}
-              </p>
-              <Button 
-                className="mt-4"
-                onClick={() => setIsAddModalOpen(true)}
-              >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Camera
-              </Button>
-            </div>
-          )}
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <p>Loading cameras...</p>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {filteredCameraGroups.map((group) => (
+              <CameraGrid
+                key={group.id}
+                cameras={group.cameras}
+                title={group.name}
+              />
+            ))}
+            
+            {filteredCameraGroups.length === 0 && (
+              <div className="text-center py-12">
+                <h3 className="text-lg font-medium">No cameras found</h3>
+                <p className="text-muted-foreground mt-2">
+                  {cameras.length === 0 
+                    ? "Add a camera to get started" 
+                    : "Try adjusting your search or add a new camera"}
+                </p>
+                <Button 
+                  className="mt-4"
+                  onClick={() => setIsAddModalOpen(true)}
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Camera
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       
       <AddCameraModal 

@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Camera, Cpu, HardDrive, AlertTriangle, Filter } from "lucide-react";
+import { Camera as CameraIcon, Cpu, HardDrive, AlertTriangle, Filter } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -19,25 +19,58 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Camera as CameraType } from "@/types/camera";
+import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
-  const [stats, setStats] = useState(getSystemStats());
-  const [cameras, setCameras] = useState<CameraType[]>(getCameras());
+  const [stats, setStats] = useState<any>({
+    totalCameras: 0,
+    onlineCameras: 0,
+    offlineCameras: 0,
+    recordingCameras: 0,
+    storageUsed: "0 GB",
+    storageTotal: "1 TB",
+    storagePercentage: 0,
+    uptimeHours: 0
+  });
+  const [cameras, setCameras] = useState<CameraType[]>([]);
   const [sortOption, setSortOption] = useState("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [groupBy, setGroupBy] = useState<"none" | "group" | "location">("none");
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  
+  // Fetch data from API
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // Fetch cameras
+      const camerasData = await getCameras();
+      setCameras(camerasData);
+      
+      // Fetch system stats
+      const statsData = await getSystemStats();
+      setStats(statsData);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast({
+        title: "Error fetching data",
+        description: "Could not connect to the server. Using cached data instead.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // Refresh data periodically
   useEffect(() => {
     // Get initial data
-    setCameras(getCameras());
-    setStats(getSystemStats());
+    fetchData();
     
     // Set up refresh interval
     const interval = setInterval(() => {
-      setCameras(getCameras());
-      setStats(getSystemStats());
-    }, 5000); // Refresh every 5 seconds
+      fetchData();
+    }, 30000); // Refresh every 30 seconds
     
     return () => clearInterval(interval);
   }, []);
@@ -145,18 +178,14 @@ const Dashboard = () => {
               Monitor your camera system status and activity
             </p>
           </div>
-          <div>
-            <Button onClick={() => window.location.href = "/cameras"}>
-              <Camera className="mr-2 h-4 w-4" /> Add Camera
-            </Button>
-          </div>
+          {/* "Add Camera" button removed from dashboard as requested */}
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             title="Total Cameras"
             value={stats.totalCameras}
-            icon={<Camera className="h-4 w-4 text-vision-blue-500" />}
+            icon={<CameraIcon className="h-4 w-4 text-vision-blue-500" />}
             description="Connected to system"
           />
           <StatsCard
@@ -172,7 +201,7 @@ const Dashboard = () => {
           <StatsCard
             title="Recording"
             value={stats.recordingCameras}
-            icon={<Camera className="h-4 w-4 text-red-500" />}
+            icon={<CameraIcon className="h-4 w-4 text-red-500" />}
             description={`${stats.recordingCameras} active recordings`}
           />
           <StatsCard
@@ -270,41 +299,86 @@ const Dashboard = () => {
               </div>
             </div>
             
-            <TabsContent value="all" className="mt-4">
-              {getCameraList("all").map(group => (
-                <div key={group.id} className="mb-8">
-                  {groupBy !== "none" && <h3 className="text-xl font-semibold mb-4">{group.name}</h3>}
-                  <CameraGrid cameras={group.cameras} />
-                </div>
-              ))}
-            </TabsContent>
-            
-            <TabsContent value="online" className="mt-4">
-              {getCameraList("online").map(group => (
-                <div key={group.id} className="mb-8">
-                  {groupBy !== "none" && <h3 className="text-xl font-semibold mb-4">{group.name}</h3>}
-                  <CameraGrid cameras={group.cameras} />
-                </div>
-              ))}
-            </TabsContent>
-            
-            <TabsContent value="offline" className="mt-4">
-              {getCameraList("offline").map(group => (
-                <div key={group.id} className="mb-8">
-                  {groupBy !== "none" && <h3 className="text-xl font-semibold mb-4">{group.name}</h3>}
-                  <CameraGrid cameras={group.cameras} />
-                </div>
-              ))}
-            </TabsContent>
-            
-            <TabsContent value="recording" className="mt-4">
-              {getCameraList("recording").map(group => (
-                <div key={group.id} className="mb-8">
-                  {groupBy !== "none" && <h3 className="text-xl font-semibold mb-4">{group.name}</h3>}
-                  <CameraGrid cameras={group.cameras} />
-                </div>
-              ))}
-            </TabsContent>
+            {loading ? (
+              <div className="py-10 text-center">Loading camera data...</div>
+            ) : (
+              <>
+                <TabsContent value="all" className="mt-4">
+                  {getCameraList("all").map(group => (
+                    <div key={group.id} className="mb-8">
+                      {groupBy !== "none" && <h3 className="text-xl font-semibold mb-4">{group.name}</h3>}
+                      <CameraGrid cameras={group.cameras} />
+                    </div>
+                  ))}
+                  {cameras.length === 0 && (
+                    <div className="text-center py-12">
+                      <h3 className="text-lg font-medium">No cameras found</h3>
+                      <p className="text-muted-foreground mt-2">
+                        Go to the Cameras page to add cameras to your system
+                      </p>
+                      <Button 
+                        className="mt-4"
+                        onClick={() => window.location.href = "/cameras"}
+                      >
+                        <CameraIcon className="mr-2 h-4 w-4" />
+                        Manage Cameras
+                      </Button>
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="online" className="mt-4">
+                  {getCameraList("online").map(group => (
+                    <div key={group.id} className="mb-8">
+                      {groupBy !== "none" && <h3 className="text-xl font-semibold mb-4">{group.name}</h3>}
+                      <CameraGrid cameras={group.cameras} />
+                    </div>
+                  ))}
+                  {onlineCameras.length === 0 && (
+                    <div className="text-center py-12">
+                      <h3 className="text-lg font-medium">No online cameras found</h3>
+                      <p className="text-muted-foreground mt-2">
+                        There are currently no cameras online
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="offline" className="mt-4">
+                  {getCameraList("offline").map(group => (
+                    <div key={group.id} className="mb-8">
+                      {groupBy !== "none" && <h3 className="text-xl font-semibold mb-4">{group.name}</h3>}
+                      <CameraGrid cameras={group.cameras} />
+                    </div>
+                  ))}
+                  {offlineCameras.length === 0 && (
+                    <div className="text-center py-12">
+                      <h3 className="text-lg font-medium">No offline cameras</h3>
+                      <p className="text-muted-foreground mt-2">
+                        All cameras are currently online
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="recording" className="mt-4">
+                  {getCameraList("recording").map(group => (
+                    <div key={group.id} className="mb-8">
+                      {groupBy !== "none" && <h3 className="text-xl font-semibold mb-4">{group.name}</h3>}
+                      <CameraGrid cameras={group.cameras} />
+                    </div>
+                  ))}
+                  {recordingCameras.length === 0 && (
+                    <div className="text-center py-12">
+                      <h3 className="text-lg font-medium">No recording cameras</h3>
+                      <p className="text-muted-foreground mt-2">
+                        No cameras are currently recording
+                      </p>
+                    </div>
+                  )}
+                </TabsContent>
+              </>
+            )}
           </Tabs>
         </div>
       </div>

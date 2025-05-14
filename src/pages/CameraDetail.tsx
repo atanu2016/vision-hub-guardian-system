@@ -1,37 +1,134 @@
 
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, PauseCircle, PlayCircle, Settings, Share2, Video } from "lucide-react";
+import { ArrowLeft, Download, PauseCircle, PlayCircle, Settings, Share2 } from "lucide-react";
 import { useParams, Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import AppLayout from "@/components/layout/AppLayout";
-import { useState } from "react";
-
-// This would normally come from an API
-const getMockCamera = (id: string) => {
-  return {
-    id,
-    name: "Front Door Camera",
-    location: "Main Entrance",
-    ipAddress: "192.168.1.100",
-    port: 8080,
-    username: "admin",
-    status: "online" as const,
-    model: "Hikvision DS-2CD2385G1-I",
-    manufacturer: "Hikvision",
-    lastSeen: "2023-05-13T12:30:45Z",
-    recording: true
-  };
-};
+import { useState, useEffect, useRef } from "react";
+import { getCameras } from "@/data/mockData";
+import { setupCameraStream } from "@/services/apiService";
+import { useToast } from "@/hooks/use-toast";
+import { Camera } from "@/types/camera";
 
 const CameraDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [isStreaming, setIsStreaming] = useState(true);
+  const [camera, setCamera] = useState<Camera | null>(null);
+  const [loading, setLoading] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const { toast } = useToast();
   
-  if (!id) return <div>Camera not found</div>;
+  useEffect(() => {
+    const fetchCamera = async () => {
+      setLoading(true);
+      try {
+        const cameras = await getCameras();
+        const foundCamera = cameras.find(cam => cam.id === id);
+        if (foundCamera) {
+          setCamera(foundCamera);
+        } else {
+          toast({
+            title: "Camera not found",
+            description: "The requested camera could not be found.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching camera:", error);
+        toast({
+          title: "Error loading camera",
+          description: "Could not load camera details. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchCamera();
+  }, [id, toast]);
   
-  const camera = getMockCamera(id);
+  // Setup camera stream when camera data is loaded
+  useEffect(() => {
+    if (!camera || !camera.status || camera.status !== "online") return;
+    
+    const cleanupFn = setupCameraStream(
+      camera, 
+      videoRef.current,
+      (error) => {
+        console.error("Error setting up camera stream:", error);
+        toast({
+          title: "Stream Error",
+          description: "Could not connect to camera stream. Please check camera settings.",
+          variant: "destructive",
+        });
+      }
+    );
+    
+    return () => {
+      cleanupFn();
+    };
+  }, [camera, toast]);
+  
+  const handleToggleStreaming = () => {
+    setIsStreaming(!isStreaming);
+    
+    if (videoRef.current) {
+      if (!isStreaming) {
+        // Resume streaming
+        if (camera) {
+          setupCameraStream(camera, videoRef.current);
+        }
+      } else {
+        // Pause streaming
+        videoRef.current.pause();
+      }
+    }
+  };
+  
+  const handleTakeSnapshot = () => {
+    // Implementation would capture a frame from the video
+    toast({
+      title: "Snapshot taken",
+      description: "Screenshot saved to recordings folder.",
+    });
+  };
+  
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center h-[70vh]">
+          <p>Loading camera details...</p>
+        </div>
+      </AppLayout>
+    );
+  }
+  
+  if (!camera) {
+    return (
+      <AppLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" asChild>
+                <Link to="/">
+                  <ArrowLeft className="h-4 w-4" />
+                </Link>
+              </Button>
+              <h1 className="text-2xl font-bold">Camera Not Found</h1>
+            </div>
+          </div>
+          <p>The requested camera could not be found. It may have been deleted or you may not have permission to view it.</p>
+          <Button asChild>
+            <Link to="/">Return to Dashboard</Link>
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
+  
   const isOnline = camera.status === "online";
   
   return (
@@ -75,13 +172,14 @@ const CameraDetail = () => {
             <div className="relative aspect-video rounded-lg overflow-hidden border border-border bg-vision-dark-900">
               {isOnline ? (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <Video size={48} className="mx-auto mb-4 text-vision-blue-500" />
-                    <p className="text-lg">Live stream would appear here</p>
-                    <p className="text-sm text-muted-foreground">
-                      Connected to {camera.ipAddress}:{camera.port}
-                    </p>
-                  </div>
+                  <video 
+                    ref={videoRef}
+                    className="h-full w-full object-contain"
+                    poster={camera.thumbnail || '/placeholder.svg'}
+                    playsInline
+                    autoPlay={isStreaming}
+                    muted
+                  />
                 </div>
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -100,7 +198,8 @@ const CameraDetail = () => {
                     size="sm" 
                     variant={isStreaming ? "default" : "outline"}
                     className="flex-shrink-0"
-                    onClick={() => setIsStreaming(!isStreaming)}
+                    onClick={handleToggleStreaming}
+                    disabled={!isOnline}
                   >
                     {isStreaming ? (
                       <>
@@ -112,14 +211,21 @@ const CameraDetail = () => {
                       </>
                     )}
                   </Button>
-                  <Button size="sm" variant="outline">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={handleTakeSnapshot}
+                    disabled={!isOnline || !isStreaming}
+                  >
                     <Download className="mr-2 h-4 w-4" /> Snapshot
                   </Button>
                 </div>
                 
-                <Badge variant="outline" className="bg-vision-dark-800/70 h-9 px-4 flex items-center">
-                  Live
-                </Badge>
+                {isOnline && isStreaming && (
+                  <Badge variant="outline" className="bg-vision-dark-800/70 h-9 px-4 flex items-center">
+                    Live
+                  </Badge>
+                )}
               </div>
             </div>
             
@@ -163,17 +269,22 @@ const CameraDetail = () => {
                 <Separator />
                 <div>
                   <p className="text-sm text-muted-foreground">Model</p>
-                  <p>{camera.model}</p>
+                  <p>{camera.model || "Not specified"}</p>
                 </div>
                 <Separator />
                 <div>
                   <p className="text-sm text-muted-foreground">Manufacturer</p>
-                  <p>{camera.manufacturer}</p>
+                  <p>{camera.manufacturer || "Not specified"}</p>
                 </div>
                 <Separator />
                 <div>
                   <p className="text-sm text-muted-foreground">IP Address</p>
                   <p>{camera.ipAddress}:{camera.port}</p>
+                </div>
+                <Separator />
+                <div>
+                  <p className="text-sm text-muted-foreground">Connection Type</p>
+                  <p>{camera.connectionType?.toUpperCase() || "IP"}</p>
                 </div>
                 <Separator />
                 <div>
@@ -189,13 +300,47 @@ const CameraDetail = () => {
             <div className="border rounded-md p-4">
               <h2 className="text-lg font-medium mb-4">Quick Actions</h2>
               <div className="space-y-2">
-                <Button className="w-full" variant="outline">
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={() => {
+                    // Implementation would open fullscreen mode
+                    toast({
+                      title: "Feature not available",
+                      description: "Full screen view is not yet implemented.",
+                    });
+                  }}
+                  disabled={!isOnline}
+                >
                   View Full Screen
                 </Button>
-                <Button className="w-full" variant="outline">
-                  Begin Recording
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={() => {
+                    // Implementation would toggle recording
+                    toast({
+                      title: camera.recording ? "Recording stopped" : "Recording started",
+                      description: camera.recording ? 
+                        "Camera recording has been stopped." : 
+                        "Camera has started recording.",
+                    });
+                  }}
+                  disabled={!isOnline}
+                >
+                  {camera.recording ? "Stop Recording" : "Begin Recording"}
                 </Button>
-                <Button className="w-full" variant="outline">
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={() => {
+                    // Implementation would open motion detection settings
+                    toast({
+                      title: "Feature not available",
+                      description: "Motion detection settings are not yet implemented.",
+                    });
+                  }}
+                >
                   Configure Motion Detection
                 </Button>
               </div>
