@@ -37,11 +37,13 @@ export const useNotifications = () => {
     setNotifications(prev => [newNotification, ...prev]);
     
     // Also show a toast for real-time feedback
-    toast({
-      title: notification.title,
-      description: notification.message,
-      variant: notification.type === 'error' ? 'destructive' : 'default',
-    });
+    if (toast) {
+      toast({
+        title: notification.title,
+        description: notification.message,
+        variant: notification.type === 'error' ? 'destructive' : 'default',
+      });
+    }
     
     return newNotification;
   };

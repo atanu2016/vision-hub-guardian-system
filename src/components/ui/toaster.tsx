@@ -1,4 +1,5 @@
 
+import * as React from "react"
 import {
   Toast,
   ToastClose,
@@ -7,7 +8,7 @@ import {
   ToastTitle,
   ToastViewport,
 } from "@/components/ui/toast"
-import { createContext, useContext } from "react"
+import { createContext, useContext, useState } from "react"
 
 // Define the toast context type
 type ToastContextType = {
@@ -37,27 +38,53 @@ export const useToast = () => {
   return useContext(ToastContext)
 }
 
-// Mock implementation for toast function
+// Create the actual provider component for the toast context
 export function Toaster() {
-  const { toasts } = useToast()
+  const [toasts, setToasts] = useState<ToastContextType["toasts"]>([])
+
+  // Implement the toast function
+  const toast = ({ title, description, action, variant = "default" }: {
+    title?: string;
+    description?: string;
+    action?: React.ReactNode;
+    variant?: "default" | "destructive";
+  }) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prevToasts) => [
+      { id, title, description, action, variant },
+      ...prevToasts,
+    ])
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+      setToasts((prevToasts) => prevToasts.filter((t) => t.id !== id))
+    }, 5000)
+  }
+
+  // Create the context value
+  const contextValue = React.useMemo(() => ({ toast, toasts }), [toasts])
 
   return (
-    <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
-        return (
-          <Toast key={id} {...props}>
-            <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
-              {description && (
-                <ToastDescription>{description}</ToastDescription>
-              )}
-            </div>
-            {action}
-            <ToastClose />
-          </Toast>
-        )
-      })}
-      <ToastViewport />
-    </ToastProvider>
+    <ToastContext.Provider value={contextValue}>
+      <ToastProvider>
+        {toasts.map(function ({ id, title, description, action, ...props }) {
+          return (
+            <Toast key={id} {...props}>
+              <div className="grid gap-1">
+                {title && <ToastTitle>{title}</ToastTitle>}
+                {description && (
+                  <ToastDescription>{description}</ToastDescription>
+                )}
+              </div>
+              {action}
+              <ToastClose onClick={() => 
+                setToasts((prevToasts) => prevToasts.filter((t) => t.id !== id))
+              } />
+            </Toast>
+          )
+        })}
+        <ToastViewport />
+      </ToastProvider>
+    </ToastContext.Provider>
   )
 }

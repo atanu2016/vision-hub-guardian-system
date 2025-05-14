@@ -1,5 +1,5 @@
 
-import { Route, Routes, useNavigate } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
@@ -19,7 +19,6 @@ import Notifications from "@/pages/Notifications";
 import { Toaster } from "@/components/ui/toaster";
 import { useEffect } from "react";
 import { initializeSystem } from "@/services/apiService";
-import { toast } from "@/hooks/use-toast";
 
 function App() {
   // Initialize the system when the app starts
