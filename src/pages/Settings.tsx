@@ -20,7 +20,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
-import { Globe, Mail, Settings } from "lucide-react";
+import { Globe, Mail, Settings as SettingsIcon } from "lucide-react";
 
 const generalFormSchema = z.object({
   systemName: z.string().min(2, "System name must be at least 2 characters"),
@@ -75,7 +75,7 @@ const timezones = [
   { value: "aest", label: "AEST (Australian Eastern Standard Time)" },
 ];
 
-const Settings = () => {
+const SettingsPage = () => {
   const { toast } = useToast();
   const { addNotification } = useNotifications();
   const [isTesting, setIsTesting] = useState(false);
@@ -703,4 +703,4 @@ const Settings = () => {
   );
 };
 
-export default Settings;
+export default SettingsPage;
