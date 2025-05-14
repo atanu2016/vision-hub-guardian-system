@@ -1,4 +1,3 @@
-
 import { Camera, CameraGroup, StorageSettings } from "@/types/camera";
 
 // Base API URL - in a real implementation, this would be your actual API endpoint
@@ -225,6 +224,17 @@ export const getCameras = async (): Promise<Camera[]> => {
   }
 };
 
+// Export function to save camera data
+export const saveCamera = async (camera: Camera): Promise<Camera> => {
+  return await saveCameraToAPI(camera);
+};
+
+// Export function to delete camera
+export const deleteCamera = async (cameraId: string): Promise<void> => {
+  return await deleteCameraFromAPI(cameraId);
+};
+
+// Export the API functions that the mockData module needs
 export const saveCameraToAPI = async (camera: Camera): Promise<Camera> => {
   const method = camera.id ? 'PUT' : 'POST';
   const url = camera.id ? `/cameras/${camera.id}` : '/cameras';
@@ -310,6 +320,11 @@ export const getCameraGroupsFromAPI = async (): Promise<CameraGroup[]> => {
     console.error('Error fetching camera groups, generating from cameras:', error);
     return getFallbackCameraGroups();
   }
+};
+
+// Adding the needed export for getCameraGroups
+export const getCameraGroups = async (): Promise<CameraGroup[]> => {
+  return await getCameraGroupsFromAPI();
 };
 
 // Storage settings API functions

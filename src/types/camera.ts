@@ -1,27 +1,28 @@
 
+// Camera types
+export type CameraConnectionType = "ip" | "rtsp" | "rtmp" | "onvif";
+export type CameraStatus = "online" | "offline" | "error";
+
 export interface Camera {
   id: string;
   name: string;
+  status: CameraStatus;
   location: string;
   ipAddress: string;
   port?: number;
   username?: string;
   password?: string;
-  status: "online" | "offline";
   model?: string;
   manufacturer?: string;
-  lastSeen: string;
+  lastSeen: string; // ISO date string
   recording: boolean;
-  rtmpUrl?: string;
   thumbnail?: string;
   group?: string;
-  connectionType?: "rtmp" | "rtsp" | "ip" | "onvif";
-  motionDetection?: boolean;
+  connectionType?: CameraConnectionType;
+  rtmpUrl?: string;
   onvifPath?: string;
+  motionDetection?: boolean;
 }
-
-export type CameraConnectionType = "ip" | "rtsp" | "rtmp" | "onvif";
-export type CameraStatus = "online" | "offline";
 
 export interface CameraGroup {
   id: string;
@@ -30,17 +31,17 @@ export interface CameraGroup {
 }
 
 export interface StorageSettings {
-  type: 'local' | 'nas' | 'cloud';
+  type: "local" | "nas" | "s3";
   path?: string;
+  retentionDays: number;
+  overwriteOldest: boolean;
   nasAddress?: string;
   nasPath?: string;
   nasUsername?: string;
   nasPassword?: string;
-  cloudProvider?: 'aws' | 'azure' | 'gcp';
-  cloudRegion?: string;
-  cloudBucket?: string;
-  cloudKey?: string;
-  cloudSecret?: string;
-  retentionDays: number;
-  overwriteOldest: boolean;
+  s3Endpoint?: string;
+  s3Bucket?: string; 
+  s3AccessKey?: string;
+  s3SecretKey?: string;
+  s3Region?: string;
 }

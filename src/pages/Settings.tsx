@@ -1,123 +1,112 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import AppLayout from "@/components/layout/AppLayout";
-import SettingsMenuSection from "@/components/layout/SettingsMenuSection";
 
-type SettingsTab = "general" | "storage" | "notifications" | "security" | "advanced";
+import { useState } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
+import AppLayout from '@/components/layout/AppLayout';
+import { Button } from '@/components/ui/button';
+import { FileSpreadsheet, Link as LinkIcon, AlertTriangle, DatabaseZap, HardDrive, Bell, Shield } from 'lucide-react';
+import SettingsMenuSection from '@/components/layout/SettingsMenuSection';
 
 const Settings = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const path = location.pathname;
+  const [activeSection, setActiveSection] = useState('storage');
 
-  // Determine the active tab based on the URL path
-  const getActiveTab = (): SettingsTab => {
-    if (path.includes("/storage")) return "storage";
-    if (path.includes("/notifications")) return "notifications";
-    if (path.includes("/security")) return "security";
-    if (path.includes("/advanced")) return "advanced";
-    return "general";
-  };
-
-  const activeTab = getActiveTab();
-
-  // Handle tab change
-  const handleTabChange = (value: string) => {
-    switch (value) {
-      case "storage":
-        navigate("/settings/storage");
-        break;
-      case "notifications":
-        navigate("/settings/alerts");
-        break;
-      case "security":
-        navigate("/profile-settings");
-        break;
-      case "advanced":
-        navigate("/settings/advanced");
-        break;
-      default:
-        navigate("/settings");
-    }
+  // Function to determine if a path is active
+  const isActive = (path: string) => {
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground">
-            Manage your system settings and preferences.
-          </p>
-        </div>
-
-        <Tabs defaultValue={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="storage">Storage</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
-            <TabsTrigger value="advanced">Advanced</TabsTrigger>
-          </TabsList>
-        </Tabs>
-
-        {activeTab === "general" && (
-          <div className="space-y-6">
-            <SettingsMenuSection
-              title="System Settings"
-              description="Configure general system settings"
-              items={[
-                {
-                  title: "Recording Settings",
-                  description: "Configure recording quality and retention",
-                  href: "/settings/recordings",
-                },
-                {
-                  title: "Alert Settings",
-                  description: "Configure notifications and alerts",
-                  href: "/settings/alerts",
-                },
-              ]}
-            />
-
-            <SettingsMenuSection
-              title="User Interface"
-              description="Customize the user interface"
-              items={[
-                {
-                  title: "Appearance",
-                  description: "Customize the theme and layout",
-                  href: "#",
-                },
-                {
-                  title: "Dashboard",
-                  description: "Configure dashboard widgets and layout",
-                  href: "#",
-                },
-              ]}
-            />
-
-            <SettingsMenuSection
-              title="System Information"
-              description="View system information and status"
-              items={[
-                {
-                  title: "Version",
-                  description: "Vision Hub v1.0.0",
-                  href: "#",
-                  disabled: true,
-                },
-                {
-                  title: "License",
-                  description: "Standard License - Expires in 365 days",
-                  href: "#",
-                  disabled: true,
-                },
-              ]}
-            />
+      <div className="container px-0 mx-auto">
+        <div className="grid grid-cols-12 gap-4 xl:gap-8">
+          {/* Settings sidebar */}
+          <div className="col-span-12 md:col-span-4 lg:col-span-3 border-r">
+            <nav className="sticky top-4 space-y-6 py-6 pr-4">
+              <div>
+                <h3 className="font-semibold text-lg mb-2">Settings</h3>
+                <p className="text-sm text-muted-foreground">
+                  Manage your system settings and preferences
+                </p>
+              </div>
+              
+              {/* Storage Section */}
+              <SettingsMenuSection 
+                isActive={isActive} 
+                title="Storage"
+                description="Configure video storage options"
+                items={[
+                  {
+                    title: "Storage Settings",
+                    description: "Configure where recordings are saved",
+                    href: "/settings/storage",
+                    icon: <HardDrive className="w-4 h-4" />
+                  },
+                  {
+                    title: "Recordings",
+                    description: "Manage recorded video footage",
+                    href: "/settings/recordings",
+                    icon: <FileSpreadsheet className="w-4 h-4" />
+                  }
+                ]}
+              />
+              
+              {/* Notifications Section */}
+              <SettingsMenuSection 
+                isActive={isActive}
+                title="Notifications"
+                description="Configure alert notifications"
+                items={[
+                  {
+                    title: "Alerts",
+                    description: "Set up email and push notifications",
+                    href: "/settings/alerts",
+                    icon: <Bell className="w-4 h-4" />
+                  },
+                  {
+                    title: "Webhooks",
+                    description: "Connect to external services",
+                    href: "/settings/webhooks",
+                    icon: <LinkIcon className="w-4 h-4" />
+                  }
+                ]}
+              />
+              
+              {/* System Section */}
+              <SettingsMenuSection 
+                isActive={isActive}
+                title="System"
+                description="System-wide settings and configurations"
+                items={[
+                  {
+                    title: "Advanced Settings",
+                    description: "Configure security and advanced options",
+                    href: "/settings/advanced",
+                    icon: <Shield className="w-4 h-4" />
+                  },
+                  {
+                    title: "Database",
+                    description: "Configure database connection",
+                    href: "/settings/database",
+                    icon: <DatabaseZap className="w-4 h-4" />,
+                    disabled: false
+                  },
+                  {
+                    title: "Logs",
+                    description: "View system logs and debug information",
+                    href: "/settings/logs",
+                    icon: <AlertTriangle className="w-4 h-4" />,
+                    disabled: true
+                  }
+                ]}
+              />
+            </nav>
           </div>
-        )}
+          
+          {/* Settings content */}
+          <div className="col-span-12 md:col-span-8 lg:col-span-9 p-6">
+            <Outlet />
+          </div>
+        </div>
       </div>
     </AppLayout>
   );
