@@ -2,7 +2,6 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Bell,
   LogOut,
   PlusCircle,
   Search,
@@ -18,16 +17,38 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useState } from "react";
+import AddCameraModal from "@/components/cameras/AddCameraModal";
+import { Camera } from "@/types/camera";
+import { getCameras, saveCameras } from "@/data/mockData";
+import { useToast } from "@/hooks/use-toast";
+import { NotificationDropdown } from "./NotificationDropdown";
+import { useNotifications } from "@/hooks/useNotifications";
 
 const TopBar = () => {
   const { user, profile, signOut, isAdmin } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [cameras, setCameras] = useState<Camera[]>(getCameras());
+  const { 
+    notifications, 
+    markAsRead, 
+    markAllAsRead, 
+    clearAll, 
+    addNotification 
+  } = useNotifications();
+  
+  // Generate groups dynamically based on camera data
+  const existingGroups = Array.from(new Set(cameras.map(c => c.group || "Ungrouped")))
+    .filter(group => group !== "Ungrouped");
   
   const getInitials = (name?: string | null) => {
     if (!name) return 'U';
@@ -39,6 +60,28 @@ const TopBar = () => {
       .substring(0, 2);
   };
 
+  const handleAddCamera = (newCamera: Omit<Camera, "id">) => {
+    // Generate a unique ID
+    const camera: Camera = {
+      ...newCamera,
+      id: `cam-${Date.now()}`,
+    };
+    
+    // Add to cameras list
+    const updatedCameras = [...cameras, camera];
+    setCameras(updatedCameras);
+    
+    // Save to storage
+    saveCameras(updatedCameras);
+    
+    // Add notification
+    addNotification({
+      title: "Camera Added",
+      message: `${camera.name} has been added successfully`,
+      type: "success"
+    });
+  };
+
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16 items-center px-4 md:px-6 gap-4">
@@ -47,10 +90,12 @@ const TopBar = () => {
         </div>
         
         <div className="hidden md:flex md:w-56 items-center gap-2">
-          <div className="bg-vision-blue-500 p-1.5 rounded">
-            <Bell size={20} className="text-white" />
-          </div>
-          <h2 className="text-lg font-semibold">Vision Hub</h2>
+          <Link to="/" className="flex items-center gap-2">
+            <div className="bg-vision-blue-500 p-1.5 rounded">
+              <User size={20} className="text-white" />
+            </div>
+            <h2 className="text-lg font-semibold">Vision Hub</h2>
+          </Link>
         </div>
 
         <div className="flex-1">
@@ -74,14 +119,21 @@ const TopBar = () => {
             <ThemeToggle />
           </div>
           
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center">3</Badge>
-          </Button>
+          <NotificationDropdown
+            notifications={notifications}
+            onMarkAsRead={markAsRead}
+            onMarkAllAsRead={markAllAsRead}
+            onClearAll={clearAll}
+            onViewAll={() => navigate('/notifications')}
+          />
           
           <Separator orientation="vertical" className="hidden md:block h-8" />
           
-          <Button variant="outline" className="hidden lg:flex">
+          <Button 
+            variant="outline" 
+            className="flex"
+            onClick={() => setIsAddModalOpen(true)}
+          >
             <PlusCircle className="mr-2 h-4 w-4" /> Add Camera
           </Button>
           
@@ -151,6 +203,13 @@ const TopBar = () => {
           )}
         </div>
       </div>
+      
+      <AddCameraModal 
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onAdd={handleAddCamera}
+        existingGroups={existingGroups}
+      />
     </header>
   );
 };

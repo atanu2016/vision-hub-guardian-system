@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Camera, Cpu, HardDrive, AlertTriangle } from "lucide-react";
+import { Camera, Cpu, HardDrive, AlertTriangle, Filter } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -9,10 +9,23 @@ import AppLayout from "@/components/layout/AppLayout";
 import CameraGrid from "@/components/cameras/CameraGrid";
 import StatsCard from "@/components/dashboard/StatsCard";
 import { getCameras, getSystemStats } from "@/data/mockData";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Camera as CameraType } from "@/types/camera";
 
 const Dashboard = () => {
   const [stats, setStats] = useState(getSystemStats());
-  const [cameras, setCameras] = useState(getCameras());
+  const [cameras, setCameras] = useState<CameraType[]>(getCameras());
+  const [sortOption, setSortOption] = useState("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [groupBy, setGroupBy] = useState<"none" | "group" | "location">("none");
   
   // Refresh data periodically
   useEffect(() => {
@@ -32,6 +45,95 @@ const Dashboard = () => {
   const onlineCameras = cameras.filter(camera => camera.status === "online");
   const offlineCameras = cameras.filter(camera => camera.status === "offline");
   const recordingCameras = cameras.filter(camera => camera.recording);
+
+  // Sort cameras based on selected option
+  const sortCameras = (camerasToSort: CameraType[]) => {
+    return [...camerasToSort].sort((a, b) => {
+      let valueA, valueB;
+      
+      switch (sortOption) {
+        case "name":
+          valueA = a.name.toLowerCase();
+          valueB = b.name.toLowerCase();
+          break;
+        case "location":
+          valueA = a.location.toLowerCase();
+          valueB = b.location.toLowerCase();
+          break;
+        case "status":
+          valueA = a.status;
+          valueB = b.status;
+          break;
+        case "lastSeen":
+          valueA = a.lastSeen || "";
+          valueB = b.lastSeen || "";
+          break;
+        default:
+          valueA = a.name.toLowerCase();
+          valueB = b.name.toLowerCase();
+      }
+      
+      if (sortOrder === "asc") {
+        return valueA < valueB ? -1 : valueA > valueB ? 1 : 0;
+      } else {
+        return valueA > valueB ? -1 : valueA < valueB ? 1 : 0;
+      }
+    });
+  };
+
+  // Group cameras if groupBy is selected
+  const groupCameras = (camerasToGroup: CameraType[]) => {
+    if (groupBy === "none") {
+      return [{
+        id: "all",
+        name: "All Cameras",
+        cameras: sortCameras(camerasToGroup)
+      }];
+    }
+    
+    const grouped = camerasToGroup.reduce((acc, camera) => {
+      const key = groupBy === "group" 
+        ? (camera.group || "Ungrouped") 
+        : camera.location;
+        
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      
+      acc[key].push(camera);
+      return acc;
+    }, {} as Record<string, CameraType[]>);
+    
+    return Object.entries(grouped).map(([name, groupCameras]) => ({
+      id: name,
+      name,
+      cameras: sortCameras(groupCameras)
+    }));
+  };
+
+  // Get camera list based on tab and apply sorting/grouping
+  const getCameraList = (tabValue: string) => {
+    let cameraList;
+    
+    switch (tabValue) {
+      case "all":
+        cameraList = cameras;
+        break;
+      case "online":
+        cameraList = onlineCameras;
+        break;
+      case "offline":
+        cameraList = offlineCameras;
+        break;
+      case "recording":
+        cameraList = recordingCameras;
+        break;
+      default:
+        cameraList = cameras;
+    }
+    
+    return groupCameras(cameraList);
+  };
   
   return (
     <AppLayout>
@@ -122,23 +224,86 @@ const Dashboard = () => {
 
         <div className="space-y-4">
           <Tabs defaultValue="all" className="w-full">
-            <TabsList>
-              <TabsTrigger value="all">All Cameras</TabsTrigger>
-              <TabsTrigger value="online">Online</TabsTrigger>
-              <TabsTrigger value="offline">Offline</TabsTrigger>
-              <TabsTrigger value="recording">Recording</TabsTrigger>
-            </TabsList>
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-4">
+              <TabsList>
+                <TabsTrigger value="all">All Cameras</TabsTrigger>
+                <TabsTrigger value="online">Online</TabsTrigger>
+                <TabsTrigger value="offline">Offline</TabsTrigger>
+                <TabsTrigger value="recording">Recording</TabsTrigger>
+              </TabsList>
+              
+              <div className="flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <Filter className="h-4 w-4" />
+                      Sort & Group
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56">
+                    <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+                    <DropdownMenuRadioGroup value={sortOption} onValueChange={setSortOption}>
+                      <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="location">Location</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="status">Status</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="lastSeen">Last Seen</DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                    
+                    <DropdownMenuSeparator />
+                    
+                    <DropdownMenuLabel>Order</DropdownMenuLabel>
+                    <DropdownMenuRadioGroup value={sortOrder} onValueChange={(value) => setSortOrder(value as "asc" | "desc")}>
+                      <DropdownMenuRadioItem value="asc">Ascending</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="desc">Descending</DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                    
+                    <DropdownMenuSeparator />
+                    
+                    <DropdownMenuLabel>Group by</DropdownMenuLabel>
+                    <DropdownMenuRadioGroup value={groupBy} onValueChange={(value) => setGroupBy(value as "none" | "group" | "location")}>
+                      <DropdownMenuRadioItem value="none">No Grouping</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="group">Camera Group</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="location">Location</DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+            
             <TabsContent value="all" className="mt-4">
-              <CameraGrid cameras={cameras} />
+              {getCameraList("all").map(group => (
+                <div key={group.id} className="mb-8">
+                  {groupBy !== "none" && <h3 className="text-xl font-semibold mb-4">{group.name}</h3>}
+                  <CameraGrid cameras={group.cameras} />
+                </div>
+              ))}
             </TabsContent>
+            
             <TabsContent value="online" className="mt-4">
-              <CameraGrid cameras={onlineCameras} />
+              {getCameraList("online").map(group => (
+                <div key={group.id} className="mb-8">
+                  {groupBy !== "none" && <h3 className="text-xl font-semibold mb-4">{group.name}</h3>}
+                  <CameraGrid cameras={group.cameras} />
+                </div>
+              ))}
             </TabsContent>
+            
             <TabsContent value="offline" className="mt-4">
-              <CameraGrid cameras={offlineCameras} />
+              {getCameraList("offline").map(group => (
+                <div key={group.id} className="mb-8">
+                  {groupBy !== "none" && <h3 className="text-xl font-semibold mb-4">{group.name}</h3>}
+                  <CameraGrid cameras={group.cameras} />
+                </div>
+              ))}
             </TabsContent>
+            
             <TabsContent value="recording" className="mt-4">
-              <CameraGrid cameras={recordingCameras} />
+              {getCameraList("recording").map(group => (
+                <div key={group.id} className="mb-8">
+                  {groupBy !== "none" && <h3 className="text-xl font-semibold mb-4">{group.name}</h3>}
+                  <CameraGrid cameras={group.cameras} />
+                </div>
+              ))}
             </TabsContent>
           </Tabs>
         </div>

@@ -1,8 +1,23 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -10,130 +25,125 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import AppLayout from "@/components/layout/AppLayout";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
-import { getStorageSettings, saveStorageSettings } from "@/data/mockData";
-import { StorageSettings as StorageSettingsType } from "@/types/camera";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import AppLayout from "@/components/layout/AppLayout";
+import DatabaseSettings from "@/components/settings/DatabaseSettings";
+import { useNotifications } from "@/hooks/useNotifications";
+
+const localStorageSchema = z.object({
+  type: z.literal("local"),
+  path: z.string().min(1, "Storage path is required"),
+  retentionDays: z.coerce.number().int().min(1, "Retention days must be at least 1"),
+  overwriteOldest: z.boolean(),
+});
+
+const nasStorageSchema = z.object({
+  type: z.literal("nas"),
+  nasAddress: z.string()
+    .min(1, "NAS address is required")
+    .refine(val => {
+      // Check for valid IP or hostname format
+      const ipRegex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+      const hostnameRegex = /^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$/;
+      return ipRegex.test(val) || hostnameRegex.test(val);
+    }, "Please enter a valid IP address or hostname"),
+  nasPath: z.string().min(1, "NAS path is required"),
+  nasUsername: z.string().min(1, "Username is required"),
+  nasPassword: z.string().min(1, "Password is required"),
+  retentionDays: z.coerce.number().int().min(1, "Retention days must be at least 1"),
+  overwriteOldest: z.boolean(),
+});
+
+const cloudStorageSchema = z.object({
+  type: z.literal("cloud"),
+  cloudProvider: z.enum(["aws", "azure", "gcp"]),
+  cloudRegion: z.string().min(1, "Region is required"),
+  cloudBucket: z.string().min(1, "Bucket name is required"),
+  cloudKey: z.string().min(1, "Access key is required"),
+  cloudSecret: z.string().min(1, "Secret key is required"),
+  retentionDays: z.coerce.number().int().min(1, "Retention days must be at least 1"),
+  overwriteOldest: z.boolean(),
+});
+
+const storageSchema = z.discriminatedUnion("type", [
+  localStorageSchema,
+  nasStorageSchema,
+  cloudStorageSchema
+]);
+
+type StorageFormValues = z.infer<typeof storageSchema>;
 
 const StorageSettings = () => {
   const { toast } = useToast();
-  const [settings, setSettings] = useState<StorageSettingsType>(() => {
-    return getStorageSettings();
-  });
-
-  // Local form state
-  const [formData, setFormData] = useState({
-    type: settings.type,
-    path: settings.path || "/recordings",
-    nasAddress: settings.nasAddress || "",
-    nasUsername: settings.nasUsername || "",
-    nasPassword: settings.nasPassword || "",
-    cloudProvider: settings.cloudProvider || "aws",
-    cloudKey: settings.cloudKey || "",
-    cloudSecret: settings.cloudSecret || "",
-    cloudBucket: settings.cloudBucket || "",
-    cloudRegion: settings.cloudRegion || "us-east-1",
-    overwriteOldest: true,
-    retentionDays: "30"
+  const { addNotification } = useNotifications();
+  const [activeTab, setActiveTab] = useState("local");
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Get initial form values from localStorage or use defaults
+  const getInitialValues = () => {
+    const savedSettings = localStorage.getItem("vision-hub-storage-settings");
+    if (savedSettings) {
+      try {
+        const parsed = JSON.parse(savedSettings);
+        setActiveTab(parsed.type);
+        return parsed;
+      } catch (error) {
+        console.error("Failed to parse saved storage settings:", error);
+      }
+    }
+    
+    return {
+      type: "local",
+      path: "/var/lib/vision-hub/recordings",
+      retentionDays: 30,
+      overwriteOldest: true,
+    };
+  };
+  
+  const form = useForm<StorageFormValues>({
+    resolver: zodResolver(storageSchema),
+    defaultValues: getInitialValues(),
   });
   
-  // Validation state
-  const [validationErrors, setValidationErrors] = useState<{
-    nasAddress?: string;
-    cloudCredentials?: string;
-    path?: string;
-  }>({});
+  const watchStorageType = form.watch("type");
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  // Update form values when tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
     
-    // Clear validation error when user starts typing
-    if (name in validationErrors) {
-      setValidationErrors(prev => {
-        const newErrors = {...prev};
-        delete newErrors[name as keyof typeof validationErrors];
-        return newErrors;
-      });
-    }
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-    // Clear validation errors when changing type
-    if (name === 'type') {
-      setValidationErrors({});
-    }
-  };
-
-  const handleSwitchChange = (name: string, checked: boolean) => {
-    setFormData(prev => ({ ...prev, [name]: checked }));
-  };
-
-  const validateSettings = () => {
-    const newErrors: {
-      nasAddress?: string;
-      cloudCredentials?: string;
-      path?: string;
-    } = {};
+    // Update form type field
+    form.setValue("type", value as "local" | "nas" | "cloud");
     
-    if (formData.type === 'local') {
-      if (!formData.path) {
-        newErrors.path = "Local path is required";
-      }
-    } else if (formData.type === 'nas') {
-      if (!formData.nasAddress) {
-        newErrors.nasAddress = "NAS server address is required";
-      } else if (!formData.nasAddress.includes(':') && !formData.nasAddress.includes('/')) {
-        newErrors.nasAddress = "Invalid NAS address format. Expected format: server:/path or server/path";
-      }
-    } else if (formData.type === 'cloud') {
-      const hasAllCloudFields = formData.cloudKey && formData.cloudSecret && formData.cloudBucket;
-      if (!hasAllCloudFields) {
-        newErrors.cloudCredentials = "Cloud credentials and bucket name are required";
-      }
-    }
-    
-    setValidationErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    // Reset form validation state
+    form.clearErrors();
   };
 
-  const handleSaveSettings = () => {
-    if (!validateSettings()) {
+  const onSubmit = (data: StorageFormValues) => {
+    setIsSaving(true);
+    
+    // Simulate API call delay
+    setTimeout(() => {
+      // Store in localStorage
+      localStorage.setItem("vision-hub-storage-settings", JSON.stringify(data));
+      
+      setIsSaving(false);
+      
       toast({
-        title: "Validation Error",
-        description: "Please correct the errors before saving",
-        variant: "destructive",
+        title: "Storage Settings Saved",
+        description: "Your storage configuration has been updated",
       });
-      return;
-    }
-
-    // Save settings
-    const newSettings: StorageSettingsType = {
-      type: formData.type,
-      path: formData.path,
-      nasAddress: formData.nasAddress,
-      nasUsername: formData.nasUsername,
-      nasPassword: formData.nasPassword,
-      cloudProvider: formData.cloudProvider,
-      cloudKey: formData.cloudKey,
-      cloudSecret: formData.cloudSecret,
-      cloudBucket: formData.cloudBucket,
-      cloudRegion: formData.cloudRegion,
-    };
-
-    setSettings(newSettings);
-    saveStorageSettings(newSettings);
-
-    toast({
-      title: "Settings Saved",
-      description: "Storage settings have been updated successfully"
-    });
+      
+      addNotification({
+        title: "Storage Configuration Updated",
+        message: `Storage configuration updated to use ${
+          data.type === "local" ? "local storage" : 
+          data.type === "nas" ? "NAS storage" : 
+          "cloud storage"
+        }`,
+        type: "success"
+      });
+    }, 1000);
   };
 
   return (
@@ -142,222 +152,335 @@ const StorageSettings = () => {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Storage Settings</h1>
           <p className="text-muted-foreground">
-            Configure how and where camera recordings are stored
+            Configure how and where your recordings and data are stored
           </p>
         </div>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>Storage Location</CardTitle>
-            <CardDescription>
-              Choose where to store your camera recordings
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="storageType">Storage Type</Label>
-              <Select 
-                value={formData.type} 
-                onValueChange={(value) => handleSelectChange("type", value)}
-              >
-                <SelectTrigger id="storageType">
-                  <SelectValue placeholder="Select storage location" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="local">Local Drive</SelectItem>
-                  <SelectItem value="nas">Network Attached Storage (NAS)</SelectItem>
-                  <SelectItem value="cloud">Cloud Storage</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {formData.type === "local" && (
-              <div className="space-y-2">
-                <Label htmlFor="localPath">Local Path</Label>
-                <Input 
-                  id="localPath"
-                  name="path"
-                  value={formData.path}
-                  onChange={handleInputChange}
-                  placeholder="/recordings"
-                  className={validationErrors.path ? "border-destructive" : ""}
-                />
-                {validationErrors.path && (
-                  <p className="text-sm text-destructive">{validationErrors.path}</p>
-                )}
-              </div>
-            )}
-            
-            {formData.type === "nas" && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nasAddress">NAS Server Address</Label>
-                  <Input 
-                    id="nasAddress"
-                    name="nasAddress"
-                    value={formData.nasAddress}
-                    onChange={handleInputChange}
-                    placeholder="192.168.1.100:/share"
-                    className={validationErrors.nasAddress ? "border-destructive" : ""}
-                  />
-                  {validationErrors.nasAddress && (
-                    <p className="text-sm text-destructive">{validationErrors.nasAddress}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    Format: server:/path or server/path (e.g., 192.168.1.100:/share)
-                  </p>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="nasUsername">Username</Label>
-                    <Input 
-                      id="nasUsername"
-                      name="nasUsername"
-                      value={formData.nasUsername}
-                      onChange={handleInputChange}
-                      placeholder="username"
-                    />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Storage Usage</CardTitle>
+                <CardDescription>
+                  Current usage of your storage
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="text-sm font-medium">Recordings</div>
+                      <div className="text-sm text-muted-foreground">80% (800GB / 1TB)</div>
+                    </div>
+                    <Progress value={80} className="h-2" />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="nasPassword">Password</Label>
-                    <Input 
-                      id="nasPassword"
-                      name="nasPassword"
-                      type="password"
-                      value={formData.nasPassword}
-                      onChange={handleInputChange}
-                      placeholder="password"
-                    />
+                  
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="text-sm font-medium">Snapshots</div>
+                      <div className="text-sm text-muted-foreground">35% (35GB / 100GB)</div>
+                    </div>
+                    <Progress value={35} className="h-2" />
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="text-sm font-medium">Configuration</div>
+                      <div className="text-sm text-muted-foreground">10% (1GB / 10GB)</div>
+                    </div>
+                    <Progress value={10} className="h-2" />
+                  </div>
+                  
+                  <div className="pt-2">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm text-muted-foreground">Est. Time Remaining</span>
+                        <span className="text-lg font-medium">14 days</span>
+                      </div>
+                      
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm text-muted-foreground">Auto Cleanup</span>
+                        <span className="text-lg font-medium">Enabled</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-            
-            {formData.type === "cloud" && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="cloudProvider">Cloud Provider</Label>
-                  <Select 
-                    value={formData.cloudProvider} 
-                    onValueChange={(value) => handleSelectChange("cloudProvider", value)}
-                  >
-                    <SelectTrigger id="cloudProvider">
-                      <SelectValue placeholder="Select cloud provider" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="aws">Amazon S3</SelectItem>
-                      <SelectItem value="google">Google Cloud Storage</SelectItem>
-                      <SelectItem value="azure">Azure Blob Storage</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="cloudRegion">Region</Label>
-                  <Select 
-                    value={formData.cloudRegion} 
-                    onValueChange={(value) => handleSelectChange("cloudRegion", value)}
-                  >
-                    <SelectTrigger id="cloudRegion">
-                      <SelectValue placeholder="Select region" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="us-east-1">US East (N. Virginia)</SelectItem>
-                      <SelectItem value="us-west-1">US West (N. California)</SelectItem>
-                      <SelectItem value="eu-west-1">EU (Ireland)</SelectItem>
-                      <SelectItem value="ap-southeast-1">Asia Pacific (Singapore)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="cloudBucket">Bucket Name</Label>
-                  <Input 
-                    id="cloudBucket"
-                    name="cloudBucket"
-                    value={formData.cloudBucket}
-                    onChange={handleInputChange}
-                    placeholder="my-recordings-bucket"
-                    className={validationErrors.cloudCredentials ? "border-destructive" : ""}
-                  />
-                </div>
-                
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="cloudKey">API Key</Label>
-                    <Input 
-                      id="cloudKey"
-                      name="cloudKey"
-                      value={formData.cloudKey}
-                      onChange={handleInputChange}
-                      placeholder="AKIAIOSFODNN7EXAMPLE"
-                      className={validationErrors.cloudCredentials ? "border-destructive" : ""}
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Storage Configuration</CardTitle>
+                <CardDescription>
+                  Configure where recordings and data will be stored
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Storage Type</FormLabel>
+                          <Tabs 
+                            defaultValue={activeTab} 
+                            value={activeTab} 
+                            onValueChange={handleTabChange}
+                            className="w-full"
+                          >
+                            <TabsList className="grid w-full grid-cols-3">
+                              <TabsTrigger value="local">Local</TabsTrigger>
+                              <TabsTrigger value="nas">NAS</TabsTrigger>
+                              <TabsTrigger value="cloud">Cloud</TabsTrigger>
+                            </TabsList>
+                            
+                            <TabsContent value="local" className="pt-4 space-y-4">
+                              <FormField
+                                control={form.control}
+                                name="path"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Storage Path</FormLabel>
+                                    <FormControl>
+                                      <Input {...field} />
+                                    </FormControl>
+                                    <FormDescription>
+                                      Path to local directory where recordings will be stored
+                                    </FormDescription>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </TabsContent>
+                            
+                            <TabsContent value="nas" className="pt-4 space-y-4">
+                              <FormField
+                                control={form.control}
+                                name="nasAddress"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>NAS Address</FormLabel>
+                                    <FormControl>
+                                      <Input {...field} placeholder="192.168.1.100 or nas.local" />
+                                    </FormControl>
+                                    <FormDescription>
+                                      IP address or hostname of the NAS device
+                                    </FormDescription>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              <FormField
+                                control={form.control}
+                                name="nasPath"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>NAS Share Path</FormLabel>
+                                    <FormControl>
+                                      <Input {...field} placeholder="/recordings or \\recordings" />
+                                    </FormControl>
+                                    <FormDescription>
+                                      Path to the shared folder on the NAS
+                                    </FormDescription>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField
+                                  control={form.control}
+                                  name="nasUsername"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>NAS Username</FormLabel>
+                                      <FormControl>
+                                        <Input {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                
+                                <FormField
+                                  control={form.control}
+                                  name="nasPassword"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>NAS Password</FormLabel>
+                                      <FormControl>
+                                        <Input type="password" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+                            </TabsContent>
+                            
+                            <TabsContent value="cloud" className="pt-4 space-y-4">
+                              <FormField
+                                control={form.control}
+                                name="cloudProvider"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Cloud Provider</FormLabel>
+                                    <Select
+                                      onValueChange={field.onChange}
+                                      defaultValue={field.value}
+                                      value={field.value}
+                                    >
+                                      <FormControl>
+                                        <SelectTrigger>
+                                          <SelectValue placeholder="Select a cloud provider" />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        <SelectItem value="aws">AWS S3</SelectItem>
+                                        <SelectItem value="azure">Azure Blob Storage</SelectItem>
+                                        <SelectItem value="gcp">Google Cloud Storage</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                    <FormDescription>
+                                      Select your cloud storage provider
+                                    </FormDescription>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              <FormField
+                                control={form.control}
+                                name="cloudRegion"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Region</FormLabel>
+                                    <FormControl>
+                                      <Input {...field} placeholder="us-east-1, us-central1, etc." />
+                                    </FormControl>
+                                    <FormDescription>
+                                      Cloud region where storage is located
+                                    </FormDescription>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              <FormField
+                                control={form.control}
+                                name="cloudBucket"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Bucket Name</FormLabel>
+                                    <FormControl>
+                                      <Input {...field} placeholder="my-vision-hub-recordings" />
+                                    </FormControl>
+                                    <FormDescription>
+                                      Name of the bucket/container for recordings
+                                    </FormDescription>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              <FormField
+                                control={form.control}
+                                name="cloudKey"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Access Key/ID</FormLabel>
+                                    <FormControl>
+                                      <Input {...field} />
+                                    </FormControl>
+                                    <FormDescription>
+                                      Your cloud provider access key or client ID
+                                    </FormDescription>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              <FormField
+                                control={form.control}
+                                name="cloudSecret"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Secret Key</FormLabel>
+                                    <FormControl>
+                                      <Input type="password" {...field} />
+                                    </FormControl>
+                                    <FormDescription>
+                                      Your cloud provider secret key
+                                    </FormDescription>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </TabsContent>
+                          </Tabs>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cloudSecret">API Secret</Label>
-                    <Input 
-                      id="cloudSecret"
-                      name="cloudSecret"
-                      type="password"
-                      value={formData.cloudSecret}
-                      onChange={handleInputChange}
-                      placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-                      className={validationErrors.cloudCredentials ? "border-destructive" : ""}
+                    
+                    <FormField
+                      control={form.control}
+                      name="retentionDays"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Retention Period (Days)</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            Number of days to keep recordings before automatic deletion
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                </div>
-                
-                {validationErrors.cloudCredentials && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      {validationErrors.cloudCredentials}
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </div>
-            )}
-            
-            <Separator />
-            
-            <div className="space-y-2">
-              <Label htmlFor="retentionDays">Retention Period (Days)</Label>
-              <Input 
-                id="retentionDays"
-                name="retentionDays"
-                type="number" 
-                value={formData.retentionDays}
-                onChange={handleInputChange}
-                min="1"
-              />
-              <p className="text-xs text-muted-foreground">
-                Recordings older than this will be automatically deleted
-              </p>
-            </div>
-            
-            <div className="flex items-center justify-between space-y-0">
-              <div className="space-y-0.5">
-                <Label htmlFor="overwriteOldest">Overwrite Oldest Recordings</Label>
-                <p className="text-sm text-muted-foreground">
-                  When storage is full, overwrite oldest recordings
-                </p>
-              </div>
-              <Switch 
-                id="overwriteOldest" 
-                checked={formData.overwriteOldest}
-                onCheckedChange={(checked) => handleSwitchChange("overwriteOldest", checked)}
-              />
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-end">
-            <Button variant="outline" className="mr-2">
-              Cancel
-            </Button>
-            <Button onClick={handleSaveSettings}>Save Changes</Button>
-          </CardFooter>
-        </Card>
+                    
+                    <FormField
+                      control={form.control}
+                      name="overwriteOldest"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                          <div className="space-y-0.5">
+                            <FormLabel>Overwrite Oldest Recordings</FormLabel>
+                            <FormDescription>
+                              When storage is full, automatically delete oldest recordings
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Button type="submit" disabled={isSaving}>
+                      {isSaving ? "Saving..." : "Save Storage Settings"}
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+        
+        <div>
+          <h2 className="text-xl font-bold mb-4">Database Configuration</h2>
+          <DatabaseSettings />
+        </div>
       </div>
     </AppLayout>
   );
