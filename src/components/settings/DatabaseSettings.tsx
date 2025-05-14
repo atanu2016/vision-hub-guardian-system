@@ -29,20 +29,40 @@ const DatabaseSettings = () => {
         
         if (error) throw error;
         
-        // Get table count from postgres system tables
-        const { data: tablesData, error: tablesError } = await supabase.rpc('is_admin');
+        // Check if we're admin and get table count
+        const { data: isAdmin } = await supabase.rpc('is_admin');
         
+        // Get approximate table count from a system query
         let tableCount = 6; // Default value
+        
+        // Using a query that works within Supabase permissions
+        // Instead of querying information_schema directly
         try {
-          // Get table count by performing a query to the database
-          const { count, error: countError } = await supabase
-            .from('information_schema.tables')
-            .select('*', { count: 'exact', head: true })
-            .eq('table_schema', 'public');
-            
-          if (!countError) {
-            tableCount = count || 6;
-          }
+          // We'll count the tables we know about from our schema
+          const tables = [
+            'cameras', 
+            'profiles', 
+            'storage_settings', 
+            'system_logs', 
+            'system_stats', 
+            'webhooks', 
+            'recording_settings', 
+            'camera_recording_status', 
+            'alert_settings',
+            'advanced_settings'
+          ];
+          
+          // Use Promise.all to check if each table exists
+          const tableChecks = await Promise.all(
+            tables.map(table => 
+              supabase.from(table).select('id', { count: 'exact', head: true })
+                .then(result => result.count !== null)
+                .catch(() => false)
+            )
+          );
+          
+          // Count how many tables actually exist
+          tableCount = tableChecks.filter(exists => exists).length;
         } catch (countError) {
           console.error('Error getting table count:', countError);
         }
@@ -63,8 +83,7 @@ const DatabaseSettings = () => {
         }));
         toast({
           title: "Connection Error",
-          description: "Could not connect to database.",
-          variant: "destructive"
+          description: "Could not connect to database."
         });
       } finally {
         setLoading(false);

@@ -1,3 +1,3 @@
 
-// Export from the hooks implementation
+// Re-export from the hooks implementation
 export { useToast, toast } from "@/hooks/use-toast";
