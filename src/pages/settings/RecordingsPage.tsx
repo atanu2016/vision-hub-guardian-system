@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import { getCameras } from "@/services/apiService";
 import { Camera } from "@/types/camera";
 import { getRecordingSettings, saveRecordingSettings, saveCameraRecordingStatus } from "@/services/apiService";
@@ -51,8 +50,10 @@ const RecordingsPage = () => {
         setRecordingSchedule(settings);
       } catch (error) {
         console.error("Failed to load data:", error);
-        toast("Error", {
-          description: "Failed to load recording settings"
+        toast({
+          title: "Error",
+          description: "Failed to load recording settings",
+          variant: "destructive"
         });
       } finally {
         setLoading(false);
@@ -71,8 +72,10 @@ const RecordingsPage = () => {
       
     } catch (error) {
       console.error("Failed to save settings:", error);
-      toast("Error", {
-        description: "Failed to save recording settings"
+      toast({
+        title: "Error",
+        description: "Failed to save recording settings",
+        variant: "destructive"
       });
     } finally {
       setSaving(false);
@@ -90,14 +93,17 @@ const RecordingsPage = () => {
           c.id === camera.id ? { ...c, recording: !c.recording } : c
         ));
         
-        toast("Camera Updated", {
+        toast({
+          title: "Camera Updated",
           description: `Recording ${!camera.recording ? 'enabled' : 'disabled'} for ${camera.name}`
         });
       }
     } catch (error) {
       console.error("Failed to update camera recording status:", error);
-      toast("Error", {
-        description: "Failed to update camera recording status"
+      toast({
+        title: "Error",
+        description: "Failed to update camera recording status",
+        variant: "destructive"
       });
     }
   };

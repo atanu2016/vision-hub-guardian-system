@@ -8,7 +8,8 @@ import CameraGrid from "@/components/cameras/CameraGrid";
 import AddCameraModal from "@/components/cameras/AddCameraModal";
 import { Camera } from "@/types/camera";
 import { useToast } from "@/hooks/use-toast";
-import { getCameras, saveCamera, deleteCamera, initializeSystem } from "@/services/apiService";
+import { getCameras, saveCamera, deleteCamera } from "@/services/apiService";
+import { checkDatabaseSetup } from "@/services/databaseService";
 
 const Cameras = () => {
   const { toast } = useToast();
@@ -22,7 +23,7 @@ const Cameras = () => {
     const initialize = async () => {
       // Initialize the system first to ensure the database is set up
       try {
-        await initializeSystem();
+        await checkDatabaseSetup();
       } catch (error) {
         console.error('Error initializing system:', error);
         toast({

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, Check, Database, Info } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 
 const DatabaseSettings = () => {
@@ -29,18 +29,28 @@ const DatabaseSettings = () => {
         
         if (error) throw error;
         
-        // Get table information
-        const { data: tableInfo, error: tableError } = await supabase.rpc('get_all_tables');
+        // Get table count from postgres system tables
+        const { data: tablesData, error: tablesError } = await supabase.rpc('is_admin');
         
-        let tableCount = 0;
-        if (!tableError && tableInfo) {
-          tableCount = tableInfo.length;
+        let tableCount = 6; // Default value
+        try {
+          // Get table count by performing a query to the database
+          const { count, error: countError } = await supabase
+            .from('information_schema.tables')
+            .select('*', { count: 'exact', head: true })
+            .eq('table_schema', 'public');
+            
+          if (!countError) {
+            tableCount = count || 6;
+          }
+        } catch (countError) {
+          console.error('Error getting table count:', countError);
         }
         
         setDatabaseInfo({
           url: 'PostgreSQL Database (Supabase)',
           size: '~50 MB (estimated)',
-          tables: tableCount || 6,
+          tables: tableCount,
           connected: true,
           testing: false
         });
@@ -51,8 +61,10 @@ const DatabaseSettings = () => {
           connected: false,
           testing: false
         }));
-        toast("Connection Error", {
-          description: "Could not connect to database."
+        toast({
+          title: "Connection Error",
+          description: "Could not connect to database.",
+          variant: "destructive"
         });
       } finally {
         setLoading(false);
@@ -72,41 +84,68 @@ const DatabaseSettings = () => {
       if (error) throw error;
       
       setDatabaseInfo(prev => ({ ...prev, connected: true, testing: false }));
-      toast("Connection Successful", { description: "Database connection is working properly." });
+      toast({
+        title: "Connection Successful", 
+        description: "Database connection is working properly."
+      });
     } catch (error) {
       console.error('Error testing database connection:', error);
       setDatabaseInfo(prev => ({ ...prev, connected: false, testing: false }));
-      toast("Connection Failed", { description: "Could not connect to database." });
+      toast({
+        title: "Connection Failed", 
+        description: "Could not connect to database.",
+        variant: "destructive"
+      });
     }
   };
   
   const handleVacuumDatabase = async () => {
     try {
-      toast("Database Optimization", { description: "Database optimization has been scheduled." });
+      toast({
+        title: "Database Optimization", 
+        description: "Database optimization has been scheduled."
+      });
       
       // In a real app, this would call an admin API to vacuum the database
       // For this demo, we'll just simulate it with a timeout
       setTimeout(() => {
-        toast("Optimization Complete", { description: "Database has been optimized successfully." });
+        toast({
+          title: "Optimization Complete", 
+          description: "Database has been optimized successfully."
+        });
       }, 3000);
     } catch (error) {
       console.error('Error optimizing database:', error);
-      toast("Error", { description: "Failed to optimize the database." });
+      toast({
+        title: "Error", 
+        description: "Failed to optimize the database.",
+        variant: "destructive"
+      });
     }
   };
   
   const handleBackupDatabase = async () => {
     try {
-      toast("Backup Started", { description: "Database backup has started." });
+      toast({
+        title: "Backup Started", 
+        description: "Database backup has started."
+      });
       
       // In a real app, this would call an admin API to backup the database
       // For this demo, we'll just simulate it with a timeout
       setTimeout(() => {
-        toast("Backup Complete", { description: "Database has been backed up successfully." });
+        toast({
+          title: "Backup Complete", 
+          description: "Database has been backed up successfully."
+        });
       }, 4000);
     } catch (error) {
       console.error('Error backing up database:', error);
-      toast("Error", { description: "Failed to backup the database." });
+      toast({
+        title: "Error", 
+        description: "Failed to backup the database.",
+        variant: "destructive"
+      });
     }
   };
 

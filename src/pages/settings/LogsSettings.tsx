@@ -1,12 +1,11 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Download, RefreshCw, AlertTriangle, Info, CheckCircle, X } from "lucide-react";
 import { Input } from '@/components/ui/input';
+import { toast } from "@/hooks/use-toast";
 import { getLogs, saveAdvancedSettings, getAdvancedSettings } from '@/services/apiService';
 
 interface LogEntry {
@@ -18,11 +17,17 @@ interface LogEntry {
   details?: string;
 }
 
+interface LogFilter {
+  level: string;
+  source: string;
+  search: string;
+}
+
 const LogsSettings = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
-  const [filter, setFilter] = useState({
+  const [filter, setFilter] = useState<LogFilter>({
     level: 'all',
     source: 'all',
     search: ''
@@ -38,14 +43,25 @@ const LogsSettings = () => {
     
     try {
       const data = await getLogs(filter);
-      setLogs(data);
-      toast("Logs Refreshed", {
+      
+      // Convert string level to the correct type
+      const typedLogs: LogEntry[] = data.map(log => ({
+        ...log,
+        level: (log.level as 'info' | 'warning' | 'error')
+      }));
+      
+      setLogs(typedLogs);
+      
+      toast({
+        title: "Logs Refreshed",
         description: `Loaded ${data.length} log entries`
       });
     } catch (error) {
       console.error('Failed to fetch logs:', error);
-      toast("Error", {
-        description: 'Could not retrieve system logs. Please try again.'
+      toast({
+        title: "Error",
+        description: 'Could not retrieve system logs. Please try again.',
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Camera, CameraGroup, StorageSettings } from "@/types/camera";
 import { toast } from "sonner";
@@ -388,7 +387,7 @@ export const saveRecordingSettingsToDB = async (settings: any) => {
 };
 
 // Camera recording status operations
-export const saveCameraRecordingStatus = async (cameraId: string, enabled: boolean) => {
+export const saveCameraRecordingStatus = async (cameraId: string, enabled: boolean): Promise<boolean> => {
   try {
     const { data: existing } = await supabase
       .from('camera_recording_status')
@@ -398,15 +397,29 @@ export const saveCameraRecordingStatus = async (cameraId: string, enabled: boole
       
     if (existing) {
       // Update
-      await supabase
+      const { error } = await supabase
         .from('camera_recording_status')
         .update({ enabled })
         .eq('camera_id', cameraId);
+        
+      if (error) throw error;
     } else {
       // Insert
-      await supabase
+      const { error } = await supabase
         .from('camera_recording_status')
         .insert({ camera_id: cameraId, enabled });
+        
+      if (error) throw error;
+    }
+
+    // Also update the recording flag in the cameras table for UI consistency
+    const { error: cameraUpdateError } = await supabase
+      .from('cameras')
+      .update({ recording: enabled })
+      .eq('id', cameraId);
+      
+    if (cameraUpdateError) {
+      console.error("Error updating camera recording status:", cameraUpdateError);
     }
     
     return true;
@@ -767,7 +780,7 @@ export const saveAdvancedSettingsToDB = async (settings: any) => {
 };
 
 // System logs operations
-export const fetchLogsFromDB = async (filters = {}) => {
+export const fetchLogsFromDB = async (filters: { level?: string; source?: string; search?: string } = {}) => {
   try {
     let query = supabase
       .from('system_logs')

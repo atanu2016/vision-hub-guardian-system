@@ -16,7 +16,9 @@ import {
   fetchAdvancedSettingsFromDB,
   saveAdvancedSettingsToDB,
   fetchLogsFromDB,
-  addLogToDB
+  addLogToDB,
+  saveCameraRecordingStatus,
+  checkDatabaseSetup
 } from './databaseService';
 
 // Camera API
@@ -34,6 +36,7 @@ export const getSystemStats = fetchSystemStatsFromDB;
 // Recordings API
 export const getRecordingSettings = fetchRecordingSettingsFromDB;
 export const saveRecordingSettings = saveRecordingSettingsToDB;
+export { saveCameraRecordingStatus };
 
 // Alerts API
 export const getAlertSettings = fetchAlertSettingsFromDB;
@@ -51,6 +54,28 @@ export const saveAdvancedSettings = saveAdvancedSettingsToDB;
 // Logs API
 export const getLogs = fetchLogsFromDB;
 export const addLog = addLogToDB;
+
+// System initialization
+export const initializeSystem = checkDatabaseSetup;
+
+// Camera stream setup utility
+export const setupCameraStream = (camera, videoElement, onError) => {
+  console.log("Setting up stream for camera:", camera.name);
+  
+  // This is a placeholder implementation - in a real app, this would connect
+  // to a streaming service or handle RTSP/RTMP connections
+  
+  // For now, we'll just set the poster image if available
+  if (camera.thumbnail) {
+    videoElement.poster = camera.thumbnail;
+  }
+  
+  // Return cleanup function
+  return () => {
+    console.log("Cleaning up camera stream");
+    // Any cleanup code here
+  };
+};
 
 // Camera groups api
 export const getCameraGroups = async () => {
