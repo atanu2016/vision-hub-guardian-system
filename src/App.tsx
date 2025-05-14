@@ -15,6 +15,7 @@ import Notifications from "@/pages/Notifications";
 import { Toaster } from "@/components/ui/toaster";
 import { useEffect } from "react";
 import { initializeSystem } from "@/data/mockData";
+import { toast } from "@/hooks/use-toast";
 
 function App() {
   // Initialize the system when the app starts
@@ -25,6 +26,10 @@ function App() {
         console.log("System initialized with database integration");
       } catch (error) {
         console.error("Failed to initialize system:", error);
+        toast({
+          title: "System Initialization Error",
+          description: "Failed to connect to the database"
+        });
       }
     };
     
@@ -39,8 +44,17 @@ function App() {
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
           <Route path="/cameras" element={<ProtectedRoute><Cameras /></ProtectedRoute>} />
           <Route path="/cameras/:id" element={<ProtectedRoute><CameraDetail /></ProtectedRoute>} />
+          
+          {/* Settings Routes */}
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/settings/:section" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/settings/storage" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/settings/recordings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/settings/alerts" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/settings/webhooks" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/settings/advanced" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/settings/database" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/settings/logs" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          
           <Route path="/admin" element={<ProtectedRoute requireAdmin>{<Admin />}</ProtectedRoute>} />
           <Route path="/profile-settings" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
