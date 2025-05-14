@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -7,7 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { DatabaseIcon, RefreshCw, Server, Shield, Database } from 'lucide-react';
-import { DebugLogDialog } from './DebugLogDialog';
+import DebugLogDialog from './DebugLogDialog';
 
 export function DatabaseSettings() {
   const [loading, setLoading] = useState(true);
@@ -114,7 +115,7 @@ export function DatabaseSettings() {
       <CardContent>
         <div className="grid gap-4">
           <div className="flex items-center space-x-4">
-            <Badge variant={dbStats.connected ? 'success' : 'destructive'}>
+            <Badge variant={dbStats.connected ? "default" : "destructive"}>
               {dbStats.connected ? 'Connected' : 'Not Connected'}
             </Badge>
             {dbStats.connected ? (
@@ -153,7 +154,7 @@ export function DatabaseSettings() {
       <CardFooter className="flex justify-between">
         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
           <Server className="h-4 w-4" />
-          <p>Server: {supabase.getUrl()}</p>
+          <p>Server: {supabase.config.url}</p>
         </div>
         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
           <Shield className="h-4 w-4" />
@@ -163,3 +164,5 @@ export function DatabaseSettings() {
     </Card>
   );
 }
+
+export default DatabaseSettings;
