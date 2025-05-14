@@ -112,7 +112,8 @@ const LogsSettings = () => {
     link.click();
     URL.revokeObjectURL(url);
     
-    toast("Logs Downloaded", {
+    toast({
+      title: "Logs Downloaded", 
       description: 'System logs have been downloaded to your computer.'
     });
   };
@@ -134,12 +135,14 @@ const LogsSettings = () => {
       // Save to database
       await saveAdvancedSettings(updatedSettings);
       
-      toast("Settings Saved", {
+      toast({
+        title: "Settings Saved",
         description: "Log settings have been updated successfully"
       });
     } catch (error) {
       console.error('Error saving log settings:', error);
-      toast("Error", {
+      toast({
+        title: "Error",
         description: "Failed to save log settings"
       });
     } finally {

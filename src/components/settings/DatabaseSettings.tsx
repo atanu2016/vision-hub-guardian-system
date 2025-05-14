@@ -58,7 +58,8 @@ export function DatabaseSettings() {
           tables.map(table => 
             supabase.from(table).select('id', { count: 'exact', head: true })
               .then(result => result.count !== null)
-              .catch(() => false)
+              // Fix for TS2339: Property 'catch' does not exist on type 'PromiseLike<boolean>'
+              .then(exists => exists, () => false)
           )
         );
         
@@ -154,7 +155,7 @@ export function DatabaseSettings() {
       <CardFooter className="flex justify-between">
         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
           <Server className="h-4 w-4" />
-          <p>Server: {supabase.config.url}</p>
+          <p>Server: {supabase.supabaseUrl}</p>
         </div>
         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
           <Shield className="h-4 w-4" />
