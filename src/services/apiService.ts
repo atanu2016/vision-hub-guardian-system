@@ -10,6 +10,7 @@ import {
   syncPublicCamerasToDatabase,
   checkDatabaseSetup
 } from '@/services/databaseService';
+import { Camera } from '@/types/camera';
 
 // Re-export all database functions with more intuitive names
 export const getCameras = fetchCamerasFromDB;
@@ -18,6 +19,39 @@ export const saveCamera = saveCameraToDB;
 export const deleteCamera = deleteCameraFromDB;
 export const getStorageSettings = fetchStorageSettingsFromDB;
 export const saveStorageSettings = saveStorageSettingsToDB;
+
+// Add the missing setupCameraStream function
+export const setupCameraStream = (
+  camera: Camera, 
+  videoElement: HTMLVideoElement, 
+  onError?: (err: any) => void
+): (() => void) => {
+  try {
+    // Basic function to connect a video element to a camera stream
+    // Returns a cleanup function
+    console.log(`Setting up camera stream for ${camera.name}`);
+    
+    // The actual implementation would depend on the streaming protocol
+    // For now, we'll just handle direct URL assignment
+    if (camera.rtmpUrl) {
+      videoElement.src = camera.rtmpUrl;
+      videoElement.onerror = (err) => {
+        console.error('Video element error:', err);
+        if (onError) onError(err);
+      };
+    }
+    
+    return () => {
+      // Cleanup function
+      videoElement.src = '';
+      videoElement.onerror = null;
+    };
+  } catch (err) {
+    console.error('Error setting up stream:', err);
+    if (onError) onError(err);
+    return () => {}; // Return empty cleanup function
+  }
+};
 
 // Initialize the system
 export const initializeSystem = async () => {
@@ -41,7 +75,9 @@ export const initializeSystem = async () => {
           motionDetection: true,
           group: 'Outdoor',
           model: 'VisionCam Pro',
-          manufacturer: 'CameraTech'
+          manufacturer: 'CameraTech',
+          id: 'cam-' + Date.now() + '-1',
+          lastSeen: new Date().toISOString()
         },
         {
           name: 'Backyard',
@@ -55,7 +91,9 @@ export const initializeSystem = async () => {
           motionDetection: true,
           group: 'Outdoor',
           model: 'VisionCam Pro',
-          manufacturer: 'CameraTech'
+          manufacturer: 'CameraTech',
+          id: 'cam-' + Date.now() + '-2',
+          lastSeen: new Date().toISOString()
         },
         {
           name: 'Garage',
@@ -67,7 +105,9 @@ export const initializeSystem = async () => {
           recording: false,
           group: 'Outdoor',
           model: 'VisionCam Standard',
-          manufacturer: 'CameraTech'
+          manufacturer: 'CameraTech',
+          id: 'cam-' + Date.now() + '-3',
+          lastSeen: new Date().toISOString()
         },
         {
           name: 'Living Room',
@@ -81,7 +121,9 @@ export const initializeSystem = async () => {
           motionDetection: false,
           group: 'Indoor',
           model: 'VisionCam Mini',
-          manufacturer: 'CameraTech'
+          manufacturer: 'CameraTech',
+          id: 'cam-' + Date.now() + '-4',
+          lastSeen: new Date().toISOString()
         },
         {
           name: 'Kitchen',
@@ -94,7 +136,9 @@ export const initializeSystem = async () => {
           recording: false,
           group: 'Indoor',
           model: 'VisionCam Mini',
-          manufacturer: 'CameraTech'
+          manufacturer: 'CameraTech',
+          id: 'cam-' + Date.now() + '-5',
+          lastSeen: new Date().toISOString()
         }
       ];
       

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Camera, CameraGroup, StorageSettings } from "@/types/camera";
 import { toast } from "@/hooks/use-toast";
@@ -406,7 +405,6 @@ export const syncPublicCamerasToDatabase = async (publicCameras: Camera[]): Prom
     }
     
     toast({
-      title: "Public camera feeds imported",
       description: "Example camera feeds have been added to your database"
     });
   } catch (error) {
