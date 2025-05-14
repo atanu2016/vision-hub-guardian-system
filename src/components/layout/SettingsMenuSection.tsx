@@ -16,6 +16,7 @@ interface MenuItem {
   title: string;
   description: string;
   href: string;
+  icon: React.ReactNode;
   disabled?: boolean;
 }
 
@@ -23,9 +24,10 @@ interface SettingsMenuSectionProps {
   title: string;
   description: string;
   items: MenuItem[];
+  isActive: (path: string) => boolean;
 }
 
-export const SettingsMenuSection = ({ title, description, items }: SettingsMenuSectionProps) => {
+export const SettingsMenuSection = ({ title, description, items, isActive }: SettingsMenuSectionProps) => {
   return (
     <div className="space-y-3">
       <div className="px-2">
@@ -36,8 +38,11 @@ export const SettingsMenuSection = ({ title, description, items }: SettingsMenuS
         {items.map((item, i) => (
           <div
             key={i}
-            className="flex items-start gap-4 rounded-lg border p-3 text-left text-sm transition-all hover:bg-accent"
+            className={`flex items-start gap-4 rounded-lg border p-3 text-left text-sm transition-all ${isActive(item.href) ? 'bg-accent' : 'hover:bg-accent'} ${item.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
+            <div className="flex items-center">
+              {item.icon}
+            </div>
             <div className="flex-1 space-y-1">
               <div className="flex items-center">
                 <div className="font-medium">{item.title}</div>
@@ -157,4 +162,5 @@ const SidebarSettingsMenu = ({ isActive }: { isActive: (path: string) => boolean
   );
 };
 
+export { SettingsMenuSection };
 export default SidebarSettingsMenu;

@@ -4,7 +4,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { FileSpreadsheet, Link as LinkIcon, AlertTriangle, DatabaseZap, HardDrive, Bell, Shield } from 'lucide-react';
-import SettingsMenuSection from '@/components/layout/SettingsMenuSection';
+import { SettingsMenuSection } from '@/components/layout/SettingsMenuSection';
 
 const Settings = () => {
   const location = useLocation();
