@@ -23,4 +23,16 @@ export function useToast() {
   }
 }
 
-export { toast } from "@/components/ui/toaster"
+// Create and export the toast function directly
+export const toast = (props: {
+  title?: string;
+  description?: string;
+  action?: React.ReactNode;
+  variant?: "default" | "destructive";
+}) => {
+  // Get the toast function from the context
+  const toastContext = useShadcnToast();
+  if (toastContext) {
+    toastContext.toast(props);
+  }
+};
