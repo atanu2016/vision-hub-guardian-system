@@ -30,7 +30,7 @@ function App() {
           <Route path="/settings/storage" element={<ProtectedRoute><StorageSettings /></ProtectedRoute>} />
           <Route path="/settings/recordings" element={<ProtectedRoute><RecordingsPage /></ProtectedRoute>} />
           <Route path="/settings/alerts" element={<ProtectedRoute><AlertsPage /></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute requireAdmin>{<Admin />}</ProtectedRoute>} />
           <Route path="/profile-settings" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
