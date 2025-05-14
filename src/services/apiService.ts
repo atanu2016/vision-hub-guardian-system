@@ -10,7 +10,7 @@ import {
   syncPublicCamerasToDatabase,
   checkDatabaseSetup
 } from '@/services/databaseService';
-import { Camera } from '@/types/camera';
+import { Camera, CameraStatus } from '@/types/camera';
 
 // Re-export all database functions with more intuitive names
 export const getCameras = fetchCamerasFromDB;
@@ -20,7 +20,7 @@ export const deleteCamera = deleteCameraFromDB;
 export const getStorageSettings = fetchStorageSettingsFromDB;
 export const saveStorageSettings = saveStorageSettingsToDB;
 
-// Add the missing setupCameraStream function
+// Setup camera stream function
 export const setupCameraStream = (
   camera: Camera, 
   videoElement: HTMLVideoElement, 
@@ -62,10 +62,10 @@ export const initializeSystem = async () => {
     // If not, sync public cameras to database
     if (!isDbSetup) {
       // Generate some example cameras
-      const publicCameras = [
+      const publicCameras: Camera[] = [
         {
           name: 'Front Door',
-          status: 'online',
+          status: 'online' as CameraStatus,
           location: 'Entrance',
           ipAddress: '192.168.1.100',
           port: 8080,
@@ -81,7 +81,7 @@ export const initializeSystem = async () => {
         },
         {
           name: 'Backyard',
-          status: 'online',
+          status: 'online' as CameraStatus,
           location: 'Backyard',
           ipAddress: '192.168.1.101',
           port: 8080,
@@ -97,7 +97,7 @@ export const initializeSystem = async () => {
         },
         {
           name: 'Garage',
-          status: 'offline',
+          status: 'offline' as CameraStatus,
           location: 'Garage',
           ipAddress: '192.168.1.102',
           port: 8080,
@@ -111,7 +111,7 @@ export const initializeSystem = async () => {
         },
         {
           name: 'Living Room',
-          status: 'online',
+          status: 'online' as CameraStatus,
           location: 'Living Room',
           ipAddress: '192.168.1.103',
           port: 8080,
@@ -127,7 +127,7 @@ export const initializeSystem = async () => {
         },
         {
           name: 'Kitchen',
-          status: 'error',
+          status: 'error' as CameraStatus,
           location: 'Kitchen',
           ipAddress: '192.168.1.104',
           port: 8080,

@@ -404,9 +404,8 @@ export const syncPublicCamerasToDatabase = async (publicCameras: Camera[]): Prom
       throw insertError;
     }
     
-    toast({
-      description: "Example camera feeds have been added to your database"
-    });
+    // Using sonner toast format
+    toast("Example camera feeds have been added to your database");
   } catch (error) {
     console.error("Database service error:", error);
     throw error;
