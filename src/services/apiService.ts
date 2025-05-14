@@ -1,3 +1,4 @@
+
 import { Camera, CameraGroup, StorageSettings } from "@/types/camera";
 
 // Base API URL - in a real implementation, this would be your actual API endpoint
@@ -42,9 +43,12 @@ const fetchWithErrorHandling = async (url: string, options?: RequestInit) => {
 const getFallbackCameras = (): Camera[] => {
   const storedCameras = localStorage.getItem('cameras');
   if (storedCameras) {
-    return JSON.parse(storedCameras);
+    const parsedCameras = JSON.parse(storedCameras);
+    if (Array.isArray(parsedCameras) && parsedCameras.length > 0) {
+      return parsedCameras;
+    }
   }
-  // Return public cameras if no stored cameras are found
+  // Return public cameras if no stored cameras are found or empty
   return getPublicCameras();
 };
 
@@ -200,6 +204,8 @@ export const getCamerasFromAPI = async (): Promise<Camera[]> => {
   } catch (error) {
     console.error("API error, using public cameras:", error);
     const publicCameras = getPublicCameras();
+    // Make sure we store these in localStorage
+    localStorage.setItem('cameras', JSON.stringify(publicCameras));
     return publicCameras;
   }
 };
@@ -335,15 +341,30 @@ export const setupCameraStream = (
 // Initialize the system by ensuring public cameras are available
 export const initializeSystem = async (): Promise<void> => {
   try {
-    // Try to get cameras from API or localStorage
-    const existingCameras = await getCamerasFromAPI();
+    // Clear existing cameras to ensure we always have fresh public cameras
+    localStorage.removeItem('cameras');
     
-    // If no cameras exist, use public cameras
-    if (!existingCameras || existingCameras.length === 0) {
-      const publicCameras = getPublicCameras();
-      localStorage.setItem('cameras', JSON.stringify(publicCameras));
-      console.log('System initialized with public cameras');
-    }
+    // Get the public cameras
+    const publicCameras = getPublicCameras();
+    
+    // Store them in localStorage
+    localStorage.setItem('cameras', JSON.stringify(publicCameras));
+    
+    // Update system stats
+    const stats = {
+      storageUsed: "0 GB",
+      storageTotal: "1 TB",
+      storagePercentage: 0,
+      uptimeHours: 0,
+      totalCameras: publicCameras.length,
+      onlineCameras: publicCameras.filter(c => c.status === 'online').length,
+      offlineCameras: publicCameras.filter(c => c.status === 'offline').length,
+      recordingCameras: publicCameras.filter(c => c.recording).length,
+    };
+    
+    localStorage.setItem('systemStats', JSON.stringify(stats));
+    
+    console.log('System initialized with public cameras');
   } catch (error) {
     console.error('Error initializing system:', error);
     // Ensure public cameras are available as fallback

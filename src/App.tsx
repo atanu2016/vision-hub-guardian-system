@@ -1,5 +1,5 @@
 
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useNavigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
@@ -16,8 +16,29 @@ import RecordingsPage from "@/pages/settings/RecordingsPage";
 import AlertsPage from "@/pages/settings/AlertsPage";
 import Notifications from "@/pages/Notifications";
 import { Toaster } from "@/components/ui/toaster";
+import { useEffect } from "react";
+import { initializeSystem } from "@/services/apiService";
+import { toast } from "@/hooks/use-toast";
 
 function App() {
+  // Initialize the system when the app starts
+  useEffect(() => {
+    const init = async () => {
+      try {
+        await initializeSystem();
+        // Let the user know camera data has been initialized
+        toast({
+          title: "Vision Hub v1.0.0",
+          description: "Public camera examples initialized",
+        });
+      } catch (error) {
+        console.error("Failed to initialize system:", error);
+      }
+    };
+    
+    init();
+  }, []);
+
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vision-hub-theme">
       <AuthProvider>

@@ -18,7 +18,6 @@ interface MainNavigationProps {
 const MainNavigation = ({ isActive }: MainNavigationProps) => {
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Navigation</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
           <SidebarMenuItem>
