@@ -17,7 +17,11 @@ export interface Camera {
   group?: string;
   connectionType?: "rtmp" | "rtsp" | "ip" | "onvif";
   motionDetection?: boolean;
+  onvifPath?: string;
 }
+
+export type CameraConnectionType = "ip" | "rtsp" | "rtmp" | "onvif";
+export type CameraStatus = "online" | "offline";
 
 export interface CameraGroup {
   id: string;

@@ -109,7 +109,7 @@ const StorageSettings = () => {
         }
         
         // Reset form with loaded settings
-        form.reset(settings as StorageFormValues);
+        form.reset(settings);
       } catch (error) {
         console.error("Error loading storage settings:", error);
         toast({
@@ -172,7 +172,30 @@ const StorageSettings = () => {
     setIsSaving(true);
     
     try {
-      await saveStorageSettings(data);
+      // Ensure the data object has all required fields for StorageSettings
+      const storageConfig: StorageSettings = {
+        type: data.type,
+        retentionDays: data.retentionDays,
+        overwriteOldest: data.overwriteOldest,
+      };
+      
+      // Add type-specific properties
+      if (data.type === 'local' && 'path' in data) {
+        storageConfig.path = data.path;
+      } else if (data.type === 'nas' && 'nasAddress' in data) {
+        storageConfig.nasAddress = data.nasAddress;
+        storageConfig.nasPath = data.nasPath;
+        storageConfig.nasUsername = data.nasUsername;
+        storageConfig.nasPassword = data.nasPassword;
+      } else if (data.type === 'cloud' && 'cloudProvider' in data) {
+        storageConfig.cloudProvider = data.cloudProvider;
+        storageConfig.cloudRegion = data.cloudRegion;
+        storageConfig.cloudBucket = data.cloudBucket;
+        storageConfig.cloudKey = data.cloudKey;
+        storageConfig.cloudSecret = data.cloudSecret;
+      }
+      
+      await saveStorageSettings(storageConfig);
       
       toast({
         title: "Storage Settings Saved",

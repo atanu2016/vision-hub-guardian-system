@@ -58,7 +58,7 @@ const CameraDetail = () => {
   };
   
   const handleTakeSnapshot = () => {
-    if (!isStreaming || !camera?.status === 'online') {
+    if (!isStreaming || camera?.status !== 'online') {
       toast({
         title: "Cannot take snapshot",
         description: "Camera must be online and streaming to take a snapshot.",

@@ -1,9 +1,8 @@
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import AppLayout from "@/components/layout/AppLayout";
-import { SettingsMenuSection } from "@/components/layout/SettingsMenuSection";
+import SettingsMenuSection from "@/components/layout/SettingsMenuSection";
 
 type SettingsTab = "general" | "storage" | "notifications" | "security" | "advanced";
 

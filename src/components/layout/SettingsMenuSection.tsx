@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -13,11 +12,59 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-interface SettingsMenuSectionProps {
-  isActive: (path: string) => boolean;
+interface MenuItem {
+  title: string;
+  description: string;
+  href: string;
+  disabled?: boolean;
 }
 
-const SettingsMenuSection = ({ isActive }: SettingsMenuSectionProps) => {
+interface SettingsMenuSectionProps {
+  title: string;
+  description: string;
+  items: MenuItem[];
+}
+
+export const SettingsMenuSection = ({ title, description, items }: SettingsMenuSectionProps) => {
+  return (
+    <div className="space-y-3">
+      <div className="px-2">
+        <h3 className="text-lg font-medium">{title}</h3>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+      <div className="grid gap-1">
+        {items.map((item, i) => (
+          <div
+            key={i}
+            className="flex items-start gap-4 rounded-lg border p-3 text-left text-sm transition-all hover:bg-accent"
+          >
+            <div className="flex-1 space-y-1">
+              <div className="flex items-center">
+                <div className="font-medium">{item.title}</div>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {item.description}
+              </div>
+            </div>
+            {item.href && !item.disabled && (
+              <div className="ml-auto flex items-center gap-2">
+                <Link
+                  to={item.href}
+                  className="underline-offset-4 hover:underline"
+                >
+                  View
+                </Link>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Keep the default export for backwards compatibility
+const SidebarSettingsMenu = ({ isActive }: { isActive: (path: string) => boolean }) => {
   const location = useLocation();
   const [isSettingsExpanded, setIsSettingsExpanded] = useState(
     location.pathname.startsWith("/settings") || 
@@ -110,4 +157,4 @@ const SettingsMenuSection = ({ isActive }: SettingsMenuSectionProps) => {
   );
 };
 
-export default SettingsMenuSection;
+export default SidebarSettingsMenu;
