@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +20,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
-import { globe, mail, settings } from "lucide-react";
+import { Globe, Mail, Settings } from "lucide-react";
 
 const generalFormSchema = z.object({
   systemName: z.string().min(2, "System name must be at least 2 characters"),
@@ -371,7 +370,7 @@ const Settings = () => {
                   <form onSubmit={notificationsForm.handleSubmit(onNotificationsSubmit)} className="space-y-4">
                     <div className="space-y-4">
                       <h3 className="text-lg font-medium flex items-center">
-                        <mail className="mr-2 h-5 w-5" />
+                        <Mail className="mr-2 h-5 w-5" />
                         SMTP Configuration
                       </h3>
                       <p className="text-sm text-muted-foreground">

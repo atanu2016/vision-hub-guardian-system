@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -199,15 +198,25 @@ const StorageSettings = () => {
     // Get current cloud settings
     const cloudData = form.getValues();
     
-    // Simulate connection test
-    setTimeout(() => {
+    // Check if the current type is cloud before accessing cloud-specific properties
+    if (cloudData.type === "cloud") {
+      // Simulate connection test
+      setTimeout(() => {
+        setIsConnectionTesting(false);
+        
+        toast({
+          title: "Cloud Connection Test",
+          description: `Successfully connected to ${cloudData.cloudProvider} cloud storage`,
+        });
+      }, 1500);
+    } else {
       setIsConnectionTesting(false);
-      
       toast({
-        title: "Cloud Connection Test",
-        description: `Successfully connected to ${cloudData.cloudProvider} cloud storage`,
+        title: "Error",
+        description: "Cannot test connection: not in cloud storage mode",
+        variant: "destructive"
       });
-    }, 1500);
+    }
   };
 
   return (
