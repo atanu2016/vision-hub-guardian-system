@@ -11,10 +11,6 @@ import Auth from "@/pages/Auth";
 import NotFound from "@/pages/NotFound";
 import Admin from "@/pages/Admin";
 import ProfileSettings from "@/pages/ProfileSettings";
-import StorageSettings from "@/pages/settings/StorageSettings";
-import RecordingsPage from "@/pages/settings/RecordingsPage";
-import AlertsPage from "@/pages/settings/AlertsPage";
-import AdvancedSettings from "@/pages/settings/AdvancedSettings";
 import Notifications from "@/pages/Notifications";
 import { Toaster } from "@/components/ui/toaster";
 import { useEffect } from "react";
@@ -26,8 +22,7 @@ function App() {
     const init = async () => {
       try {
         await initializeSystem();
-        // Let's just initialize without showing a toast
-        console.log("System initialized with public cameras");
+        console.log("System initialized with database integration");
       } catch (error) {
         console.error("Failed to initialize system:", error);
       }
@@ -44,11 +39,7 @@ function App() {
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
           <Route path="/cameras" element={<ProtectedRoute><Cameras /></ProtectedRoute>} />
           <Route path="/cameras/:id" element={<ProtectedRoute><CameraDetail /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/settings/storage" element={<ProtectedRoute><StorageSettings /></ProtectedRoute>} />
-          <Route path="/settings/recordings" element={<ProtectedRoute><RecordingsPage /></ProtectedRoute>} />
-          <Route path="/settings/alerts" element={<ProtectedRoute><AlertsPage /></ProtectedRoute>} />
-          <Route path="/settings/advanced" element={<ProtectedRoute><AdvancedSettings /></ProtectedRoute>} />
+          <Route path="/settings/*" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute requireAdmin>{<Admin />}</ProtectedRoute>} />
           <Route path="/profile-settings" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />

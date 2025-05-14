@@ -1,20 +1,45 @@
 
-// Importing from apiService instead of providing mock data directly
-import { 
-  getCameras, 
-  getCameraGroups, 
+// Import database service functions directly
+import {
+  fetchCamerasFromDB as getCameras,
+  fetchSystemStatsFromDB as getSystemStats,
+  saveCameraToDB as saveCamera,
+  deleteCameraFromDB as deleteCamera,
+  fetchStorageSettingsFromDB as getStorageSettings,
+  saveStorageSettingsToDB as saveStorageSettings,
+  checkDatabaseSetup as initializeSystem
+} from "@/services/databaseService";
+
+// Export all database functions directly
+export {
+  getCameras,
   getSystemStats,
   saveCamera,
   deleteCamera,
   getStorageSettings,
   saveStorageSettings,
   initializeSystem
-} from "@/services/apiService";
+};
 
-import { Camera, CameraGroup, StorageSettings } from "@/types/camera";
-
-// Initialize the system with public cameras when loaded
-initializeSystem();
-
-// Export wrapper functions that call the API service
-export { getCameras, getCameraGroups, getSystemStats, saveCamera, deleteCamera, getStorageSettings, saveStorageSettings };
+// Export function for camera groups
+export const getCameraGroups = async () => {
+  const cameras = await getCameras();
+  
+  // Extract unique camera groups
+  const groupsMap = new Map();
+  cameras.forEach(camera => {
+    if (camera.group) {
+      if (!groupsMap.has(camera.group)) {
+        groupsMap.set(camera.group, {
+          id: camera.group,
+          name: camera.group,
+          cameras: []
+        });
+      }
+      
+      groupsMap.get(camera.group).cameras.push(camera);
+    }
+  });
+  
+  return Array.from(groupsMap.values());
+};
