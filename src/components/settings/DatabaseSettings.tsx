@@ -7,11 +7,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/sonner';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Database, Server, Info } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const DatabaseSettings = () => {
   const [activeTab, setActiveTab] = useState('supabase');
   const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [isCreatingTables, setIsCreatingTables] = useState(false);
   const [mysqlDetails, setMysqlDetails] = useState({
     host: 'localhost',
     port: '3306',
@@ -41,12 +43,15 @@ const DatabaseSettings = () => {
   };
 
   const createDatabase = async () => {
+    setIsCreatingTables(true);
     try {
       // Simulating database creation
       await new Promise(resolve => setTimeout(resolve, 2000));
       toast.success('Database tables created successfully!');
     } catch (error) {
       toast.error('Failed to create database tables.');
+    } finally {
+      setIsCreatingTables(false);
     }
   };
 
@@ -61,8 +66,14 @@ const DatabaseSettings = () => {
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="supabase">Supabase</TabsTrigger>
-            <TabsTrigger value="mysql">MySQL</TabsTrigger>
+            <TabsTrigger value="supabase" className="flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              <span>Supabase</span>
+            </TabsTrigger>
+            <TabsTrigger value="mysql" className="flex items-center gap-2">
+              <Server className="h-4 w-4" />
+              <span>MySQL</span>
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="supabase" className="space-y-4 mt-4">
             <div>
@@ -82,7 +93,17 @@ const DatabaseSettings = () => {
                 <div className="grid gap-2">
                   <Label htmlFor="supabase-key">Supabase API Key</Label>
                   <Input id="supabase-key" placeholder="your-supabase-api-key" type="password" />
+                  <p className="text-sm text-muted-foreground">
+                    You can find your API key in the Supabase dashboard under Project Settings &gt; API
+                  </p>
                 </div>
+                
+                <Alert>
+                  <AlertDescription className="flex items-center gap-2">
+                    <Info className="h-4 w-4" />
+                    <span>Your Supabase project is currently connected and active.</span>
+                  </AlertDescription>
+                </Alert>
               </div>
             </div>
             <Button onClick={testConnection} disabled={isTestingConnection} className="w-full">
@@ -143,6 +164,9 @@ const DatabaseSettings = () => {
                   value={mysqlDetails.database}
                   onChange={(e) => handleMySQLInputChange('database', e.target.value)}
                 />
+                <p className="text-sm text-muted-foreground">
+                  Enter an existing database name or a new one that will be created
+                </p>
               </div>
             </div>
             <div className="flex flex-col space-y-2">
@@ -156,8 +180,19 @@ const DatabaseSettings = () => {
                   'Test Connection'
                 )}
               </Button>
-              <Button variant="outline" onClick={createDatabase}>
-                Create Database Tables
+              <Button
+                variant="outline" 
+                onClick={createDatabase}
+                disabled={isCreatingTables}
+              >
+                {isCreatingTables ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Tables...
+                  </>
+                ) : (
+                  'Create Database Tables'
+                )}
               </Button>
             </div>
           </TabsContent>

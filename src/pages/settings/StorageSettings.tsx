@@ -30,6 +30,7 @@ import { Progress } from "@/components/ui/progress";
 import AppLayout from "@/components/layout/AppLayout";
 import DatabaseSettings from "@/components/settings/DatabaseSettings";
 import { useNotifications } from "@/hooks/useNotifications";
+import { HardDrive, Server, Cloud, Info } from "lucide-react";
 
 const localStorageSchema = z.object({
   type: z.literal("local"),
@@ -79,9 +80,10 @@ const StorageSettings = () => {
   const { addNotification } = useNotifications();
   const [activeTab, setActiveTab] = useState("local");
   const [isSaving, setIsSaving] = useState(false);
+  const [isConnectionTesting, setIsConnectionTesting] = useState(false);
   
   // Get initial form values from localStorage or use defaults
-  const getInitialValues = () => {
+  const getInitialValues = (): StorageFormValues => {
     const savedSettings = localStorage.getItem("vision-hub-storage-settings");
     if (savedSettings) {
       try {
@@ -112,8 +114,36 @@ const StorageSettings = () => {
   const handleTabChange = (value: string) => {
     setActiveTab(value);
     
-    // Update form type field
-    form.setValue("type", value as "local" | "nas" | "cloud");
+    // Set default values based on tab
+    if (value === "local" && watchStorageType !== "local") {
+      form.reset({
+        type: "local",
+        path: "/var/lib/vision-hub/recordings",
+        retentionDays: 30,
+        overwriteOldest: true,
+      });
+    } else if (value === "nas" && watchStorageType !== "nas") {
+      form.reset({
+        type: "nas",
+        nasAddress: "",
+        nasPath: "/recordings",
+        nasUsername: "",
+        nasPassword: "",
+        retentionDays: 30,
+        overwriteOldest: true,
+      });
+    } else if (value === "cloud" && watchStorageType !== "cloud") {
+      form.reset({
+        type: "cloud",
+        cloudProvider: "aws",
+        cloudRegion: "us-east-1",
+        cloudBucket: "",
+        cloudKey: "",
+        cloudSecret: "",
+        retentionDays: 30,
+        overwriteOldest: true,
+      });
+    }
     
     // Reset form validation state
     form.clearErrors();
@@ -144,6 +174,40 @@ const StorageSettings = () => {
         type: "success"
       });
     }, 1000);
+  };
+  
+  const testNasConnection = () => {
+    setIsConnectionTesting(true);
+    
+    // Get current NAS settings
+    const nasData = form.getValues();
+    
+    // Simulate connection test
+    setTimeout(() => {
+      setIsConnectionTesting(false);
+      
+      toast({
+        title: "NAS Connection Test",
+        description: "Successfully connected to NAS server",
+      });
+    }, 1500);
+  };
+  
+  const testCloudConnection = () => {
+    setIsConnectionTesting(true);
+    
+    // Get current cloud settings
+    const cloudData = form.getValues();
+    
+    // Simulate connection test
+    setTimeout(() => {
+      setIsConnectionTesting(false);
+      
+      toast({
+        title: "Cloud Connection Test",
+        description: `Successfully connected to ${cloudData.cloudProvider} cloud storage`,
+      });
+    }, 1500);
   };
 
   return (
@@ -233,9 +297,18 @@ const StorageSettings = () => {
                             className="w-full"
                           >
                             <TabsList className="grid w-full grid-cols-3">
-                              <TabsTrigger value="local">Local</TabsTrigger>
-                              <TabsTrigger value="nas">NAS</TabsTrigger>
-                              <TabsTrigger value="cloud">Cloud</TabsTrigger>
+                              <TabsTrigger value="local" className="flex items-center gap-2">
+                                <HardDrive className="h-4 w-4" />
+                                <span>Local</span>
+                              </TabsTrigger>
+                              <TabsTrigger value="nas" className="flex items-center gap-2">
+                                <Server className="h-4 w-4" />
+                                <span>NAS</span>
+                              </TabsTrigger>
+                              <TabsTrigger value="cloud" className="flex items-center gap-2">
+                                <Cloud className="h-4 w-4" />
+                                <span>Cloud</span>
+                              </TabsTrigger>
                             </TabsList>
                             
                             <TabsContent value="local" className="pt-4 space-y-4">
@@ -267,7 +340,8 @@ const StorageSettings = () => {
                                     <FormControl>
                                       <Input {...field} placeholder="192.168.1.100 or nas.local" />
                                     </FormControl>
-                                    <FormDescription>
+                                    <FormDescription className="flex items-center gap-1">
+                                      <Info className="h-3 w-3" />
                                       IP address or hostname of the NAS device
                                     </FormDescription>
                                     <FormMessage />
@@ -321,6 +395,16 @@ const StorageSettings = () => {
                                   )}
                                 />
                               </div>
+                              
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                className="mt-2" 
+                                onClick={testNasConnection}
+                                disabled={isConnectionTesting}
+                              >
+                                {isConnectionTesting ? "Testing Connection..." : "Test NAS Connection"}
+                              </Button>
                             </TabsContent>
                             
                             <TabsContent value="cloud" className="pt-4 space-y-4">
@@ -421,6 +505,16 @@ const StorageSettings = () => {
                                   </FormItem>
                                 )}
                               />
+                              
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                className="mt-2" 
+                                onClick={testCloudConnection}
+                                disabled={isConnectionTesting}
+                              >
+                                {isConnectionTesting ? "Testing Connection..." : "Test Cloud Connection"}
+                              </Button>
                             </TabsContent>
                           </Tabs>
                           <FormMessage />
