@@ -40,7 +40,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
           <SidebarMenuItem>
             <SidebarMenuButton 
               asChild 
-              isActive={(path) => path.startsWith("/settings")}
+              isActive={isActive("/settings")}
             >
               <Link to="/settings">
                 <Settings />

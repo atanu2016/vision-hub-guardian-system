@@ -4,6 +4,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
+import { Settings, ChevronRight, PlaySquare, Bell, HardDrive } from "lucide-react";
 
 interface MenuItem {
   title: string;
