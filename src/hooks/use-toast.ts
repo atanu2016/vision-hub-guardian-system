@@ -1,9 +1,9 @@
 
+// Re-export sonner toast as the default toast provider
 import { toast as sonnerToast } from "sonner";
-import { useToast as useToastUI } from "@/components/ui/toaster";
 
-export const useToast = useToastUI;
-
-// Export sonner toast with the right type
-// This ensures that toast({ description: "..." }) works
+// Re-export the original toast API for backward compatibility
 export const toast = sonnerToast;
+
+// Re-export the useToast hook from the UI component for backward compatibility
+export { useToast } from "@/components/ui/toaster";
