@@ -1,4 +1,9 @@
 
-import { toast } from "@/components/ui/toast";
+import { Toast, ToastActionElement, ToastProps } from "@/components/ui/toast"
+import {
+  useToast as useToastPrimitive,
+} from "@/components/ui/toaster"
 
-export { toast, useToast } from "@/components/ui/toast";
+export type { ToastProps, ToastActionElement }
+export const toast = useToastPrimitive().toast
+export const useToast = useToastPrimitive

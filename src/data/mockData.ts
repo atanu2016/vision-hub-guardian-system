@@ -2,10 +2,10 @@
 // Importing from apiService instead of providing mock data directly
 import { 
   getCameras, 
-  getCameraGroupsFromAPI as getCameraGroups, 
+  getCameraGroups, 
   getSystemStats,
-  saveCameraToAPI as saveCamera,
-  deleteCameraFromAPI as deleteCamera,
+  saveCamera,
+  deleteCamera,
   getStorageSettings,
   saveStorageSettings,
   initializeSystem

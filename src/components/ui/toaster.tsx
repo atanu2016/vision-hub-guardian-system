@@ -1,4 +1,4 @@
-import { useToast } from "@/hooks/use-toast"
+
 import {
   Toast,
   ToastClose,
@@ -7,7 +7,37 @@ import {
   ToastTitle,
   ToastViewport,
 } from "@/components/ui/toast"
+import { createContext, useContext } from "react"
 
+// Define the toast context type
+type ToastContextType = {
+  toast: (props: {
+    title?: string;
+    description?: string;
+    action?: React.ReactNode;
+    variant?: "default" | "destructive";
+  }) => void;
+  toasts: {
+    id: string;
+    title?: string;
+    description?: string;
+    action?: React.ReactNode;
+    variant?: "default" | "destructive";
+  }[];
+}
+
+// Create the toast context with default values
+const ToastContext = createContext<ToastContextType>({
+  toast: () => {},
+  toasts: []
+})
+
+// Export the hook to use the toast
+export const useToast = () => {
+  return useContext(ToastContext)
+}
+
+// Mock implementation for toast function
 export function Toaster() {
   const { toasts } = useToast()
 

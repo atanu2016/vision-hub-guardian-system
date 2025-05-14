@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import AppLayout from "@/components/layout/AppLayout";
 import { useState, useEffect } from "react";
-import { getCameras, saveCameraToAPI } from "@/services/apiService";
+import { getCameras, saveCamera } from "@/services/apiService";
 import { Camera } from "@/types/camera";
 import { useToast } from "@/hooks/use-toast";
 import CameraStreamPlayer from "@/components/cameras/CameraStreamPlayer";
@@ -76,7 +76,7 @@ const CameraDetail = () => {
 
   const handleSaveSettings = async (updatedCamera: Camera) => {
     try {
-      await saveCameraToAPI(updatedCamera);
+      await saveCamera(updatedCamera);
       setCamera(updatedCamera);
       setShowSettings(false);
       toast({
