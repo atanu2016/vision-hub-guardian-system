@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Download, PauseCircle, PlayCircle, Settings, Share2 } from "lucide-react";
 import { useParams, Link } from "react-router-dom";
@@ -315,7 +314,7 @@ const CameraDetail = () => {
                     };
                     
                     setCamera(updatedCamera);
-                    saveCameraToAPI(updatedCamera).then(() => {
+                    saveCamera(updatedCamera).then(() => {
                       toast({
                         title: updatedCamera.recording ? "Recording started" : "Recording stopped",
                         description: updatedCamera.recording ? 
