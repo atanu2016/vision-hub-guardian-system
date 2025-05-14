@@ -1,1 +1,12 @@
+
 project_id = "csmsqglfbycodrqipbca"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[[db.migrations]]
+name = "20250514000000_create_vision_hub_schema"

@@ -1,99 +1,18 @@
 import { Camera, CameraGroup, StorageSettings } from "@/types/camera";
+import { 
+  fetchCamerasFromDB, 
+  saveCameraToDB, 
+  deleteCameraFromDB,
+  fetchStorageSettingsFromDB,
+  saveStorageSettingsToDB,
+  fetchSystemStatsFromDB,
+  updateSystemStats,
+  syncPublicCamerasToDatabase,
+  checkDatabaseSetup
+} from "./databaseService";
 
 // Base API URL - in a real implementation, this would be your actual API endpoint
 const API_BASE_URL = "/api";
-
-// Generic fetch handler with error management
-const fetchWithErrorHandling = async (url: string, options?: RequestInit) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}${url}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error(`API request failed with status ${response.status}`);
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error(`API Error: ${error}`);
-    
-    // Fallback to localStorage data when API is not available
-    if (url.includes('/cameras')) {
-      console.info('Falling back to localStorage for camera data');
-      return getFallbackCameras();
-    } else if (url.includes('/storage')) {
-      console.info('Falling back to localStorage for storage settings');
-      return getFallbackStorageSettings();
-    } else if (url.includes('/stats')) {
-      console.info('Falling back to localStorage for stats');
-      return getFallbackSystemStats();
-    }
-    
-    throw error;
-  }
-};
-
-// Fallback functions that use localStorage
-const getFallbackCameras = (): Camera[] => {
-  const storedCameras = localStorage.getItem('cameras');
-  if (storedCameras) {
-    const parsedCameras = JSON.parse(storedCameras);
-    if (Array.isArray(parsedCameras) && parsedCameras.length > 0) {
-      return parsedCameras;
-    }
-  }
-  // Return public cameras if no stored cameras are found or empty
-  return getPublicCameras();
-};
-
-const getFallbackCameraGroups = (): CameraGroup[] => {
-  const cameras = getFallbackCameras();
-  
-  const groupMap: Record<string, Camera[]> = {};
-  
-  cameras.forEach(camera => {
-    const groupName = camera.group || "Ungrouped";
-    if (!groupMap[groupName]) {
-      groupMap[groupName] = [];
-    }
-    groupMap[groupName].push(camera);
-  });
-  
-  return Object.entries(groupMap).map(([name, groupCameras]) => ({
-    id: name.toLowerCase().replace(/\s+/g, '-'),
-    name,
-    cameras: groupCameras
-  }));
-};
-
-const getFallbackStorageSettings = (): StorageSettings => {
-  const storedSettings = localStorage.getItem('storageSettings');
-  return storedSettings ? JSON.parse(storedSettings) : {
-    type: 'local',
-    path: '/recordings',
-    retentionDays: 30,
-    overwriteOldest: true
-  };
-};
-
-const getFallbackSystemStats = () => {
-  const storedStats = localStorage.getItem('systemStats');
-  return storedStats ? JSON.parse(storedStats) : {
-    storageUsed: "0 GB",
-    storageTotal: "1 TB",
-    storagePercentage: 0,
-    uptimeHours: 0,
-    totalCameras: 0,
-    onlineCameras: 0,
-    offlineCameras: 0,
-    recordingCameras: 0,
-  };
-};
 
 // Public cameras for testing
 export const getPublicCameras = (): Camera[] => {
@@ -191,135 +110,114 @@ export const getPublicCameras = (): Camera[] => {
   ];
 };
 
-// Enhanced getter for cameras with additional features
+// Enhanced getter for cameras with database integration
 export const getCameras = async (): Promise<Camera[]> => {
   try {
-    // Try API first
-    const apiCameras = await fetchWithErrorHandling('/cameras').catch(() => null);
+    // Check if database is set up
+    const isDatabaseSetup = await checkDatabaseSetup();
     
-    // Return valid API cameras if available
-    if (apiCameras && Array.isArray(apiCameras) && apiCameras.length > 0) {
-      return apiCameras;
+    if (isDatabaseSetup) {
+      // Try to get cameras from database
+      try {
+        const cameras = await fetchCamerasFromDB();
+        if (cameras.length > 0) {
+          return cameras;
+        }
+        
+        // If no cameras in database, sync public cameras
+        const publicCameras = getPublicCameras();
+        await syncPublicCamerasToDatabase(publicCameras);
+        return await fetchCamerasFromDB();
+      } catch (dbError) {
+        console.error("Database error, using public cameras:", dbError);
+        return getPublicCameras();
+      }
+    } else {
+      // Use public cameras as fallback
+      console.log("Database not set up, using public cameras");
+      return getPublicCameras();
     }
-    
-    // Fall back to localStorage
-    const cameras = getFallbackCameras();
-    
-    // Ensure all cameras have required fields
-    return cameras.map(camera => ({
-      ...camera,
-      id: camera.id,
-      name: camera.name || 'Unnamed Camera',
-      status: camera.status || 'offline',
-      lastSeen: camera.lastSeen || new Date().toISOString(),
-      recording: !!camera.recording,
-      motionDetection: !!camera.motionDetection
-    }));
   } catch (error) {
-    console.error("API error, using public cameras:", error);
-    const publicCameras = getPublicCameras();
-    // Make sure we store these in localStorage
-    localStorage.setItem('cameras', JSON.stringify(publicCameras));
-    return publicCameras;
+    console.error("Error getting cameras:", error);
+    return getPublicCameras();
   }
 };
 
 // Export function to save camera data
-export const saveCamera = async (camera: Camera): Promise<Camera> => {
-  return await saveCameraToAPI(camera);
-};
-
-// Export function to delete camera
-export const deleteCamera = async (cameraId: string): Promise<void> => {
-  return await deleteCameraFromAPI(cameraId);
-};
-
-// Export the API functions that the mockData module needs
 export const saveCameraToAPI = async (camera: Camera): Promise<Camera> => {
-  const method = camera.id ? 'PUT' : 'POST';
-  const url = camera.id ? `/cameras/${camera.id}` : '/cameras';
-  
   try {
-    // Try the API call first
-    const result = await fetchWithErrorHandling(url, {
-      method,
-      body: JSON.stringify(camera),
-    }).catch(() => null);
+    // Try to save to database first
+    const isDatabaseSetup = await checkDatabaseSetup();
     
-    if (result) {
-      return result;
-    }
-    
-    // If API call fails, update localStorage
-    const cameras = getFallbackCameras();
-    let updatedCameras;
-    
-    if (camera.id) {
-      const index = cameras.findIndex(c => c.id === camera.id);
-      if (index >= 0) {
-        cameras[index] = camera;
-        updatedCameras = [...cameras];
-      } else {
-        updatedCameras = [...cameras, camera];
-      }
+    if (isDatabaseSetup) {
+      const savedCamera = await saveCameraToDB(camera);
+      
+      // Update system stats after camera change
+      const allCameras = await fetchCamerasFromDB();
+      await updateSystemStats(allCameras);
+      
+      return savedCamera;
     } else {
-      // Generate a new ID for new cameras
-      const newCamera = {
-        ...camera, 
-        id: `cam-${Date.now()}`,
-        lastSeen: new Date().toISOString()
-      };
-      updatedCameras = [...cameras, newCamera];
-      camera = newCamera; // Return the new camera with ID
+      // Fallback to local storage
+      console.log("Database not set up, using localStorage fallback");
+      return fallbackSaveCamera(camera);
     }
-    
-    localStorage.setItem('cameras', JSON.stringify(updatedCameras));
-    
-    // Update system stats
-    updateSystemStats(updatedCameras);
-    
-    return camera;
   } catch (error) {
     console.error('Error saving camera:', error);
-    throw error;
+    return fallbackSaveCamera(camera);
   }
 };
 
 export const deleteCameraFromAPI = async (cameraId: string): Promise<void> => {
   try {
-    // Try the API call first
-    await fetchWithErrorHandling(`/cameras/${cameraId}`, {
-      method: 'DELETE',
-    }).catch(() => null);
+    // Try to delete from database first
+    const isDatabaseSetup = await checkDatabaseSetup();
     
-    // Update localStorage regardless of API success
-    const cameras = getFallbackCameras();
-    const filteredCameras = cameras.filter(c => c.id !== cameraId);
-    localStorage.setItem('cameras', JSON.stringify(filteredCameras));
-    
-    // Update system stats
-    updateSystemStats(filteredCameras);
+    if (isDatabaseSetup) {
+      await deleteCameraFromDB(cameraId);
+      
+      // Update system stats after camera deletion
+      const allCameras = await fetchCamerasFromDB();
+      await updateSystemStats(allCameras);
+    } else {
+      // Fallback to local storage
+      console.log("Database not set up, using localStorage fallback");
+      fallbackDeleteCamera(cameraId);
+    }
   } catch (error) {
     console.error('Error deleting camera:', error);
-    throw error;
+    fallbackDeleteCamera(cameraId);
   }
 };
 
 export const getCameraGroupsFromAPI = async (): Promise<CameraGroup[]> => {
   try {
-    // Try API first
-    const apiGroups = await fetchWithErrorHandling('/camera-groups').catch(() => null);
-    
-    if (apiGroups && Array.isArray(apiGroups) && apiGroups.length > 0) {
-      return apiGroups;
-    }
-    
-    // Fall back to generating groups from cameras
-    return getFallbackCameraGroups();
+    // Get cameras and group them
+    const cameras = await getCameras();
+    return groupCamerasByType(cameras);
   } catch (error) {
-    console.error('Error fetching camera groups, generating from cameras:', error);
-    return getFallbackCameraGroups();
+    console.error('Error getting camera groups:', error);
+    return [];
   }
+};
+
+// Helper to group cameras by type
+const groupCamerasByType = (cameras: Camera[]): CameraGroup[] => {
+  const groupMap: Record<string, Camera[]> = {};
+  
+  cameras.forEach(camera => {
+    const groupName = camera.group || "Ungrouped";
+    if (!groupMap[groupName]) {
+      groupMap[groupName] = [];
+    }
+    groupMap[groupName].push(camera);
+  });
+  
+  return Object.entries(groupMap).map(([name, groupCameras]) => ({
+    id: name.toLowerCase().replace(/\s+/g, '-'),
+    name,
+    cameras: groupCameras
+  }));
 };
 
 // Adding the needed export for getCameraGroups
@@ -327,18 +225,18 @@ export const getCameraGroups = async (): Promise<CameraGroup[]> => {
   return await getCameraGroupsFromAPI();
 };
 
-// Storage settings API functions
+// Storage settings API functions with database integration
 export const getStorageSettings = async (): Promise<StorageSettings> => {
   try {
-    // Try API first
-    const apiSettings = await fetchWithErrorHandling('/storage/settings').catch(() => null);
+    // Check if database is set up
+    const isDatabaseSetup = await checkDatabaseSetup();
     
-    if (apiSettings) {
-      return apiSettings;
+    if (isDatabaseSetup) {
+      return await fetchStorageSettingsFromDB();
+    } else {
+      // Fallback to local storage
+      return getFallbackStorageSettings();
     }
-    
-    // Fall back to localStorage
-    return getFallbackStorageSettings();
   } catch (error) {
     console.error('Error fetching storage settings:', error);
     return getFallbackStorageSettings();
@@ -347,42 +245,119 @@ export const getStorageSettings = async (): Promise<StorageSettings> => {
 
 export const saveStorageSettings = async (settings: StorageSettings): Promise<StorageSettings> => {
   try {
-    // Try the API call first
-    const result = await fetchWithErrorHandling('/storage/settings', {
-      method: 'PUT',
-      body: JSON.stringify(settings),
-    }).catch(() => null);
+    // Check if database is set up
+    const isDatabaseSetup = await checkDatabaseSetup();
     
-    // Update local storage regardless of API success
-    localStorage.setItem('storageSettings', JSON.stringify(settings));
-    
-    return result || settings;
+    if (isDatabaseSetup) {
+      return await saveStorageSettingsToDB(settings);
+    } else {
+      // Fallback to local storage
+      localStorage.setItem('storageSettings', JSON.stringify(settings));
+      return settings;
+    }
   } catch (error) {
     console.error('Error saving storage settings:', error);
-    throw error;
+    localStorage.setItem('storageSettings', JSON.stringify(settings));
+    return settings;
   }
 };
 
-// System stats API function
+// System stats API function with database integration
 export const getSystemStats = async () => {
   try {
-    // Try API first
-    const apiStats = await fetchWithErrorHandling('/system/stats').catch(() => null);
+    // Check if database is set up
+    const isDatabaseSetup = await checkDatabaseSetup();
     
-    if (apiStats) {
-      return apiStats;
+    if (isDatabaseSetup) {
+      return await fetchSystemStatsFromDB();
+    } else {
+      // Fallback to local storage
+      return getFallbackSystemStats();
     }
-    
-    // Fall back to localStorage
-    return getFallbackSystemStats();
   } catch (error) {
     console.error('Error fetching system stats:', error);
     return getFallbackSystemStats();
   }
 };
 
-// Update system stats in localStorage based on current cameras
-const updateSystemStats = (cameras: Camera[]) => {
+// Fallback functions that use localStorage
+const getFallbackStorageSettings = (): StorageSettings => {
+  const storedSettings = localStorage.getItem('storageSettings');
+  return storedSettings ? JSON.parse(storedSettings) : {
+    type: 'local',
+    path: '/recordings',
+    retentionDays: 30,
+    overwriteOldest: true
+  };
+};
+
+const getFallbackSystemStats = () => {
+  const storedStats = localStorage.getItem('systemStats');
+  return storedStats ? JSON.parse(storedStats) : {
+    storageUsed: "0 GB",
+    storageTotal: "1 TB",
+    storagePercentage: 0,
+    uptimeHours: 0,
+    totalCameras: 0,
+    onlineCameras: 0,
+    offlineCameras: 0,
+    recordingCameras: 0,
+  };
+};
+
+const fallbackSaveCamera = (camera: Camera): Camera => {
+  // Get existing cameras from localStorage
+  const existingCamerasString = localStorage.getItem('cameras');
+  const cameras = existingCamerasString ? JSON.parse(existingCamerasString) : [];
+  
+  // Check if camera has an ID
+  if (camera.id) {
+    // Update existing camera
+    const index = cameras.findIndex((c: Camera) => c.id === camera.id);
+    if (index >= 0) {
+      cameras[index] = { ...camera };
+    } else {
+      cameras.push(camera);
+    }
+  } else {
+    // Add new camera with generated ID
+    const newCamera = {
+      ...camera, 
+      id: `cam-${Date.now()}`,
+      lastSeen: new Date().toISOString()
+    };
+    cameras.push(newCamera);
+    camera = newCamera;
+  }
+  
+  // Save cameras back to localStorage
+  localStorage.setItem('cameras', JSON.stringify(cameras));
+  
+  // Update system stats
+  updateFallbackSystemStats(cameras);
+  
+  return camera;
+};
+
+const fallbackDeleteCamera = (cameraId: string): void => {
+  // Get existing cameras from localStorage
+  const existingCamerasString = localStorage.getItem('cameras');
+  if (!existingCamerasString) return;
+  
+  const cameras = JSON.parse(existingCamerasString);
+  
+  // Filter out the camera to delete
+  const filteredCameras = cameras.filter((c: Camera) => c.id !== cameraId);
+  
+  // Save cameras back to localStorage
+  localStorage.setItem('cameras', JSON.stringify(filteredCameras));
+  
+  // Update system stats
+  updateFallbackSystemStats(filteredCameras);
+};
+
+// Update system stats in localStorage
+const updateFallbackSystemStats = (cameras: Camera[]) => {
   const totalCameras = cameras.length;
   const onlineCameras = cameras.filter(c => c.status === 'online').length;
   const offlineCameras = cameras.filter(c => c.status === 'offline').length;
@@ -459,58 +434,51 @@ export const setupCameraStream = (
   }
 };
 
-// Initialize the system by ensuring public cameras are available
+// Initialize the system with database integration
 export const initializeSystem = async (): Promise<void> => {
   try {
-    // Clear existing cameras to ensure we always have fresh public cameras
-    localStorage.removeItem('cameras');
+    // Check if database is set up
+    const isDatabaseSetup = await checkDatabaseSetup();
     
-    // Get the public cameras
-    const publicCameras = getPublicCameras();
-    
-    // Store them in localStorage
-    localStorage.setItem('cameras', JSON.stringify(publicCameras));
-    
-    // Update system stats
-    const stats = {
-      storageUsed: "0 GB",
-      storageTotal: "1 TB",
-      storagePercentage: 0,
-      uptimeHours: 0,
-      totalCameras: publicCameras.length,
-      onlineCameras: publicCameras.filter(c => c.status === 'online').length,
-      offlineCameras: publicCameras.filter(c => c.status === 'offline').length,
-      recordingCameras: publicCameras.filter(c => c.recording).length,
-    };
-    
-    localStorage.setItem('systemStats', JSON.stringify(stats));
-    
-    console.log('System initialized with public cameras');
-    
-    // Initialize storage settings with defaults if not already set
-    const storageSettings = localStorage.getItem('storageSettings');
-    if (!storageSettings) {
-      localStorage.setItem('storageSettings', JSON.stringify({
-        type: 'local',
-        path: '/var/lib/vision-hub/recordings',
-        retentionDays: 30,
-        overwriteOldest: true
-      }));
+    if (isDatabaseSetup) {
+      // Get cameras from database
+      const cameras = await fetchCamerasFromDB();
+      
+      // If no cameras in database, sync public cameras
+      if (cameras.length === 0) {
+        const publicCameras = getPublicCameras();
+        await syncPublicCamerasToDatabase(publicCameras);
+      }
+      
+      // Update system stats
+      const updatedCameras = await fetchCamerasFromDB();
+      await updateSystemStats(updatedCameras);
+      
+      console.log('System initialized with database integration');
+    } else {
+      console.log('Database not set up, using localStorage fallback');
+      
+      // Initialize with public cameras in localStorage
+      const publicCameras = getPublicCameras();
+      localStorage.setItem('cameras', JSON.stringify(publicCameras));
+      
+      // Update system stats
+      updateFallbackSystemStats(publicCameras);
+      
+      // Initialize storage settings with defaults if not already set
+      const storageSettings = localStorage.getItem('storageSettings');
+      if (!storageSettings) {
+        localStorage.setItem('storageSettings', JSON.stringify({
+          type: 'local',
+          path: '/var/lib/vision-hub/recordings',
+          retentionDays: 30,
+          overwriteOldest: true
+        }));
+      }
     }
-    
-    // Initialize debug logs storage
-    if (!localStorage.getItem('debug-logs')) {
-      localStorage.setItem('debug-logs', JSON.stringify([
-        {
-          timestamp: new Date().toISOString(),
-          level: 'info',
-          message: 'System initialized with public cameras'
-        }
-      ]));
-    }
-    
   } catch (error) {
     console.error('Error initializing system:', error);
+    
     // Ensure public cameras are available as fallback
     const publicCameras = getPublicCameras();
     localStorage.setItem('cameras', JSON.stringify(publicCameras));

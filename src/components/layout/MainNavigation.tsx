@@ -8,8 +8,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { Home, Camera } from "lucide-react";
-import SettingsMenuSection from "./SettingsMenuSection";
+import { Home, Camera, Settings } from "lucide-react";
 
 interface MainNavigationProps {
   isActive: (path: string) => boolean;
@@ -37,8 +36,15 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
-
-          <SettingsMenuSection isActive={isActive} />
+          
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={isActive("/settings")}>
+              <Link to="/settings">
+                <Settings />
+                <span>Settings</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
