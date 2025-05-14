@@ -26,7 +26,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
 import AddCameraModal from "@/components/cameras/AddCameraModal";
 import { Camera } from "@/types/camera";
-import { getCameras, saveCameras } from "@/data/mockData";
+import { getCameras, saveCamera } from "@/data/mockData";
 import { useToast } from "@/hooks/use-toast";
 import { NotificationDropdown } from "./NotificationDropdown";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -84,8 +84,8 @@ const TopBar = () => {
     const updatedCameras = [...cameras, camera];
     setCameras(updatedCameras);
     
-    // Save to storage
-    saveCameras(updatedCameras);
+    // Save to storage - fix the function name from saveCameras to saveCamera
+    saveCamera(camera);
     
     // Add notification
     addNotification({
