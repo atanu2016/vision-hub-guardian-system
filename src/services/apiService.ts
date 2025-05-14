@@ -1,4 +1,3 @@
-
 import { Camera, CameraGroup, StorageSettings } from "@/types/camera";
 
 // Base API URL - in a real implementation, this would be your actual API endpoint
@@ -42,7 +41,11 @@ const fetchWithErrorHandling = async (url: string, options?: RequestInit) => {
 // Fallback functions that use localStorage
 const getFallbackCameras = (): Camera[] => {
   const storedCameras = localStorage.getItem('cameras');
-  return storedCameras ? JSON.parse(storedCameras) : [];
+  if (storedCameras) {
+    return JSON.parse(storedCameras);
+  }
+  // Return public cameras if no stored cameras are found
+  return getPublicCameras();
 };
 
 const getFallbackCameraGroups = (): CameraGroup[] => {
@@ -87,9 +90,118 @@ const getFallbackSystemStats = () => {
   };
 };
 
+// Public cameras for testing
+export const getPublicCameras = (): Camera[] => {
+  return [
+    {
+      id: "pub-cam-1",
+      name: "Times Square",
+      location: "New York City, USA",
+      ipAddress: "public-stream-1",
+      port: 80,
+      username: "public",
+      status: "online",
+      model: "Public Stream",
+      manufacturer: "EarthCam",
+      lastSeen: new Date().toISOString(),
+      recording: false,
+      thumbnail: "https://images.unsplash.com/photo-1534270804882-6b5048b1c1fc?q=80&w=300",
+      group: "Public Feeds",
+      connectionType: "rtmp",
+      rtmpUrl: "https://videos3.earthcam.com/fecnetwork/hdtimes10.flv/playlist.m3u8",
+    },
+    {
+      id: "pub-cam-2",
+      name: "Abbey Road",
+      location: "London, UK",
+      ipAddress: "public-stream-2",
+      port: 80,
+      username: "public",
+      status: "online",
+      model: "Public Stream",
+      manufacturer: "AbbeyRoad",
+      lastSeen: new Date().toISOString(),
+      recording: false,
+      thumbnail: "https://images.unsplash.com/photo-1520986606214-8b456906c813?q=80&w=300",
+      group: "Public Feeds",
+      connectionType: "rtmp",
+      rtmpUrl: "https://videos3.earthcam.com/fecnetwork/AbbeyRoadHD1.flv/playlist.m3u8",
+    },
+    {
+      id: "pub-cam-3",
+      name: "Tokyo Shibuya Crossing",
+      location: "Tokyo, Japan",
+      ipAddress: "public-stream-3",
+      port: 80,
+      username: "public",
+      status: "online",
+      model: "Public Stream",
+      manufacturer: "JapanCams",
+      lastSeen: new Date().toISOString(),
+      recording: false,
+      thumbnail: "https://images.unsplash.com/photo-1542051841857-5f90071e7989?q=80&w=300",
+      group: "Public Feeds",
+      connectionType: "rtmp",
+      rtmpUrl: "https://b.live-img.com/api/v2/live/player?id=1693392400000",
+    },
+    {
+      id: "pub-cam-4",
+      name: "International Space Station",
+      location: "Earth Orbit",
+      ipAddress: "public-stream-4",
+      port: 80,
+      username: "public",
+      status: "online",
+      model: "ISS Live Stream",
+      manufacturer: "NASA",
+      lastSeen: new Date().toISOString(),
+      recording: false,
+      thumbnail: "https://images.unsplash.com/photo-1454789548928-9efd52dc4031?q=80&w=300",
+      group: "Public Feeds",
+      connectionType: "rtmp",
+      rtmpUrl: "https://nasa-i.akamaihd.net/hls/live/253565/NASA-NTV1-Public/master.m3u8",
+    },
+    {
+      id: "pub-cam-5",
+      name: "Venice Grand Canal",
+      location: "Venice, Italy",
+      ipAddress: "public-stream-5",
+      port: 80,
+      username: "public",
+      status: "online",
+      model: "Public Stream",
+      manufacturer: "ItalyCams",
+      lastSeen: new Date().toISOString(),
+      recording: false,
+      thumbnail: "https://images.unsplash.com/photo-1498307833015-e7b400441eb8?q=80&w=300",
+      group: "Public Feeds",
+      connectionType: "rtmp",
+      rtmpUrl: "https://webcamurl.it/webcam/venice1.m3u8",
+    }
+  ];
+};
+
 // Camera API functions
 export const getCamerasFromAPI = async (): Promise<Camera[]> => {
-  return await fetchWithErrorHandling('/cameras');
+  try {
+    const apiCameras = await fetchWithErrorHandling('/cameras');
+    
+    // If no cameras were returned or the array is empty, use public cameras
+    if (!apiCameras || (Array.isArray(apiCameras) && apiCameras.length === 0)) {
+      const publicCameras = getPublicCameras();
+      
+      // Store them in localStorage as fallback for future use
+      localStorage.setItem('cameras', JSON.stringify(publicCameras));
+      
+      return publicCameras;
+    }
+    
+    return apiCameras;
+  } catch (error) {
+    console.error("API error, using public cameras:", error);
+    const publicCameras = getPublicCameras();
+    return publicCameras;
+  }
 };
 
 export const saveCameraToAPI = async (camera: Camera): Promise<Camera> => {
@@ -162,7 +274,7 @@ export const getSystemStatsFromAPI = async () => {
 
 // Camera stream related functions
 export const getCameraStreamUrl = (camera: Camera): string => {
-  // This would generate or return a proper stream URL based on camera properties
+  // If the camera has a defined RTMP URL, use it directly
   if (camera.connectionType === 'rtmp' && camera.rtmpUrl) {
     return camera.rtmpUrl;
   } else if (camera.connectionType === 'ip') {
@@ -185,29 +297,31 @@ export const setupCameraStream = (
   try {
     const streamUrl = getCameraStreamUrl(camera);
     
-    // For demonstration - in a real implementation, you would use HLS.js, WebRTC, or similar
-    // This is just a placeholder showing how you would wire things up
-    
-    // Use a placeholder until real streams can be integrated
     console.log(`Setting up camera stream for ${camera.name} using URL: ${streamUrl}`);
-    videoElement.poster = camera.thumbnail || '/placeholder.svg';
     
-    // In a real implementation:
-    // if (Hls.isSupported()) {
-    //   const hls = new Hls();
-    //   hls.loadSource(streamUrl);
-    //   hls.attachMedia(videoElement);
-    //   hls.on(Hls.Events.MANIFEST_PARSED, () => {
-    //     videoElement.play();
-    //   });
-    //   return () => {
-    //     hls.destroy();
-    //   };
-    // }
+    // Set the video source directly for public RTMP streams
+    if (camera.connectionType === 'rtmp' && camera.rtmpUrl) {
+      videoElement.src = streamUrl;
+      videoElement.poster = camera.thumbnail || '/placeholder.svg';
+      
+      // Try to play the video, handle potential autoplay restrictions
+      const playPromise = videoElement.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.warn('Autoplay was prevented. User interaction required.', error);
+          // Show a play button or message here if needed
+        });
+      }
+    } else {
+      // For other types, just show the poster image
+      videoElement.poster = camera.thumbnail || '/placeholder.svg';
+    }
     
     return () => {
       // Cleanup function
+      videoElement.pause();
       videoElement.src = '';
+      videoElement.load(); // Ensures resources are released
     };
   } catch (error) {
     console.error('Error setting up camera stream:', error);
@@ -215,5 +329,25 @@ export const setupCameraStream = (
       onError(error as Error);
     }
     return () => {};
+  }
+};
+
+// Initialize the system by ensuring public cameras are available
+export const initializeSystem = async (): Promise<void> => {
+  try {
+    // Try to get cameras from API or localStorage
+    const existingCameras = await getCamerasFromAPI();
+    
+    // If no cameras exist, use public cameras
+    if (!existingCameras || existingCameras.length === 0) {
+      const publicCameras = getPublicCameras();
+      localStorage.setItem('cameras', JSON.stringify(publicCameras));
+      console.log('System initialized with public cameras');
+    }
+  } catch (error) {
+    console.error('Error initializing system:', error);
+    // Ensure public cameras are available as fallback
+    const publicCameras = getPublicCameras();
+    localStorage.setItem('cameras', JSON.stringify(publicCameras));
   }
 };

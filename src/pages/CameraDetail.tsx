@@ -6,18 +6,17 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import AppLayout from "@/components/layout/AppLayout";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { getCameras } from "@/data/mockData";
-import { setupCameraStream } from "@/services/apiService";
-import { useToast } from "@/hooks/use-toast";
 import { Camera } from "@/types/camera";
+import { useToast } from "@/hooks/use-toast";
+import CameraStreamPlayer from "@/components/cameras/CameraStreamPlayer";
 
 const CameraDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [isStreaming, setIsStreaming] = useState(true);
   const [camera, setCamera] = useState<Camera | null>(null);
   const [loading, setLoading] = useState(true);
-  const videoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -50,42 +49,8 @@ const CameraDetail = () => {
     fetchCamera();
   }, [id, toast]);
   
-  // Setup camera stream when camera data is loaded
-  useEffect(() => {
-    if (!camera || !camera.status || camera.status !== "online") return;
-    
-    const cleanupFn = setupCameraStream(
-      camera, 
-      videoRef.current,
-      (error) => {
-        console.error("Error setting up camera stream:", error);
-        toast({
-          title: "Stream Error",
-          description: "Could not connect to camera stream. Please check camera settings.",
-          variant: "destructive",
-        });
-      }
-    );
-    
-    return () => {
-      cleanupFn();
-    };
-  }, [camera, toast]);
-  
   const handleToggleStreaming = () => {
     setIsStreaming(!isStreaming);
-    
-    if (videoRef.current) {
-      if (!isStreaming) {
-        // Resume streaming
-        if (camera) {
-          setupCameraStream(camera, videoRef.current);
-        }
-      } else {
-        // Pause streaming
-        videoRef.current.pause();
-      }
-    }
   };
   
   const handleTakeSnapshot = () => {
@@ -169,28 +134,11 @@ const CameraDetail = () => {
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <div className="relative aspect-video rounded-lg overflow-hidden border border-border bg-vision-dark-900">
-              {isOnline ? (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <video 
-                    ref={videoRef}
-                    className="h-full w-full object-contain"
-                    poster={camera.thumbnail || '/placeholder.svg'}
-                    playsInline
-                    autoPlay={isStreaming}
-                    muted
-                  />
-                </div>
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <p className="text-lg">Camera offline</p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Last seen: {new Date(camera.lastSeen || "").toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              )}
+            <div className="relative rounded-lg overflow-hidden border border-border">
+              <CameraStreamPlayer 
+                camera={camera} 
+                autoPlay={isStreaming}
+              />
               
               <div className="absolute bottom-4 left-4 right-4 flex justify-between">
                 <div className="flex gap-2">
