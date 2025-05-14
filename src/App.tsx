@@ -14,7 +14,7 @@ import ProfileSettings from "@/pages/ProfileSettings";
 import Notifications from "@/pages/Notifications";
 import { Toaster } from "@/components/ui/toaster";
 import { useEffect } from "react";
-import { initializeSystem } from "@/services/apiService";
+import { initializeSystem } from "@/data/mockData";
 
 function App() {
   // Initialize the system when the app starts
@@ -39,7 +39,8 @@ function App() {
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
           <Route path="/cameras" element={<ProtectedRoute><Cameras /></ProtectedRoute>} />
           <Route path="/cameras/:id" element={<ProtectedRoute><CameraDetail /></ProtectedRoute>} />
-          <Route path="/settings/*" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/settings/:section" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute requireAdmin>{<Admin />}</ProtectedRoute>} />
           <Route path="/profile-settings" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />

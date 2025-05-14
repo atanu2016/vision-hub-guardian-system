@@ -1,16 +1,9 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import {
-  Settings,
-  PlaySquare,
-  Bell,
-  HardDrive,
-  ChevronRight,
-} from "lucide-react";
 
 interface MenuItem {
   title: string;
@@ -27,8 +20,15 @@ interface SettingsMenuSectionProps {
   isActive: (path: string) => boolean;
 }
 
-// Export the component as a named export
 export const SettingsMenuSection = ({ title, description, items, isActive }: SettingsMenuSectionProps) => {
+  const navigate = useNavigate();
+  
+  const handleItemClick = (href: string, disabled?: boolean) => {
+    if (!disabled) {
+      navigate(href);
+    }
+  };
+  
   return (
     <div className="space-y-3">
       <div className="px-2">
@@ -39,29 +39,20 @@ export const SettingsMenuSection = ({ title, description, items, isActive }: Set
         {items.map((item, i) => (
           <div
             key={i}
-            className={`flex items-start gap-4 rounded-lg border p-3 text-left text-sm transition-all ${isActive(item.href) ? 'bg-accent' : 'hover:bg-accent'} ${item.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`flex items-start gap-4 rounded-lg border p-3 text-left text-sm transition-all cursor-pointer
+              ${isActive(item.href) ? 'bg-accent' : 'hover:bg-accent'} 
+              ${item.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            onClick={() => handleItemClick(item.href, item.disabled)}
           >
             <div className="flex items-center">
               {item.icon}
             </div>
             <div className="flex-1 space-y-1">
-              <div className="flex items-center">
-                <div className="font-medium">{item.title}</div>
-              </div>
+              <div className="font-medium">{item.title}</div>
               <div className="text-xs text-muted-foreground">
                 {item.description}
               </div>
             </div>
-            {item.href && !item.disabled && (
-              <div className="ml-auto flex items-center gap-2">
-                <Link
-                  to={item.href}
-                  className="underline-offset-4 hover:underline"
-                >
-                  View
-                </Link>
-              </div>
-            )}
           </div>
         ))}
       </div>
