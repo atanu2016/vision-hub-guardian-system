@@ -1,15 +1,15 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { TrashIcon, PlusCircle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getWebhooks, saveWebhook, deleteWebhook } from "@/services/apiService";
 
 interface Webhook {
   id: string;
@@ -20,16 +20,8 @@ interface Webhook {
 }
 
 const WebhooksSettings = () => {
-  const { toast } = useToast();
-  const [webhooks, setWebhooks] = useState<Webhook[]>([
-    {
-      id: "1",
-      name: "Motion Detection Events",
-      url: "https://example.com/webhook/motion",
-      events: ["motion_detected", "camera_offline"],
-      active: true
-    }
-  ]);
+  const [webhooks, setWebhooks] = useState<Webhook[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   const [newWebhook, setNewWebhook] = useState({
     name: "",
@@ -40,53 +32,76 @@ const WebhooksSettings = () => {
   
   const [isAddingWebhook, setIsAddingWebhook] = useState(false);
 
-  const handleSaveWebhook = () => {
+  // Load webhooks from database
+  useEffect(() => {
+    const loadWebhooks = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getWebhooks();
+        setWebhooks(data);
+      } catch (error) {
+        console.error("Failed to load webhooks:", error);
+        toast("Error", {
+          description: "Failed to load webhooks"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadWebhooks();
+  }, []);
+
+  const handleSaveWebhook = async () => {
     if (!newWebhook.name || !newWebhook.url) {
-      toast({
-        title: "Error",
-        description: "Webhook name and URL are required",
-        variant: "destructive"
+      toast("Error", {
+        description: "Webhook name and URL are required"
       });
       return;
     }
     
-    // Add new webhook
-    const webhook = {
-      ...newWebhook,
-      id: Date.now().toString()
+    // Save webhook to database
+    const success = await saveWebhook(newWebhook);
+    
+    if (success) {
+      // Reload webhooks
+      const updatedWebhooks = await getWebhooks();
+      setWebhooks(updatedWebhooks);
+      
+      // Reset form
+      setNewWebhook({
+        name: "",
+        url: "",
+        events: ["all"],
+        active: true
+      });
+      setIsAddingWebhook(false);
+    }
+  };
+  
+  const handleDeleteWebhook = async (id: string) => {
+    const success = await deleteWebhook(id);
+    
+    if (success) {
+      // Remove from state
+      setWebhooks(webhooks.filter(webhook => webhook.id !== id));
+    }
+  };
+  
+  const handleToggleWebhook = async (webhook: Webhook) => {
+    const updatedWebhook = {
+      ...webhook,
+      active: !webhook.active
     };
     
-    // In a real implementation, this would save to Supabase
-    setWebhooks([...webhooks, webhook]);
-    setNewWebhook({
-      name: "",
-      url: "",
-      events: ["all"],
-      active: true
-    });
-    setIsAddingWebhook(false);
+    const success = await saveWebhook(updatedWebhook);
     
-    toast({
-      title: "Webhook added",
-      description: "The webhook has been added successfully"
-    });
-  };
-  
-  const handleDeleteWebhook = (id: string) => {
-    // In a real implementation, this would delete from Supabase
-    setWebhooks(webhooks.filter(webhook => webhook.id !== id));
-    
-    toast({
-      title: "Webhook deleted",
-      description: "The webhook has been deleted"
-    });
-  };
-  
-  const handleToggleWebhook = (id: string) => {
-    // In a real implementation, this would update in Supabase
-    setWebhooks(webhooks.map(webhook => 
-      webhook.id === id ? { ...webhook, active: !webhook.active } : webhook
-    ));
+    if (success) {
+      // Update in state
+      setWebhooks(webhooks.map(w => 
+        w.id === webhook.id ? { ...w, active: !w.active } : w
+      ));
+    }
   };
   
   const getEventLabel = (event: string) => {
@@ -117,7 +132,12 @@ const WebhooksSettings = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {webhooks.length > 0 ? (
+          {isLoading ? (
+            <div className="text-center py-6">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-2 text-sm text-muted-foreground">Loading webhooks...</p>
+            </div>
+          ) : webhooks.length > 0 ? (
             webhooks.map(webhook => (
               <div key={webhook.id} className="flex flex-col border rounded-md p-4 space-y-3">
                 <div className="flex justify-between items-start">
@@ -135,7 +155,7 @@ const WebhooksSettings = () => {
                   <div className="flex items-center gap-2">
                     <Switch 
                       checked={webhook.active}
-                      onCheckedChange={() => handleToggleWebhook(webhook.id)}
+                      onCheckedChange={() => handleToggleWebhook(webhook)}
                     />
                     <Button 
                       variant="ghost" 
@@ -205,7 +225,7 @@ const WebhooksSettings = () => {
                 value={newWebhook.events[0]}
                 onValueChange={value => setNewWebhook({...newWebhook, events: [value]})}
               >
-                <SelectTrigger>
+                <SelectTrigger id="webhook-events">
                   <SelectValue placeholder="Select events" />
                 </SelectTrigger>
                 <SelectContent>

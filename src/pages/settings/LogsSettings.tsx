@@ -3,11 +3,11 @@ import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Download, RefreshCw, AlertTriangle, Info, CheckCircle, X } from "lucide-react";
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/integrations/supabase/client';
+import { getLogs, saveAdvancedSettings, getAdvancedSettings } from '@/services/apiService';
 
 interface LogEntry {
   id: string;
@@ -19,89 +19,58 @@ interface LogEntry {
 }
 
 const LogsSettings = () => {
-  const { toast } = useToast();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
   const [filter, setFilter] = useState({
     level: 'all',
     source: 'all',
     search: ''
   });
+  const [logSettings, setLogSettings] = useState({
+    logRetentionDays: 30,
+    minLogLevel: 'info'
+  });
 
-  // Simulate fetching logs
+  // Fetch logs from the database
   const fetchLogs = async () => {
     setIsLoading(true);
     
     try {
-      // In real implementation, this would fetch from a Supabase table
-      // Simulated logs for demonstration
-      const mockLogs: LogEntry[] = [
-        { 
-          id: '1',
-          timestamp: new Date(Date.now() - 100000).toISOString(),
-          level: 'info',
-          message: 'System started successfully',
-          source: 'system'
-        },
-        { 
-          id: '2',
-          timestamp: new Date(Date.now() - 200000).toISOString(),
-          level: 'warning',
-          message: 'Storage approaching capacity (85%)',
-          source: 'storage',
-          details: 'Current usage: 850GB/1TB'
-        },
-        { 
-          id: '3',
-          timestamp: new Date(Date.now() - 300000).toISOString(),
-          level: 'error',
-          message: 'Camera connection failed',
-          source: 'camera',
-          details: 'Camera ID: cam-12, IP: 192.168.1.15'
-        },
-        { 
-          id: '4',
-          timestamp: new Date(Date.now() - 400000).toISOString(),
-          level: 'info',
-          message: 'User login successful',
-          source: 'auth',
-          details: 'User: admin'
-        },
-        { 
-          id: '5',
-          timestamp: new Date(Date.now() - 500000).toISOString(),
-          level: 'info',
-          message: 'Scheduled backup completed',
-          source: 'backup',
-          details: 'Backup size: 1.2GB'
-        },
-      ];
-      
-      setLogs(mockLogs);
-      
-      // In the future, fetch from Supabase:
-      // const { data, error } = await supabase
-      //   .from('system_logs')
-      //   .select('*')
-      //   .order('timestamp', { ascending: false });
-      //
-      // if (error) throw error;
-      // setLogs(data);
-      
+      const data = await getLogs(filter);
+      setLogs(data);
+      toast("Logs Refreshed", {
+        description: `Loaded ${data.length} log entries`
+      });
     } catch (error) {
       console.error('Failed to fetch logs:', error);
-      toast({
-        title: 'Failed to load logs',
-        description: 'Could not retrieve system logs. Please try again.',
-        variant: 'destructive'
+      toast("Error", {
+        description: 'Could not retrieve system logs. Please try again.'
       });
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Load logs and log settings on component mount
   useEffect(() => {
-    fetchLogs();
+    const loadData = async () => {
+      try {
+        // Load logs
+        await fetchLogs();
+        
+        // Load log settings
+        const advancedSettings = await getAdvancedSettings();
+        setLogSettings({
+          logRetentionDays: advancedSettings.logRetentionDays,
+          minLogLevel: advancedSettings.minLogLevel
+        });
+      } catch (error) {
+        console.error('Error loading data:', error);
+      }
+    };
+    
+    loadData();
   }, []);
 
   const filteredLogs = logs.filter(log => {
@@ -127,10 +96,39 @@ const LogsSettings = () => {
     link.click();
     URL.revokeObjectURL(url);
     
-    toast({
-      title: 'Logs downloaded',
+    toast("Logs Downloaded", {
       description: 'System logs have been downloaded to your computer.'
     });
+  };
+  
+  const handleSaveLogSettings = async () => {
+    try {
+      setSavingSettings(true);
+      
+      // Get existing advanced settings
+      const currentSettings = await getAdvancedSettings();
+      
+      // Update only log-related settings
+      const updatedSettings = {
+        ...currentSettings,
+        logRetentionDays: logSettings.logRetentionDays,
+        minLogLevel: logSettings.minLogLevel
+      };
+      
+      // Save to database
+      await saveAdvancedSettings(updatedSettings);
+      
+      toast("Settings Saved", {
+        description: "Log settings have been updated successfully"
+      });
+    } catch (error) {
+      console.error('Error saving log settings:', error);
+      toast("Error", {
+        description: "Failed to save log settings"
+      });
+    } finally {
+      setSavingSettings(false);
+    }
   };
 
   const getLevelIcon = (level: string) => {
@@ -174,7 +172,7 @@ const LogsSettings = () => {
                 <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
-              <Button variant="outline" onClick={handleDownloadLogs}>
+              <Button variant="outline" onClick={handleDownloadLogs} disabled={filteredLogs.length === 0}>
                 <Download className="h-4 w-4 mr-2" />
                 Export
               </Button>
@@ -228,7 +226,12 @@ const LogsSettings = () => {
           
           <div className="border rounded-md overflow-hidden">
             <div className="max-h-[500px] overflow-y-auto">
-              {filteredLogs.length > 0 ? (
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center py-10">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <p className="text-sm text-muted-foreground mt-2">Loading logs...</p>
+                </div>
+              ) : filteredLogs.length > 0 ? (
                 <table className="min-w-full">
                   <thead className="bg-muted/50 sticky top-0">
                     <tr>
@@ -272,7 +275,7 @@ const LogsSettings = () => {
         </CardContent>
         <CardFooter className="flex justify-between text-sm text-muted-foreground">
           <p>Showing {filteredLogs.length} of {logs.length} logs</p>
-          <p>Log retention: 30 days</p>
+          <p>Log retention: {logSettings.logRetentionDays} days</p>
         </CardFooter>
       </Card>
       
@@ -289,7 +292,10 @@ const LogsSettings = () => {
               <p className="font-medium">Log Retention</p>
               <p className="text-sm text-muted-foreground">How long logs are kept</p>
             </div>
-            <Select defaultValue="30">
+            <Select 
+              value={logSettings.logRetentionDays.toString()}
+              onValueChange={(value) => setLogSettings({...logSettings, logRetentionDays: parseInt(value)})}
+            >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select retention" />
               </SelectTrigger>
@@ -307,7 +313,10 @@ const LogsSettings = () => {
               <p className="font-medium">Minimum Log Level</p>
               <p className="text-sm text-muted-foreground">Only store logs at or above this severity</p>
             </div>
-            <Select defaultValue="info">
+            <Select 
+              value={logSettings.minLogLevel}
+              onValueChange={(value) => setLogSettings({...logSettings, minLogLevel: value})}
+            >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select log level" />
               </SelectTrigger>
@@ -321,7 +330,13 @@ const LogsSettings = () => {
           </div>
         </CardContent>
         <CardFooter>
-          <Button className="ml-auto">Save Log Settings</Button>
+          <Button 
+            className="ml-auto" 
+            onClick={handleSaveLogSettings}
+            disabled={savingSettings}
+          >
+            {savingSettings ? "Saving..." : "Save Log Settings"}
+          </Button>
         </CardFooter>
       </Card>
     </div>

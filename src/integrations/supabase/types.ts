@@ -9,6 +9,107 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      advanced_settings: {
+        Row: {
+          debug_mode: boolean | null
+          id: string
+          log_level: string | null
+          log_retention_days: number | null
+          mfa_enabled: boolean | null
+          mfa_secret: string | null
+          min_log_level: string | null
+          server_port: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          debug_mode?: boolean | null
+          id?: string
+          log_level?: string | null
+          log_retention_days?: number | null
+          mfa_enabled?: boolean | null
+          mfa_secret?: string | null
+          min_log_level?: string | null
+          server_port?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          debug_mode?: boolean | null
+          id?: string
+          log_level?: string | null
+          log_retention_days?: number | null
+          mfa_enabled?: boolean | null
+          mfa_secret?: string | null
+          min_log_level?: string | null
+          server_port?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      alert_settings: {
+        Row: {
+          camera_offline: boolean
+          email_address: string | null
+          email_notifications: boolean
+          id: string
+          motion_detection: boolean
+          notification_sound: string | null
+          push_notifications: boolean
+          storage_warning: boolean
+          updated_at: string | null
+        }
+        Insert: {
+          camera_offline?: boolean
+          email_address?: string | null
+          email_notifications?: boolean
+          id?: string
+          motion_detection?: boolean
+          notification_sound?: string | null
+          push_notifications?: boolean
+          storage_warning?: boolean
+          updated_at?: string | null
+        }
+        Update: {
+          camera_offline?: boolean
+          email_address?: string | null
+          email_notifications?: boolean
+          id?: string
+          motion_detection?: boolean
+          notification_sound?: string | null
+          push_notifications?: boolean
+          storage_warning?: boolean
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      camera_recording_status: {
+        Row: {
+          camera_id: string
+          enabled: boolean
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          camera_id: string
+          enabled?: boolean
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          camera_id?: string
+          enabled?: boolean
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "camera_recording_status_camera_id_fkey"
+            columns: ["camera_id"]
+            isOneToOne: true
+            referencedRelation: "cameras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cameras: {
         Row: {
           connectiontype: string | null
@@ -96,6 +197,42 @@ export type Database = {
         }
         Relationships: []
       }
+      recording_settings: {
+        Row: {
+          continuous: boolean
+          days_of_week: string[] | null
+          id: string
+          motion_detection: boolean
+          quality: string | null
+          schedule_type: string
+          time_end: string | null
+          time_start: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          continuous?: boolean
+          days_of_week?: string[] | null
+          id?: string
+          motion_detection?: boolean
+          quality?: string | null
+          schedule_type?: string
+          time_end?: string | null
+          time_start?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          continuous?: boolean
+          days_of_week?: string[] | null
+          id?: string
+          motion_detection?: boolean
+          quality?: string | null
+          schedule_type?: string
+          time_end?: string | null
+          time_start?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       storage_settings: {
         Row: {
           id: string
@@ -147,6 +284,36 @@ export type Database = {
         }
         Relationships: []
       }
+      system_logs: {
+        Row: {
+          created_at: string | null
+          details: string | null
+          id: string
+          level: string
+          message: string
+          source: string
+          timestamp: string
+        }
+        Insert: {
+          created_at?: string | null
+          details?: string | null
+          id?: string
+          level: string
+          message: string
+          source: string
+          timestamp?: string
+        }
+        Update: {
+          created_at?: string | null
+          details?: string | null
+          id?: string
+          level?: string
+          message?: string
+          source?: string
+          timestamp?: string
+        }
+        Relationships: []
+      }
       system_stats: {
         Row: {
           id: string
@@ -183,6 +350,36 @@ export type Database = {
           storage_used?: string | null
           total_cameras?: number | null
           uptime_hours?: number | null
+        }
+        Relationships: []
+      }
+      webhooks: {
+        Row: {
+          active: boolean
+          created_at: string | null
+          events: string[]
+          id: string
+          name: string
+          updated_at: string | null
+          url: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string | null
+          events?: string[]
+          id?: string
+          name: string
+          updated_at?: string | null
+          url: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string | null
+          events?: string[]
+          id?: string
+          name?: string
+          updated_at?: string | null
+          url?: string
         }
         Relationships: []
       }

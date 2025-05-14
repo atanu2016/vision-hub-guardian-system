@@ -1,6 +1,7 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Camera, CameraGroup, StorageSettings } from "@/types/camera";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 // Camera operations
 export const fetchCamerasFromDB = async (): Promise<Camera[]> => {
@@ -260,6 +261,570 @@ export const saveStorageSettingsToDB = async (settings: StorageSettings): Promis
   }
 };
 
+// Recording settings operations
+export const fetchRecordingSettingsFromDB = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('recording_settings')
+      .select('*')
+      .limit(1)
+      .single();
+      
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No data found, insert default settings
+        const defaultSettings = {
+          continuous: true,
+          motion_detection: true,
+          schedule_type: "always",
+          time_start: "00:00",
+          time_end: "23:59",
+          days_of_week: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+          quality: "medium"
+        };
+        
+        const { data: newData, error: insertError } = await supabase
+          .from('recording_settings')
+          .insert(defaultSettings)
+          .select()
+          .single();
+          
+        if (insertError) throw insertError;
+        return {
+          continuous: newData.continuous,
+          motionDetection: newData.motion_detection,
+          schedule: newData.schedule_type,
+          timeStart: newData.time_start,
+          timeEnd: newData.time_end,
+          daysOfWeek: newData.days_of_week,
+          quality: newData.quality
+        };
+      }
+      
+      console.error("Error fetching recording settings:", error);
+      throw error;
+    }
+    
+    return {
+      continuous: data.continuous,
+      motionDetection: data.motion_detection,
+      schedule: data.schedule_type,
+      timeStart: data.time_start,
+      timeEnd: data.time_end,
+      daysOfWeek: data.days_of_week,
+      quality: data.quality
+    };
+  } catch (error) {
+    console.error("Database service error:", error);
+    toast("Error", {
+      description: "Failed to load recording settings"
+    });
+    
+    // Return default settings on error
+    return {
+      continuous: true,
+      motionDetection: true,
+      schedule: "always", 
+      timeStart: "00:00",
+      timeEnd: "23:59",
+      daysOfWeek: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+      quality: "medium"
+    };
+  }
+};
+
+export const saveRecordingSettingsToDB = async (settings: any) => {
+  try {
+    // Transform to DB format
+    const dbSettings = {
+      continuous: settings.continuous,
+      motion_detection: settings.motionDetection,
+      schedule_type: settings.schedule,
+      time_start: settings.timeStart,
+      time_end: settings.timeEnd,
+      days_of_week: settings.daysOfWeek,
+      quality: settings.quality
+    };
+    
+    // Check for existing settings
+    const { data: existingData } = await supabase
+      .from('recording_settings')
+      .select('id')
+      .limit(1);
+      
+    let query;
+    if (existingData && existingData.length > 0) {
+      // Update existing
+      query = supabase
+        .from('recording_settings')
+        .update(dbSettings)
+        .eq('id', existingData[0].id);
+    } else {
+      // Insert new
+      query = supabase
+        .from('recording_settings')
+        .insert(dbSettings);
+    }
+    
+    const { error } = await query;
+    
+    if (error) {
+      console.error("Error saving recording settings:", error);
+      throw error;
+    }
+    
+    toast("Success", {
+      description: "Recording settings saved successfully"
+    });
+    
+    return true;
+  } catch (error) {
+    console.error("Database service error:", error);
+    toast("Error", {
+      description: "Failed to save recording settings"
+    });
+    return false;
+  }
+};
+
+// Camera recording status operations
+export const saveCameraRecordingStatus = async (cameraId: string, enabled: boolean) => {
+  try {
+    const { data: existing } = await supabase
+      .from('camera_recording_status')
+      .select()
+      .eq('camera_id', cameraId)
+      .maybeSingle();
+      
+    if (existing) {
+      // Update
+      await supabase
+        .from('camera_recording_status')
+        .update({ enabled })
+        .eq('camera_id', cameraId);
+    } else {
+      // Insert
+      await supabase
+        .from('camera_recording_status')
+        .insert({ camera_id: cameraId, enabled });
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error saving camera recording status:", error);
+    return false;
+  }
+};
+
+// Alert settings operations
+export const fetchAlertSettingsFromDB = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('alert_settings')
+      .select('*')
+      .limit(1)
+      .single();
+      
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No data found, insert default settings
+        const defaultSettings = {
+          motion_detection: true,
+          camera_offline: true,
+          storage_warning: true,
+          email_notifications: false,
+          push_notifications: false,
+          email_address: "",
+          notification_sound: "default"
+        };
+        
+        const { data: newData, error: insertError } = await supabase
+          .from('alert_settings')
+          .insert(defaultSettings)
+          .select()
+          .single();
+          
+        if (insertError) throw insertError;
+        return {
+          motionDetection: newData.motion_detection,
+          cameraOffline: newData.camera_offline,
+          storageWarning: newData.storage_warning,
+          emailNotifications: newData.email_notifications,
+          pushNotifications: newData.push_notifications,
+          emailAddress: newData.email_address,
+          notificationSound: newData.notification_sound
+        };
+      }
+      
+      console.error("Error fetching alert settings:", error);
+      throw error;
+    }
+    
+    return {
+      motionDetection: data.motion_detection,
+      cameraOffline: data.camera_offline,
+      storageWarning: data.storage_warning,
+      emailNotifications: data.email_notifications,
+      pushNotifications: data.push_notifications,
+      emailAddress: data.email_address,
+      notificationSound: data.notification_sound
+    };
+  } catch (error) {
+    console.error("Database service error:", error);
+    toast("Error", {
+      description: "Failed to load alert settings"
+    });
+    
+    // Return default settings on error
+    return {
+      motionDetection: true,
+      cameraOffline: true,
+      storageWarning: true,
+      emailNotifications: false,
+      pushNotifications: false,
+      emailAddress: "",
+      notificationSound: "default"
+    };
+  }
+};
+
+export const saveAlertSettingsToDB = async (settings: any) => {
+  try {
+    // Transform to DB format
+    const dbSettings = {
+      motion_detection: settings.motionDetection,
+      camera_offline: settings.cameraOffline,
+      storage_warning: settings.storageWarning,
+      email_notifications: settings.emailNotifications,
+      push_notifications: settings.pushNotifications,
+      email_address: settings.emailAddress,
+      notification_sound: settings.notificationSound
+    };
+    
+    // Check for existing settings
+    const { data: existingData } = await supabase
+      .from('alert_settings')
+      .select('id')
+      .limit(1);
+      
+    let query;
+    if (existingData && existingData.length > 0) {
+      // Update existing
+      query = supabase
+        .from('alert_settings')
+        .update(dbSettings)
+        .eq('id', existingData[0].id);
+    } else {
+      // Insert new
+      query = supabase
+        .from('alert_settings')
+        .insert(dbSettings);
+    }
+    
+    const { error } = await query;
+    
+    if (error) {
+      console.error("Error saving alert settings:", error);
+      throw error;
+    }
+    
+    toast("Success", {
+      description: "Alert settings saved successfully"
+    });
+    
+    return true;
+  } catch (error) {
+    console.error("Database service error:", error);
+    toast("Error", {
+      description: "Failed to save alert settings"
+    });
+    return false;
+  }
+};
+
+// Webhook operations
+export const fetchWebhooksFromDB = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('webhooks')
+      .select('*')
+      .order('created_at');
+      
+    if (error) {
+      console.error("Error fetching webhooks:", error);
+      throw error;
+    }
+    
+    // Transform to our format
+    return data.map(webhook => ({
+      id: webhook.id,
+      name: webhook.name,
+      url: webhook.url,
+      events: webhook.events,
+      active: webhook.active
+    }));
+  } catch (error) {
+    console.error("Database service error:", error);
+    toast("Error", {
+      description: "Failed to load webhooks"
+    });
+    return [];
+  }
+};
+
+export const saveWebhookToDB = async (webhook: any) => {
+  try {
+    const { id, ...webhookData } = webhook;
+    
+    if (id) {
+      // Update
+      const { error } = await supabase
+        .from('webhooks')
+        .update({
+          name: webhookData.name,
+          url: webhookData.url,
+          events: webhookData.events,
+          active: webhookData.active,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+        
+      if (error) throw error;
+    } else {
+      // Insert
+      const { error } = await supabase
+        .from('webhooks')
+        .insert({
+          name: webhookData.name,
+          url: webhookData.url,
+          events: webhookData.events,
+          active: webhookData.active
+        });
+        
+      if (error) throw error;
+    }
+    
+    toast("Success", {
+      description: "Webhook saved successfully"
+    });
+    
+    return true;
+  } catch (error) {
+    console.error("Error saving webhook:", error);
+    toast("Error", {
+      description: "Failed to save webhook"
+    });
+    return false;
+  }
+};
+
+export const deleteWebhookFromDB = async (id: string) => {
+  try {
+    const { error } = await supabase
+      .from('webhooks')
+      .delete()
+      .eq('id', id);
+      
+    if (error) throw error;
+    
+    toast("Success", {
+      description: "Webhook deleted successfully"
+    });
+    
+    return true;
+  } catch (error) {
+    console.error("Error deleting webhook:", error);
+    toast("Error", {
+      description: "Failed to delete webhook"
+    });
+    return false;
+  }
+};
+
+// Advanced settings operations
+export const fetchAdvancedSettingsFromDB = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('advanced_settings')
+      .select('*')
+      .limit(1)
+      .single();
+      
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No data found, insert default settings
+        const defaultSettings = {
+          server_port: '8080',
+          log_level: 'info',
+          debug_mode: false,
+          mfa_enabled: false,
+          log_retention_days: 30,
+          min_log_level: 'info'
+        };
+        
+        const { data: newData, error: insertError } = await supabase
+          .from('advanced_settings')
+          .insert(defaultSettings)
+          .select()
+          .single();
+          
+        if (insertError) throw insertError;
+        return {
+          serverPort: newData.server_port,
+          logLevel: newData.log_level,
+          debugMode: newData.debug_mode,
+          mfaEnabled: newData.mfa_enabled,
+          mfaSecret: newData.mfa_secret,
+          logRetentionDays: newData.log_retention_days,
+          minLogLevel: newData.min_log_level
+        };
+      }
+      
+      console.error("Error fetching advanced settings:", error);
+      throw error;
+    }
+    
+    return {
+      serverPort: data.server_port,
+      logLevel: data.log_level,
+      debugMode: data.debug_mode,
+      mfaEnabled: data.mfa_enabled,
+      mfaSecret: data.mfa_secret,
+      logRetentionDays: data.log_retention_days,
+      minLogLevel: data.min_log_level
+    };
+  } catch (error) {
+    console.error("Database service error:", error);
+    toast("Error", {
+      description: "Failed to load advanced settings"
+    });
+    
+    // Return default settings on error
+    return {
+      serverPort: '8080',
+      logLevel: 'info',
+      debugMode: false,
+      mfaEnabled: false,
+      mfaSecret: '',
+      logRetentionDays: 30,
+      minLogLevel: 'info'
+    };
+  }
+};
+
+export const saveAdvancedSettingsToDB = async (settings: any) => {
+  try {
+    // Transform to DB format
+    const dbSettings = {
+      server_port: settings.serverPort,
+      log_level: settings.logLevel,
+      debug_mode: settings.debugMode,
+      mfa_enabled: settings.mfaEnabled,
+      mfa_secret: settings.mfaSecret,
+      log_retention_days: settings.logRetentionDays,
+      min_log_level: settings.minLogLevel
+    };
+    
+    // Check for existing settings
+    const { data: existingData } = await supabase
+      .from('advanced_settings')
+      .select('id')
+      .limit(1);
+      
+    let query;
+    if (existingData && existingData.length > 0) {
+      // Update existing
+      query = supabase
+        .from('advanced_settings')
+        .update(dbSettings)
+        .eq('id', existingData[0].id);
+    } else {
+      // Insert new
+      query = supabase
+        .from('advanced_settings')
+        .insert(dbSettings);
+    }
+    
+    const { error } = await query;
+    
+    if (error) {
+      console.error("Error saving advanced settings:", error);
+      throw error;
+    }
+    
+    toast("Success", {
+      description: "Advanced settings saved successfully"
+    });
+    
+    return true;
+  } catch (error) {
+    console.error("Database service error:", error);
+    toast("Error", {
+      description: "Failed to save advanced settings"
+    });
+    return false;
+  }
+};
+
+// System logs operations
+export const fetchLogsFromDB = async (filters = {}) => {
+  try {
+    let query = supabase
+      .from('system_logs')
+      .select('*')
+      .order('timestamp', { ascending: false })
+      .limit(100);
+      
+    // Apply any filters
+    if (filters.level && filters.level !== 'all') {
+      query = query.eq('level', filters.level);
+    }
+    
+    if (filters.source && filters.source !== 'all') {
+      query = query.eq('source', filters.source);
+    }
+    
+    if (filters.search) {
+      query = query.or(`message.ilike.%${filters.search}%,details.ilike.%${filters.search}%`);
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error("Error fetching logs:", error);
+      throw error;
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error("Database service error:", error);
+    toast("Error", {
+      description: "Failed to load system logs"
+    });
+    return [];
+  }
+};
+
+export const addLogToDB = async (level: string, message: string, source: string, details?: string) => {
+  try {
+    const { error } = await supabase
+      .from('system_logs')
+      .insert({
+        level,
+        message,
+        source,
+        details,
+        timestamp: new Date().toISOString()
+      });
+      
+    if (error) {
+      console.error("Error adding log:", error);
+    }
+  } catch (error) {
+    console.error("Error adding log to database:", error);
+  }
+};
+
 // System stats operations
 export const updateSystemStats = async (cameras: Camera[]) => {
   try {
@@ -404,7 +969,6 @@ export const syncPublicCamerasToDatabase = async (publicCameras: Camera[]): Prom
       throw insertError;
     }
     
-    // Using sonner toast format
     toast("Example camera feeds have been added to your database");
   } catch (error) {
     console.error("Database service error:", error);
