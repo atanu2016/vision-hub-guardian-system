@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -24,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AddCameraModal from "@/components/cameras/AddCameraModal";
 import { Camera } from "@/types/camera";
 import { getCameras, saveCameras } from "@/data/mockData";
@@ -37,7 +36,7 @@ const TopBar = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [cameras, setCameras] = useState<Camera[]>(getCameras());
+  const [cameras, setCameras] = useState<Camera[]>([]);
   const { 
     notifications, 
     markAsRead, 
@@ -45,6 +44,20 @@ const TopBar = () => {
     clearAll, 
     addNotification 
   } = useNotifications();
+  
+  // Load cameras when component mounts
+  useEffect(() => {
+    const loadCameras = async () => {
+      try {
+        const loadedCameras = await getCameras();
+        setCameras(loadedCameras);
+      } catch (error) {
+        console.error("Failed to load cameras:", error);
+      }
+    };
+    
+    loadCameras();
+  }, []);
   
   // Generate groups dynamically based on camera data
   const existingGroups = Array.from(new Set(cameras.map(c => c.group || "Ungrouped")))

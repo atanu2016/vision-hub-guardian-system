@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -27,7 +26,17 @@ const AlertsPage = () => {
   });
 
   useEffect(() => {
-    setCameras(getCameras());
+    const loadCameras = async () => {
+      try {
+        const loadedCameras = await getCameras();
+        setCameras(loadedCameras);
+      } catch (error) {
+        console.error("Failed to load cameras:", error);
+        setCameras([]);
+      }
+    };
+    
+    loadCameras();
   }, []);
 
   const handleSaveSettings = () => {
