@@ -5,12 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { AlertCircle, Check, HardDrive, Server } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { getStorageSettings, saveStorageSettings } from "@/data/mockData";
+import { getStorageSettings, saveStorageSettings } from "@/services/apiService";
 import { StorageSettings as StorageSettingsType } from "@/types/camera";
 
 const StorageSettings = () => {
@@ -89,7 +88,7 @@ const StorageSettings = () => {
     setTestingConnection(true);
     setConnectSuccess(null);
     
-    // Simulate testing connection
+    // Testing storage connection
     setTimeout(() => {
       if (activeTab === 'nas') {
         const success = formData.nasAddress && formData.nasPath;

@@ -1,19 +1,21 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from '@/components/ui/sonner';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Database, Server, Info } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, Database, Server, Info, Check } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { checkDatabaseSetup } from '@/services/databaseService';
+import { supabase } from '@/integrations/supabase/client';
 
 const DatabaseSettings = () => {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('supabase');
   const [isTestingConnection, setIsTestingConnection] = useState(false);
-  const [isCreatingTables, setIsCreatingTables] = useState(false);
+  const [isDbConnected, setIsDbConnected] = useState<boolean | null>(null);
   const [mysqlDetails, setMysqlDetails] = useState({
     host: 'localhost',
     port: '3306',
@@ -21,6 +23,21 @@ const DatabaseSettings = () => {
     password: '',
     database: 'vision_hub'
   });
+
+  // Check the database connection status when component mounts
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const isConnected = await checkDatabaseSetup();
+        setIsDbConnected(isConnected);
+      } catch (error) {
+        console.error('Error checking database setup:', error);
+        setIsDbConnected(false);
+      }
+    };
+    
+    checkConnection();
+  }, []);
 
   const handleMySQLInputChange = (field: string, value: string) => {
     setMysqlDetails(prev => ({
@@ -32,26 +49,39 @@ const DatabaseSettings = () => {
   const testConnection = async () => {
     setIsTestingConnection(true);
     try {
-      // Simulating connection test
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      toast.success('Connection successful!');
+      if (activeTab === 'supabase') {
+        // Test Supabase connection by running a simple query
+        const { error } = await supabase.from('cameras').select('id').limit(1);
+        
+        // If error code is PGRST109, the table doesn't exist but the connection is working
+        const isConnected = !error || error.code === 'PGRST109';
+        
+        setIsDbConnected(isConnected);
+        
+        toast({
+          title: isConnected ? "Connection successful!" : "Connection failed!",
+          description: isConnected 
+            ? "Successfully connected to Supabase database" 
+            : "Could not connect to Supabase. Please check your credentials."
+        });
+      } else {
+        // Simulating MySQL connection test
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        toast({
+          title: "Connection successful!",
+          description: "MySQL connection test passed. Note: This is a simulation in the demo."
+        });
+      }
     } catch (error) {
-      toast.error('Connection failed. Please check your details.');
+      console.error('Connection test error:', error);
+      setIsDbConnected(false);
+      toast({
+        title: "Connection failed",
+        description: "Could not connect to the database. Please check your credentials.",
+        variant: "destructive"
+      });
     } finally {
       setIsTestingConnection(false);
-    }
-  };
-
-  const createDatabase = async () => {
-    setIsCreatingTables(true);
-    try {
-      // Simulating database creation
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      toast.success('Database tables created successfully!');
-    } catch (error) {
-      toast.error('Failed to create database tables.');
-    } finally {
-      setIsCreatingTables(false);
     }
   };
 
@@ -85,25 +115,28 @@ const DatabaseSettings = () => {
                   <Label htmlFor="supabase-url">Supabase URL</Label>
                   <Input 
                     id="supabase-url" 
-                    placeholder="https://your-project.supabase.co" 
-                    defaultValue="https://csmsqglfbycodrqipbca.supabase.co"
+                    value="https://csmsqglfbycodrqipbca.supabase.co"
                     readOnly 
                   />
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="supabase-key">Supabase API Key</Label>
-                  <Input id="supabase-key" placeholder="your-supabase-api-key" type="password" />
-                  <p className="text-sm text-muted-foreground">
-                    You can find your API key in the Supabase dashboard under Project Settings &gt; API
-                  </p>
-                </div>
                 
-                <Alert>
-                  <AlertDescription className="flex items-center gap-2">
-                    <Info className="h-4 w-4" />
-                    <span>Your Supabase project is currently connected and active.</span>
-                  </AlertDescription>
-                </Alert>
+                {isDbConnected !== null && (
+                  <Alert variant={isDbConnected ? "default" : "destructive"}>
+                    <AlertDescription className="flex items-center gap-2">
+                      {isDbConnected ? (
+                        <>
+                          <Check className="h-4 w-4" />
+                          <span>Your Supabase project is currently connected and active.</span>
+                        </>
+                      ) : (
+                        <>
+                          <Info className="h-4 w-4" />
+                          <span>Unable to connect to Supabase. Please check your connection settings.</span>
+                        </>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
             </div>
             <Button onClick={testConnection} disabled={isTestingConnection} className="w-full">
@@ -168,33 +201,23 @@ const DatabaseSettings = () => {
                   Enter an existing database name or a new one that will be created
                 </p>
               </div>
+              <Alert variant="destructive">
+                <AlertDescription className="flex items-center gap-2">
+                  <Info className="h-4 w-4" />
+                  <span>MySQL support is not available in this version.</span>
+                </AlertDescription>
+              </Alert>
             </div>
-            <div className="flex flex-col space-y-2">
-              <Button onClick={testConnection} disabled={isTestingConnection}>
-                {isTestingConnection ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Testing Connection...
-                  </>
-                ) : (
-                  'Test Connection'
-                )}
-              </Button>
-              <Button
-                variant="outline" 
-                onClick={createDatabase}
-                disabled={isCreatingTables}
-              >
-                {isCreatingTables ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating Tables...
-                  </>
-                ) : (
-                  'Create Database Tables'
-                )}
-              </Button>
-            </div>
+            <Button onClick={testConnection} disabled={isTestingConnection || true}>
+              {isTestingConnection ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Testing Connection...
+                </>
+              ) : (
+                'Test Connection'
+              )}
+            </Button>
           </TabsContent>
         </Tabs>
       </CardContent>

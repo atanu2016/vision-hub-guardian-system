@@ -144,7 +144,7 @@ export const getCameras = async (): Promise<Camera[]> => {
 };
 
 // Export function to save camera data
-export const saveCameraToAPI = async (camera: Camera): Promise<Camera> => {
+export const saveCamera = async (camera: Camera): Promise<Camera> => {
   try {
     // Try to save to database first
     const isDatabaseSetup = await checkDatabaseSetup();
@@ -168,7 +168,7 @@ export const saveCameraToAPI = async (camera: Camera): Promise<Camera> => {
   }
 };
 
-export const deleteCameraFromAPI = async (cameraId: string): Promise<void> => {
+export const deleteCamera = async (cameraId: string): Promise<void> => {
   try {
     // Try to delete from database first
     const isDatabaseSetup = await checkDatabaseSetup();
@@ -190,7 +190,7 @@ export const deleteCameraFromAPI = async (cameraId: string): Promise<void> => {
   }
 };
 
-export const getCameraGroupsFromAPI = async (): Promise<CameraGroup[]> => {
+export const getCameraGroups = async (): Promise<CameraGroup[]> => {
   try {
     // Get cameras and group them
     const cameras = await getCameras();
@@ -218,11 +218,6 @@ const groupCamerasByType = (cameras: Camera[]): CameraGroup[] => {
     name,
     cameras: groupCameras
   }));
-};
-
-// Adding the needed export for getCameraGroups
-export const getCameraGroups = async (): Promise<CameraGroup[]> => {
-  return await getCameraGroupsFromAPI();
 };
 
 // Storage settings API functions with database integration

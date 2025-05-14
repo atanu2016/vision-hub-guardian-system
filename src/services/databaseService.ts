@@ -16,7 +16,29 @@ export const fetchCamerasFromDB = async (): Promise<Camera[]> => {
       throw error;
     }
     
-    return data || [];
+    // Transform the data to match our Camera type
+    const cameras: Camera[] = data.map(cam => ({
+      id: cam.id,
+      name: cam.name,
+      status: cam.status as "online" | "offline" | "error",
+      location: cam.location,
+      ipAddress: cam.ipaddress,
+      port: cam.port || 80,
+      username: cam.username || undefined,
+      password: cam.password || undefined,
+      model: cam.model || undefined,
+      manufacturer: cam.manufacturer || undefined,
+      lastSeen: cam.lastseen,
+      recording: cam.recording || false,
+      thumbnail: cam.thumbnail || undefined,
+      group: cam.group || undefined,
+      connectionType: (cam.connectiontype as "ip" | "rtsp" | "rtmp" | "onvif") || "ip",
+      rtmpUrl: cam.rtmpurl || undefined,
+      onvifPath: cam.onvifpath || undefined,
+      motionDetection: cam.motiondetection || false
+    }));
+    
+    return cameras;
   } catch (error) {
     console.error("Database service error:", error);
     throw error;
@@ -31,30 +53,34 @@ export const saveCameraToDB = async (camera: Camera): Promise<Camera> => {
       delete camera.id;
     }
 
+    // Transform camera object to match database schema
+    const dbCamera = {
+      id: camera.id,
+      name: camera.name,
+      status: camera.status,
+      location: camera.location, 
+      ipaddress: camera.ipAddress,
+      port: camera.port,
+      username: camera.username,
+      password: camera.password,
+      model: camera.model,
+      manufacturer: camera.manufacturer,
+      lastseen: new Date().toISOString(),
+      recording: camera.recording,
+      thumbnail: camera.thumbnail,
+      group: camera.group,
+      connectiontype: camera.connectionType,
+      rtmpurl: camera.rtmpUrl,
+      onvifpath: camera.onvifPath,
+      motiondetection: camera.motionDetection
+    };
+
     let query;
     if (camera.id) {
       // Update existing camera
       query = supabase
         .from('cameras')
-        .update({
-          name: camera.name,
-          status: camera.status,
-          location: camera.location, 
-          ipAddress: camera.ipAddress,
-          port: camera.port,
-          username: camera.username,
-          password: camera.password,
-          model: camera.model,
-          manufacturer: camera.manufacturer,
-          lastSeen: new Date().toISOString(),
-          recording: camera.recording,
-          thumbnail: camera.thumbnail,
-          group: camera.group,
-          connectionType: camera.connectionType,
-          rtmpUrl: camera.rtmpUrl,
-          onvifPath: camera.onvifPath,
-          motionDetection: camera.motionDetection
-        })
+        .update(dbCamera)
         .eq('id', camera.id)
         .select()
         .single();
@@ -62,10 +88,7 @@ export const saveCameraToDB = async (camera: Camera): Promise<Camera> => {
       // Insert new camera
       query = supabase
         .from('cameras')
-        .insert({
-          ...camera,
-          lastSeen: new Date().toISOString()
-        })
+        .insert(dbCamera)
         .select()
         .single();
     }
@@ -77,7 +100,27 @@ export const saveCameraToDB = async (camera: Camera): Promise<Camera> => {
       throw error;
     }
     
-    return data;
+    // Transform back from DB format to our Camera type
+    return {
+      id: data.id,
+      name: data.name,
+      status: data.status as "online" | "offline" | "error",
+      location: data.location,
+      ipAddress: data.ipaddress,
+      port: data.port || 80,
+      username: data.username || undefined,
+      password: data.password || undefined,
+      model: data.model || undefined,
+      manufacturer: data.manufacturer || undefined,
+      lastSeen: data.lastseen,
+      recording: data.recording || false,
+      thumbnail: data.thumbnail || undefined,
+      group: data.group || undefined,
+      connectionType: (data.connectiontype as "ip" | "rtsp" | "rtmp" | "onvif") || "ip",
+      rtmpUrl: data.rtmpurl || undefined,
+      onvifPath: data.onvifpath || undefined,
+      motionDetection: data.motiondetection || false
+    };
   } catch (error) {
     console.error("Database service error:", error);
     throw error;
@@ -124,7 +167,22 @@ export const fetchStorageSettingsFromDB = async (): Promise<StorageSettings> => 
       throw error;
     }
     
-    return data;
+    // Transform DB data to our StorageSettings type
+    return {
+      type: data.type as "local" | "nas" | "s3",
+      path: data.path || undefined,
+      retentionDays: data.retentiondays,
+      overwriteOldest: data.overwriteoldest,
+      nasAddress: data.nasaddress || undefined,
+      nasPath: data.naspath || undefined,
+      nasUsername: data.nasusername || undefined, 
+      nasPassword: data.naspassword || undefined,
+      s3Endpoint: data.s3endpoint || undefined,
+      s3Bucket: data.s3bucket || undefined,
+      s3AccessKey: data.s3accesskey || undefined,
+      s3SecretKey: data.s3secretkey || undefined,
+      s3Region: data.s3region || undefined
+    };
   } catch (error) {
     console.error("Database service error:", error);
     throw error;
@@ -133,6 +191,23 @@ export const fetchStorageSettingsFromDB = async (): Promise<StorageSettings> => 
 
 export const saveStorageSettingsToDB = async (settings: StorageSettings): Promise<StorageSettings> => {
   try {
+    // Transform to DB format
+    const dbSettings = {
+      type: settings.type,
+      path: settings.path,
+      retentiondays: settings.retentionDays,
+      overwriteoldest: settings.overwriteOldest,
+      nasaddress: settings.nasAddress,
+      naspath: settings.nasPath,
+      nasusername: settings.nasUsername,
+      naspassword: settings.nasPassword,
+      s3endpoint: settings.s3Endpoint,
+      s3bucket: settings.s3Bucket,
+      s3accesskey: settings.s3AccessKey,
+      s3secretkey: settings.s3SecretKey,
+      s3region: settings.s3Region
+    };
+    
     // First check if we have any settings
     const { data: existingData } = await supabase
       .from('storage_settings')
@@ -144,7 +219,7 @@ export const saveStorageSettingsToDB = async (settings: StorageSettings): Promis
       // Update existing settings
       query = supabase
         .from('storage_settings')
-        .update(settings)
+        .update(dbSettings)
         .eq('id', existingData[0].id)
         .select()
         .single();
@@ -152,7 +227,7 @@ export const saveStorageSettingsToDB = async (settings: StorageSettings): Promis
       // Insert new settings
       query = supabase
         .from('storage_settings')
-        .insert(settings)
+        .insert(dbSettings)
         .select()
         .single();
     }
@@ -164,7 +239,22 @@ export const saveStorageSettingsToDB = async (settings: StorageSettings): Promis
       throw error;
     }
     
-    return data;
+    // Transform back to our type
+    return {
+      type: data.type as "local" | "nas" | "s3",
+      path: data.path || undefined,
+      retentionDays: data.retentiondays,
+      overwriteOldest: data.overwriteoldest,
+      nasAddress: data.nasaddress || undefined,
+      nasPath: data.naspath || undefined,
+      nasUsername: data.nasusername || undefined, 
+      nasPassword: data.naspassword || undefined,
+      s3Endpoint: data.s3endpoint || undefined,
+      s3Bucket: data.s3bucket || undefined,
+      s3AccessKey: data.s3accesskey || undefined,
+      s3SecretKey: data.s3secretkey || undefined,
+      s3Region: data.s3region || undefined
+    };
   } catch (error) {
     console.error("Database service error:", error);
     throw error;
@@ -235,14 +325,14 @@ export const fetchSystemStatsFromDB = async () => {
       if (error.code === 'PGRST116') {
         // No data found, return default stats
         return {
-          total_cameras: 0,
-          online_cameras: 0,
-          offline_cameras: 0,
-          recording_cameras: 0,
-          uptime_hours: 0,
-          storage_used: "0 GB",
-          storage_total: "1 TB",
-          storage_percentage: 0
+          totalCameras: 0,
+          onlineCameras: 0,
+          offlineCameras: 0,
+          recordingCameras: 0,
+          uptimeHours: 0,
+          storageUsed: "0 GB",
+          storageTotal: "1 TB",
+          storagePercentage: 0
         };
       }
       console.error("Error fetching system stats:", error);
@@ -284,10 +374,25 @@ export const syncPublicCamerasToDatabase = async (publicCameras: Camera[]): Prom
       return;
     }
     
-    // Prepare cameras for insert (remove any existing IDs)
+    // Prepare cameras for insert
     const camerasToInsert = publicCameras.map(({id, ...rest}) => ({
-      ...rest,
-      lastSeen: new Date().toISOString()
+      name: rest.name,
+      status: rest.status,
+      location: rest.location,
+      ipaddress: rest.ipAddress,
+      port: rest.port,
+      username: rest.username,
+      password: rest.password,
+      model: rest.model,
+      manufacturer: rest.manufacturer,
+      lastseen: new Date().toISOString(),
+      recording: rest.recording,
+      thumbnail: rest.thumbnail,
+      group: rest.group,
+      connectiontype: rest.connectionType,
+      rtmpurl: rest.rtmpUrl,
+      onvifpath: rest.onvifPath,
+      motiondetection: rest.motionDetection
     }));
     
     // Insert cameras
