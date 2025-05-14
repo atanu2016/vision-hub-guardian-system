@@ -27,6 +27,7 @@ interface SettingsMenuSectionProps {
   isActive: (path: string) => boolean;
 }
 
+// Export the component as a named export
 export const SettingsMenuSection = ({ title, description, items, isActive }: SettingsMenuSectionProps) => {
   return (
     <div className="space-y-3">
@@ -162,5 +163,5 @@ const SidebarSettingsMenu = ({ isActive }: { isActive: (path: string) => boolean
   );
 };
 
-export { SettingsMenuSection };
+// Only export the default once
 export default SidebarSettingsMenu;
