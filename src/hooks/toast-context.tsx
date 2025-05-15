@@ -1,13 +1,13 @@
 
 import * as React from "react";
 import { toast as sonnerToast } from "sonner";
-import { ToastOptions, ToastFunction } from "./toast-types";
-import { formatToastVariant } from "./toast-utils";
+import { ToastOptions, ToastFunction, ToastProps } from "./toast-types";
+import { formatToastVariant, handleStringToast } from "./toast-utils";
 
 export interface ToastContextType {
   toast: ToastFunction;
   dismiss: (toastId?: string) => void;
-  toasts: ToastOptions[];
+  toasts: ToastProps[];
 }
 
 const ToastContext = React.createContext<ToastContextType | undefined>(undefined);
@@ -17,26 +17,34 @@ export const ToastProvider = ({
 }: { 
   children: React.ReactNode 
 }) => {
-  const [toasts, setToasts] = React.useState<ToastOptions[]>([]);
+  const [toasts, setToasts] = React.useState<ToastProps[]>([]);
 
   const notify = React.useCallback((options: ToastOptions) => {
-    const id = options.id || Math.random().toString(36).slice(2);
-    const newToast: ToastOptions = {
+    let parsedOptions: ToastProps;
+    
+    if (typeof options === 'string') {
+      parsedOptions = handleStringToast(options);
+    } else {
+      parsedOptions = options;
+    }
+    
+    const id = parsedOptions.id || Math.random().toString(36).slice(2);
+    const newToast: ToastProps = {
       id,
-      ...options,
+      ...parsedOptions,
     };
     
     setToasts((prevToasts) => [...prevToasts, newToast]);
     
     // Map our toast options to Sonner options
     const sonnerOptions = {
-      duration: options.duration,
+      duration: parsedOptions.duration,
       id,
       // Map additional options as needed
     };
 
     // Show toast using Sonner based on variant
-    formatToastVariant(options, sonnerOptions);
+    formatToastVariant(newToast, sonnerOptions);
 
     return id;
   }, []);
@@ -55,7 +63,7 @@ export const ToastProvider = ({
 
   // Create success method
   const success = React.useCallback(
-    (title: string, options?: Omit<ToastOptions, "title" | "variant">) => {
+    (title: string, options?: Omit<ToastProps, "title" | "variant">) => {
       return notify({ title, ...options, variant: "success" });
     },
     [notify]
@@ -63,7 +71,7 @@ export const ToastProvider = ({
 
   // Create error method
   const error = React.useCallback(
-    (title: string, options?: Omit<ToastOptions, "title" | "variant">) => {
+    (title: string, options?: Omit<ToastProps, "title" | "variant">) => {
       return notify({ title, ...options, variant: "destructive" });
     },
     [notify]
@@ -71,7 +79,7 @@ export const ToastProvider = ({
 
   // Create warning method
   const warning = React.useCallback(
-    (title: string, options?: Omit<ToastOptions, "title" | "variant">) => {
+    (title: string, options?: Omit<ToastProps, "title" | "variant">) => {
       return notify({ title, ...options, variant: "warning" });
     },
     [notify]
@@ -79,7 +87,7 @@ export const ToastProvider = ({
 
   // Create info method
   const info = React.useCallback(
-    (title: string, options?: Omit<ToastOptions, "title" | "variant">) => {
+    (title: string, options?: Omit<ToastProps, "title" | "variant">) => {
       return notify({ title, ...options });
     },
     [notify]

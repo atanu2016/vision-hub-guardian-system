@@ -9,11 +9,11 @@ export interface ToastProps {
   // Additional properties can be added here
 }
 
-export type ToastOptions = ToastProps;
+export type ToastOptions = ToastProps | string;
 
 // Define the shape of the toast function and its convenience methods
 export interface ToastFunction {
-  (options: ToastProps): string;
+  (options: ToastOptions): string;
   success: (title: string, options?: Omit<ToastProps, "title" | "variant">) => string;
   error: (title: string, options?: Omit<ToastProps, "title" | "variant">) => string;
   warning: (title: string, options?: Omit<ToastProps, "title" | "variant">) => string;

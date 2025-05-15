@@ -14,38 +14,42 @@ const getToastFunction = (): ToastFunction => {
     return toastContext.toast;
   } catch (e) {
     // This will happen outside of the React component tree
-    // Return a simple alternative toast function that uses sonner directly
     console.warn(
       "Toast accessed outside React component tree; fallback to simpler implementation"
     );
     
-    // Import sonner directly as a fallback
-    const { toast: sonnerToast } = require("sonner");
-    
-    // Create a base toast function
-    const toast = ((options: ToastOptions) => {
+    // Create a standalone toast function that works outside of React components
+    // without requiring a dynamic import (which would make this async)
+    const toast: ToastFunction = ((options: ToastOptions) => {
+      // We'll use a dummy implementation that just logs for now
+      // The actual toast will be shown by the global toast registry when within a component
       if (typeof options === 'string') {
         options = handleStringToast(options);
       }
       
-      return sonnerToast(options.title, { description: options.description });
+      console.log('[Toast]', options.title, options.description || '');
+      return options.id || `toast-${Date.now()}`;
     }) as ToastFunction;
     
     // Add helper methods
-    toast.success = (title, options) => {
-      return sonnerToast.success(title, { description: options?.description });
+    toast.success = (title, options = {}) => {
+      console.log('[Toast Success]', title, options.description || '');
+      return `toast-success-${Date.now()}`;
     };
     
-    toast.error = (title, options) => {
-      return sonnerToast.error(title, { description: options?.description });
+    toast.error = (title, options = {}) => {
+      console.log('[Toast Error]', title, options.description || '');
+      return `toast-error-${Date.now()}`;
     };
     
-    toast.warning = (title, options) => {
-      return sonnerToast.warning(title, { description: options?.description });
+    toast.warning = (title, options = {}) => {
+      console.log('[Toast Warning]', title, options.description || '');
+      return `toast-warning-${Date.now()}`;
     };
     
-    toast.info = (title, options) => {
-      return sonnerToast(title, { description: options?.description });
+    toast.info = (title, options = {}) => {
+      console.log('[Toast Info]', title, options.description || '');
+      return `toast-info-${Date.now()}`;
     };
     
     return toast;

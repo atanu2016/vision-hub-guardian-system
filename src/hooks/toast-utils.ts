@@ -1,6 +1,6 @@
 
 import { toast as sonnerToast } from "sonner";
-import { ToastOptions } from "./toast-types";
+import { ToastOptions, ToastProps } from "./toast-types";
 
 type SonnerToastOptions = {
   description?: string;
@@ -13,7 +13,7 @@ type SonnerToastOptions = {
  * Formats toast options based on variant and displays the appropriate Sonner toast
  */
 export const formatToastVariant = (
-  options: ToastOptions, 
+  options: ToastProps, 
   sonnerOptions: SonnerToastOptions
 ) => {
   if (options.variant === "destructive") {
@@ -44,8 +44,8 @@ export const formatToastVariant = (
  */
 export const formatToastOptions = (
   message?: string,
-  options?: Omit<ToastOptions, "description">
-): ToastOptions => {
+  options?: Omit<ToastProps, "description">
+): ToastProps => {
   return {
     ...(message ? { description: message } : {}),
     ...options,
@@ -55,7 +55,7 @@ export const formatToastOptions = (
 /**
  * Handles string-only toast calls by converting them to the expected format
  */
-export const handleStringToast = (message: string): ToastOptions => {
+export const handleStringToast = (message: string): ToastProps => {
   return {
     title: message
   };
