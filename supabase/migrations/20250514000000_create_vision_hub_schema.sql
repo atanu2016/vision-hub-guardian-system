@@ -1,123 +1,216 @@
 
--- Create cameras table
-CREATE TABLE IF NOT EXISTS public.cameras (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'offline',
-  location TEXT NOT NULL,
-  ipAddress TEXT NOT NULL,
-  port INTEGER DEFAULT 80,
-  username TEXT,
-  password TEXT,
-  model TEXT,
-  manufacturer TEXT,
-  lastSeen TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-  recording BOOLEAN DEFAULT false,
-  thumbnail TEXT,
-  group_name TEXT,
-  connectionType TEXT DEFAULT 'ip',
-  rtmpUrl TEXT,
-  onvifPath TEXT,
-  motionDetection BOOLEAN DEFAULT false
+-- Create the database tables for vision hub
+
+-- Create profiles table
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id UUID REFERENCES auth.users PRIMARY KEY,
+    full_name TEXT,
+    is_admin BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- Create storage_settings table
-CREATE TABLE IF NOT EXISTS public.storage_settings (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  type TEXT NOT NULL DEFAULT 'local',
-  path TEXT,
-  retentionDays INTEGER NOT NULL DEFAULT 30,
-  overwriteOldest BOOLEAN NOT NULL DEFAULT true,
-  nasAddress TEXT,
-  nasPath TEXT,
-  nasUsername TEXT,
-  nasPassword TEXT,
-  s3Endpoint TEXT,
-  s3Bucket TEXT,
-  s3AccessKey TEXT,
-  s3SecretKey TEXT,
-  s3Region TEXT,
-  dropboxToken TEXT,
-  dropboxFolder TEXT,
-  googleDriveToken TEXT,
-  googleDriveFolderId TEXT,
-  oneDriveToken TEXT,
-  oneDriveFolderId TEXT,
-  azureConnectionString TEXT,
-  azureContainer TEXT,
-  backblazeKeyId TEXT,
-  backblazeApplicationKey TEXT,
-  backblazeBucket TEXT
+-- Create system_logs table
+CREATE TABLE IF NOT EXISTS public.system_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    level TEXT NOT NULL,
+    message TEXT NOT NULL,
+    source TEXT NOT NULL,
+    details TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
 -- Create system_stats table
 CREATE TABLE IF NOT EXISTS public.system_stats (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  total_cameras INTEGER DEFAULT 0,
-  online_cameras INTEGER DEFAULT 0,
-  offline_cameras INTEGER DEFAULT 0,
-  recording_cameras INTEGER DEFAULT 0,
-  uptime_hours INTEGER DEFAULT 0,
-  storage_used TEXT DEFAULT '0 GB',
-  storage_total TEXT DEFAULT '1 TB',
-  storage_percentage NUMERIC DEFAULT 0,
-  last_updated TIMESTAMP WITH TIME ZONE DEFAULT now()
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    total_cameras INTEGER DEFAULT 0,
+    online_cameras INTEGER DEFAULT 0,
+    offline_cameras INTEGER DEFAULT 0,
+    recording_cameras INTEGER DEFAULT 0,
+    storage_used TEXT DEFAULT '0 GB',
+    storage_total TEXT DEFAULT '1 TB',
+    storage_percentage NUMERIC DEFAULT 0,
+    uptime_hours INTEGER DEFAULT 0,
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- Add function to clear recordings storage
-CREATE OR REPLACE FUNCTION public.clear_recordings_storage()
-RETURNS VOID
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
+-- Create cameras table
+CREATE TABLE IF NOT EXISTS public.cameras (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    location TEXT NOT NULL,
+    ipaddress TEXT NOT NULL,
+    port INTEGER DEFAULT 80,
+    username TEXT,
+    password TEXT,
+    rtmpurl TEXT,
+    connectiontype TEXT DEFAULT 'ip',
+    onvifpath TEXT,
+    manufacturer TEXT,
+    model TEXT,
+    status TEXT NOT NULL DEFAULT 'offline',
+    lastseen TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    motiondetection BOOLEAN DEFAULT FALSE,
+    recording BOOLEAN DEFAULT FALSE,
+    thumbnail TEXT,
+    "group" TEXT
+);
+
+-- Create storage_settings table
+CREATE TABLE IF NOT EXISTS public.storage_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    type TEXT NOT NULL DEFAULT 'local',
+    path TEXT,
+    retentiondays INTEGER NOT NULL DEFAULT 30,
+    overwriteoldest BOOLEAN NOT NULL DEFAULT TRUE,
+    nasaddress TEXT,
+    naspath TEXT,
+    nasusername TEXT,
+    naspassword TEXT,
+    s3endpoint TEXT,
+    s3accesskey TEXT,
+    s3secretkey TEXT,
+    s3bucket TEXT,
+    s3region TEXT
+);
+
+-- Create camera_recording_status table
+CREATE TABLE IF NOT EXISTS public.camera_recording_status (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    camera_id UUID NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- Create recording_settings table
+CREATE TABLE IF NOT EXISTS public.recording_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    continuous BOOLEAN NOT NULL DEFAULT TRUE,
+    motion_detection BOOLEAN NOT NULL DEFAULT TRUE,
+    schedule_type TEXT NOT NULL DEFAULT 'always',
+    time_start TEXT DEFAULT '00:00',
+    time_end TEXT DEFAULT '23:59',
+    days_of_week TEXT[] DEFAULT ARRAY['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+    quality TEXT DEFAULT 'medium',
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- Create webhooks table
+CREATE TABLE IF NOT EXISTS public.webhooks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    url TEXT NOT NULL,
+    events TEXT[] NOT NULL DEFAULT '{}',
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- Create alert_settings table
+CREATE TABLE IF NOT EXISTS public.alert_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    motion_detection BOOLEAN NOT NULL DEFAULT TRUE,
+    camera_offline BOOLEAN NOT NULL DEFAULT TRUE,
+    storage_warning BOOLEAN NOT NULL DEFAULT TRUE,
+    email_notifications BOOLEAN NOT NULL DEFAULT FALSE,
+    push_notifications BOOLEAN NOT NULL DEFAULT FALSE,
+    email_address TEXT,
+    notification_sound TEXT DEFAULT 'default',
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- Create advanced_settings table
+CREATE TABLE IF NOT EXISTS public.advanced_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    server_port TEXT DEFAULT '8080',
+    log_level TEXT DEFAULT 'info',
+    debug_mode BOOLEAN DEFAULT FALSE,
+    mfa_enabled BOOLEAN DEFAULT FALSE,
+    mfa_secret TEXT,
+    log_retention_days INTEGER DEFAULT 30,
+    min_log_level TEXT DEFAULT 'info',
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- Create database_config table for storing database configuration
+CREATE TABLE IF NOT EXISTS public.database_config (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    db_type TEXT NOT NULL DEFAULT 'supabase',
+    mysql_host TEXT,
+    mysql_port TEXT DEFAULT '3306',
+    mysql_database TEXT,
+    mysql_user TEXT,
+    mysql_password TEXT,
+    mysql_ssl BOOLEAN DEFAULT FALSE,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- Create smtp_config table for storing email server settings
+CREATE TABLE IF NOT EXISTS public.smtp_config (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    enabled BOOLEAN DEFAULT FALSE,
+    server TEXT,
+    port TEXT DEFAULT '587',
+    username TEXT,
+    password TEXT,
+    from_email TEXT,
+    use_ssl BOOLEAN DEFAULT TRUE,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- Create admin user function
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
 BEGIN
-  -- Update the system stats to show zero used storage
-  UPDATE public.system_stats
-  SET storage_used = '0 GB',
-      storage_percentage = 0,
-      last_updated = now();
-  
-  -- In a real implementation, this would also delete actual recording files
-  -- That would be handled by a service or background task
+  INSERT INTO public.profiles (id, full_name, is_admin)
+  VALUES (NEW.id, NEW.raw_user_meta_data->>'full_name', false);
+  RETURN NEW;
 END;
-$$;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Enable row level security
-ALTER TABLE public.cameras ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.storage_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.system_stats ENABLE ROW LEVEL SECURITY;
+-- Check if user is admin
+CREATE OR REPLACE FUNCTION public.is_admin(user_id UUID DEFAULT auth.uid())
+RETURNS BOOLEAN AS $$
+DECLARE
+  admin_status BOOLEAN;
+BEGIN
+  SELECT is_admin INTO admin_status FROM public.profiles WHERE id = user_id;
+  RETURN admin_status;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Create policies that allow anyone to read the tables
-CREATE POLICY "Allow public read access to cameras" ON public.cameras
-    FOR SELECT USING (true);
+-- Create trigger for new users
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
-CREATE POLICY "Allow public read access to storage_settings" ON public.storage_settings
-    FOR SELECT USING (true);
+-- Insert initial data if not exists
+INSERT INTO public.system_stats (id)
+SELECT gen_random_uuid()
+WHERE NOT EXISTS (SELECT 1 FROM public.system_stats);
 
-CREATE POLICY "Allow public read access to system_stats" ON public.system_stats
-    FOR SELECT USING (true);
+INSERT INTO public.storage_settings (id)
+SELECT gen_random_uuid()
+WHERE NOT EXISTS (SELECT 1 FROM public.storage_settings);
 
--- Create policies that allow authenticated users to insert, update, and delete
-CREATE POLICY "Allow authenticated users to insert cameras" ON public.cameras
-    FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+INSERT INTO public.recording_settings (id)
+SELECT gen_random_uuid()
+WHERE NOT EXISTS (SELECT 1 FROM public.recording_settings);
 
-CREATE POLICY "Allow authenticated users to update cameras" ON public.cameras
-    FOR UPDATE USING (auth.role() = 'authenticated');
+INSERT INTO public.alert_settings (id)
+SELECT gen_random_uuid()
+WHERE NOT EXISTS (SELECT 1 FROM public.alert_settings);
 
-CREATE POLICY "Allow authenticated users to delete cameras" ON public.cameras
-    FOR DELETE USING (auth.role() = 'authenticated');
+INSERT INTO public.advanced_settings (id)
+SELECT gen_random_uuid()
+WHERE NOT EXISTS (SELECT 1 FROM public.advanced_settings);
 
-CREATE POLICY "Allow authenticated users to insert storage_settings" ON public.storage_settings
-    FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+INSERT INTO public.database_config (id)
+SELECT gen_random_uuid()
+WHERE NOT EXISTS (SELECT 1 FROM public.database_config);
 
-CREATE POLICY "Allow authenticated users to update storage_settings" ON public.storage_settings
-    FOR UPDATE USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Allow authenticated users to insert system_stats" ON public.system_stats
-    FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-
-CREATE POLICY "Allow authenticated users to update system_stats" ON public.system_stats
-    FOR UPDATE USING (auth.role() = 'authenticated');
-
--- Create a realtime publication for the tables
-ALTER PUBLICATION supabase_realtime ADD TABLE public.cameras, public.storage_settings, public.system_stats;
+INSERT INTO public.smtp_config (id)
+SELECT gen_random_uuid()
+WHERE NOT EXISTS (SELECT 1 FROM public.smtp_config);
