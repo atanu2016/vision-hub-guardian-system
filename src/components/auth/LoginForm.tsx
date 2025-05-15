@@ -1,5 +1,5 @@
 
-import { LoginFormUI, FirebaseErrorAlert, ExistingUsersAlert, CreateAdminNotice } from './LoginFormUI';
+import { LoginFormUI, FirebaseErrorAlert } from './LoginFormUI';
 import { useLoginForm } from './useLoginForm';
 
 type LoginFormProps = {
@@ -21,29 +21,11 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
     <>
       {firebaseError && <FirebaseErrorAlert error={firebaseError} />}
 
-      {existingUsers.length > 0 && (
-        <ExistingUsersAlert 
-          existingUsers={existingUsers}
-          onMakeAdmins={makeAdmins}
-          isSubmitting={isSubmitting}
-        />
-      )}
-
-      {showCreateAdmin ? (
-        <>
-          <CreateAdminNotice />
-          <LoginFormUI 
-            onSubmit={handleCreateAdmin} 
-            isSubmitting={isSubmitting} 
-            buttonText="Create Superadmin Account"
-          />
-        </>
-      ) : (
-        <LoginFormUI 
-          onSubmit={handleSubmit} 
-          isSubmitting={isSubmitting}
-        />
-      )}
+      <LoginFormUI 
+        onSubmit={handleSubmit} 
+        isSubmitting={isSubmitting}
+        buttonText={showCreateAdmin ? "Create Superadmin Account" : "Log in"}
+      />
     </>
   );
 };

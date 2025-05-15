@@ -6,7 +6,6 @@ import { toast } from '@/hooks/use-toast';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { AuthBranding } from '@/components/auth/AuthBranding';
 import { supabase } from '@/integrations/supabase/client';
-import { SupabaseConnectionTest } from '@/components/auth/SupabaseConnectionTest';
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -76,7 +75,6 @@ const Auth = () => {
           </CardContent>
           
           <CardFooter className="flex flex-col space-y-4">
-            <SupabaseConnectionTest />
             <div className="text-xs text-center text-muted-foreground mt-4">
               By using this service, you agree to our <a href="#" className="underline">Terms of Service</a> and <a href="#" className="underline">Privacy Policy</a>.
             </div>

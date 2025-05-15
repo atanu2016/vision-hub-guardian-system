@@ -3,11 +3,9 @@ import { useState, useEffect, useContext } from 'react';
 import { z } from 'zod';
 import { AuthContext } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { auth, firestore } from '@/integrations/firebase/client';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, getDocs, query, where } from 'firebase/firestore';
-import { checkLocalAdminLogin, createLocalAdmin } from '@/services/userService';
 import { loginSchema } from './LoginFormUI';
+import { supabase } from '@/integrations/supabase/client';
+import { checkLocalAdminLogin, createLocalAdmin } from '@/services/userService';
 
 // Define a version of useAuth that doesn't throw when outside provider
 export const useOptionalAuth = () => {
@@ -22,71 +20,40 @@ export const useLoginForm = ({ onSuccess }: { onSuccess?: () => void }) => {
   const [showCreateAdmin, setShowCreateAdmin] = useState(false);
   const [firebaseError, setFirebaseError] = useState<string | null>(null);
   const [existingUsers, setExistingUsers] = useState<Array<{email: string, id: string}>>([]);
-  
-  // Check if any users exist
-  useEffect(() => {
-    const checkForUsers = async () => {
-      try {
-        console.log("Checking for existing users in Firebase...");
-        const profilesSnapshot = await getDocs(collection(firestore, 'profiles'));
-        
-        // Also check auth users collection if possible
-        try {
-          const usersQuery = query(collection(firestore, 'users'));
-          const usersSnapshot = await getDocs(usersQuery);
-          const usersList = usersSnapshot.docs.map(doc => ({
-            email: doc.data().email,
-            id: doc.id
-          }));
-          setExistingUsers(usersList);
-          console.log(`Found ${usersSnapshot.size} users in auth collection`);
-        } catch (authError) {
-          console.log("Could not access auth users directly", authError);
-        }
-        
-        if (profilesSnapshot.empty) {
-          console.log("No profiles found, showing admin creation form");
-          setShowCreateAdmin(true);
-        } else {
-          console.log(`Found ${profilesSnapshot.size} profiles`);
-          const userProfiles = profilesSnapshot.docs.map(doc => ({
-            email: doc.data().email || 'Unknown email',
-            id: doc.id
-          }));
-          setExistingUsers(prev => [...prev, ...userProfiles]);
-          setShowCreateAdmin(false);
-        }
-      } catch (error: any) {
-        console.error('Error checking for users:', error);
-        setFirebaseError(error.message || 'Firebase connection error');
-      }
-    };
-    
-    checkForUsers();
-  }, []);
 
   const handleSubmit = async (values: z.infer<typeof loginSchema>) => {
     setIsSubmitting(true);
     try {
-      console.log("Attempting to sign in...");
+      console.log("Attempting to sign in with Supabase...");
       
-      // If we have authContext, use that, otherwise try with local admin
-      if (authContext?.signIn) {
-        await authContext.signIn(values.email, values.password);
-      } else {
-        // Fallback if no auth context is available
-        if (checkLocalAdminLogin(values.email, values.password)) {
+      // Try Supabase login first
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: values.email,
+        password: values.password,
+      });
+      
+      if (error) {
+        console.error("Supabase login error:", error);
+        
+        // If we have authContext, try Firebase next
+        if (authContext?.signIn) {
+          await authContext.signIn(values.email, values.password);
+        } else if (checkLocalAdminLogin(values.email, values.password)) {
+          // Fallback to local admin
           createLocalAdmin();
           toast.success("Successfully logged in as local admin");
           if (onSuccess) onSuccess();
           return;
         } else {
-          throw new Error("Auth provider not available");
+          throw new Error(error.message || "Login failed");
         }
+      } else if (data.user) {
+        // Successful Supabase login
+        console.log("Successfully logged in with Supabase:", data.user);
+        toast.success("Successfully logged in!");
+        if (onSuccess) onSuccess();
+        return;
       }
-      
-      toast.success("Successfully logged in!");
-      if (onSuccess) onSuccess();
     } catch (error: any) {
       console.error('Login error:', error);
       toast.error(error.message || 'Login failed. Please check your credentials.');
@@ -98,32 +65,24 @@ export const useLoginForm = ({ onSuccess }: { onSuccess?: () => void }) => {
   const handleCreateAdmin = async (values: z.infer<typeof loginSchema>) => {
     setIsSubmitting(true);
     try {
-      console.log("Creating admin user in Firebase...");
-      // Register the user first
-      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
-      const user = userCredential.user;
+      console.log("Creating admin user in Supabase...");
+      // Try to create user in Supabase first
+      const { data, error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: {
+            full_name: values.email.split('@')[0],
+            is_admin: true
+          }
+        }
+      });
       
-      if (user) {
-        console.log("User created, adding role and profile...");
-        // Add the user to user_roles collection with superadmin role
-        await setDoc(doc(firestore, 'user_roles', user.uid), {
-          user_id: user.uid,
-          role: 'superadmin',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-        
-        // Also add to profiles collection
-        await setDoc(doc(firestore, 'profiles', user.uid), {
-          id: user.uid,
-          full_name: values.email.split('@')[0],
-          is_admin: true,
-          mfa_enrolled: false,
-          mfa_required: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-        
+      if (error) {
+        console.error("Supabase signup error:", error);
+        toast.error(error.message || 'Failed to create admin account.');
+      } else {
+        console.log("Admin created in Supabase:", data);
         toast.success('Superadmin account created successfully! Please log in.');
         setShowCreateAdmin(false);
       }
@@ -143,40 +102,48 @@ export const useLoginForm = ({ onSuccess }: { onSuccess?: () => void }) => {
         return;
       }
       
+      // Try updating user roles in Supabase
       for (const user of existingUsers) {
-        console.log(`Setting user ${user.email} (${user.id}) as superadmin...`);
+        console.log(`Setting user ${user.email} (${user.id}) as superadmin in Supabase...`);
         
-        // Add or update user_roles collection
-        await setDoc(doc(firestore, 'user_roles', user.id), {
-          user_id: user.id,
-          role: 'superadmin',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
+        // Check if user_roles record exists
+        const { data: existingRole, error: roleCheckError } = await supabase
+          .from('user_roles')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
         
-        // Also ensure profile exists with admin flag
-        const profileRef = doc(firestore, 'profiles', user.id);
-        const profileSnap = await getDoc(profileRef);
-        
-        if (profileSnap.exists()) {
-          // Update existing profile
-          await setDoc(profileRef, {
-            ...profileSnap.data(),
-            is_admin: true,
-            mfa_required: false
-          }, { merge: true });
-        } else {
-          // Create new profile
-          await setDoc(profileRef, {
-            id: user.id,
-            full_name: user.email.split('@')[0],
-            is_admin: true,
-            mfa_enrolled: false,
-            mfa_required: false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
+        if (roleCheckError && roleCheckError.code !== 'PGRST116') {
+          console.error('Error checking role:', roleCheckError);
         }
+        
+        if (!existingRole) {
+          // Create a new role
+          const { error } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: user.id,
+              role: 'superadmin'
+            });
+          
+          if (error) console.error('Error creating role:', error);
+        } else {
+          // Update existing role
+          const { error } = await supabase
+            .from('user_roles')
+            .update({ role: 'superadmin' })
+            .eq('id', existingRole.id);
+          
+          if (error) console.error('Error updating role:', error);
+        }
+        
+        // Update profile is_admin flag
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ is_admin: true })
+          .eq('id', user.id);
+        
+        if (profileError) console.error('Error updating profile:', profileError);
       }
       
       toast.success(`Successfully made ${existingUsers.length} users superadmins!`);
