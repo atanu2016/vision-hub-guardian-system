@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -53,7 +52,8 @@ export default function SMTPSettings() {
   const isEnabled = form.watch("enabled");
   
   // Load SMTP settings when component mounts
-  useState(() => {
+  // Fixed: Changed useState to useEffect and removed the second argument
+  useEffect(() => {
     loadSMTPSettings();
   }, []);
 
@@ -112,6 +112,9 @@ export default function SMTPSettings() {
         }
       }
       
+      // Fixed: Convert Date to ISO string before saving
+      const currentDate = new Date().toISOString();
+      
       // Update the SMTP configuration
       const { error } = await supabase
         .from('smtp_config')
@@ -123,7 +126,7 @@ export default function SMTPSettings() {
           password: values.password,
           from_email: values.from_email,
           use_ssl: values.use_ssl,
-          updated_at: new Date(),
+          updated_at: currentDate, // Fixed: Using string instead of Date object
         })
         .eq('id', '1');
         

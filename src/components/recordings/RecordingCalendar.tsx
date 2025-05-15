@@ -136,7 +136,7 @@ export default function RecordingCalendar({ cameraId }: RecordingCalendarProps) 
                 onSelect={handleDateSelect}
                 initialFocus
                 components={{
-                  day: renderDay
+                  Day: renderDay  // Fixed: Changed 'day' to 'Day' (capitalized)
                 }}
               />
             </PopoverContent>
