@@ -51,7 +51,8 @@ const Dashboard = () => {
       setStats(statsData);
     } catch (error) {
       console.error("Error fetching data:", error);
-      toast("Error fetching data", {
+      toast({
+        title: "Error fetching data",
         description: "Could not connect to the server. Using cached data instead.",
         variant: "destructive",
       });

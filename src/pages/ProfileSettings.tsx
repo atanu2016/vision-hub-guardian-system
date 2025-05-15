@@ -70,7 +70,8 @@ const ProfileSettings = () => {
     
     // Validate inputs
     if (!formData.fullName.trim() || !formData.email.trim()) {
-      toast("Missing Information", {
+      toast({
+        title: "Missing Information",
         description: "Please fill in all required fields",
         variant: "destructive",
       });
@@ -80,7 +81,8 @@ const ProfileSettings = () => {
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      toast("Invalid Email", {
+      toast({
+        title: "Invalid Email",
         description: "Please enter a valid email address",
         variant: "destructive",
       });
@@ -90,7 +92,8 @@ const ProfileSettings = () => {
     // Check if changing password
     if (formData.newPassword || formData.confirmPassword) {
       if (!formData.currentPassword) {
-        toast("Current Password Required", {
+        toast({
+          title: "Current Password Required",
           description: "Please enter your current password",
           variant: "destructive",
         });
@@ -98,7 +101,8 @@ const ProfileSettings = () => {
       }
       
       if (formData.newPassword !== formData.confirmPassword) {
-        toast("Password Mismatch", {
+        toast({
+          title: "Password Mismatch",
           description: "New passwords do not match",
           variant: "destructive",
         });
@@ -106,7 +110,8 @@ const ProfileSettings = () => {
       }
       
       if (formData.newPassword.length < 8) {
-        toast("Password Too Short", {
+        toast({
+          title: "Password Too Short",
           description: "Password must be at least 8 characters",
           variant: "destructive",
         });
@@ -132,7 +137,8 @@ const ProfileSettings = () => {
     setProfile(updatedProfile);
     localStorage.setItem('userProfile', JSON.stringify(updatedProfile));
     
-    toast("Profile Updated", {
+    toast({
+      title: "Profile Updated",
       description: "Your profile has been updated successfully",
     });
     
