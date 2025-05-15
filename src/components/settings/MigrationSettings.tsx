@@ -1,22 +1,57 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Database, MoveRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { toast } from 'sonner';
-import { Textarea } from '@/components/ui/textarea';
-import { supabase } from '@/integrations/supabase/client';
+import { Database, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import FirebaseMigrationForm from './migration/FirebaseMigrationForm';
 import SupabaseMigrationForm from './migration/SupabaseMigrationForm';
+import { checkMigrationAccess } from '@/services/userService';
 
 export default function MigrationSettings() {
   const [activeTab, setActiveTab] = useState('firebase');
-  const { isAdmin } = useAuth();
+  const [hasAccess, setHasAccess] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
   
-  if (!isAdmin) {
+  useEffect(() => {
+    const checkAccess = async () => {
+      if (user) {
+        setLoading(true);
+        const access = await checkMigrationAccess(user.id);
+        setHasAccess(access);
+        setLoading(false);
+      } else {
+        setHasAccess(false);
+        setLoading(false);
+      }
+    };
+    
+    checkAccess();
+  }, [user]);
+  
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="h-5 w-5" />
+            <span>Data Migration</span>
+          </CardTitle>
+          <CardDescription>
+            Checking access...
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!hasAccess) {
     return (
       <Card>
         <CardHeader>

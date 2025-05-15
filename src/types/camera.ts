@@ -2,8 +2,8 @@
 export type CameraConnectionType = "ip" | "rtsp" | "rtmp" | "onvif";
 export type CameraStatus = "online" | "offline" | "error";
 export type StorageProviderType = "local" | "nas" | "s3" | "dropbox" | "google_drive" | "onedrive" | "azure_blob" | "backblaze";
-export type QualityType = "low" | "medium" | "high" | "ultra";
-export type ScheduleType = "always" | "workdays" | "weekends" | "custom";
+export type QualityType = 'low' | 'medium' | 'high' | 'ultra';
+export type ScheduleType = 'always' | 'workdays' | 'weekends' | 'custom';
 
 export interface Camera {
   id: string;
@@ -26,7 +26,7 @@ export interface Camera {
   motionDetection?: boolean;
   
   // Recording settings properties
-  quality?: QualityType;
+  quality?: QualityType; 
   scheduleType?: ScheduleType;
   timeStart?: string;
   timeEnd?: string;

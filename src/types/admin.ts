@@ -16,3 +16,7 @@ export type MFASessionData = {
   qrCode: string | null;
   verified: boolean;
 };
+
+// Recording settings types
+export type QualityType = 'low' | 'medium' | 'high' | 'ultra';
+export type ScheduleType = 'always' | 'workdays' | 'weekends' | 'custom';

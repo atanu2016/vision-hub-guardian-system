@@ -37,7 +37,7 @@ export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole 
   }
 
   // Don't allow changing your own role except for superadmin
-  const disabled = userId === currentUserId && currentRole === 'superadmin';
+  const disabled = userId === currentUserId && currentRole !== 'superadmin';
 
   return (
     <div className="flex items-center gap-2">
