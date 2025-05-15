@@ -9,14 +9,17 @@ import {
   ToastViewport,
 } from "@/components/ui/toast"
 import { useToast } from "@/hooks/use-toast"
+import { Toaster as SonnerToaster } from "sonner"
 
 export function Toaster() {
   const { toast } = useToast()
   
   return (
-    <ToastProvider>
-      <ToastViewport />
-    </ToastProvider>
+    <>
+      <ToastProvider>
+        <ToastViewport />
+      </ToastProvider>
+      <SonnerToaster />
+    </>
   )
 }
-

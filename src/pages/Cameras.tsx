@@ -25,11 +25,7 @@ const Cameras = () => {
         await checkDatabaseSetup();
       } catch (error) {
         console.error('Error initializing system:', error);
-        toast({
-          title: "System Initialization Error",
-          description: "Could not initialize the system. Using fallback data.",
-          variant: "destructive",
-        });
+        toast.error("Could not initialize the system. Using fallback data.");
       }
       
       // Then fetch cameras
@@ -46,11 +42,7 @@ const Cameras = () => {
       setCameras(camerasData);
     } catch (error) {
       console.error('Error fetching cameras:', error);
-      toast({
-        title: "Error loading cameras",
-        description: "Could not load cameras from the server. Using cached data.",
-        variant: "destructive",
-      });
+      toast.error("Could not load cameras from the server. Using cached data.");
     } finally {
       setLoading(false);
     }
@@ -120,17 +112,10 @@ const Cameras = () => {
       // Update the local state with the saved camera
       setCameras(prev => [...prev, savedCamera]);
       
-      toast({
-        title: "Camera Added",
-        description: `${savedCamera.name} has been added successfully`,
-      });
+      toast.success(`${savedCamera.name} has been added successfully`);
     } catch (error) {
       console.error('Error adding camera:', error);
-      toast({
-        title: "Error Adding Camera",
-        description: "Could not add camera. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Could not add camera. Please try again.");
     }
   };
 
@@ -141,17 +126,10 @@ const Cameras = () => {
       // Update local state by removing the deleted camera
       setCameras(prev => prev.filter(camera => camera.id !== cameraId));
       
-      toast({
-        title: "Camera Deleted",
-        description: "Camera has been removed successfully",
-      });
+      toast.success("Camera has been removed successfully");
     } catch (error) {
       console.error('Error deleting camera:', error);
-      toast({
-        title: "Error Deleting Camera",
-        description: "Could not delete camera. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Could not delete camera. Please try again.");
     }
   };
 

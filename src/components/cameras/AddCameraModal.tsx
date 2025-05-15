@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Camera, CameraConnectionType, CameraStatus } from "@/types/camera";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -59,59 +59,35 @@ const AddCameraModal = ({ isOpen, onClose, onAdd, existingGroups }: AddCameraMod
     // Connection type specific validation
     if (connectionType === "ip") {
       if (!ipAddress || !port) {
-        toast({
-          title: "Validation Error",
-          description: "IP address and port are required",
-          variant: "destructive",
-        });
+        toast.error("IP address and port are required");
         return;
       }
 
       // Simple IP validation
       const ipRegex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
       if (!ipRegex.test(ipAddress)) {
-        toast({
-          title: "Invalid IP Address",
-          description: "Please enter a valid IP address",
-          variant: "destructive",
-        });
+        toast.error("Please enter a valid IP address");
         return;
       }
     } else if (connectionType === "rtmp") {
       if (!rtmpUrl) {
-        toast({
-          title: "Validation Error",
-          description: "RTMP URL is required",
-          variant: "destructive",
-        });
+        toast.error("RTMP URL is required");
         return;
       }
       
       // Basic RTMP URL validation
       if (!rtmpUrl.startsWith("rtmp://")) {
-        toast({
-          title: "Invalid RTMP URL",
-          description: "RTMP URL should start with rtmp://",
-          variant: "destructive",
-        });
+        toast.error("RTMP URL should start with rtmp://");
         return;
       }
     } else if (connectionType === "onvif") {
       if (!ipAddress || !port) {
-        toast({
-          title: "Validation Error",
-          description: "IP address and port are required for ONVIF",
-          variant: "destructive",
-        });
+        toast.error("IP address and port are required for ONVIF");
         return;
       }
       
       if (!username || !password) {
-        toast({
-          title: "Validation Error", 
-          description: "Username and password are required for ONVIF",
-          variant: "destructive",
-        });
+        toast.error("Username and password are required for ONVIF");
         return;
       }
     }
@@ -151,9 +127,7 @@ const AddCameraModal = ({ isOpen, onClose, onAdd, existingGroups }: AddCameraMod
       };
 
       onAdd(newCamera);
-      toast("Camera Added Successfully", {
-        description: `${name} has been added to ${finalGroup}`
-      });
+      toast.success(`${name} has been added to ${finalGroup}`);
       resetForm();
       onClose();
     } catch (error) {

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Notification } from '@/components/layout/NotificationDropdown';
 import { toast } from '@/hooks/use-toast';
@@ -35,14 +36,18 @@ export const useNotifications = () => {
     setNotifications(prev => [newNotification, ...prev]);
     
     // Also show a toast for real-time feedback
-    if (toast) {
-      if (notification.type === 'error') {
-        toast.error(notification.message);
-      } else {
-        toast(notification.title, {
-          description: notification.message
-        });
-      }
+    if (notification.type === 'error') {
+      toast.error(notification.title, {
+        description: notification.message
+      });
+    } else if (notification.type === 'success') {
+      toast.success(notification.title, {
+        description: notification.message
+      });
+    } else {
+      toast(notification.title, {
+        description: notification.message
+      });
     }
     
     return newNotification;

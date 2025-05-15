@@ -4,7 +4,7 @@ import { setupCameraStream } from "@/services/apiService";
 import { Camera } from "@/types/camera";
 import { Button } from "@/components/ui/button";
 import { PlayCircle, PauseCircle, Volume2, VolumeX } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface CameraStreamPlayerProps {
   camera: Camera;

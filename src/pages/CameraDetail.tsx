@@ -43,26 +43,18 @@ const CameraDetail = () => {
         if (foundCamera) {
           setCamera(foundCamera);
         } else {
-          toast({
-            title: "Camera not found",
-            description: "The requested camera could not be found.",
-            variant: "destructive",
-          });
+          toast.error("The requested camera could not be found.");
         }
       } catch (error) {
         console.error("Error fetching camera:", error);
-        toast({
-          title: "Error loading camera",
-          description: "Could not load camera details. Please try again.",
-          variant: "destructive",
-        });
+        toast.error("Could not load camera details. Please try again.");
       } finally {
         setLoading(false);
       }
     };
     
     fetchCamera();
-  }, [id, toast]);
+  }, [id]);
   
   const handleToggleStreaming = () => {
     setIsStreaming(!isStreaming);
@@ -70,19 +62,12 @@ const CameraDetail = () => {
   
   const handleTakeSnapshot = () => {
     if (!isStreaming || camera?.status !== 'online') {
-      toast({
-        title: "Cannot take snapshot",
-        description: "Camera must be online and streaming to take a snapshot.",
-        variant: "destructive",
-      });
+      toast.error("Camera must be online and streaming to take a snapshot.");
       return;
     }
 
     // Implementation would capture a frame from the video
-    toast({
-      title: "Snapshot taken",
-      description: "Screenshot saved to recordings folder.",
-    });
+    toast.success("Screenshot saved to recordings folder.");
   };
 
   const handleSaveSettings = async (updatedCamera: Camera) => {
@@ -90,17 +75,10 @@ const CameraDetail = () => {
       await saveCamera(updatedCamera);
       setCamera(updatedCamera);
       setShowSettings(false);
-      toast({
-        title: "Settings saved",
-        description: "Camera settings updated successfully.",
-      });
+      toast.success("Camera settings updated successfully.");
     } catch (error) {
       console.error("Error saving camera settings:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save camera settings.",
-        variant: "destructive",
-      });
+      toast.error("Failed to save camera settings.");
     }
   };
   
@@ -109,18 +87,11 @@ const CameraDetail = () => {
     
     try {
       await deleteCamera(camera.id);
-      toast({
-        title: "Camera deleted",
-        description: "Camera has been successfully deleted.",
-      });
+      toast.success("Camera has been successfully deleted.");
       navigate('/');
     } catch (error) {
       console.error("Error deleting camera:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete camera.",
-        variant: "destructive",
-      });
+      toast.error("Failed to delete camera.");
     }
   };
   
