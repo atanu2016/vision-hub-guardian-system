@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/componen
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, supabaseUrl } from '@/integrations/supabase/client';
 import { DatabaseIcon, RefreshCw, Server, Shield, Database } from 'lucide-react';
 import DebugLogDialog from './DebugLogDialog';
 
@@ -155,7 +155,7 @@ export function DatabaseSettings() {
       <CardFooter className="flex justify-between">
         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
           <Server className="h-4 w-4" />
-          <p>Server: {supabase.supabaseUrl}</p>
+          <p>Server: {supabaseUrl}</p>
         </div>
         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
           <Shield className="h-4 w-4" />
