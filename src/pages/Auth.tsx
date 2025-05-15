@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -17,16 +18,6 @@ import { AspectRatio } from '@/components/ui/aspect-ratio';
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-});
-
-const signupSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-  confirmPassword: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-  fullName: z.string().min(2, { message: 'Full name is required' }),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
 });
 
 const resetSchema = z.object({
@@ -49,11 +40,6 @@ const Auth = () => {
     defaultValues: { email: '', password: '' },
   });
 
-  const signupForm = useForm<z.infer<typeof signupSchema>>({
-    resolver: zodResolver(signupSchema),
-    defaultValues: { email: '', password: '', confirmPassword: '', fullName: '' },
-  });
-
   const resetForm = useForm<z.infer<typeof resetSchema>>({
     resolver: zodResolver(resetSchema),
     defaultValues: { email: '' },
@@ -69,12 +55,16 @@ const Auth = () => {
           .single();
         
         if (settings) {
-          // These would be actual fields in your database
+          // Check for auth branding fields
+          if (settings.auth_logo_url) setLogoUrl(settings.auth_logo_url);
+          if (settings.auth_background_url) setBackgroundUrl(settings.auth_background_url);
+          
+          // Backward compatibility
           const customLogoUrl = localStorage.getItem('auth_logo_url');
           const customBackgroundUrl = localStorage.getItem('auth_background_url');
           
-          if (customLogoUrl) setLogoUrl(customLogoUrl);
-          if (customBackgroundUrl) setBackgroundUrl(customBackgroundUrl);
+          if (customLogoUrl && !settings.auth_logo_url) setLogoUrl(customLogoUrl);
+          if (customBackgroundUrl && !settings.auth_background_url) setBackgroundUrl(customBackgroundUrl);
         }
       } catch (error) {
         console.error('Error loading branding:', error);
@@ -91,40 +81,6 @@ const Auth = () => {
       // No need to navigate here as it's handled in AuthContext
     } catch (error) {
       console.error('Login error:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleSignup = async (values: z.infer<typeof signupSchema>) => {
-    setIsSubmitting(true);
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email: values.email,
-        password: values.password,
-        options: {
-          data: {
-            full_name: values.fullName,
-          },
-        },
-      });
-      
-      if (error) throw error;
-      
-      // Switch to login tab on successful signup
-      setActiveTab('login');
-      loginForm.setValue('email', values.email);
-      loginForm.setValue('password', '');
-      
-      // Automatically sign in if email verification is disabled
-      if (data?.user && !data?.session) {
-        // Show message about email verification
-        alert('Please check your email to verify your account.');
-      }
-      
-    } catch (error: any) {
-      console.error('Signup error:', error);
-      alert(`Signup failed: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -191,10 +147,9 @@ const Auth = () => {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3 mb-6">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
-                <TabsTrigger value="reset">Reset</TabsTrigger>
+                <TabsTrigger value="reset">Reset Password</TabsTrigger>
               </TabsList>
 
               <TabsContent value="login">
@@ -234,75 +189,6 @@ const Auth = () => {
                         </>
                       ) : (
                         'Log in'
-                      )}
-                    </Button>
-                  </form>
-                </Form>
-              </TabsContent>
-
-              <TabsContent value="signup">
-                <Form {...signupForm}>
-                  <form onSubmit={signupForm.handleSubmit(handleSignup)} className="space-y-4">
-                    <FormField
-                      control={signupForm.control}
-                      name="fullName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Full Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="John Doe" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signupForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input placeholder="mail@example.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signupForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="********" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signupForm.control}
-                      name="confirmPassword"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Confirm Password</FormLabel>
-                          <FormControl>
-                            <Input type="password" placeholder="********" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="submit" className="w-full" disabled={isSubmitting}>
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Creating account...
-                        </>
-                      ) : (
-                        'Create account'
                       )}
                     </Button>
                   </form>
