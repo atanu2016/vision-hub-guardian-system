@@ -1,65 +1,139 @@
 
+import { supabase } from '@/integrations/supabase/client';
+import type { UserRole, UserData } from '@/types/admin';
 import { toast } from 'sonner';
-import { 
-  fetchUsers as fetchFirebaseUsers, 
-  updateUserRole as updateFirebaseUserRole, 
-  toggleMfaRequirement as toggleFirebaseMfaRequirement, 
-  checkMigrationAccess as checkFirebaseMigrationAccess 
-} from './firebaseService';
-import type { UserData, UserRole } from '@/types/admin';
 
-// Re-export functions from firebaseService to maintain the same interface
-export const updateUserRole = updateFirebaseUserRole;
-export const toggleMfaRequirement = toggleFirebaseMfaRequirement;
-export const checkMigrationAccess = checkFirebaseMigrationAccess;
-
-// Create a local admin flag to bypass Firebase during development
-let localAdminCreated = false;
-const localAdmin = {
-  id: 'local-admin-id',
-  email: 'admin@example.com',
-  full_name: 'Local Admin',
-  role: 'superadmin' as UserRole,
-  mfa_enrolled: false,
-  mfa_required: false,
-  created_at: new Date().toISOString()
-};
-
-// Modified fetchUsers function that returns local admin when Firebase fails
 export async function fetchUsers(): Promise<UserData[]> {
   try {
-    console.log("Attempting to fetch users from Firebase...");
-    const users = await fetchFirebaseUsers();
+    // Get all auth users - only available to superadmin
+    const { data: authUsers, error: authError } = await supabase
+      .from('profiles')
+      .select('id, full_name, mfa_enrolled, mfa_required, created_at');
     
-    // If local admin was created, include it in the results
-    if (localAdminCreated) {
-      return [localAdmin, ...users];
-    }
-    
-    return users;
+    if (authError) throw authError;
+
+    // For each user, get roles
+    const usersWithRoles = await Promise.all(
+      authUsers.map(async (user) => {
+        // Get user role
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .maybeSingle();
+          
+        // Get user email
+        const { data: userData } = await supabase.auth.admin.getUserById(user.id);
+        
+        return {
+          ...user,
+          email: userData?.user?.email || 'No email',
+          role: (roleData?.role as UserRole) || 'user',
+        };
+      })
+    );
+
+    return usersWithRoles;
   } catch (error) {
-    console.error('Error fetching users from Firebase:', error);
-    toast.error('Using local admin account due to Firebase connection issues');
-    
-    // Return local admin account as a fallback
-    return [localAdmin];
+    console.error('Error fetching users:', error);
+    throw error;
   }
 }
 
-// Helper function to check if the local admin login is valid
-export function checkLocalAdminLogin(email: string, password: string): boolean {
-  // For development only - use a simple password
-  return (email === 'admin@example.com' && password === 'admin123');
+export async function updateUserRole(userId: string, newRole: UserRole, currentUserId?: string): Promise<void> {
+  try {
+    // Don't allow changing your own role if you're a superadmin
+    if (userId === currentUserId && newRole !== 'superadmin') {
+      toast.error("You cannot downgrade your own superadmin role");
+      return;
+    }
+
+    const { data: existingRole } = await supabase
+      .from('user_roles')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    let error;
+    
+    if (existingRole) {
+      // Update existing role
+      const { error: updateError } = await supabase
+        .from('user_roles')
+        .update({ role: newRole, updated_at: new Date().toISOString() })
+        .eq('user_id', userId);
+        
+      error = updateError;
+    } else {
+      // Insert new role
+      const { error: insertError } = await supabase
+        .from('user_roles')
+        .insert({ user_id: userId, role: newRole });
+        
+      error = insertError;
+    }
+
+    if (error) throw error;
+    
+    toast.success(`User role updated to ${newRole}`);
+  } catch (error) {
+    console.error('Error updating user role:', error);
+    toast.error('Failed to update user role');
+    throw error;
+  }
 }
 
-// Create local admin account for development
-export function createLocalAdmin(): void {
-  localAdminCreated = true;
-  toast.success('Local admin account created successfully');
-  console.log('Local admin mode activated');
+export async function toggleMfaRequirement(userId: string, required: boolean): Promise<void> {
+  try {
+    // First update the profile
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ mfa_required: required })
+      .eq('id', userId);
+      
+    if (profileError) throw profileError;
+    
+    // If MFA is being disabled, also reset MFA enrollment status if needed
+    if (!required) {
+      // Check if the user has MFA enrolled
+      const { data: userData } = await supabase
+        .from('profiles')
+        .select('mfa_enrolled')
+        .eq('id', userId)
+        .single();
+        
+      if (userData && userData.mfa_enrolled) {
+        // Reset MFA enrollment status
+        const { error: resetError } = await supabase
+          .from('profiles')
+          .update({ mfa_enrolled: false })
+          .eq('id', userId);
+          
+        if (resetError) throw resetError;
+      }
+    }
+    
+    toast.success(`MFA requirement ${required ? 'enabled' : 'disabled'}`);
+  } catch (error) {
+    console.error('Error updating MFA requirement:', error);
+    toast.error('Failed to update MFA requirement');
+    throw error;
+  }
 }
 
-// Check if the local admin was created
-export function isLocalAdminCreated(): boolean {
-  return localAdminCreated;
+// New function to check admin access for migration tools
+export async function checkMigrationAccess(userId: string): Promise<boolean> {
+  try {
+    // Check if the user is an admin or superadmin
+    const { data: roleData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .single();
+      
+    return roleData && (roleData.role === 'admin' || roleData.role === 'superadmin');
+  } catch (error) {
+    console.error('Error checking migration access:', error);
+    return false;
+  }
 }

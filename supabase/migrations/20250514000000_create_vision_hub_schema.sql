@@ -6,27 +6,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID REFERENCES auth.users PRIMARY KEY,
     full_name TEXT,
     is_admin BOOLEAN DEFAULT FALSE,
-    mfa_enrolled BOOLEAN DEFAULT FALSE,
-    mfa_required BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-);
-
--- Create user_roles table with enum
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
-        CREATE TYPE user_role AS ENUM ('superadmin', 'admin', 'operator', 'user');
-    END IF;
-END$$;
-
--- Create user_roles table
-CREATE TABLE IF NOT EXISTS public.user_roles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    role user_role NOT NULL DEFAULT 'user',
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
 -- Create system_logs table
@@ -182,41 +163,11 @@ CREATE TABLE IF NOT EXISTS public.smtp_config (
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, full_name, is_admin, mfa_enrolled, mfa_required)
-  VALUES (NEW.id, NEW.raw_user_meta_data->>'full_name', true, false, false);
-  
-  -- Also set new users as superadmin by default
-  INSERT INTO public.user_roles (user_id, role)
-  VALUES (NEW.id, 'superadmin');
-  
+  INSERT INTO public.profiles (id, full_name, is_admin)
+  VALUES (NEW.id, NEW.raw_user_meta_data->>'full_name', false);
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Create a function to check user roles
-CREATE OR REPLACE FUNCTION public.get_user_role(user_id UUID DEFAULT auth.uid())
-RETURNS user_role AS $$
-DECLARE
-  user_role_val user_role;
-BEGIN
-  SELECT role INTO user_role_val FROM public.user_roles WHERE user_id = $1;
-  RETURN COALESCE(user_role_val, 'user'::user_role);
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Create a function to check if a user has a specific role
-CREATE OR REPLACE FUNCTION public.has_role(_user_id uuid, _role user_role)
-RETURNS boolean
-LANGUAGE sql
-STABLE SECURITY DEFINER
-AS $$
-  SELECT EXISTS (
-    SELECT 1
-    FROM public.user_roles
-    WHERE user_id = _user_id
-      AND role = _role
-  );
-$$;
 
 -- Check if user is admin
 CREATE OR REPLACE FUNCTION public.is_admin(user_id UUID DEFAULT auth.uid())

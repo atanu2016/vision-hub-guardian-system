@@ -92,7 +92,7 @@ export function MFAEnrollmentForm({ redirectUrl = '/' }: MFAEnrollmentFormProps)
       await supabase
         .from('profiles')
         .update({ mfa_enrolled: true })
-        .eq('id', user!.uid);
+        .eq('id', user!.id);
 
       toast.success('MFA setup successful', {
         description: 'Your account is now secured with two-factor authentication',

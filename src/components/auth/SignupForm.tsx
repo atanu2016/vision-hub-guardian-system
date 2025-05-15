@@ -6,11 +6,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { auth, firestore } from '@/integrations/firebase/client';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
 
 const formSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -34,41 +32,22 @@ export function SignupForm() {
     try {
       setIsLoading(true);
       
-      // Create user with email and password
-      const userCredential = await createUserWithEmailAndPassword(
-        auth, 
-        values.email, 
-        values.password
-      );
-      
-      const user = userCredential.user;
-      
-      // Update profile with display name
-      await updateProfile(user, {
-        displayName: values.fullName
-      });
-      
-      // Add user to profiles collection
-      await setDoc(doc(firestore, 'profiles', user.uid), {
-        id: user.uid,
-        full_name: values.fullName,
-        is_admin: false,
-        mfa_enrolled: false,
-        mfa_required: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
-      
-      // Add default user role
-      await setDoc(doc(firestore, 'user_roles', user.uid), {
-        user_id: user.uid,
-        role: 'user',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+      const { data, error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: {
+            full_name: values.fullName,
+          },
+        }
       });
 
+      if (error) {
+        throw error;
+      }
+
       toast.success('Registration successful', {
-        description: 'Your account has been created successfully.'
+        description: 'Please check your email for verification instructions.'
       });
       
       form.reset();

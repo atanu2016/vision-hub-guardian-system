@@ -31,8 +31,7 @@ export default function UserManagement() {
 
   async function handleUpdateUserRole(userId: string, newRole: UserRole) {
     try {
-      // Using uid instead of id for the current user
-      await updateUserRole(userId, newRole, user?.uid);
+      await updateUserRole(userId, newRole, user?.id);
       // Update local state
       setUsers(users.map(u => 
         u.id === userId ? { ...u, role: newRole } : u
@@ -81,7 +80,7 @@ export default function UserManagement() {
       <CardContent>
         <UserTable 
           users={users}
-          currentUserId={user?.uid}
+          currentUserId={user?.id}
           updateUserRole={handleUpdateUserRole}
           toggleMfaRequirement={handleToggleMfaRequirement}
           loading={loading}
