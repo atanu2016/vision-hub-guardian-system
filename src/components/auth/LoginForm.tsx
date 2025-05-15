@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -26,11 +26,11 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const [showCreateAdmin, setShowCreateAdmin] = useState(false);
   
   // Check if any users exist
-  useState(() => {
+  useEffect(() => {
     const checkForUsers = async () => {
       try {
         const { data, error } = await supabase
-          .from('users')
+          .from('profiles')
           .select('count')
           .single();
         
@@ -75,17 +75,26 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
       if (authError) throw authError;
       
       if (authData.user) {
-        // Add the user to the users table with superadmin role
+        // Add the user to the profiles table with superadmin role
         const { error: userError } = await supabase
-          .from('users')
+          .from('user_roles')
           .insert({
-            id: authData.user.id,
-            email: values.email,
+            user_id: authData.user.id,
             role: 'superadmin',
-            created_at: new Date().toISOString(),
           });
           
         if (userError) throw userError;
+        
+        // Also add to profiles table
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: authData.user.id,
+            full_name: values.email.split('@')[0],
+            is_admin: true,
+          });
+          
+        if (profileError) throw profileError;
         
         toast.success('Superadmin account created successfully! Please log in.');
         setShowCreateAdmin(false);
