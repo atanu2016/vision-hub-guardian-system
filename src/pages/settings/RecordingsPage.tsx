@@ -50,10 +50,7 @@ const RecordingsPage = () => {
         setRecordingSchedule(settings);
       } catch (error) {
         console.error("Failed to load data:", error);
-        toast({
-          description: "Failed to load recording settings",
-          variant: "destructive"
-        });
+        toast.error("Failed to load recording settings");
       } finally {
         setLoading(false);
       }
@@ -71,10 +68,7 @@ const RecordingsPage = () => {
       
     } catch (error) {
       console.error("Failed to save settings:", error);
-      toast({
-        description: "Failed to save recording settings",
-        variant: "destructive"
-      });
+      toast.error("Failed to save recording settings");
     } finally {
       setSaving(false);
     }
@@ -91,16 +85,11 @@ const RecordingsPage = () => {
           c.id === camera.id ? { ...c, recording: !c.recording } : c
         ));
         
-        toast({
-          description: `Recording ${!camera.recording ? 'enabled' : 'disabled'} for ${camera.name}`
-        });
+        toast(`Recording ${!camera.recording ? 'enabled' : 'disabled'} for ${camera.name}`);
       }
     } catch (error) {
       console.error("Failed to update camera recording status:", error);
-      toast({
-        description: "Failed to update camera recording status",
-        variant: "destructive"
-      });
+      toast.error("Failed to update camera recording status");
     }
   };
 

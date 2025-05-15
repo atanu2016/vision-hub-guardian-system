@@ -1,11 +1,9 @@
 
 // Implement toast functionality
-import { toast as sonnerToast } from "sonner";
-import type { ToastT } from "sonner";
+import { toast as sonnerToast, type Toast as SonnerToast } from "sonner";
 
+// Export the toast function
 export const toast = sonnerToast;
 
-// Re-export the useToast hook
-export { useToast } from "sonner";
-
-export type Toast = ToastT;
+// Re-export the toast type
+export type Toast = SonnerToast;
