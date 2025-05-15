@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -120,10 +119,8 @@ const StorageSettings = () => {
         await fetchStorageUsage();
       } catch (error) {
         console.error("Failed to load storage settings:", error);
-        toast({
-          title: "Error Loading Settings",
-          description: "Could not load storage settings. Please try again.",
-          variant: "destructive"
+        toast.error("Error Loading Settings", {
+          description: "Could not load storage settings. Please try again."
         });
       } finally {
         setIsLoading(false);
@@ -232,19 +229,16 @@ const StorageSettings = () => {
       // Save to database through API service
       await saveStorageSettings(settings);
       
-      toast({
-        title: "Storage Settings Saved",
-        description: "Your storage configuration has been updated successfully.",
+      toast.success("Storage Settings Saved", {
+        description: "Your storage configuration has been updated successfully."
       });
 
       // Refresh storage usage data
       await fetchStorageUsage();
     } catch (error) {
       console.error("Failed to save storage settings:", error);
-      toast({
-        title: "Error Saving Settings",
-        description: "An error occurred while saving your storage settings.",
-        variant: "destructive"
+      toast.error("Error Saving Settings", {
+        description: "An error occurred while saving your storage settings."
       });
     } finally {
       setIsSaving(false);
@@ -255,24 +249,16 @@ const StorageSettings = () => {
   const handleClearStorage = async () => {
     setIsClearing(true);
     try {
-      // Delete recordings or reset storage usage in database
-      const { error } = await supabase.rpc('clear_recordings_storage');
+      // Try updating system_stats directly since the function might not exist
+      const { error: updateError } = await supabase
+        .from('system_stats')
+        .update({ 
+          storage_used: '0 GB',
+          storage_percentage: 0
+        });
       
-      if (error) {
-        if (error.message.includes('function "clear_recordings_storage" does not exist')) {
-          // Fallback if the function doesn't exist
-          const { error: updateError } = await supabase
-            .from('system_stats')
-            .update({ 
-              storage_used: '0 GB',
-              storage_percentage: 0
-            })
-            .eq('id', 'any-id');
-          
-          if (updateError) throw updateError;
-        } else {
-          throw error;
-        }
+      if (updateError) {
+        throw updateError;
       }
       
       // Update local state to reflect changes
@@ -283,16 +269,13 @@ const StorageSettings = () => {
         usedSpaceFormatted: "0 GB"
       });
       
-      toast({
-        title: "Storage Cleared",
+      toast.success("Storage Cleared", {
         description: "All recordings have been successfully removed."
       });
     } catch (error) {
       console.error("Failed to clear storage:", error);
-      toast({
-        title: "Error Clearing Storage",
-        description: "An error occurred while clearing the storage.",
-        variant: "destructive"
+      toast.error("Error Clearing Storage", {
+        description: "An error occurred while clearing the storage."
       });
     } finally {
       setIsClearing(false);

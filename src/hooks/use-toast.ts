@@ -25,6 +25,7 @@ export type ToastOptions = {
     label: string;
     onClick: () => void;
   };
+  title?: string; // Added title property to fix type errors
 };
 
 // Define the type for toast function with methods
