@@ -8,9 +8,10 @@ import { useEffect, useState } from "react";
 
 interface CameraCardProps {
   camera: Camera;
+  onDelete?: (cameraId: string) => Promise<void>;
 }
 
-const CameraCard = ({ camera }: CameraCardProps) => {
+const CameraCard = ({ camera, onDelete }: CameraCardProps) => {
   const [isLiveStream, setIsLiveStream] = useState(false);
   const [streamChecked, setStreamChecked] = useState(false);
 
