@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { Download, PauseCircle, PlayCircle } from "lucide-react";
+import { Download, PauseCircle, PlayCircle, ArrowLeft } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { useState, useEffect } from "react";
 import { getCameras, saveCamera, deleteCamera } from "@/services/apiService";
