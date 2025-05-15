@@ -1,5 +1,5 @@
 
-import { ToastOptions } from "sonner";
+import { ToastOptions } from "@/hooks/use-toast";
 
 /**
  * Formats toast options to ensure consistent usage across the application

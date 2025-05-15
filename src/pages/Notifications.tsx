@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { CalendarIcon, CheckCircleIcon, TrashIcon, XCircleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,11 +18,11 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { Notification } from "@/components/layout/NotificationDropdown";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { useToast } from "@/hooks/use-toast";
+import { toast, useToast } from "@/hooks/use-toast";
 
 const NotificationsPage = () => {
   const { notifications, markAsRead, markAllAsRead, clearAll, removeNotification } = useNotifications();
-  const { toast } = useToast();
+  const { toast: hookToast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
 
@@ -47,16 +46,12 @@ const NotificationsPage = () => {
 
   const handleMarkAllAsRead = () => {
     markAllAsRead();
-    toast({
-      title: "All notifications marked as read",
-    });
+    toast("All notifications marked as read");
   };
 
   const handleClearAll = () => {
     clearAll();
-    toast({
-      title: "All notifications cleared",
-    });
+    toast("All notifications cleared");
   };
 
   const getNotificationIcon = (type: string) => {

@@ -27,13 +27,13 @@ import { useState, useEffect } from "react";
 import AddCameraModal from "@/components/cameras/AddCameraModal";
 import { Camera } from "@/types/camera";
 import { getCameras, saveCamera } from "@/data/mockData";
-import { toast } from "@/hooks/use-toast";
+import { toast, useToast } from "@/hooks/use-toast";
 import { NotificationDropdown } from "./NotificationDropdown";
 import { useNotifications } from "@/hooks/useNotifications";
 
 const TopBar = () => {
   const { user, profile, signOut, isAdmin } = useAuth();
-  const { toast } = useToast();
+  const { toast: hookToast } = useToast();
   const navigate = useNavigate();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [cameras, setCameras] = useState<Camera[]>([]);

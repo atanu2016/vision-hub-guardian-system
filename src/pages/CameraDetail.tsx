@@ -32,7 +32,7 @@ const CameraDetail = () => {
   const [activeTab, setActiveTab] = useState("live");
   const [showSettings, setShowSettings] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const { toast } = useToast();
+  const { toast: hookToast } = useToast();
   
   useEffect(() => {
     const fetchCamera = async () => {
@@ -43,11 +43,11 @@ const CameraDetail = () => {
         if (foundCamera) {
           setCamera(foundCamera);
         } else {
-          toast.error("The requested camera could not be found.");
+          hookToast.error("The requested camera could not be found.");
         }
       } catch (error) {
         console.error("Error fetching camera:", error);
-        toast.error("Could not load camera details. Please try again.");
+        hookToast.error("Could not load camera details. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -62,12 +62,12 @@ const CameraDetail = () => {
   
   const handleTakeSnapshot = () => {
     if (!isStreaming || camera?.status !== 'online') {
-      toast.error("Camera must be online and streaming to take a snapshot.");
+      hookToast.error("Camera must be online and streaming to take a snapshot.");
       return;
     }
 
     // Implementation would capture a frame from the video
-    toast.success("Screenshot saved to recordings folder.");
+    hookToast.success("Screenshot saved to recordings folder.");
   };
 
   const handleSaveSettings = async (updatedCamera: Camera) => {
@@ -75,10 +75,10 @@ const CameraDetail = () => {
       await saveCamera(updatedCamera);
       setCamera(updatedCamera);
       setShowSettings(false);
-      toast.success("Camera settings updated successfully.");
+      hookToast.success("Camera settings updated successfully.");
     } catch (error) {
       console.error("Error saving camera settings:", error);
-      toast.error("Failed to save camera settings.");
+      hookToast.error("Failed to save camera settings.");
     }
   };
   
@@ -87,11 +87,11 @@ const CameraDetail = () => {
     
     try {
       await deleteCamera(camera.id);
-      toast.success("Camera has been successfully deleted.");
+      hookToast.success("Camera has been successfully deleted.");
       navigate('/');
     } catch (error) {
       console.error("Error deleting camera:", error);
-      toast.error("Failed to delete camera.");
+      hookToast.error("Failed to delete camera.");
     }
   };
   
@@ -296,7 +296,7 @@ const CameraDetail = () => {
                         videoElement.requestFullscreen();
                       } 
                     } else {
-                      toast({
+                      hookToast({
                         title: "Full screen error",
                         description: "Unable to enter full screen mode.",
                         variant: "destructive",
@@ -319,8 +319,7 @@ const CameraDetail = () => {
                     
                     setCamera(updatedCamera);
                     saveCamera(updatedCamera).then(() => {
-                      toast({
-                        title: updatedCamera.recording ? "Recording started" : "Recording stopped",
+                      hookToast(updatedCamera.recording ? "Recording started" : "Recording stopped", {
                         description: updatedCamera.recording ? 
                           "Camera has started recording." : 
                           "Camera recording has been stopped.",

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Camera as CameraIcon, Cpu, HardDrive, AlertTriangle, Filter } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +18,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Camera as CameraType } from "@/types/camera";
-import { useToast } from "@/hooks/use-toast";
+import { toast, useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
   const [stats, setStats] = useState<any>({
@@ -52,8 +51,7 @@ const Dashboard = () => {
       setStats(statsData);
     } catch (error) {
       console.error("Error fetching data:", error);
-      toast({
-        title: "Error fetching data",
+      toast("Error fetching data", {
         description: "Could not connect to the server. Using cached data instead.",
         variant: "destructive",
       });
