@@ -29,7 +29,14 @@ const localAdmin = {
 export async function fetchUsers(): Promise<UserData[]> {
   try {
     console.log("Attempting to fetch users from Firebase...");
-    return await fetchFirebaseUsers();
+    const users = await fetchFirebaseUsers();
+    
+    // If local admin was created, include it in the results
+    if (localAdminCreated) {
+      return [localAdmin, ...users];
+    }
+    
+    return users;
   } catch (error) {
     console.error('Error fetching users from Firebase:', error);
     toast.error('Using local admin account due to Firebase connection issues');
@@ -49,6 +56,7 @@ export function checkLocalAdminLogin(email: string, password: string): boolean {
 export function createLocalAdmin(): void {
   localAdminCreated = true;
   toast.success('Local admin account created successfully');
+  console.log('Local admin mode activated');
 }
 
 // Check if the local admin was created
