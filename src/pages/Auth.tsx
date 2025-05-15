@@ -5,7 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { AuthBranding } from '@/components/auth/AuthBranding';
-import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { createLocalAdmin } from '@/services/userService';
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -16,23 +17,19 @@ const Auth = () => {
     navigate('/');
   };
   
-  // Temporary login with existing local admin
+  // Direct login with local admin for easier testing
   const handleLocalAdminLogin = () => {
     setIsLoading(true);
     
     try {
-      // Import the necessary functions
-      import('@/services/userService').then(({ checkLocalAdminLogin, createLocalAdmin }) => {
-        // Create local admin and navigate to home
-        createLocalAdmin();
-        toast({
-          title: "Local Admin Mode",
-          description: "Logged in with local admin account. For full functionality, connect Supabase.",
-          variant: "default"
-        });
-        
-        navigate('/');
+      createLocalAdmin();
+      toast({
+        title: "Local Admin Mode",
+        description: "Logged in with local admin account. For development purposes only.",
+        variant: "default"
       });
+      
+      navigate('/');
     } catch (error) {
       console.error("Error logging in with local admin:", error);
       setIsLoading(false);
@@ -60,18 +57,19 @@ const Auth = () => {
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-vision-dark-800 px-2 text-muted-foreground">
-                  Or continue with local mode
+                  Or continue with
                 </span>
               </div>
             </div>
             
-            <button
+            <Button
               onClick={handleLocalAdminLogin}
-              className="w-full py-2 px-4 border border-gray-600 rounded-md bg-transparent hover:bg-gray-800 transition-colors text-sm"
+              className="w-full bg-transparent hover:bg-gray-800 border border-gray-600"
+              variant="outline"
               disabled={isLoading}
             >
               Continue with Local Admin
-            </button>
+            </Button>
           </CardContent>
           
           <CardFooter className="flex flex-col space-y-4">

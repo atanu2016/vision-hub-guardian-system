@@ -10,7 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 
 export const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+  password: z.string().min(1, { message: 'Password is required' }),
 });
 
 type LoginFormUIProps = {
@@ -67,12 +67,16 @@ export const LoginFormUI = ({
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {buttonText === 'Log in' ? 'Logging in...' : 'Creating account...'}
+              Logging in...
             </>
           ) : (
             buttonText
           )}
         </Button>
+        
+        <div className="text-center text-xs text-muted-foreground mt-2">
+          <p>Default login: admin@example.com / admin123</p>
+        </div>
       </form>
     </Form>
   );

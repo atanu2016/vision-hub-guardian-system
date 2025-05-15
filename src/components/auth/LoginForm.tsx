@@ -9,12 +9,8 @@ type LoginFormProps = {
 export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const {
     isSubmitting,
-    showCreateAdmin,
     firebaseError,
-    existingUsers,
     handleSubmit,
-    handleCreateAdmin,
-    makeAdmins
   } = useLoginForm({ onSuccess });
 
   return (
@@ -25,6 +21,10 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
         onSubmit={handleSubmit} 
         isSubmitting={isSubmitting}
         buttonText="Log in"
+        defaultValues={{ 
+          email: 'admin@example.com', 
+          password: 'admin123' 
+        }}
       />
     </>
   );
