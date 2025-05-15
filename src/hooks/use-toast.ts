@@ -1,45 +1,9 @@
 
-import { toast as sonnerToast } from "sonner";
+// Re-export from the hooks implementation
+import { toast } from "sonner";
+import type { Toast } from "sonner";
 
-type ToastOptions = {
-  title?: string;
-  description?: string;
-  variant?: "default" | "destructive";
-  duration?: number;
-  action?: {
-    label: string;
-    onClick: () => void;
-  };
-};
+export { toast };
+export { useToast } from "@/components/ui/use-toast";
 
-export function toast(opts: ToastOptions) {
-  const { title, description, variant, action, ...rest } = opts;
-
-  if (variant === "destructive") {
-    return sonnerToast.error(title, {
-      description,
-      action: action ? {
-        label: action.label,
-        onClick: action.onClick,
-      } : undefined,
-      ...rest,
-    });
-  }
-
-  return sonnerToast(title, {
-    description,
-    action: action ? {
-      label: action.label,
-      onClick: action.onClick,
-    } : undefined,
-    ...rest,
-  });
-}
-
-export const useToast = () => {
-  return {
-    toast,
-  };
-};
-
-export type { ToastOptions };
+export type { Toast };

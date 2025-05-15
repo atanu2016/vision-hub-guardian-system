@@ -19,20 +19,29 @@ const CameraCard = ({ camera, onDelete }: CameraCardProps) => {
   useEffect(() => {
     if (camera.status === "online") {
       // In a real implementation, this would check if the stream is actually available
-      // For now, we'll simulate a check with a slight delay
-      const checkStreamAvailability = setTimeout(() => {
-        // This would be a real check in production
-        // For now, assume the stream is available if status is online
-        setIsLiveStream(true);
-        setStreamChecked(true);
-      }, 500);
+      const checkStreamAvailability = async () => {
+        try {
+          // This would be a real API call to check stream availability in production
+          // For now we'll simulate an API call with a timeout
+          const streamAvailable = camera.rtmpUrl && camera.rtmpUrl.length > 0;
+          
+          // Set stream status based on actual availability
+          setIsLiveStream(streamAvailable);
+          setStreamChecked(true);
+        } catch (error) {
+          console.error("Failed to check stream availability:", error);
+          setIsLiveStream(false);
+          setStreamChecked(true);
+        }
+      };
       
-      return () => clearTimeout(checkStreamAvailability);
+      // Start the check
+      checkStreamAvailability();
     } else {
       setIsLiveStream(false);
       setStreamChecked(true);
     }
-  }, [camera.status]);
+  }, [camera.status, camera.rtmpUrl]);
 
   const isOnline = camera.status === "online" && isLiveStream;
   const isRecording = camera.recording;

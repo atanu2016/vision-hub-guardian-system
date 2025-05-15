@@ -12,7 +12,16 @@ import { useToast } from "@/hooks/use-toast";
 import CameraStreamPlayer from "@/components/cameras/CameraStreamPlayer";
 import CameraSettings from "@/components/cameras/CameraSettings";
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
 
 const CameraDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -149,7 +158,7 @@ const CameraDetail = () => {
   }
   
   // Check camera status based on feed availability
-  const isOnline = camera.status === "online" && isStreaming;
+  const isOnline = camera.status === "online";
   
   return (
     <AppLayout>

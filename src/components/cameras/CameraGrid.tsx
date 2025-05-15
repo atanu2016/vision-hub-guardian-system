@@ -18,9 +18,9 @@ const CameraGrid: React.FC<CameraGridProps> = ({ cameras, title, onDeleteCamera 
           <div className="flex-1 ml-4 border-t border-gray-200 dark:border-gray-800"></div>
         </div>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
         {cameras.map((camera) => (
-          <div key={camera.id} className="relative">
+          <div key={camera.id} className="h-full">
             <CameraCard camera={camera} onDelete={onDeleteCamera} />
           </div>
         ))}
