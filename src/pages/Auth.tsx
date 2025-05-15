@@ -1,137 +1,110 @@
-import { useState, useEffect, useContext } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2 } from 'lucide-react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { LoginForm } from '@/components/auth/LoginForm';
-import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm';
-import { AuthBranding } from '@/components/auth/AuthBranding';
-import { SignupForm } from '@/components/auth/SignupForm';
-import { MFAEnrollmentForm } from '@/components/auth/MFAEnrollmentForm';
-import { AuthContext } from '@/contexts/AuthContext';
 
-// A standalone version of useAuth that doesn't throw when outside provider
-const useOptionalAuth = () => {
-  const context = useContext(AuthContext);
-  return context;
-};
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from 'react';
+import { Database } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from '@/hooks/use-toast';
 
 const Auth = () => {
-  const authContext = useOptionalAuth();
-  const [activeTab, setActiveTab] = useState('login');
-  const location = useLocation();
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
   
-  // Get the return path from location state, or default to '/'
-  const from = location.state?.from || '/';
-  
-  const { backgroundUrl, LogoComponent } = AuthBranding();
-
-  useEffect(() => {
-    // Check URL params for tab selection
-    const params = new URLSearchParams(location.search);
-    const tab = params.get('tab');
-    if (tab && (tab === 'login' || tab === 'reset' || tab === 'signup')) {
-      setActiveTab(tab);
-    }
-  }, [location]);
-
-  // If we're not inside an AuthProvider, just render the login form
-  // without trying to use auth context data
-  if (!authContext) {
-    console.log("Auth context not available, rendering login form without context");
-    return renderAuthUI('login', setActiveTab, from, backgroundUrl, LogoComponent);
-  }
-
-  const { user, isLoading, requiresMFA } = authContext;
-
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-  
-  if (user) {
-    // If MFA is required but not enrolled, redirect to MFA enrollment
-    if (requiresMFA) {
-      return renderMFAEnrollment(from, backgroundUrl, LogoComponent);
-    }
+  // This function will be a placeholder that shows a toast message
+  // encouraging users to connect Supabase
+  const handleConnectSupabase = () => {
+    setIsLoading(true);
     
-    // Otherwise, redirect to the page they were trying to access
-    return <Navigate to={from} replace />;
-  }
-
-  return renderAuthUI(activeTab, setActiveTab, from, backgroundUrl, LogoComponent);
-};
-
-// Helper function to render MFA enrollment UI
-const renderMFAEnrollment = (from: string, backgroundUrl: string | null, LogoComponent: React.FC) => {
+    try {
+      toast({
+        title: "Supabase Connection Required",
+        description: "Please click on the green Supabase button in the top right to connect your Supabase account.",
+        variant: "default"
+      });
+      
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 1500);
+    } catch (error) {
+      setIsLoading(false);
+      toast({
+        title: "Connection Error",
+        description: "There was an error connecting to Supabase.",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Temporary login with existing local admin
+  const handleLocalAdminLogin = () => {
+    setIsLoading(true);
+    
+    try {
+      // Import the necessary functions
+      import('@/services/userService').then(({ checkLocalAdminLogin, createLocalAdmin }) => {
+        // Create local admin and navigate to home
+        createLocalAdmin();
+        toast({
+          title: "Local Admin Mode",
+          description: "Logged in with local admin account. For full functionality, connect Supabase.",
+          variant: "default"
+        });
+        
+        navigate('/');
+      });
+    } catch (error) {
+      console.error("Error logging in with local admin:", error);
+      setIsLoading(false);
+    }
+  };
+  
   return (
-    <div className="flex min-h-screen items-center justify-center bg-vision-dark-900 p-4 sm:p-8" style={backgroundUrl ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
+    <div className="flex min-h-screen items-center justify-center bg-vision-dark-900 p-4 sm:p-8">
       <div className="w-full max-w-md">
-        <div className="mb-8 flex justify-center">
-          <LogoComponent />
-        </div>
-        <Card className="border-vision-blue-800/30 bg-vision-dark-800/80 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-xl text-center">MFA Enrollment Required</CardTitle>
-            <CardDescription className="text-center">Please set up multi-factor authentication to proceed</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <MFAEnrollmentForm redirectUrl={from} />
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-};
-
-// Helper function to render the main auth UI - simplified signature
-const renderAuthUI = (
-  activeTab: string,
-  setActiveTab: (tab: string) => void,
-  from: string,
-  backgroundUrl: string | null,
-  LogoComponent: React.FC
-) => {
-  const containerStyle = backgroundUrl 
-    ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } 
-    : {};
-
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-vision-dark-900 p-4 sm:p-8" style={containerStyle}>
-      <div className="w-full max-w-md">
-        <div className="mb-8 flex justify-center">
-          <LogoComponent />
-        </div>
-
         <Card className="border-vision-blue-800/30 bg-vision-dark-800/80 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-xl text-center">Welcome to Vision Hub</CardTitle>
-            <CardDescription className="text-center">Cloud security camera management platform</CardDescription>
+            <CardDescription className="text-center">Connect to Supabase for full functionality</CardDescription>
           </CardHeader>
-          <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3 mb-6">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
-                <TabsTrigger value="reset">Reset</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="login">
-                <LoginForm />
-              </TabsContent>
-
-              <TabsContent value="signup">
-                <SignupForm />
-              </TabsContent>
-
-              <TabsContent value="reset">
-                <ResetPasswordForm />
-              </TabsContent>
-            </Tabs>
+          
+          <CardContent className="space-y-6">
+            <div className="rounded-lg bg-blue-950/50 p-4 text-center">
+              <Database className="mx-auto h-12 w-12 text-blue-400 mb-2" />
+              <h3 className="text-lg font-medium text-blue-100">Authentication with Supabase</h3>
+              <p className="mt-2 text-sm text-blue-300">
+                For secure authentication and database features, connect your project to Supabase.
+              </p>
+            </div>
+            
+            <Button 
+              onClick={handleConnectSupabase} 
+              className="w-full bg-emerald-600 hover:bg-emerald-700"
+              disabled={isLoading}
+            >
+              {isLoading ? "Connecting..." : "Connect to Supabase"}
+            </Button>
+            
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-gray-600"></span>
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-vision-dark-800 px-2 text-muted-foreground">
+                  Or continue with local mode
+                </span>
+              </div>
+            </div>
+            
+            <Button
+              variant="outline"
+              onClick={handleLocalAdminLogin}
+              className="w-full"
+              disabled={isLoading}
+            >
+              Continue with Local Admin
+            </Button>
           </CardContent>
+          
           <CardFooter className="flex flex-col space-y-4">
             <div className="text-xs text-center text-muted-foreground">
               By using this service, you agree to our <a href="#" className="underline">Terms of Service</a> and <a href="#" className="underline">Privacy Policy</a>.
