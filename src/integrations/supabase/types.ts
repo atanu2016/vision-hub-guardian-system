@@ -11,6 +11,8 @@ export type Database = {
     Tables: {
       advanced_settings: {
         Row: {
+          auth_background_url: string | null
+          auth_logo_url: string | null
           debug_mode: boolean | null
           id: string
           log_level: string | null
@@ -22,6 +24,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          auth_background_url?: string | null
+          auth_logo_url?: string | null
           debug_mode?: boolean | null
           id?: string
           log_level?: string | null
@@ -33,6 +37,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          auth_background_url?: string | null
+          auth_logo_url?: string | null
           debug_mode?: boolean | null
           id?: string
           log_level?: string | null
@@ -173,6 +179,42 @@ export type Database = {
         }
         Relationships: []
       }
+      database_config: {
+        Row: {
+          db_type: string
+          id: string
+          mysql_database: string | null
+          mysql_host: string | null
+          mysql_password: string | null
+          mysql_port: string | null
+          mysql_ssl: boolean | null
+          mysql_user: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          db_type?: string
+          id?: string
+          mysql_database?: string | null
+          mysql_host?: string | null
+          mysql_password?: string | null
+          mysql_port?: string | null
+          mysql_ssl?: boolean | null
+          mysql_user?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          db_type?: string
+          id?: string
+          mysql_database?: string | null
+          mysql_host?: string | null
+          mysql_password?: string | null
+          mysql_port?: string | null
+          mysql_ssl?: boolean | null
+          mysql_user?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -230,6 +272,42 @@ export type Database = {
           time_end?: string | null
           time_start?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      smtp_config: {
+        Row: {
+          enabled: boolean | null
+          from_email: string | null
+          id: string
+          password: string | null
+          port: string | null
+          server: string | null
+          updated_at: string | null
+          use_ssl: boolean | null
+          username: string | null
+        }
+        Insert: {
+          enabled?: boolean | null
+          from_email?: string | null
+          id?: string
+          password?: string | null
+          port?: string | null
+          server?: string | null
+          updated_at?: string | null
+          use_ssl?: boolean | null
+          username?: string | null
+        }
+        Update: {
+          enabled?: boolean | null
+          from_email?: string | null
+          id?: string
+          password?: string | null
+          port?: string | null
+          server?: string | null
+          updated_at?: string | null
+          use_ssl?: boolean | null
+          username?: string | null
         }
         Relationships: []
       }

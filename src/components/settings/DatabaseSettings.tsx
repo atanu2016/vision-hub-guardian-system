@@ -132,18 +132,29 @@ export function DatabaseSettings() {
   // Load database and SMTP configurations
   const loadConfigurations = async () => {
     try {
-      // Load database configuration from advanced_settings instead of database_config
-      const { data: advSettings, error: dbError } = await supabase
-        .from('advanced_settings')
+      // Load database configuration from database_config table
+      const { data: dbConfigData, error: dbError } = await supabase
+        .from('database_config')
         .select('*')
         .single();
 
-      if (!dbError && advSettings) {
-        // Map advanced_settings to our database config format
+      if (!dbError && dbConfigData) {
+        // Map database_config to our format
         setDbConfig(prev => ({
           ...prev,
-          dbType: 'supabase', // Default to supabase
-          // MySQL settings could be stored in other fields or just use defaults
+          dbType: dbConfigData.db_type || 'supabase',
+          mysqlHost: dbConfigData.mysql_host || '',
+          mysqlPort: dbConfigData.mysql_port || '3306',
+          mysqlDatabase: dbConfigData.mysql_database || '',
+          mysqlUser: dbConfigData.mysql_user || '',
+          mysqlPassword: dbConfigData.mysql_password || '',
+          mysqlSsl: dbConfigData.mysql_ssl || false,
+        }));
+      } else {
+        // If no config found in table, use localStorage as fallback
+        setDbConfig(prev => ({
+          ...prev,
+          dbType: 'supabase',
           mysqlHost: localStorage.getItem('mysql_host') || '',
           mysqlPort: localStorage.getItem('mysql_port') || '3306',
           mysqlDatabase: localStorage.getItem('mysql_database') || '',
@@ -153,25 +164,40 @@ export function DatabaseSettings() {
         }));
       }
 
-      // Check if we can get data from alert_settings for SMTP config
-      const { data: alertSettings, error: smtpError } = await supabase
-        .from('alert_settings')
+      // Check if we can get data from smtp_config for SMTP config
+      const { data: smtpConfigData, error: smtpError } = await supabase
+        .from('smtp_config')
         .select('*')
         .single();
 
-      if (!smtpError && alertSettings) {
-        // Map alert_settings to our SMTP config format
-        // Since we don't have explicit SMTP settings in our schema,
-        // we'll use alert_settings as a reference
+      if (!smtpError && smtpConfigData) {
+        // Map smtp_config to our format
+        setSmtpConfig(prev => ({
+          ...prev,
+          server: smtpConfigData.server || '',
+          port: smtpConfigData.port || '587',
+          username: smtpConfigData.username || '',
+          password: smtpConfigData.password || '',
+          fromEmail: smtpConfigData.from_email || '',
+          useSsl: smtpConfigData.use_ssl || true,
+          enabled: smtpConfigData.enabled || false
+        }));
+      } else {
+        // If no config found in table, check alert_settings or use localStorage as fallback
+        const { data: alertSettings } = await supabase
+          .from('alert_settings')
+          .select('*')
+          .single();
+
         setSmtpConfig(prev => ({
           ...prev,
           server: localStorage.getItem('smtp_server') || '',
           port: localStorage.getItem('smtp_port') || '587',
           username: localStorage.getItem('smtp_username') || '',
           password: localStorage.getItem('smtp_password') || '',
-          fromEmail: alertSettings.email_address || '',
+          fromEmail: alertSettings?.email_address || '',
           useSsl: localStorage.getItem('smtp_ssl') === 'true' || true,
-          enabled: alertSettings.email_notifications || false
+          enabled: alertSettings?.email_notifications || false
         }));
       }
     } catch (error) {
@@ -183,7 +209,37 @@ export function DatabaseSettings() {
   const saveDbConfig = async () => {
     setIsSaving(true);
     try {
-      // Save MySQL settings to localStorage since we don't have a dedicated table
+      // Check if we have any db config already
+      const { data: existingConfig } = await supabase
+        .from('database_config')
+        .select('id')
+        .single();
+      
+      // Prepare the data to save
+      const dbConfigData = {
+        db_type: dbConfig.dbType,
+        mysql_host: dbConfig.mysqlHost,
+        mysql_port: dbConfig.mysqlPort,
+        mysql_database: dbConfig.mysqlDatabase,
+        mysql_user: dbConfig.mysqlUser,
+        mysql_password: dbConfig.mysqlPassword,
+        mysql_ssl: dbConfig.mysqlSsl,
+        updated_at: new Date().toISOString()
+      };
+      
+      // Either update existing or insert new
+      if (existingConfig) {
+        await supabase
+          .from('database_config')
+          .update(dbConfigData)
+          .eq('id', existingConfig.id);
+      } else {
+        await supabase
+          .from('database_config')
+          .insert(dbConfigData);
+      }
+      
+      // Also save to localStorage for backward compatibility
       localStorage.setItem('mysql_host', dbConfig.mysqlHost);
       localStorage.setItem('mysql_port', dbConfig.mysqlPort);
       localStorage.setItem('mysql_database', dbConfig.mysqlDatabase);
@@ -211,23 +267,58 @@ export function DatabaseSettings() {
   const saveSmtpConfig = async () => {
     setIsSaving(true);
     try {
-      // Save SMTP settings to localStorage
+      // Check if we have any smtp config already
+      const { data: existingConfig } = await supabase
+        .from('smtp_config')
+        .select('id')
+        .single();
+      
+      // Prepare the data to save
+      const smtpConfigData = {
+        enabled: smtpConfig.enabled,
+        server: smtpConfig.server,
+        port: smtpConfig.port,
+        username: smtpConfig.username,
+        password: smtpConfig.password,
+        from_email: smtpConfig.fromEmail,
+        use_ssl: smtpConfig.useSsl,
+        updated_at: new Date().toISOString()
+      };
+      
+      // Either update existing or insert new
+      if (existingConfig) {
+        await supabase
+          .from('smtp_config')
+          .update(smtpConfigData)
+          .eq('id', existingConfig.id);
+      } else {
+        await supabase
+          .from('smtp_config')
+          .insert(smtpConfigData);
+      }
+      
+      // Also save to localStorage for backward compatibility
       localStorage.setItem('smtp_server', smtpConfig.server);
       localStorage.setItem('smtp_port', smtpConfig.port);
       localStorage.setItem('smtp_username', smtpConfig.username);
       localStorage.setItem('smtp_password', smtpConfig.password);
       localStorage.setItem('smtp_ssl', String(smtpConfig.useSsl));
       
-      // Update email notifications setting in alert_settings table
-      const { error } = await supabase
+      // Also update email notifications setting in alert_settings table for compatibility
+      const alertSettingsData = await supabase
         .from('alert_settings')
-        .update({ 
-          email_notifications: smtpConfig.enabled,
-          email_address: smtpConfig.fromEmail
-        })
-        .eq('id', (await supabase.from('alert_settings').select('id').single()).data?.id);
-
-      if (error) throw error;
+        .select('id')
+        .single();
+        
+      if (alertSettingsData?.data?.id) {
+        await supabase
+          .from('alert_settings')
+          .update({ 
+            email_notifications: smtpConfig.enabled,
+            email_address: smtpConfig.fromEmail
+          })
+          .eq('id', alertSettingsData.data.id);
+      }
 
       toast({
         title: "Success",

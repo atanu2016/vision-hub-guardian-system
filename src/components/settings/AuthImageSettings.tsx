@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,7 +24,7 @@ const AuthImageSettings = () => {
       localStorage.setItem('auth_logo_url', logoUrl);
       localStorage.setItem('auth_background_url', backgroundUrl);
       
-      // Save to the database - using advanced_settings table that exists in Supabase
+      // Save to the database - using advanced_settings table
       const { error } = await supabase
         .from('advanced_settings')
         .update({
