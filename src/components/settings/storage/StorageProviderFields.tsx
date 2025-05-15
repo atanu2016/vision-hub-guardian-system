@@ -4,9 +4,10 @@ import LocalStorageFields from "./LocalStorageFields";
 import NasStorageFields from "./NasStorageFields";
 import S3StorageFields from "./S3StorageFields";
 import CloudStorageFields from "./CloudStorageFields";
+import * as z from "zod";
 
-// Storage form schema type interface
-interface StorageFormSchemaType {
+// Storage form schema type with required type field
+type StorageFormSchemaType = {
   type: "local" | "nas" | "s3" | "dropbox" | "google_drive" | "onedrive" | "azure_blob" | "backblaze";
   path?: string;
   retentionDays: number;
@@ -31,7 +32,7 @@ interface StorageFormSchemaType {
   backblazeKeyId?: string;
   backblazeApplicationKey?: string;
   backblazeBucket?: string;
-}
+};
 
 interface StorageProviderFieldsProps {
   form: UseFormReturn<StorageFormSchemaType>;

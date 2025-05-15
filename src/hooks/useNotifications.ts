@@ -37,15 +37,12 @@ export const useNotifications = () => {
     
     // Also show a toast for real-time feedback
     if (notification.type === 'error') {
-      notify.error(notification.title, {
-        description: notification.message
-      });
+      notify.error(notification.title);
     } else if (notification.type === 'success') {
-      notify.success(notification.title, {
-        description: notification.message
-      });
+      notify.success(notification.title);
     } else {
-      notify(notification.title, {
+      notify({
+        title: notification.title,
         description: notification.message
       });
     }

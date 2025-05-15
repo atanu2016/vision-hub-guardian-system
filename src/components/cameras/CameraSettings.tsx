@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Camera } from "@/types/camera";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,8 @@ const CameraSettings = ({ camera, onSave }: CameraSettingsProps) => {
     setIsLoading(true);
     try {
       onSave(cameraData);
-      toast("Settings saved", {
+      toast({
+        title: "Settings saved",
         description: "Camera settings have been updated successfully."
       });
     } catch (error) {

@@ -4,8 +4,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { UseFormReturn } from "react-hook-form";
 import { HardDrive, Server, Cloud } from "lucide-react";
 
-// Storage form schema type interface
-interface StorageFormSchemaType {
+// Storage form schema type with required type field
+type StorageFormSchemaType = {
   type: "local" | "nas" | "s3" | "dropbox" | "google_drive" | "onedrive" | "azure_blob" | "backblaze";
   path?: string;
   retentionDays: number;
@@ -30,7 +30,7 @@ interface StorageFormSchemaType {
   backblazeKeyId?: string;
   backblazeApplicationKey?: string;
   backblazeBucket?: string;
-}
+};
 
 interface StorageProviderSelectorProps {
   form: UseFormReturn<StorageFormSchemaType>;

@@ -7,15 +7,18 @@ import {
 const TOAST_LIMIT = 5
 const TOAST_REMOVE_DELAY = 1000000
 
-export type ToasterToast = ToastProps & {
+export interface Toast extends ToastProps {
   id: string
   title?: string
   description?: React.ReactNode
   action?: ToastActionElement
+  duration?: number
 }
 
+export type ToasterToast = Toast
+
 export type ToastOptions = Partial<
-  Pick<ToasterToast, "title" | "description" | "action" | "variant" | "duration">
+  Pick<Toast, "title" | "description" | "action" | "variant" | "duration">
 > & {
   promise?: {
     error: string;
@@ -26,25 +29,15 @@ export type ToastOptions = Partial<
     label: string;
     onClick: () => void;
   };
-  title?: string; // Added title property to fix type errors
-};
+}
 
 // Define the type for toast function with methods
 export interface ToastFunction {
-  (opts: ToastOptions): string;
+  (opts: string | ToastOptions): string;
   error: (message: string, opts?: Omit<ToastOptions, "variant">) => string;
   success: (message: string, opts?: Omit<ToastOptions, "variant">) => string;
   warning: (message: string, opts?: Omit<ToastOptions, "variant">) => string;
   info: (message: string, opts?: Omit<ToastOptions, "variant">) => string;
-}
-
-export interface Toast {
-  id: string;
-  title?: string;
-  description?: React.ReactNode;
-  action?: ToastActionElement;
-  variant?: "default" | "destructive";
-  duration?: number;
 }
 
 const actionTypes = {
@@ -172,9 +165,7 @@ function dispatch(action: Action) {
   })
 }
 
-type Toast = Omit<ToasterToast, "id">
-
-function toast(opts: ToastOptions): string {
+function toast(opts: string | ToastOptions): string {
   const id = genId()
 
   const update = (props: ToastOptions) =>
@@ -185,17 +176,19 @@ function toast(opts: ToastOptions): string {
     })
 
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", id })
+  
+  let toastOptions: ToastOptions = typeof opts === 'string' ? { title: opts } : opts
 
   dispatch({
     type: "ADD_TOAST",
     toast: {
-      ...opts,
+      ...toastOptions,
       id,
       open: true,
       onOpenChange: (open) => {
         if (!open) dismiss()
       },
-    },
+    } as Toast,
   })
 
   return id

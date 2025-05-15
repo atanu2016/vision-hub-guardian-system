@@ -43,6 +43,9 @@ const storageFormSchema = z.object({
   backblazeBucket: z.string().optional(),
 });
 
+// Extract type from schema
+type StorageFormSchemaType = z.infer<typeof storageFormSchema>;
+
 interface StorageFormProps {
   initialSettings: StorageSettingsType;
   isLoading: boolean;
@@ -52,13 +55,13 @@ interface StorageFormProps {
 
 const StorageForm = ({ initialSettings, isLoading, isSaving, onSave }: StorageFormProps) => {
   // Initialize form
-  const form = useForm<z.infer<typeof storageFormSchema>>({
+  const form = useForm<StorageFormSchemaType>({
     resolver: zodResolver(storageFormSchema),
     defaultValues: {
-      type: initialSettings.type,
+      type: initialSettings.type || "local",
       path: initialSettings.path || "/recordings",
-      retentionDays: initialSettings.retentionDays,
-      overwriteOldest: initialSettings.overwriteOldest,
+      retentionDays: initialSettings.retentionDays || 30,
+      overwriteOldest: initialSettings.overwriteOldest ?? true,
       nasAddress: initialSettings.nasAddress,
       nasPath: initialSettings.nasPath,
       nasUsername: initialSettings.nasUsername,
@@ -85,10 +88,10 @@ const StorageForm = ({ initialSettings, isLoading, isSaving, onSave }: StorageFo
   // Update form values when initialSettings changes
   useEffect(() => {
     form.reset({
-      type: initialSettings.type,
+      type: initialSettings.type || "local",
       path: initialSettings.path || "/recordings",
-      retentionDays: initialSettings.retentionDays,
-      overwriteOldest: initialSettings.overwriteOldest,
+      retentionDays: initialSettings.retentionDays || 30,
+      overwriteOldest: initialSettings.overwriteOldest ?? true,
       nasAddress: initialSettings.nasAddress,
       nasPath: initialSettings.nasPath,
       nasUsername: initialSettings.nasUsername,
@@ -116,7 +119,7 @@ const StorageForm = ({ initialSettings, isLoading, isSaving, onSave }: StorageFo
   const currentStorageType = form.watch("type");
 
   // Handle form submission
-  const onSubmit = async (values: z.infer<typeof storageFormSchema>) => {
+  const onSubmit = async (values: StorageFormSchemaType) => {
     // Convert form data to StorageSettings type
     const settings: StorageSettingsType = {
       type: values.type,
