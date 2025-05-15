@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Download, PauseCircle, PlayCircle, Settings, Share2, Trash2 } from "lucide-react";
 import { useParams, Link, useNavigate } from "react-router-dom";
@@ -12,7 +11,8 @@ import { Camera } from "@/types/camera";
 import { useToast } from "@/hooks/use-toast";
 import CameraStreamPlayer from "@/components/cameras/CameraStreamPlayer";
 import CameraSettings from "@/components/cameras/CameraSettings";
-import { Dialog, DialogContent, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const CameraDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -360,9 +360,8 @@ const CameraDetail = () => {
                 </Button>
                 <Button 
                   className="w-full" 
-                  variant="outline"
-                  onClick={() => setShowDeleteDialog(true)}
                   variant="destructive"
+                  onClick={() => setShowDeleteDialog(true)}
                 >
                   <Trash2 className="mr-2 h-4 w-4" /> Delete Camera
                 </Button>

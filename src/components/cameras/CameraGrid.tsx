@@ -6,9 +6,10 @@ import { Camera } from '@/types/camera';
 interface CameraGridProps {
   cameras: Camera[];
   title?: string;
+  onDeleteCamera?: (cameraId: string) => Promise<void>;
 }
 
-const CameraGrid: React.FC<CameraGridProps> = ({ cameras, title }) => {
+const CameraGrid: React.FC<CameraGridProps> = ({ cameras, title, onDeleteCamera }) => {
   return (
     <div className="space-y-4">
       {title && (
@@ -20,7 +21,7 @@ const CameraGrid: React.FC<CameraGridProps> = ({ cameras, title }) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
         {cameras.map((camera) => (
           <div key={camera.id} className="relative">
-            <CameraCard camera={camera} />
+            <CameraCard camera={camera} onDelete={onDeleteCamera} />
           </div>
         ))}
       </div>

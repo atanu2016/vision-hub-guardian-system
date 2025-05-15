@@ -1,7 +1,5 @@
 
-import { Toast, toast as sonnerToast } from "sonner";
-
-type ToastProps = React.ComponentProps<typeof Toast>;
+import { toast as sonnerToast } from "sonner";
 
 type ToastOptions = {
   title?: string;
