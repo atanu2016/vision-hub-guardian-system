@@ -53,13 +53,11 @@ const LogsSettings = () => {
       setLogs(typedLogs);
       
       toast({
-        title: "Logs Refreshed",
         description: `Loaded ${data.length} log entries`
       });
     } catch (error) {
       console.error('Failed to fetch logs:', error);
       toast({
-        title: "Error",
         description: 'Could not retrieve system logs. Please try again.',
         variant: "destructive"
       });
@@ -113,7 +111,6 @@ const LogsSettings = () => {
     URL.revokeObjectURL(url);
     
     toast({
-      title: "Logs Downloaded", 
       description: 'System logs have been downloaded to your computer.'
     });
   };
@@ -136,13 +133,11 @@ const LogsSettings = () => {
       await saveAdvancedSettings(updatedSettings);
       
       toast({
-        title: "Settings Saved",
         description: "Log settings have been updated successfully"
       });
     } catch (error) {
       console.error('Error saving log settings:', error);
       toast({
-        title: "Error",
         description: "Failed to save log settings"
       });
     } finally {

@@ -1,9 +1,11 @@
 
-// Re-export from the hooks implementation
-import { toast } from "sonner";
-import type { Toast } from "sonner";
+// Implement toast functionality
+import { toast as sonnerToast } from "sonner";
+import type { ToastT } from "sonner";
 
-export { toast };
-export { useToast } from "@/components/ui/use-toast";
+export const toast = sonnerToast;
 
-export type { Toast };
+// Re-export the useToast hook
+export { useToast } from "sonner";
+
+export type Toast = ToastT;

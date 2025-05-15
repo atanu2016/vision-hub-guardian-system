@@ -1,10 +1,10 @@
 
+import { useState, useEffect } from "react";
 import { Camera } from "@/types/camera";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { CameraOff, WifiOff } from "lucide-react";
-import { useEffect, useState } from "react";
 
 interface CameraCardProps {
   camera: Camera;
