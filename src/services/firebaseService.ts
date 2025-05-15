@@ -36,7 +36,7 @@ export async function fetchUsers(): Promise<UserData[]> {
     const rolesSnapshot = await getDocs(collection(firestore, 'user_roles'));
     const roles = rolesSnapshot.docs.reduce((acc, doc) => {
       const data = doc.data();
-      acc[doc.id] = data.role;
+      acc[doc.id] = data.role as UserRole;
       return acc;
     }, {} as Record<string, UserRole>);
     
@@ -46,7 +46,7 @@ export async function fetchUsers(): Promise<UserData[]> {
       id: profile.id,
       full_name: profile.full_name,
       email: profile.email || 'No email',
-      role: roles[profile.id] || 'user',
+      role: (roles[profile.id] || 'user') as UserRole,
       mfa_enrolled: profile.mfa_enrolled || false,
       mfa_required: profile.mfa_required || false,
       created_at: profile.created_at
@@ -132,7 +132,7 @@ export async function checkMigrationAccess(userId: string): Promise<boolean> {
     const userRoleSnap = await getDoc(userRoleRef);
     
     if (userRoleSnap.exists()) {
-      const role = userRoleSnap.data().role;
+      const role = userRoleSnap.data().role as UserRole;
       console.log(`User role: ${role}`);
       return role === 'admin' || role === 'superadmin';
     }

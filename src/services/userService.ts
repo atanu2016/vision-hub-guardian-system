@@ -6,13 +6,12 @@ import {
   toggleMfaRequirement as toggleFirebaseMfaRequirement, 
   checkMigrationAccess as checkFirebaseMigrationAccess 
 } from './firebaseService';
+import type { UserData, UserRole } from '@/types/admin';
 
 // Re-export functions from firebaseService to maintain the same interface
-export { 
-  updateUserRole, 
-  toggleMfaRequirement, 
-  checkMigrationAccess 
-};
+export const updateUserRole = updateFirebaseUserRole;
+export const toggleMfaRequirement = toggleFirebaseMfaRequirement;
+export const checkMigrationAccess = checkFirebaseMigrationAccess;
 
 // Create a local admin flag to bypass Firebase during development
 let localAdminCreated = false;
@@ -20,14 +19,14 @@ const localAdmin = {
   id: 'local-admin-id',
   email: 'admin@example.com',
   full_name: 'Local Admin',
-  role: 'superadmin',
+  role: 'superadmin' as UserRole,
   mfa_enrolled: false,
   mfa_required: false,
   created_at: new Date().toISOString()
 };
 
 // Modified fetchUsers function that returns local admin when Firebase fails
-export async function fetchUsers() {
+export async function fetchUsers(): Promise<UserData[]> {
   try {
     console.log("Attempting to fetch users from Firebase...");
     return await fetchFirebaseUsers();
