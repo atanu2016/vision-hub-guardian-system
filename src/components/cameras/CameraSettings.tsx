@@ -17,7 +17,7 @@ const CameraSettings = ({ camera, onSave }: CameraSettingsProps) => {
   } = useCameraSettings(camera, onSave);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 pb-16 relative">
       <BasicSettings cameraData={cameraData} handleChange={handleChange} />
       <ConnectionSettings cameraData={cameraData} handleChange={handleChange} />
       <RecordingSettings cameraData={cameraData} handleChange={handleChange} />

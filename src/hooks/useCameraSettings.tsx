@@ -1,12 +1,61 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Camera } from "@/types/camera";
 import { useToast } from "@/hooks/use-toast";
 
 export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera) => void) {
   const [cameraData, setCameraData] = useState<Camera>({ ...camera });
   const [isLoading, setIsLoading] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [isValid, setIsValid] = useState(true);
   const { toast } = useToast();
+
+  // Check for changes when cameraData updates
+  useEffect(() => {
+    const hasChanged = JSON.stringify(cameraData) !== JSON.stringify(camera);
+    setHasChanges(hasChanged);
+  }, [cameraData, camera]);
+
+  // Validate form when cameraData changes
+  useEffect(() => {
+    validateForm();
+  }, [cameraData]);
+
+  const validateForm = () => {
+    // Required fields
+    if (!cameraData.name?.trim()) {
+      setIsValid(false);
+      return;
+    }
+
+    // IP validation
+    if (!cameraData.ipAddress?.trim() || !isValidIP(cameraData.ipAddress)) {
+      setIsValid(false);
+      return;
+    }
+
+    // RTMP URL validation for RTMP type
+    if (cameraData.connectionType === 'rtmp' && (!cameraData.rtmpUrl?.trim() || !cameraData.rtmpUrl.startsWith('rtmp://'))) {
+      setIsValid(false);
+      return;
+    }
+
+    // RTSP URL validation for RTSP type
+    if (cameraData.connectionType === 'rtsp' && (!cameraData.rtmpUrl?.trim() || !cameraData.rtmpUrl.startsWith('rtsp://'))) {
+      setIsValid(false);
+      return;
+    }
+
+    setIsValid(true);
+  };
+
+  const isValidIP = (ip: string) => {
+    const ipPattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+    if (!ipPattern.test(ip)) return false;
+    
+    const parts = ip.split('.').map(part => parseInt(part, 10));
+    return parts.every(part => part >= 0 && part <= 255);
+  };
 
   const handleChange = (field: keyof Camera, value: string | boolean | number) => {
     setCameraData({
@@ -16,6 +65,15 @@ export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera
   };
 
   const handleSave = async () => {
+    if (!isValid) {
+      toast({
+        title: "Cannot save settings",
+        description: "Please correct the errors in the form",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       onSave(cameraData);
@@ -23,6 +81,7 @@ export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera
         title: "Settings saved",
         description: "Camera settings have been updated successfully."
       });
+      setHasChanges(false);
     } catch (error) {
       console.error("Error saving camera settings:", error);
       toast({
@@ -36,11 +95,14 @@ export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera
 
   const handleReset = () => {
     setCameraData({ ...camera });
+    setHasChanges(false);
   };
 
   return {
     cameraData,
     isLoading,
+    hasChanges,
+    isValid,
     handleChange,
     handleSave,
     handleReset
