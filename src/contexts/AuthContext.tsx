@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from 'react';
 import { 
   User, 
@@ -20,6 +19,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/components/ui/sonner';
 import { auth, firestore } from '@/integrations/firebase/client';
+import { checkLocalAdminLogin, createLocalAdmin, isLocalAdminCreated } from '@/services/userService';
 
 export type UserRole = 'superadmin' | 'admin' | 'operator' | 'user';
 
@@ -43,6 +43,7 @@ type AuthContextType = {
   requiresMFA: boolean;
   isSuperAdmin: boolean;
   isOperator: boolean;
+  useLocalAdmin: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -52,26 +53,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<UserRole>('user');
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [useLocalAdmin, setUseLocalAdmin] = useState<boolean>(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Set up the auth state listener
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      
-      if (currentUser) {
-        fetchUserProfile(currentUser.uid);
-        fetchUserRole(currentUser.uid);
-      } else {
-        setProfile(null);
-        setRole('user');
-      }
-      
-      setIsLoading(false);
-    });
+    try {
+      // Set up the auth state listener
+      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        setUser(currentUser);
+        
+        if (currentUser) {
+          fetchUserProfile(currentUser.uid);
+          fetchUserRole(currentUser.uid);
+        } else if (useLocalAdmin) {
+          // If using local admin mode
+          setProfile({
+            id: 'local-admin-id',
+            full_name: 'Local Admin',
+            is_admin: true,
+            mfa_enrolled: false,
+            mfa_required: false,
+          });
+          setRole('superadmin');
+        } else {
+          setProfile(null);
+          setRole('user');
+        }
+        
+        setIsLoading(false);
+      });
 
-    return () => unsubscribe();
-  }, []);
+      return () => unsubscribe();
+    } catch (error) {
+      console.error("Error setting up auth state listener:", error);
+      setIsLoading(false);
+    }
+  }, [useLocalAdmin]);
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -104,9 +121,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
+      // Check if this is a local admin login
+      if (checkLocalAdminLogin(email, password)) {
+        createLocalAdmin();
+        setUseLocalAdmin(true);
+        toast.success('Logged in as local admin');
+        navigate('/');
+        return;
+      }
+
+      // Otherwise try Firebase
       await signInWithEmailAndPassword(auth, email, password);
       toast.success('Successfully signed in');
     } catch (error: any) {
+      console.error('Sign in error:', error);
       toast.error(error.message || 'Error signing in');
       throw error;
     }
@@ -114,6 +142,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      if (useLocalAdmin) {
+        setUseLocalAdmin(false);
+        setProfile(null);
+        setRole('user');
+        navigate('/auth');
+        toast.success('Successfully signed out');
+        return;
+      }
+      
       await firebaseSignOut(auth);
       navigate('/auth');
       toast.success('Successfully signed out');
@@ -133,8 +170,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const requiresMFA = !!(profile?.mfa_required && !profile?.mfa_enrolled);
-  const isAdmin = role === 'admin' || role === 'superadmin' || !!profile?.is_admin;
-  const isSuperAdmin = role === 'superadmin';
+  const isAdmin = role === 'admin' || role === 'superadmin' || !!profile?.is_admin || useLocalAdmin;
+  const isSuperAdmin = role === 'superadmin' || useLocalAdmin;
   const isOperator = role === 'operator' || isAdmin;
 
   return (
@@ -151,6 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signOut,
         resetPassword,
         requiresMFA,
+        useLocalAdmin,
       }}
     >
       {children}

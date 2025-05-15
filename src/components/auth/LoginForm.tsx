@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 import { auth, firestore } from '@/integrations/firebase/client';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { InfoIcon } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
@@ -26,6 +28,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const { signIn } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCreateAdmin, setShowCreateAdmin] = useState(false);
+  const [firebaseError, setFirebaseError] = useState<string | null>(null);
   
   // Check if any users exist
   useEffect(() => {
@@ -39,8 +42,9 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
         } else {
           console.log(`Found ${profilesSnapshot.size} users`);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error checking for users:', error);
+        setFirebaseError(error.message || 'Firebase connection error');
       }
     };
     
@@ -49,13 +53,13 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: 'admin@example.com', password: 'admin123' },
   });
 
   const handleSubmit = async (values: z.infer<typeof loginSchema>) => {
     setIsSubmitting(true);
     try {
-      console.log("Attempting to sign in with Firebase...");
+      console.log("Attempting to sign in...");
       await signIn(values.email, values.password);
       toast.success("Successfully logged in!");
       if (onSuccess) onSuccess();
@@ -109,6 +113,21 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
 
   return (
     <Form {...form}>
+      {firebaseError && (
+        <Alert className="mb-6 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">
+          <InfoIcon className="h-4 w-4" />
+          <AlertTitle>Firebase Connection Error</AlertTitle>
+          <AlertDescription>
+            <p className="mb-2">{firebaseError}</p>
+            <p className="text-sm">You can use the local admin account below:</p>
+            <ul className="text-sm list-disc list-inside mt-1">
+              <li>Email: admin@example.com</li>
+              <li>Password: admin123</li>
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {showCreateAdmin ? (
         <>
           <div className="mb-4 p-3 bg-amber-100 dark:bg-amber-900/30 rounded-md text-amber-800 dark:text-amber-300">
