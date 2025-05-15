@@ -11,7 +11,7 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { auth, firestore } from '@/integrations/firebase/client';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { InfoIcon } from 'lucide-react';
 
@@ -29,6 +29,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCreateAdmin, setShowCreateAdmin] = useState(false);
   const [firebaseError, setFirebaseError] = useState<string | null>(null);
+  const [existingUsers, setExistingUsers] = useState<Array<{email: string, id: string}>>([]);
   
   // Check if any users exist
   useEffect(() => {
@@ -36,11 +37,32 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
       try {
         console.log("Checking for existing users in Firebase...");
         const profilesSnapshot = await getDocs(collection(firestore, 'profiles'));
+        
+        // Also check auth users collection if possible
+        try {
+          const usersQuery = query(collection(firestore, 'users'));
+          const usersSnapshot = await getDocs(usersQuery);
+          const usersList = usersSnapshot.docs.map(doc => ({
+            email: doc.data().email,
+            id: doc.id
+          }));
+          setExistingUsers(usersList);
+          console.log(`Found ${usersSnapshot.size} users in auth collection`);
+        } catch (authError) {
+          console.log("Could not access auth users directly", authError);
+        }
+        
         if (profilesSnapshot.empty) {
-          console.log("No users found, showing admin creation form");
+          console.log("No profiles found, showing admin creation form");
           setShowCreateAdmin(true);
         } else {
-          console.log(`Found ${profilesSnapshot.size} users`);
+          console.log(`Found ${profilesSnapshot.size} profiles`);
+          const userProfiles = profilesSnapshot.docs.map(doc => ({
+            email: doc.data().email || 'Unknown email',
+            id: doc.id
+          }));
+          setExistingUsers(prev => [...prev, ...userProfiles]);
+          setShowCreateAdmin(false);
         }
       } catch (error: any) {
         console.error('Error checking for users:', error);
@@ -111,6 +133,59 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
     }
   };
 
+  const makeAdmins = async () => {
+    setIsSubmitting(true);
+    try {
+      if (existingUsers.length === 0) {
+        toast.error('No existing users found to promote');
+        return;
+      }
+      
+      for (const user of existingUsers) {
+        console.log(`Setting user ${user.email} (${user.id}) as superadmin...`);
+        
+        // Add or update user_roles collection
+        await setDoc(doc(firestore, 'user_roles', user.id), {
+          user_id: user.id,
+          role: 'superadmin',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+        
+        // Also ensure profile exists with admin flag
+        const profileRef = doc(firestore, 'profiles', user.id);
+        const profileSnap = await getDoc(profileRef);
+        
+        if (profileSnap.exists()) {
+          // Update existing profile
+          await setDoc(profileRef, {
+            ...profileSnap.data(),
+            is_admin: true,
+            mfa_required: false
+          }, { merge: true });
+        } else {
+          // Create new profile
+          await setDoc(profileRef, {
+            id: user.id,
+            full_name: user.email.split('@')[0],
+            is_admin: true,
+            mfa_enrolled: false,
+            mfa_required: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+        }
+      }
+      
+      toast.success(`Successfully made ${existingUsers.length} users superadmins!`);
+    } catch (error: any) {
+      console.error('Error making users admins:', error);
+      toast.error(error.message || 'Failed to update user roles');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Form {...form}>
       {firebaseError && (
@@ -124,6 +199,34 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
               <li>Email: admin@example.com</li>
               <li>Password: admin123</li>
             </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {existingUsers.length > 0 && (
+        <Alert className="mb-6 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+          <InfoIcon className="h-4 w-4" />
+          <AlertTitle>Found {existingUsers.length} existing users</AlertTitle>
+          <AlertDescription>
+            <div className="flex flex-col">
+              <p className="mb-2 text-sm">Make all users superadmins to ensure you can login:</p>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={makeAdmins}
+                disabled={isSubmitting}
+                className="mt-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Make All Users Superadmins'
+                )}
+              </Button>
+            </div>
           </AlertDescription>
         </Alert>
       )}

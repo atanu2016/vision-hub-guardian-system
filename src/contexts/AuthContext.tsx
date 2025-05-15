@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from 'react';
 import { 
   User, 
@@ -20,8 +21,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from '@/components/ui/sonner';
 import { auth, firestore } from '@/integrations/firebase/client';
 import { checkLocalAdminLogin, createLocalAdmin, isLocalAdminCreated } from '@/services/userService';
-
-export type UserRole = 'superadmin' | 'admin' | 'operator' | 'user';
+import { UserRole } from '@/types/admin';
 
 export type Profile = {
   id: string;
@@ -97,10 +97,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (profileDoc.exists()) {
         setProfile(profileDoc.data() as Profile);
       } else {
-        console.log('No profile found');
+        console.log('No profile found, creating one...');
+        
+        // Get user information if available
+        const userDoc = await getDoc(doc(firestore, 'users', userId));
+        const userData = userDoc.exists() ? userDoc.data() : null;
+        
+        // Create a default profile for this user
+        const newProfile = {
+          id: userId,
+          full_name: userData?.displayName || user?.displayName || null,
+          is_admin: true, // Set as admin by default for existing users
+          mfa_enrolled: false,
+          mfa_required: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        await setDoc(doc(firestore, 'profiles', userId), newProfile);
+        setProfile(newProfile as Profile);
+        console.log('Created default profile for user');
+        
+        // Also set as superadmin for existing users without roles
+        await setDoc(doc(firestore, 'user_roles', userId), {
+          user_id: userId,
+          role: 'superadmin',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+        setRole('superadmin');
+        console.log('Set user as superadmin');
       }
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('Error fetching/creating user profile:', error);
     }
   };
 
@@ -111,7 +140,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (roleDoc.exists()) {
         setRole(roleDoc.data().role as UserRole);
       } else {
-        setRole('user'); // Default role
+        console.log('No role found, setting as superadmin for existing user');
+        // Set as superadmin for existing users without roles
+        await setDoc(doc(firestore, 'user_roles', userId), {
+          user_id: userId,
+          role: 'superadmin',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+        setRole('superadmin');
       }
     } catch (error) {
       console.error('Error fetching user role:', error);

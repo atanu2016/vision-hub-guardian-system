@@ -40,6 +40,50 @@ export async function fetchUsers(): Promise<UserData[]> {
       return acc;
     }, {} as Record<string, UserRole>);
     
+    // If no profiles found, try to get users from auth directly
+    if (profiles.length === 0) {
+      try {
+        console.log("No profiles found, trying to fetch from users collection...");
+        const usersSnapshot = await getDocs(collection(firestore, 'users'));
+        
+        if (!usersSnapshot.empty) {
+          console.log(`Found ${usersSnapshot.size} users in auth collection`);
+          // For each user, create a profile and role if it doesn't exist
+          for (const userDoc of usersSnapshot.docs) {
+            const userData = userDoc.data();
+            const userId = userDoc.id;
+            
+            // Create profile if doesn't exist
+            await setDoc(doc(firestore, 'profiles', userId), {
+              id: userId,
+              full_name: userData.displayName || userData.email?.split('@')[0] || null,
+              email: userData.email,
+              is_admin: true,
+              mfa_enrolled: false,
+              mfa_required: false,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }, { merge: true });
+            
+            // Set as superadmin
+            await setDoc(doc(firestore, 'user_roles', userId), {
+              user_id: userId,
+              role: 'superadmin',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }, { merge: true });
+            
+            console.log(`Created profile and set superadmin role for ${userData.email}`);
+          }
+          
+          // Fetch profiles again after creating them
+          return fetchUsers();
+        }
+      } catch (authError) {
+        console.error("Error accessing users collection:", authError);
+      }
+    }
+    
     // Combine data
     const usersWithRoles = profiles.map(profile => ({
       ...profile,
@@ -83,6 +127,15 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
         user_id: userId,
         role: newRole,
         created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+    }
+    
+    // Also ensure profile has admin flag if superadmin or admin
+    if (newRole === 'superadmin' || newRole === 'admin') {
+      const profileRef = doc(firestore, 'profiles', userId);
+      await updateDoc(profileRef, {
+        is_admin: true,
         updated_at: new Date().toISOString()
       });
     }
