@@ -9,11 +9,13 @@ import { Button } from '@/components/ui/button';
 import { Shield, ShieldCheck, ShieldX, User } from 'lucide-react';
 import { toast } from 'sonner';
 
+type UserRole = 'superadmin' | 'admin' | 'operator' | 'user';
+
 type UserData = {
   id: string;
   email: string;
   full_name: string | null;
-  role: string;
+  role: UserRole;
   mfa_enrolled: boolean;
   mfa_required: boolean;
   created_at: string;
@@ -58,7 +60,7 @@ export default function UserManagement() {
           return {
             ...user,
             email: userData?.user?.email || 'No email',
-            role: roleData?.role || 'user',
+            role: (roleData?.role as UserRole) || 'user',
           };
         })
       );
@@ -72,7 +74,7 @@ export default function UserManagement() {
     }
   }
 
-  async function updateUserRole(userId: string, newRole: string) {
+  async function updateUserRole(userId: string, newRole: UserRole) {
     try {
       // Don't allow changing your own role if you're a superadmin
       if (userId === user?.id && newRole !== 'superadmin') {
@@ -142,7 +144,7 @@ export default function UserManagement() {
     }
   }
 
-  function getRoleIcon(role: string) {
+  function getRoleIcon(role: UserRole) {
     switch (role) {
       case 'superadmin': 
         return <Shield className="h-5 w-5 text-red-500" />;
@@ -206,7 +208,7 @@ export default function UserManagement() {
                         {getRoleIcon(user.role)}
                         <Select
                           defaultValue={user.role}
-                          onValueChange={(value) => updateUserRole(user.id, value)}
+                          onValueChange={(value) => updateUserRole(user.id, value as UserRole)}
                         >
                           <SelectTrigger className="w-32">
                             <SelectValue placeholder="Role" />
