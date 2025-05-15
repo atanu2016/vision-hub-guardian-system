@@ -1,9 +1,25 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from "@/integrations/supabase/client";
-import { Session, User } from '@supabase/supabase-js';
+import { 
+  User, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut as firebaseSignOut, 
+  onAuthStateChanged, 
+  sendPasswordResetEmail 
+} from 'firebase/auth';
+import { 
+  doc, 
+  getDoc, 
+  setDoc, 
+  collection, 
+  query, 
+  where, 
+  getDocs 
+} from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/components/ui/sonner';
+import { auth, firestore } from '@/integrations/firebase/client';
 
 export type UserRole = 'superadmin' | 'admin' | 'operator' | 'user';
 
@@ -16,7 +32,6 @@ export type Profile = {
 };
 
 type AuthContextType = {
-  session: Session | null;
   user: User | null;
   profile: Profile | null;
   role: UserRole;
@@ -34,61 +49,39 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<UserRole>('user');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Set up the auth state listener first
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        
-        // Reset profile when signing out
-        if (event === 'SIGNED_OUT') {
-          setProfile(null);
-          setRole('user');
-        }
-
-        // Fetch user profile when signed in
-        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && currentSession?.user) {
-          fetchUserProfile(currentSession.user.id);
-          fetchUserRole(currentSession.user.id);
-        }
-      }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
+    // Set up the auth state listener
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
       
-      if (currentSession?.user) {
-        fetchUserProfile(currentSession.user.id);
-        fetchUserRole(currentSession.user.id);
+      if (currentUser) {
+        fetchUserProfile(currentUser.uid);
+        fetchUserRole(currentUser.uid);
+      } else {
+        setProfile(null);
+        setRole('user');
       }
       
       setIsLoading(false);
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => unsubscribe();
   }, []);
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, is_admin, mfa_enrolled, mfa_required')
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-      setProfile(data as Profile);
+      const profileDoc = await getDoc(doc(firestore, 'profiles', userId));
+      
+      if (profileDoc.exists()) {
+        setProfile(profileDoc.data() as Profile);
+      } else {
+        console.log('No profile found');
+      }
     } catch (error) {
       console.error('Error fetching user profile:', error);
     }
@@ -96,19 +89,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserRole = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (error) throw error;
+      const roleDoc = await getDoc(doc(firestore, 'user_roles', userId));
       
-      if (data) {
-        setRole(data.role as UserRole);
+      if (roleDoc.exists()) {
+        setRole(roleDoc.data().role as UserRole);
       } else {
-        // Default to 'user' if no role is assigned
-        setRole('user');
+        setRole('user'); // Default role
       }
     } catch (error) {
       console.error('Error fetching user role:', error);
@@ -118,11 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error, data } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      
-      // The navigation will happen automatically in the Auth component
-      // when the user state changes due to the onAuthStateChange listener
+      await signInWithEmailAndPassword(auth, email, password);
       toast.success('Successfully signed in');
     } catch (error: any) {
       toast.error(error.message || 'Error signing in');
@@ -132,10 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
-      // Navigate after successful sign out
+      await firebaseSignOut(auth);
       navigate('/auth');
       toast.success('Successfully signed out');
     } catch (error: any) {
@@ -145,10 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const resetPassword = async (email: string) => {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (error) throw error;
+      await sendPasswordResetEmail(auth, email);
       toast.success('Password reset email sent. Please check your inbox.');
     } catch (error: any) {
       toast.error(error.message || 'Error sending password reset email');
@@ -164,7 +140,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider
       value={{
-        session,
         user,
         profile,
         role,

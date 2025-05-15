@@ -9,7 +9,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { auth, firestore } from '@/integrations/firebase/client';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
@@ -29,12 +31,8 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   useEffect(() => {
     const checkForUsers = async () => {
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('count')
-          .single();
-        
-        if (!error && data && data.count === 0) {
+        const profilesSnapshot = await getDocs(collection(firestore, 'profiles'));
+        if (profilesSnapshot.empty) {
           setShowCreateAdmin(true);
         }
       } catch (error) {
@@ -67,34 +65,28 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
     setIsSubmitting(true);
     try {
       // Register the user first
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: values.email,
-        password: values.password,
-      });
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      const user = userCredential.user;
       
-      if (authError) throw authError;
-      
-      if (authData.user) {
-        // Add the user to the profiles table with superadmin role
-        const { error: userError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: authData.user.id,
-            role: 'superadmin',
-          });
-          
-        if (userError) throw userError;
+      if (user) {
+        // Add the user to user_roles collection with superadmin role
+        await setDoc(doc(firestore, 'user_roles', user.uid), {
+          user_id: user.uid,
+          role: 'superadmin',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
         
-        // Also add to profiles table
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: authData.user.id,
-            full_name: values.email.split('@')[0],
-            is_admin: true,
-          });
-          
-        if (profileError) throw profileError;
+        // Also add to profiles collection
+        await setDoc(doc(firestore, 'profiles', user.uid), {
+          id: user.uid,
+          full_name: values.email.split('@')[0],
+          is_admin: true,
+          mfa_enrolled: false,
+          mfa_required: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
         
         toast.success('Superadmin account created successfully! Please log in.');
         setShowCreateAdmin(false);
