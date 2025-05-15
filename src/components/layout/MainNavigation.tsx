@@ -8,13 +8,16 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { Home, Camera, Settings } from "lucide-react";
+import { Home, Camera, Settings, Shield } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MainNavigationProps {
   isActive: (path: string) => boolean;
 }
 
 const MainNavigation = ({ isActive }: MainNavigationProps) => {
+  const { isAdmin } = useAuth();
+  
   return (
     <SidebarGroup>
       <SidebarGroupContent>
@@ -48,6 +51,20 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
+          
+          {isAdmin && (
+            <SidebarMenuItem>
+              <SidebarMenuButton 
+                asChild 
+                isActive={isActive("/admin")}
+              >
+                <Link to="/admin">
+                  <Shield />
+                  <span>Admin</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
