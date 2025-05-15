@@ -1,5 +1,5 @@
 
-import { UserData } from '@/types/admin';
+import { UserData, UserRole } from '@/types/admin';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { RoleSelector } from './RoleSelector';
 import { MfaToggle } from './MfaToggle';
