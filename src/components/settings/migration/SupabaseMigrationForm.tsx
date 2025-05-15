@@ -12,7 +12,6 @@ import {
   AccordionItem,
   AccordionTrigger
 } from '@/components/ui/accordion';
-import { ProgressBar } from '@/components/ui/progress-bar';
 
 export default function SupabaseMigrationForm() {
   const [supabaseUrl, setSupabaseUrl] = useState('');
@@ -119,7 +118,12 @@ export default function SupabaseMigrationForm() {
       {migrationStatus.status === 'in-progress' && (
         <div className="space-y-4">
           <p className="font-medium">{migrationStatus.message}</p>
-          <ProgressBar value={migrationStatus.progress} />
+          <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-primary transition-all duration-500 ease-out" 
+              style={{ width: `${migrationStatus.progress}%` }}
+            ></div>
+          </div>
           <div className="text-sm text-muted-foreground max-h-40 overflow-y-auto border rounded p-2">
             {migrationStatus.details.map((detail, index) => (
               <div key={index} className="py-1 border-b border-muted last:border-0">

@@ -16,6 +16,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { useEffect } from "react";
 import { initializeSystem } from "@/data/mockData";
 import { toast } from "@/hooks/use-toast";
+import UserManagement from "@/pages/admin/UserManagement";
+import AdminPage from "@/pages/admin/index";
+import CreateUser from "@/pages/admin/CreateUser";
 
 function App() {
   // Initialize the system when the app starts
@@ -55,7 +58,10 @@ function App() {
           <Route path="/settings/database" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/settings/logs" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           
-          <Route path="/admin" element={<ProtectedRoute requireAdmin>{<Admin />}</ProtectedRoute>} />
+          {/* Admin Routes */}
+          <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminPage /></ProtectedRoute>} />
+          <Route path="/admin/users" element={<ProtectedRoute requireAdmin><UserManagement /></ProtectedRoute>} />
+          <Route path="/admin/users/create" element={<ProtectedRoute requireAdmin><CreateUser /></ProtectedRoute>} />
           <Route path="/profile-settings" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />

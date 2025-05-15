@@ -7,10 +7,11 @@ import MySQLMigrationForm from './migration/MySQLMigrationForm';
 import SupabaseConnectionForm from './migration/SupabaseConnectionForm';
 import MigrationAlert from './migration/MigrationAlert';
 import FirebaseMigrationForm from './migration/FirebaseMigrationForm';
+import SupabaseMigrationForm from './migration/SupabaseMigrationForm';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function DatabaseMigration() {
-  const [activeTab, setActiveTab] = useState('firebase');
+  const [activeTab, setActiveTab] = useState('supabase');
   const { isAdmin } = useAuth();
   
   if (!isAdmin) {
@@ -49,11 +50,16 @@ export default function DatabaseMigration() {
         <MigrationAlert />
         
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
+            <TabsTrigger value="supabase">Supabase Migration</TabsTrigger>
             <TabsTrigger value="firebase">Firebase Migration</TabsTrigger>
             <TabsTrigger value="mysql">MySQL Migration</TabsTrigger>
-            <TabsTrigger value="supabase">Supabase Connection</TabsTrigger>
+            <TabsTrigger value="connection">Connection Settings</TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="supabase">
+            <SupabaseMigrationForm />
+          </TabsContent>
           
           <TabsContent value="firebase">
             <FirebaseMigrationForm />
@@ -63,7 +69,7 @@ export default function DatabaseMigration() {
             <MySQLMigrationForm />
           </TabsContent>
           
-          <TabsContent value="supabase">
+          <TabsContent value="connection">
             <SupabaseConnectionForm />
           </TabsContent>
         </Tabs>

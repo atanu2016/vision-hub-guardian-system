@@ -2,15 +2,17 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, Database, Settings } from 'lucide-react';
+import { Shield, Database, Users } from 'lucide-react';
 import UserManagement from './UserManagement';
 import DatabaseMigration from '@/components/settings/DatabaseMigration';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('users');
   const { isAdmin, isLoading } = useAuth();
+  const navigate = useNavigate();
   
   if (isLoading) {
     return (
@@ -33,6 +35,13 @@ export default function AdminPage() {
             System administration and management tools
           </p>
         </div>
+        <Button 
+          onClick={() => navigate('/admin/users/create')}
+          className="bg-vision-blue"
+        >
+          <Users className="mr-2 h-4 w-4" />
+          Create User
+        </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
