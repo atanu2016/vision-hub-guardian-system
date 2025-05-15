@@ -1,3 +1,4 @@
+
 import { toast as sonnerToast } from "sonner";
 
 // Define the toast option types based on sonner's API
@@ -26,52 +27,8 @@ export type ToastOptions = {
   };
 };
 
-// Create a custom useToast hook that provides toast functionality
-export function useToast() {
-  return {
-    toast: (title: string | ToastOptions, options?: ToastOptions) => {
-      if (typeof title === 'string') {
-        return sonnerToast(title, options);
-      } else {
-        // Title is actually an options object
-        return sonnerToast(title.description || 'Notification');
-      }
-    },
-    // Add utility methods for different toast types
-    error: (title: string | ToastOptions, options?: ToastOptions) => {
-      if (typeof title === 'string') {
-        return sonnerToast.error(title, options);
-      } else {
-        return sonnerToast.error(title.description || 'Error');
-      }
-    },
-    success: (title: string | ToastOptions, options?: ToastOptions) => {
-      if (typeof title === 'string') {
-        return sonnerToast.success(title, options);
-      } else {
-        return sonnerToast.success(title.description || 'Success');
-      }
-    },
-    warning: (title: string | ToastOptions, options?: ToastOptions) => {
-      if (typeof title === 'string') {
-        return sonnerToast.warning(title, options);
-      } else {
-        return sonnerToast.warning(title.description || 'Warning');
-      }
-    },
-    info: (title: string | ToastOptions, options?: ToastOptions) => {
-      if (typeof title === 'string') {
-        return sonnerToast.info(title, options);
-      } else {
-        return sonnerToast.info(title.description || 'Information');
-      }
-    },
-    promise: sonnerToast.promise,
-  };
-}
-
-// Define the type for the notify function with methods
-type NotifyFunction = {
+// Define the type for toast function with methods
+export type ToastFunction = {
   (title: string | ToastOptions, options?: ToastOptions): string | number;
   error: (title: string | ToastOptions, options?: ToastOptions) => string | number;
   success: (title: string | ToastOptions, options?: ToastOptions) => string | number;
@@ -80,47 +37,62 @@ type NotifyFunction = {
   promise: typeof sonnerToast.promise;
 };
 
-// Create the base function
-const notifyFunction = (title: string | ToastOptions, options?: ToastOptions) => {
-  if (typeof title === 'string') {
-    return sonnerToast(title, options);
-  } else {
-    return sonnerToast(title.description || 'Notification');
-  }
-};
+// Create a custom useToast hook that provides toast functionality
+export function useToast() {
+  return {
+    toast: createToastFunction(),
+    notify: createToastFunction()
+  };
+}
 
-// Add methods to the function
-export const notify: NotifyFunction = Object.assign(notifyFunction, {
-  error: (title: string | ToastOptions, options?: ToastOptions) => {
+// Function to create a toast function with all the required methods
+function createToastFunction(): ToastFunction {
+  const toastFn = ((title: string | ToastOptions, options?: ToastOptions) => {
+    if (typeof title === 'string') {
+      return sonnerToast(title, options);
+    } else {
+      // Title is actually an options object
+      return sonnerToast(title.description || 'Notification');
+    }
+  }) as ToastFunction;
+
+  toastFn.error = (title: string | ToastOptions, options?: ToastOptions) => {
     if (typeof title === 'string') {
       return sonnerToast.error(title, options);
     } else {
       return sonnerToast.error(title.description || 'Error');
     }
-  },
-  success: (title: string | ToastOptions, options?: ToastOptions) => {
+  };
+
+  toastFn.success = (title: string | ToastOptions, options?: ToastOptions) => {
     if (typeof title === 'string') {
       return sonnerToast.success(title, options);
     } else {
       return sonnerToast.success(title.description || 'Success');
     }
-  },
-  warning: (title: string | ToastOptions, options?: ToastOptions) => {
+  };
+
+  toastFn.warning = (title: string | ToastOptions, options?: ToastOptions) => {
     if (typeof title === 'string') {
       return sonnerToast.warning(title, options);
     } else {
       return sonnerToast.warning(title.description || 'Warning');
     }
-  },
-  info: (title: string | ToastOptions, options?: ToastOptions) => {
+  };
+
+  toastFn.info = (title: string | ToastOptions, options?: ToastOptions) => {
     if (typeof title === 'string') {
       return sonnerToast.info(title, options);
     } else {
       return sonnerToast.info(title.description || 'Information');
     }
-  },
-  promise: sonnerToast.promise
-});
+  };
 
-// Keep the toast export for backward compatibility
-export const toast = notify;
+  toastFn.promise = sonnerToast.promise;
+
+  return toastFn;
+}
+
+// Create standalone toast and notify functions
+export const notify: ToastFunction = createToastFunction();
+export const toast: ToastFunction = notify;
