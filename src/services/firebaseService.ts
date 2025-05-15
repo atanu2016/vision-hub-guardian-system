@@ -23,7 +23,12 @@ export async function fetchUsers(): Promise<UserData[]> {
       const data = doc.data();
       return {
         ...data,
-        id: doc.id
+        id: doc.id,
+        full_name: data.full_name || null,
+        email: data.email || 'No email',
+        mfa_enrolled: data.mfa_enrolled || false,
+        mfa_required: data.mfa_required || false,
+        created_at: data.created_at || new Date().toISOString()
       };
     });
     
