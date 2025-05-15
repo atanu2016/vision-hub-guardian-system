@@ -91,9 +91,13 @@ export function DatabaseSettings() {
         // Use Promise.all to check if each table exists
         const tableChecks = await Promise.all(
           tables.map(table => 
+            // Modified this line to properly handle the Promise with error handling
             supabase.from(table).select('id', { count: 'exact', head: true })
               .then(result => result.count !== null)
-              .catch(() => false)
+              .then(
+                exists => exists, 
+                () => false // Error handler within then() instead of catch()
+              )
           )
         );
         
