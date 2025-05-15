@@ -73,7 +73,17 @@ export function useToast() {
 
 // Create a standalone toast function with the same API as the hook
 // This is for when you don't want to use the hook
-// Make the main function callable and attach methods to it
+// Define the type for the toast function with methods
+type ToastFunction = {
+  (title: string | ToastOptions, options?: ToastOptions): string | number;
+  error: (title: string | ToastOptions, options?: ToastOptions) => string | number;
+  success: (title: string | ToastOptions, options?: ToastOptions) => string | number;
+  warning: (title: string | ToastOptions, options?: ToastOptions) => string | number;
+  info: (title: string | ToastOptions, options?: ToastOptions) => string | number;
+  promise: typeof sonnerToast.promise;
+};
+
+// Create the base function
 const toastFunction = (title: string | ToastOptions, options?: ToastOptions) => {
   if (typeof title === 'string') {
     return sonnerToast(title, options);
@@ -82,8 +92,8 @@ const toastFunction = (title: string | ToastOptions, options?: ToastOptions) => 
   }
 };
 
-// Create a callable toast object with methods
-export const toast = Object.assign(toastFunction, {
+// Add methods to the function
+export const toast: ToastFunction = Object.assign(toastFunction, {
   error: (title: string | ToastOptions, options?: ToastOptions) => {
     if (typeof title === 'string') {
       return sonnerToast.error(title, options);
