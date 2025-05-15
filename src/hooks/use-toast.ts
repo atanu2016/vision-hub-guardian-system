@@ -1,4 +1,3 @@
-
 import { toast as sonnerToast } from "sonner";
 
 // Define the toast option types based on sonner's API
@@ -71,10 +70,8 @@ export function useToast() {
   };
 }
 
-// Create a standalone toast function with the same API as the hook
-// This is for when you don't want to use the hook
-// Define the type for the toast function with methods
-type ToastFunction = {
+// Define the type for the notify function with methods
+type NotifyFunction = {
   (title: string | ToastOptions, options?: ToastOptions): string | number;
   error: (title: string | ToastOptions, options?: ToastOptions) => string | number;
   success: (title: string | ToastOptions, options?: ToastOptions) => string | number;
@@ -84,7 +81,7 @@ type ToastFunction = {
 };
 
 // Create the base function
-const toastFunction = (title: string | ToastOptions, options?: ToastOptions) => {
+const notifyFunction = (title: string | ToastOptions, options?: ToastOptions) => {
   if (typeof title === 'string') {
     return sonnerToast(title, options);
   } else {
@@ -93,7 +90,7 @@ const toastFunction = (title: string | ToastOptions, options?: ToastOptions) => 
 };
 
 // Add methods to the function
-export const toast: ToastFunction = Object.assign(toastFunction, {
+export const notify: NotifyFunction = Object.assign(notifyFunction, {
   error: (title: string | ToastOptions, options?: ToastOptions) => {
     if (typeof title === 'string') {
       return sonnerToast.error(title, options);
@@ -124,3 +121,6 @@ export const toast: ToastFunction = Object.assign(toastFunction, {
   },
   promise: sonnerToast.promise
 });
+
+// Keep the toast export for backward compatibility
+export const toast = notify;

@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Notification } from '@/components/layout/NotificationDropdown';
-import { toast } from '@/hooks/use-toast';
+import { notify } from '@/hooks/use-toast';
 
 const NOTIFICATIONS_STORAGE_KEY = 'vision-hub-notifications';
 
@@ -37,15 +37,15 @@ export const useNotifications = () => {
     
     // Also show a toast for real-time feedback
     if (notification.type === 'error') {
-      toast.error(notification.title, {
+      notify.error(notification.title, {
         description: notification.message
       });
     } else if (notification.type === 'success') {
-      toast.success(notification.title, {
+      notify.success(notification.title, {
         description: notification.message
       });
     } else {
-      toast(notification.title, {
+      notify(notification.title, {
         description: notification.message
       });
     }

@@ -1,6 +1,6 @@
 
 // Re-export from the hooks implementation
-import { useToast, toast, type Toast, type ToastOptions } from "@/hooks/use-toast";
+import { useToast, notify, toast, type Toast, type ToastOptions } from "@/hooks/use-toast";
 
-export { useToast, toast };
+export { useToast, notify, toast };
 export type { Toast, ToastOptions };
