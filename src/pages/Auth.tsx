@@ -1,38 +1,20 @@
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useState } from 'react';
-import { Database } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
+import { LoginForm } from '@/components/auth/LoginForm';
+import { AuthBranding } from '@/components/auth/AuthBranding';
+import { supabase } from '@/integrations/supabase/client';
+import { SupabaseConnectionTest } from '@/components/auth/SupabaseConnectionTest';
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { LogoComponent } = AuthBranding();
   
-  // This function will be a placeholder that shows a toast message
-  // encouraging users to connect Supabase
-  const handleConnectSupabase = () => {
-    setIsLoading(true);
-    
-    try {
-      toast({
-        title: "Supabase Connection Required",
-        description: "Please click on the green Supabase button in the top right to connect your Supabase account.",
-        variant: "default"
-      });
-      
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 1500);
-    } catch (error) {
-      setIsLoading(false);
-      toast({
-        title: "Connection Error",
-        description: "There was an error connecting to Supabase.",
-        variant: "destructive"
-      });
-    }
+  const handleLoginSuccess = () => {
+    navigate('/');
   };
   
   // Temporary login with existing local admin
@@ -63,26 +45,15 @@ const Auth = () => {
       <div className="w-full max-w-md">
         <Card className="border-vision-blue-800/30 bg-vision-dark-800/80 backdrop-blur-sm">
           <CardHeader>
+            <div className="flex justify-center mb-4">
+              <LogoComponent />
+            </div>
             <CardTitle className="text-xl text-center">Welcome to Vision Hub</CardTitle>
-            <CardDescription className="text-center">Connect to Supabase for full functionality</CardDescription>
+            <CardDescription className="text-center">Sign in to your account</CardDescription>
           </CardHeader>
           
           <CardContent className="space-y-6">
-            <div className="rounded-lg bg-blue-950/50 p-4 text-center">
-              <Database className="mx-auto h-12 w-12 text-blue-400 mb-2" />
-              <h3 className="text-lg font-medium text-blue-100">Authentication with Supabase</h3>
-              <p className="mt-2 text-sm text-blue-300">
-                For secure authentication and database features, connect your project to Supabase.
-              </p>
-            </div>
-            
-            <Button 
-              onClick={handleConnectSupabase} 
-              className="w-full bg-emerald-600 hover:bg-emerald-700"
-              disabled={isLoading}
-            >
-              {isLoading ? "Connecting..." : "Connect to Supabase"}
-            </Button>
+            <LoginForm onSuccess={handleLoginSuccess} />
             
             <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">
@@ -95,18 +66,18 @@ const Auth = () => {
               </div>
             </div>
             
-            <Button
-              variant="outline"
+            <button
               onClick={handleLocalAdminLogin}
-              className="w-full"
+              className="w-full py-2 px-4 border border-gray-600 rounded-md bg-transparent hover:bg-gray-800 transition-colors text-sm"
               disabled={isLoading}
             >
               Continue with Local Admin
-            </Button>
+            </button>
           </CardContent>
           
           <CardFooter className="flex flex-col space-y-4">
-            <div className="text-xs text-center text-muted-foreground">
+            <SupabaseConnectionTest />
+            <div className="text-xs text-center text-muted-foreground mt-4">
               By using this service, you agree to our <a href="#" className="underline">Terms of Service</a> and <a href="#" className="underline">Privacy Policy</a>.
             </div>
           </CardFooter>
