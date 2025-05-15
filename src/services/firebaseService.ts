@@ -16,15 +16,22 @@ import type { UserRole, UserData } from '@/types/admin';
 
 export async function fetchUsers(): Promise<UserData[]> {
   try {
+    console.log("Fetching users from Firebase...");
     // Get all profiles
     const profilesSnapshot = await getDocs(collection(firestore, 'profiles'));
-    const profiles = profilesSnapshot.docs.map(doc => doc.data());
+    const profiles = profilesSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        ...data,
+        id: doc.id
+      };
+    });
     
     // Get all user roles
     const rolesSnapshot = await getDocs(collection(firestore, 'user_roles'));
     const roles = rolesSnapshot.docs.reduce((acc, doc) => {
       const data = doc.data();
-      acc[data.user_id] = data.role;
+      acc[doc.id] = data.role;
       return acc;
     }, {} as Record<string, UserRole>);
     
@@ -43,6 +50,7 @@ export async function fetchUsers(): Promise<UserData[]> {
     return usersWithRoles;
   } catch (error) {
     console.error('Error fetching users:', error);
+    toast.error('Failed to fetch users from Firebase');
     throw error;
   }
 }
@@ -114,14 +122,17 @@ export async function toggleMfaRequirement(userId: string, required: boolean): P
 // Check admin access for migration tools
 export async function checkMigrationAccess(userId: string): Promise<boolean> {
   try {
+    console.log(`Checking migration access for user: ${userId}`);
     const userRoleRef = doc(firestore, 'user_roles', userId);
     const userRoleSnap = await getDoc(userRoleRef);
     
     if (userRoleSnap.exists()) {
       const role = userRoleSnap.data().role;
+      console.log(`User role: ${role}`);
       return role === 'admin' || role === 'superadmin';
     }
     
+    console.log(`No role found for user: ${userId}`);
     return false;
   } catch (error) {
     console.error('Error checking migration access:', error);

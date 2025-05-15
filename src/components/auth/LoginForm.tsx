@@ -31,9 +31,13 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   useEffect(() => {
     const checkForUsers = async () => {
       try {
+        console.log("Checking for existing users in Firebase...");
         const profilesSnapshot = await getDocs(collection(firestore, 'profiles'));
         if (profilesSnapshot.empty) {
+          console.log("No users found, showing admin creation form");
           setShowCreateAdmin(true);
+        } else {
+          console.log(`Found ${profilesSnapshot.size} users`);
         }
       } catch (error) {
         console.error('Error checking for users:', error);
@@ -51,7 +55,9 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const handleSubmit = async (values: z.infer<typeof loginSchema>) => {
     setIsSubmitting(true);
     try {
+      console.log("Attempting to sign in with Firebase...");
       await signIn(values.email, values.password);
+      toast.success("Successfully logged in!");
       if (onSuccess) onSuccess();
     } catch (error: any) {
       console.error('Login error:', error);
@@ -64,11 +70,13 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const handleCreateAdmin = async (values: z.infer<typeof loginSchema>) => {
     setIsSubmitting(true);
     try {
+      console.log("Creating admin user in Firebase...");
       // Register the user first
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
       
       if (user) {
+        console.log("User created, adding role and profile...");
         // Add the user to user_roles collection with superadmin role
         await setDoc(doc(firestore, 'user_roles', user.uid), {
           user_id: user.uid,
