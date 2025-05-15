@@ -83,15 +83,17 @@ export function DatabaseSettings() {
           'recording_settings', 
           'camera_recording_status', 
           'alert_settings',
-          'advanced_settings'
-        ];
+          'advanced_settings',
+          'database_config',
+          'smtp_config'
+        ] as const;
         
         // Use Promise.all to check if each table exists
         const tableChecks = await Promise.all(
           tables.map(table => 
             supabase.from(table).select('id', { count: 'exact', head: true })
               .then(result => result.count !== null)
-              .then(exists => exists, () => false)
+              .catch(() => false)
           )
         );
         
