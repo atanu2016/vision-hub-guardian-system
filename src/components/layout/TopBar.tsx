@@ -30,6 +30,7 @@ import { getCameras, saveCamera } from "@/data/mockData";
 import { toast, useToast } from "@/hooks/use-toast";
 import { NotificationDropdown } from "./NotificationDropdown";
 import { useNotifications } from "@/hooks/useNotifications";
+import SearchBar from "@/components/search/SearchBar";
 
 const TopBar = () => {
   const { user, profile, signOut, isAdmin } = useAuth();
@@ -114,15 +115,7 @@ const TopBar = () => {
         <div className="flex-1">
           <form className="hidden md:flex max-w-sm">
             <div className="relative w-full">
-              <Search
-                className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <Input
-                type="search"
-                placeholder="Search cameras, recordings, alerts..."
-                className="w-full pl-8 bg-secondary/50"
-              />
+              <SearchBar />
             </div>
           </form>
         </div>

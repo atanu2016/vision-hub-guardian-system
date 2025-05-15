@@ -28,7 +28,7 @@ serve(async (req) => {
     const { host, port, username, password, sender, recipient, secure } = await req.json() as SMTPConfig;
 
     // Basic validation
-    if (!host || !port || !username || !password || !sender || !recipient) {
+    if (!host || !port || !sender || !recipient) {
       return new Response(
         JSON.stringify({ error: "Missing required SMTP configuration parameters" }),
         {
@@ -85,7 +85,7 @@ serve(async (req) => {
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error sending test email:", error);
     
     return new Response(

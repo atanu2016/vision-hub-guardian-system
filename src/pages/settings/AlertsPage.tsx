@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +10,7 @@ import { toast } from "sonner";
 import { getCameras, getAlertSettings, saveAlertSettings } from "@/services/apiService";
 import { Camera } from "@/types/camera";
 import { Bell, BellOff } from "lucide-react";
+import SMTPSettings from "@/components/settings/email/SMTPSettings";
 
 interface AlertSettings {
   motionDetection: boolean;
@@ -26,6 +26,7 @@ const AlertsPage = () => {
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState("settings");
   
   const [alertSettings, setAlertSettings] = useState<AlertSettings>({
     motionDetection: true,
@@ -121,9 +122,10 @@ const AlertsPage = () => {
         </p>
       </div>
       
-      <Tabs defaultValue="settings">
+      <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="settings">Alert Settings</TabsTrigger>
+          <TabsTrigger value="email">Email Configuration</TabsTrigger>
           <TabsTrigger value="history">Alert History</TabsTrigger>
         </TabsList>
         
@@ -316,6 +318,10 @@ const AlertsPage = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        <TabsContent value="email" className="space-y-6 mt-6">
+          <SMTPSettings />
         </TabsContent>
         
         <TabsContent value="history" className="mt-6">

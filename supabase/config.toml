@@ -10,3 +10,6 @@ max_rows = 1000
 
 [[db.migrations]]
 name = "20250514000000_create_vision_hub_schema"
+
+[functions.send-test-email]
+verify_jwt = true
