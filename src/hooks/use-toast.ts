@@ -1,51 +1,47 @@
 
-import {
-  Toast,
-  ToastActionElement,
-  ToastProps,
-} from "@/components/ui/toast";
+import { Toast, toast as sonnerToast } from "sonner";
 
-import { useToast as useShadcnToast } from "@/components/ui/toaster";
+type ToastProps = React.ComponentProps<typeof Toast>;
 
-export type ToastActionType = {
-  altText?: string;
-  action?: ToastActionElement;
-  destructive?: boolean;
+type ToastOptions = {
+  title?: string;
+  description?: string;
+  variant?: "default" | "destructive";
   duration?: number;
-} & Omit<ToastProps, "children">;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
+};
 
-export function useToast() {
-  const { toast } = useShadcnToast();
-  
-  return {
-    toast,
-    dismiss: () => {}, // Will be implemented if needed
+export function toast(opts: ToastOptions) {
+  const { title, description, variant, action, ...rest } = opts;
+
+  if (variant === "destructive") {
+    return sonnerToast.error(title, {
+      description,
+      action: action ? {
+        label: action.label,
+        onClick: action.onClick,
+      } : undefined,
+      ...rest,
+    });
   }
+
+  return sonnerToast(title, {
+    description,
+    action: action ? {
+      label: action.label,
+      onClick: action.onClick,
+    } : undefined,
+    ...rest,
+  });
 }
 
-// Create and export the toast function directly
-// Support both single object param and separate title, description params
-export const toast = (
-  titleOrOptions: string | {
-    title?: string;
-    description?: string;
-    action?: React.ReactNode;
-    variant?: "default" | "destructive";
-  },
-  description?: string
-) => {
-  const toastContext = useShadcnToast();
-  
-  if (!toastContext) return;
-  
-  if (typeof titleOrOptions === 'string') {
-    // Called with separate title and description
-    toastContext.toast({
-      title: titleOrOptions,
-      description: description
-    });
-  } else {
-    // Called with options object
-    toastContext.toast(titleOrOptions);
-  }
+export const useToast = () => {
+  return {
+    toast,
+  };
 };
+
+export type { ToastOptions };

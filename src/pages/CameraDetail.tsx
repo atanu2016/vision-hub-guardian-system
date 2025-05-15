@@ -1,25 +1,28 @@
+
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, PauseCircle, PlayCircle, Settings, Share2 } from "lucide-react";
-import { useParams, Link } from "react-router-dom";
+import { ArrowLeft, Download, PauseCircle, PlayCircle, Settings, Share2, Trash2 } from "lucide-react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import AppLayout from "@/components/layout/AppLayout";
 import { useState, useEffect } from "react";
-import { getCameras, saveCamera } from "@/services/apiService";
+import { getCameras, saveCamera, deleteCamera } from "@/services/apiService";
 import { Camera } from "@/types/camera";
 import { useToast } from "@/hooks/use-toast";
 import CameraStreamPlayer from "@/components/cameras/CameraStreamPlayer";
 import CameraSettings from "@/components/cameras/CameraSettings";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/dialog";
 
 const CameraDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [isStreaming, setIsStreaming] = useState(true);
   const [camera, setCamera] = useState<Camera | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("live");
   const [showSettings, setShowSettings] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -92,6 +95,26 @@ const CameraDetail = () => {
     }
   };
   
+  const handleDeleteCamera = async () => {
+    if (!camera) return;
+    
+    try {
+      await deleteCamera(camera.id);
+      toast({
+        title: "Camera deleted",
+        description: "Camera has been successfully deleted.",
+      });
+      navigate('/');
+    } catch (error) {
+      console.error("Error deleting camera:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete camera.",
+        variant: "destructive",
+      });
+    }
+  };
+  
   if (loading) {
     return (
       <AppLayout>
@@ -125,7 +148,8 @@ const CameraDetail = () => {
     );
   }
   
-  const isOnline = camera.status === "online";
+  // Check camera status based on feed availability
+  const isOnline = camera.status === "online" && isStreaming;
   
   return (
     <AppLayout>
@@ -334,6 +358,14 @@ const CameraDetail = () => {
                 >
                   Configure Camera Settings
                 </Button>
+                <Button 
+                  className="w-full" 
+                  variant="outline"
+                  onClick={() => setShowDeleteDialog(true)}
+                  variant="destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete Camera
+                </Button>
               </div>
             </div>
           </div>
@@ -346,6 +378,23 @@ const CameraDetail = () => {
           <CameraSettings camera={camera} onSave={handleSaveSettings} />
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Camera</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {camera.name}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCamera} className="bg-destructive hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 };

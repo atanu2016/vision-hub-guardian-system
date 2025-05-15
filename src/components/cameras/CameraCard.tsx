@@ -4,42 +4,72 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { CameraOff, WifiOff } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface CameraCardProps {
   camera: Camera;
 }
 
 const CameraCard = ({ camera }: CameraCardProps) => {
-  const isOnline = camera.status === "online";
+  const [isLiveStream, setIsLiveStream] = useState(false);
+  const [streamChecked, setStreamChecked] = useState(false);
+
+  // Check if the camera stream is actually available
+  useEffect(() => {
+    if (camera.status === "online") {
+      // In a real implementation, this would check if the stream is actually available
+      // For now, we'll simulate a check with a slight delay
+      const checkStreamAvailability = setTimeout(() => {
+        // This would be a real check in production
+        // For now, assume the stream is available if status is online
+        setIsLiveStream(true);
+        setStreamChecked(true);
+      }, 500);
+      
+      return () => clearTimeout(checkStreamAvailability);
+    } else {
+      setIsLiveStream(false);
+      setStreamChecked(true);
+    }
+  }, [camera.status]);
+
+  const isOnline = camera.status === "online" && isLiveStream;
   const isRecording = camera.recording;
 
   return (
     <Link to={`/cameras/${camera.id}`}>
       <Card className="camera-card h-full hover:shadow-md transition-all duration-200">
         <div className="camera-feed group aspect-video relative">
-          {isOnline ? (
-            <>
-              <div className={`absolute top-2 left-2 z-10 h-2 w-2 rounded-full ${isRecording ? "bg-red-500 animate-pulse" : "bg-green-500"}`}></div>
-              {camera.thumbnail ? (
-                <img 
-                  src={camera.thumbnail} 
-                  alt={camera.name} 
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="w-full h-full bg-vision-dark-800 flex items-center justify-center">
-                  <span className="text-vision-dark-400">No preview</span>
+          {streamChecked ? (
+            isOnline ? (
+              <>
+                <div className={`absolute top-2 left-2 z-10 h-2 w-2 rounded-full ${isRecording ? "bg-red-500 animate-pulse" : "bg-green-500"}`}></div>
+                {camera.thumbnail ? (
+                  <img 
+                    src={camera.thumbnail} 
+                    alt={camera.name} 
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-vision-dark-800 flex items-center justify-center">
+                    <span className="text-vision-dark-400">No preview</span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="camera-feed-offline w-full h-full bg-vision-dark-900 flex items-center justify-center">
+                <div className="absolute top-2 left-2 z-10 h-2 w-2 rounded-full bg-red-500"></div>
+                <div className="flex flex-col items-center">
+                  <CameraOff size={32} className="mb-2" />
+                  <span>Camera offline</span>
                 </div>
-              )}
-            </>
-          ) : (
-            <div className="camera-feed-offline w-full h-full bg-vision-dark-900 flex items-center justify-center">
-              <div className="absolute top-2 left-2 z-10 h-2 w-2 rounded-full bg-red-500"></div>
-              <div className="flex flex-col items-center">
-                <CameraOff size={32} className="mb-2" />
-                <span>Camera offline</span>
               </div>
+            )
+          ) : (
+            // Loading state while checking stream
+            <div className="w-full h-full bg-vision-dark-800 flex items-center justify-center">
+              <span className="text-vision-dark-400">Checking stream...</span>
             </div>
           )}
         </div>

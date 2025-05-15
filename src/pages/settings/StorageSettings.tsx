@@ -6,15 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { AlertCircle, Check, HardDrive, Server } from "lucide-react";
+import { AlertCircle, Check, HardDrive, Server, CloudUpload, DropboxLogo } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { getStorageSettings, saveStorageSettings } from "@/services/apiService";
-import { StorageSettings as StorageSettingsType } from "@/types/camera";
+import { StorageSettings as StorageSettingsType, StorageProviderType } from "@/types/camera";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const StorageSettings = () => {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("local");
+  const [activeTab, setActiveTab] = useState<StorageProviderType>("local");
   const [isSaving, setIsSaving] = useState(false);
   const [testingConnection, setTestingConnection] = useState(false);
   const [connectSuccess, setConnectSuccess] = useState<boolean | null>(null);
@@ -40,8 +41,7 @@ const StorageSettings = () => {
         console.error('Error fetching storage settings:', error);
         toast({
           title: "Error loading settings",
-          description: "Could not load storage settings.",
-          variant: "destructive",
+          description: "Could not load storage settings."
         });
       }
     };
@@ -63,7 +63,7 @@ const StorageSettings = () => {
     // Prepare the settings object based on the active tab
     const settings: StorageSettingsType = {
       ...formData,
-      type: activeTab as "local" | "nas" | "s3"
+      type: activeTab
     };
     
     try {
@@ -88,17 +88,38 @@ const StorageSettings = () => {
     setTestingConnection(true);
     setConnectSuccess(null);
     
-    // Testing storage connection
+    // Testing storage connection based on the active provider
     setTimeout(() => {
-      if (activeTab === 'nas') {
-        const success = formData.nasAddress && formData.nasPath;
-        setConnectSuccess(!!success);
-      } else if (activeTab === 's3') {
-        const success = formData.s3Bucket && formData.s3AccessKey && formData.s3SecretKey;
-        setConnectSuccess(!!success);
-      } else {
-        setConnectSuccess(true);
+      let success = false;
+      
+      switch (activeTab) {
+        case 'local':
+          success = !!formData.path;
+          break;
+        case 'nas':
+          success = !!(formData.nasAddress && formData.nasPath);
+          break;
+        case 's3':
+          success = !!(formData.s3Bucket && formData.s3AccessKey && formData.s3SecretKey);
+          break;
+        case 'dropbox':
+          success = !!formData.dropboxToken;
+          break;
+        case 'google_drive':
+          success = !!formData.googleDriveToken;
+          break;
+        case 'onedrive':
+          success = !!formData.oneDriveToken;
+          break;
+        case 'azure_blob':
+          success = !!(formData.azureConnectionString && formData.azureContainer);
+          break;
+        case 'backblaze':
+          success = !!(formData.backblazeKeyId && formData.backblazeApplicationKey && formData.backblazeBucket);
+          break;
       }
+      
+      setConnectSuccess(success);
       setTestingConnection(false);
     }, 1500);
   };
@@ -112,37 +133,41 @@ const StorageSettings = () => {
         </p>
       </div>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="local">
-            <HardDrive className="mr-2 h-4 w-4" />
-            Local Storage
-          </TabsTrigger>
-          <TabsTrigger value="nas">
-            <Server className="mr-2 h-4 w-4" />
-            NAS
-          </TabsTrigger>
-          <TabsTrigger value="s3">
-            <svg 
-              className="mr-2 h-4 w-4" 
-              xmlns="http://www.w3.org/2000/svg" 
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M2 12h2l2-4 2 4h2" />
-              <path d="M18 16h-6l-2-4-2 4H4" />
-              <path d="M22 12h-4l-2 4-2-4h-4" />
-            </svg>
-            S3 Compatible
-          </TabsTrigger>
-        </TabsList>
-        
-        <form onSubmit={handleSubmit}>
-          <TabsContent value="local">
+      <form onSubmit={handleSubmit}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Storage Provider</CardTitle>
+            <CardDescription>
+              Select which storage provider you want to use for your recordings
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <Label htmlFor="storage-provider">Storage Provider</Label>
+              <Select 
+                value={activeTab}
+                onValueChange={(value) => setActiveTab(value as StorageProviderType)}
+              >
+                <SelectTrigger id="storage-provider">
+                  <SelectValue placeholder="Select storage provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="local">Local Storage</SelectItem>
+                  <SelectItem value="nas">Network Attached Storage (NAS)</SelectItem>
+                  <SelectItem value="s3">S3 Compatible</SelectItem>
+                  <SelectItem value="dropbox">Dropbox</SelectItem>
+                  <SelectItem value="google_drive">Google Drive</SelectItem>
+                  <SelectItem value="onedrive">Microsoft OneDrive</SelectItem>
+                  <SelectItem value="azure_blob">Azure Blob Storage</SelectItem>
+                  <SelectItem value="backblaze">Backblaze B2</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="mt-6">
+          {activeTab === "local" && (
             <Card>
               <CardHeader>
                 <CardTitle>Local Storage Settings</CardTitle>
@@ -182,9 +207,9 @@ const StorageSettings = () => {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
           
-          <TabsContent value="nas">
+          {activeTab === "nas" && (
             <Card>
               <CardHeader>
                 <CardTitle>NAS Storage Settings</CardTitle>
@@ -274,9 +299,9 @@ const StorageSettings = () => {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
           
-          <TabsContent value="s3">
+          {activeTab === "s3" && (
             <Card>
               <CardHeader>
                 <CardTitle>S3 Compatible Storage</CardTitle>
@@ -366,15 +391,371 @@ const StorageSettings = () => {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
           
-          <CardFooter className="flex justify-end pt-6">
+          {activeTab === "dropbox" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Dropbox Storage Settings</CardTitle>
+                <CardDescription>
+                  Configure Dropbox for your recordings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="dropbox-token">Dropbox Access Token</Label>
+                  <Input
+                    id="dropbox-token"
+                    type="password"
+                    value={formData.dropboxToken || ''}
+                    onChange={(e) => handleInputChange('dropboxToken', e.target.value)}
+                    placeholder="Your Dropbox access token"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    <a href="https://www.dropbox.com/developers/apps" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                      Create a Dropbox app to get your access token
+                    </a>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dropbox-folder">Folder Path</Label>
+                  <Input
+                    id="dropbox-folder"
+                    value={formData.dropboxFolder || ''}
+                    onChange={(e) => handleInputChange('dropboxFolder', e.target.value)}
+                    placeholder="/CameraRecordings"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dropbox-retention-days">Retention Period (days)</Label>
+                  <Input
+                    id="dropbox-retention-days"
+                    type="number"
+                    value={formData.retentionDays || 30}
+                    onChange={(e) => handleInputChange('retentionDays', parseInt(e.target.value) || 30)}
+                  />
+                </div>
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  className="mt-2"
+                  onClick={handleTestConnection}
+                  disabled={testingConnection}
+                >
+                  {testingConnection ? "Testing..." : "Test Connection"}
+                </Button>
+                {connectSuccess !== null && (
+                  <Alert variant={connectSuccess ? "default" : "destructive"}>
+                    {connectSuccess ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                    <AlertDescription>
+                      {connectSuccess 
+                        ? "Successfully connected to Dropbox" 
+                        : "Failed to connect to Dropbox. Please check your access token and try again."}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === "google_drive" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Google Drive Storage Settings</CardTitle>
+                <CardDescription>
+                  Configure Google Drive for your recordings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="google-drive-token">Google Drive OAuth Token</Label>
+                  <Input
+                    id="google-drive-token"
+                    type="password"
+                    value={formData.googleDriveToken || ''}
+                    onChange={(e) => handleInputChange('googleDriveToken', e.target.value)}
+                    placeholder="Your Google Drive OAuth token"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    <a href="https://console.developers.google.com/" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                      Create a Google Cloud project to get your OAuth credentials
+                    </a>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="google-drive-folder-id">Folder ID</Label>
+                  <Input
+                    id="google-drive-folder-id"
+                    value={formData.googleDriveFolderId || ''}
+                    onChange={(e) => handleInputChange('googleDriveFolderId', e.target.value)}
+                    placeholder="Google Drive folder ID"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="google-drive-retention-days">Retention Period (days)</Label>
+                  <Input
+                    id="google-drive-retention-days"
+                    type="number"
+                    value={formData.retentionDays || 30}
+                    onChange={(e) => handleInputChange('retentionDays', parseInt(e.target.value) || 30)}
+                  />
+                </div>
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  className="mt-2"
+                  onClick={handleTestConnection}
+                  disabled={testingConnection}
+                >
+                  {testingConnection ? "Testing..." : "Test Connection"}
+                </Button>
+                {connectSuccess !== null && (
+                  <Alert variant={connectSuccess ? "default" : "destructive"}>
+                    {connectSuccess ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                    <AlertDescription>
+                      {connectSuccess 
+                        ? "Successfully connected to Google Drive" 
+                        : "Failed to connect to Google Drive. Please check your token and try again."}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === "onedrive" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Microsoft OneDrive Storage Settings</CardTitle>
+                <CardDescription>
+                  Configure OneDrive for your recordings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="onedrive-token">OneDrive Access Token</Label>
+                  <Input
+                    id="onedrive-token"
+                    type="password"
+                    value={formData.oneDriveToken || ''}
+                    onChange={(e) => handleInputChange('oneDriveToken', e.target.value)}
+                    placeholder="Your OneDrive access token"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    <a href="https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                      Register an Azure AD app to get your access token
+                    </a>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="onedrive-folder-id">Folder ID</Label>
+                  <Input
+                    id="onedrive-folder-id"
+                    value={formData.oneDriveFolderId || ''}
+                    onChange={(e) => handleInputChange('oneDriveFolderId', e.target.value)}
+                    placeholder="OneDrive folder ID"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="onedrive-retention-days">Retention Period (days)</Label>
+                  <Input
+                    id="onedrive-retention-days"
+                    type="number"
+                    value={formData.retentionDays || 30}
+                    onChange={(e) => handleInputChange('retentionDays', parseInt(e.target.value) || 30)}
+                  />
+                </div>
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  className="mt-2"
+                  onClick={handleTestConnection}
+                  disabled={testingConnection}
+                >
+                  {testingConnection ? "Testing..." : "Test Connection"}
+                </Button>
+                {connectSuccess !== null && (
+                  <Alert variant={connectSuccess ? "default" : "destructive"}>
+                    {connectSuccess ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                    <AlertDescription>
+                      {connectSuccess 
+                        ? "Successfully connected to OneDrive" 
+                        : "Failed to connect to OneDrive. Please check your token and try again."}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === "azure_blob" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Azure Blob Storage Settings</CardTitle>
+                <CardDescription>
+                  Configure Azure Blob Storage for your recordings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="azure-connection-string">Connection String</Label>
+                  <Input
+                    id="azure-connection-string"
+                    type="password"
+                    value={formData.azureConnectionString || ''}
+                    onChange={(e) => handleInputChange('azureConnectionString', e.target.value)}
+                    placeholder="Your Azure Storage connection string"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    <a href="https://portal.azure.com/#blade/HubsExtension/BrowseResource/resourceType/Microsoft.Storage%2FStorageAccounts" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                      Get your connection string from the Azure portal
+                    </a>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="azure-container">Container Name</Label>
+                  <Input
+                    id="azure-container"
+                    value={formData.azureContainer || ''}
+                    onChange={(e) => handleInputChange('azureContainer', e.target.value)}
+                    placeholder="recordings"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="azure-retention-days">Retention Period (days)</Label>
+                  <Input
+                    id="azure-retention-days"
+                    type="number"
+                    value={formData.retentionDays || 30}
+                    onChange={(e) => handleInputChange('retentionDays', parseInt(e.target.value) || 30)}
+                  />
+                </div>
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  className="mt-2"
+                  onClick={handleTestConnection}
+                  disabled={testingConnection}
+                >
+                  {testingConnection ? "Testing..." : "Test Connection"}
+                </Button>
+                {connectSuccess !== null && (
+                  <Alert variant={connectSuccess ? "default" : "destructive"}>
+                    {connectSuccess ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                    <AlertDescription>
+                      {connectSuccess 
+                        ? "Successfully connected to Azure Blob Storage" 
+                        : "Failed to connect to Azure Blob Storage. Please check your connection string and try again."}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === "backblaze" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Backblaze B2 Storage Settings</CardTitle>
+                <CardDescription>
+                  Configure Backblaze B2 for your recordings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="backblaze-key-id">Application Key ID</Label>
+                    <Input
+                      id="backblaze-key-id"
+                      value={formData.backblazeKeyId || ''}
+                      onChange={(e) => handleInputChange('backblazeKeyId', e.target.value)}
+                      placeholder="Your Backblaze key ID"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="backblaze-application-key">Application Key</Label>
+                    <Input
+                      id="backblaze-application-key"
+                      type="password"
+                      value={formData.backblazeApplicationKey || ''}
+                      onChange={(e) => handleInputChange('backblazeApplicationKey', e.target.value)}
+                      placeholder="Your Backblaze application key"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="backblaze-bucket">Bucket Name</Label>
+                  <Input
+                    id="backblaze-bucket"
+                    value={formData.backblazeBucket || ''}
+                    onChange={(e) => handleInputChange('backblazeBucket', e.target.value)}
+                    placeholder="your-bucket-name"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    <a href="https://www.backblaze.com/b2/cloud-storage.html#af9kre" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                      Create a Backblaze B2 account to get your keys
+                    </a>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="backblaze-retention-days">Retention Period (days)</Label>
+                  <Input
+                    id="backblaze-retention-days"
+                    type="number"
+                    value={formData.retentionDays || 30}
+                    onChange={(e) => handleInputChange('retentionDays', parseInt(e.target.value) || 30)}
+                  />
+                </div>
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  className="mt-2"
+                  onClick={handleTestConnection}
+                  disabled={testingConnection}
+                >
+                  {testingConnection ? "Testing..." : "Test Connection"}
+                </Button>
+                {connectSuccess !== null && (
+                  <Alert variant={connectSuccess ? "default" : "destructive"}>
+                    {connectSuccess ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                    <AlertDescription>
+                      {connectSuccess 
+                        ? "Successfully connected to Backblaze B2" 
+                        : "Failed to connect to Backblaze B2. Please check your credentials and try again."}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          <CardFooter className="flex justify-end pt-6 mt-6">
             <Button type="submit" disabled={isSaving}>
               {isSaving ? "Saving..." : "Save Settings"}
             </Button>
           </CardFooter>
-        </form>
-      </Tabs>
+        </div>
+      </form>
     </div>
   );
 };
