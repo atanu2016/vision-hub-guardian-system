@@ -1,26 +1,27 @@
+import * as React from "react"
+import { 
+  ToastActionElement, 
+  ToastProps
+} from "@/components/ui/toast"
 
-import { toast as sonnerToast } from "sonner";
+const TOAST_LIMIT = 5
+const TOAST_REMOVE_DELAY = 1000000
 
-// Define the toast option types based on sonner's API
-export type Toast = {
-  id: string | number;
-  title?: string;
-  description?: string;
-  action?: {
-    label: string;
-    onClick: () => void;
+export type ToasterToast = ToastProps & {
+  id: string
+  title?: string
+  description?: React.ReactNode
+  action?: ToastActionElement
+}
+
+export type ToastOptions = Partial<
+  Pick<ToasterToast, "title" | "description" | "action" | "variant" | "duration">
+> & {
+  promise?: {
+    error: string;
+    loading: string;
+    success: string;
   };
-  cancel?: {
-    label: string;
-    onClick?: () => void;
-  };
-  duration?: number;
-};
-
-export type ToastOptions = {
-  description?: string;
-  variant?: "default" | "destructive";
-  duration?: number;
   action?: {
     label: string;
     onClick: () => void;
@@ -29,71 +30,215 @@ export type ToastOptions = {
 };
 
 // Define the type for toast function with methods
-export type ToastFunction = {
-  (title: string | ToastOptions, options?: ToastOptions): string | number;
-  error: (title: string | ToastOptions, options?: ToastOptions) => string | number;
-  success: (title: string | ToastOptions, options?: ToastOptions) => string | number;
-  warning: (title: string | ToastOptions, options?: ToastOptions) => string | number;
-  info: (title: string | ToastOptions, options?: ToastOptions) => string | number;
-  promise: typeof sonnerToast.promise;
+export interface ToastFunction {
+  (opts: ToastOptions): string;
+  error: (message: string, opts?: Omit<ToastOptions, "variant">) => string;
+  success: (message: string, opts?: Omit<ToastOptions, "variant">) => string;
+  warning: (message: string, opts?: Omit<ToastOptions, "variant">) => string;
+  info: (message: string, opts?: Omit<ToastOptions, "variant">) => string;
+}
+
+export interface Toast {
+  id: string;
+  title?: string;
+  description?: React.ReactNode;
+  action?: ToastActionElement;
+  variant?: "default" | "destructive";
+  duration?: number;
+}
+
+const actionTypes = {
+  ADD_TOAST: "ADD_TOAST",
+  UPDATE_TOAST: "UPDATE_TOAST",
+  DISMISS_TOAST: "DISMISS_TOAST",
+  REMOVE_TOAST: "REMOVE_TOAST",
+} as const
+
+let count = 0
+
+function genId() {
+  count = (count + 1) % Number.MAX_VALUE
+  return count.toString()
+}
+
+type ActionType = typeof actionTypes
+
+type Action =
+  | {
+      type: ActionType["ADD_TOAST"]
+      toast: Toast
+    }
+  | {
+      type: ActionType["UPDATE_TOAST"]
+      toast: Partial<Toast>
+      id: string
+    }
+  | {
+      type: ActionType["DISMISS_TOAST"]
+      toastId?: string
+      id?: string
+    }
+  | {
+      type: ActionType["REMOVE_TOAST"]
+      toastId?: string
+      id?: string
+    }
+
+interface State {
+  toasts: Toast[]
+}
+
+const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+
+const addToRemoveQueue = (toastId: string) => {
+  if (toastTimeouts.has(toastId)) {
+    return
+  }
+
+  const timeout = setTimeout(() => {
+    toastTimeouts.delete(toastId)
+    dispatch({
+      type: "REMOVE_TOAST",
+      id: toastId,
+    })
+  }, TOAST_REMOVE_DELAY)
+
+  toastTimeouts.set(toastId, timeout)
+}
+
+export const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case "ADD_TOAST":
+      return {
+        ...state,
+        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
+      }
+
+    case "UPDATE_TOAST":
+      return {
+        ...state,
+        toasts: state.toasts.map((t) =>
+          t.id === action.id ? { ...t, ...action.toast } : t
+        ),
+      }
+
+    case "DISMISS_TOAST": {
+      const { id, toastId = id } = action
+
+      // ! Side effects ! - This could be extracted into a dismissToast() action,
+      // but I'll keep it here for simplicity
+      if (toastId) {
+        addToRemoveQueue(toastId)
+      } else {
+        state.toasts.forEach((toast) => {
+          addToRemoveQueue(toast.id)
+        })
+      }
+
+      return {
+        ...state,
+        toasts: state.toasts.map((t) =>
+          t.id === toastId || toastId === undefined
+            ? {
+                ...t,
+                open: false,
+              }
+            : t
+        ),
+      }
+    }
+    case "REMOVE_TOAST":
+      if (action.id === undefined) {
+        return {
+          ...state,
+          toasts: [],
+        }
+      }
+      return {
+        ...state,
+        toasts: state.toasts.filter((t) => t.id !== action.id),
+      }
+  }
+}
+
+const listeners: Array<(state: State) => void> = []
+
+let memoryState: State = { toasts: [] }
+
+function dispatch(action: Action) {
+  memoryState = reducer(memoryState, action)
+  listeners.forEach((listener) => {
+    listener(memoryState)
+  })
+}
+
+type Toast = Omit<ToasterToast, "id">
+
+function toast(opts: ToastOptions): string {
+  const id = genId()
+
+  const update = (props: ToastOptions) =>
+    dispatch({
+      type: "UPDATE_TOAST",
+      id,
+      toast: { ...props },
+    })
+
+  const dismiss = () => dispatch({ type: "DISMISS_TOAST", id })
+
+  dispatch({
+    type: "ADD_TOAST",
+    toast: {
+      ...opts,
+      id,
+      open: true,
+      onOpenChange: (open) => {
+        if (!open) dismiss()
+      },
+    },
+  })
+
+  return id
+}
+
+// Helper methods for different toast variants
+toast.error = (message: string, opts?: Omit<ToastOptions, "variant">): string => {
+  return toast({ ...opts, title: message, variant: "destructive" });
 };
 
-// Create a custom useToast hook that provides toast functionality
+toast.success = (message: string, opts?: Omit<ToastOptions, "variant">): string => {
+  return toast({ ...opts, title: message, variant: "default" });
+};
+
+toast.warning = (message: string, opts?: Omit<ToastOptions, "variant">): string => {
+  return toast({ ...opts, title: message, variant: "default" });
+};
+
+toast.info = (message: string, opts?: Omit<ToastOptions, "variant">): string => {
+  return toast({ ...opts, title: message, variant: "default" });
+};
+
 export function useToast() {
+  const [state, setState] = React.useState<State>(memoryState)
+
+  React.useEffect(() => {
+    listeners.push(setState)
+    return () => {
+      const index = listeners.indexOf(setState)
+      if (index > -1) {
+        listeners.splice(index, 1)
+      }
+    }
+  }, [state])
+
   return {
-    toast: createToastFunction(),
-    notify: createToastFunction()
-  };
+    ...state,
+    toast,
+    dismiss: (id?: string) => dispatch({ type: "DISMISS_TOAST", id }),
+  }
 }
 
-// Function to create a toast function with all the required methods
-function createToastFunction(): ToastFunction {
-  const toastFn = ((title: string | ToastOptions, options?: ToastOptions) => {
-    if (typeof title === 'string') {
-      return sonnerToast(title, options);
-    } else {
-      // Title is actually an options object
-      return sonnerToast(title.description || 'Notification');
-    }
-  }) as ToastFunction;
+export { toast }
 
-  toastFn.error = (title: string | ToastOptions, options?: ToastOptions) => {
-    if (typeof title === 'string') {
-      return sonnerToast.error(title, options);
-    } else {
-      return sonnerToast.error(title.description || 'Error');
-    }
-  };
-
-  toastFn.success = (title: string | ToastOptions, options?: ToastOptions) => {
-    if (typeof title === 'string') {
-      return sonnerToast.success(title, options);
-    } else {
-      return sonnerToast.success(title.description || 'Success');
-    }
-  };
-
-  toastFn.warning = (title: string | ToastOptions, options?: ToastOptions) => {
-    if (typeof title === 'string') {
-      return sonnerToast.warning(title, options);
-    } else {
-      return sonnerToast.warning(title.description || 'Warning');
-    }
-  };
-
-  toastFn.info = (title: string | ToastOptions, options?: ToastOptions) => {
-    if (typeof title === 'string') {
-      return sonnerToast.info(title, options);
-    } else {
-      return sonnerToast.info(title.description || 'Information');
-    }
-  };
-
-  toastFn.promise = sonnerToast.promise;
-
-  return toastFn;
-}
-
-// Create standalone toast and notify functions
-export const notify: ToastFunction = createToastFunction();
-export const toast: ToastFunction = notify;
+// For backwards compatibility with existing code that might use notify
+export const notify = toast;
