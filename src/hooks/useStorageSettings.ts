@@ -40,8 +40,10 @@ export const useStorageSettings = () => {
       return settings;
     } catch (error) {
       console.error("Failed to load storage settings:", error);
-      toast.error("Error Loading Settings", {
-        description: "Could not load storage settings. Please try again."
+      toast({
+        title: "Error Loading Settings",
+        description: "Could not load storage settings. Please try again.",
+        variant: "destructive"
       });
       return null;
     } finally {
@@ -98,7 +100,8 @@ export const useStorageSettings = () => {
       // Save to database through API service
       await saveStorageSettings(settings);
       
-      toast.success("Storage Settings Saved", {
+      toast({
+        title: "Storage Settings Saved",
         description: "Your storage configuration has been updated successfully."
       });
 
@@ -107,8 +110,10 @@ export const useStorageSettings = () => {
       return true;
     } catch (error) {
       console.error("Failed to save storage settings:", error);
-      toast.error("Error Saving Settings", {
-        description: "An error occurred while saving your storage settings."
+      toast({
+        title: "Error Saving Settings",
+        description: "An error occurred while saving your storage settings.",
+        variant: "destructive"
       });
       return false;
     } finally {
@@ -140,14 +145,17 @@ export const useStorageSettings = () => {
         usedSpaceFormatted: "0 GB"
       });
       
-      toast.success("Storage Cleared", {
+      toast({
+        title: "Storage Cleared",
         description: "All recordings have been successfully removed."
       });
       return true;
     } catch (error) {
       console.error("Failed to clear storage:", error);
-      toast.error("Error Clearing Storage", {
-        description: "An error occurred while clearing the storage."
+      toast({
+        title: "Error Clearing Storage",
+        description: "An error occurred while clearing the storage.",
+        variant: "destructive"
       });
       return false;
     } finally {
