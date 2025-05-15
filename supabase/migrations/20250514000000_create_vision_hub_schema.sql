@@ -36,7 +36,18 @@ CREATE TABLE IF NOT EXISTS public.storage_settings (
   s3Bucket TEXT,
   s3AccessKey TEXT,
   s3SecretKey TEXT,
-  s3Region TEXT
+  s3Region TEXT,
+  dropboxToken TEXT,
+  dropboxFolder TEXT,
+  googleDriveToken TEXT,
+  googleDriveFolderId TEXT,
+  oneDriveToken TEXT,
+  oneDriveFolderId TEXT,
+  azureConnectionString TEXT,
+  azureContainer TEXT,
+  backblazeKeyId TEXT,
+  backblazeApplicationKey TEXT,
+  backblazeBucket TEXT
 );
 
 -- Create system_stats table
@@ -52,6 +63,24 @@ CREATE TABLE IF NOT EXISTS public.system_stats (
   storage_percentage NUMERIC DEFAULT 0,
   last_updated TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
+
+-- Add function to clear recordings storage
+CREATE OR REPLACE FUNCTION public.clear_recordings_storage()
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  -- Update the system stats to show zero used storage
+  UPDATE public.system_stats
+  SET storage_used = '0 GB',
+      storage_percentage = 0,
+      last_updated = now();
+  
+  -- In a real implementation, this would also delete actual recording files
+  -- That would be handled by a service or background task
+END;
+$$;
 
 -- Enable row level security
 ALTER TABLE public.cameras ENABLE ROW LEVEL SECURITY;
