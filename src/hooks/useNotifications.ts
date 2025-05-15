@@ -7,7 +7,7 @@ const NOTIFICATIONS_STORAGE_KEY = 'vision-hub-notifications';
 
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const { success, error, toast } = useToast();
+  const { toast } = useToast();
 
   // Load notifications from storage on component mount
   useEffect(() => {
@@ -38,9 +38,9 @@ export const useNotifications = () => {
     
     // Also show a toast for real-time feedback
     if (notification.type === 'error') {
-      error(notification.title, { description: notification.message });
+      toast.error(notification.title, { description: notification.message });
     } else if (notification.type === 'success') {
-      success(notification.title, { description: notification.message });
+      toast.success(notification.title, { description: notification.message });
     } else {
       toast({
         title: notification.title,

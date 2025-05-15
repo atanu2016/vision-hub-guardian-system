@@ -1,15 +1,11 @@
 
 import * as React from "react";
 import { toast as sonnerToast } from "sonner";
-import { ToastOptions } from "./toast-types";
+import { ToastOptions, ToastFunction } from "./toast-types";
 import { formatToastVariant } from "./toast-utils";
 
 export interface ToastContextType {
-  toast: (options: ToastOptions) => string;
-  success: (title: string, options?: Omit<ToastOptions, "variant">) => string;
-  error: (title: string, options?: Omit<ToastOptions, "variant">) => string;
-  warning: (title: string, options?: Omit<ToastOptions, "variant">) => string;
-  info: (title: string, options?: Omit<ToastOptions, "variant">) => string;
+  toast: ToastFunction;
   dismiss: (toastId?: string) => void;
   toasts: ToastOptions[];
 }
@@ -24,7 +20,7 @@ export const ToastProvider = ({
   const [toasts, setToasts] = React.useState<ToastOptions[]>([]);
 
   const notify = React.useCallback((options: ToastOptions) => {
-    const id = Math.random().toString(36).slice(2);
+    const id = options.id || Math.random().toString(36).slice(2);
     const newToast: ToastOptions = {
       id,
       ...options,
@@ -57,45 +53,55 @@ export const ToastProvider = ({
     }
   }, []);
 
+  // Create success method
   const success = React.useCallback(
-    (title: string, options?: Omit<ToastOptions, "variant">) => {
+    (title: string, options?: Omit<ToastOptions, "title" | "variant">) => {
       return notify({ title, ...options, variant: "success" });
     },
     [notify]
   );
 
+  // Create error method
   const error = React.useCallback(
-    (title: string, options?: Omit<ToastOptions, "variant">) => {
+    (title: string, options?: Omit<ToastOptions, "title" | "variant">) => {
       return notify({ title, ...options, variant: "destructive" });
     },
     [notify]
   );
 
+  // Create warning method
   const warning = React.useCallback(
-    (title: string, options?: Omit<ToastOptions, "variant">) => {
+    (title: string, options?: Omit<ToastOptions, "title" | "variant">) => {
       return notify({ title, ...options, variant: "warning" });
     },
     [notify]
   );
 
+  // Create info method
   const info = React.useCallback(
-    (title: string, options?: Omit<ToastOptions, "variant">) => {
+    (title: string, options?: Omit<ToastOptions, "title" | "variant">) => {
       return notify({ title, ...options });
     },
     [notify]
   );
 
+  // Attach the helper methods to the notify function to create a ToastFunction
+  const toastFunction = React.useMemo(() => {
+    const toast = notify as ToastFunction;
+    toast.success = success;
+    toast.error = error;
+    toast.warning = warning;
+    toast.info = info;
+    return toast;
+  }, [notify, success, error, warning, info]);
+
   const value = React.useMemo(
     () => ({
-      toast: notify,
-      success,
-      error,
-      warning,
-      info,
+      toast: toastFunction,
       dismiss,
       toasts,
     }),
-    [notify, success, error, warning, info, dismiss, toasts]
+    [toastFunction, dismiss, toasts]
   );
 
   return (

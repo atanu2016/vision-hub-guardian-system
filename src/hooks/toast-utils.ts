@@ -1,13 +1,20 @@
 
-import { toast as sonnerToast, type ToastOptions as SonnerToastOptions } from "sonner";
+import { toast as sonnerToast } from "sonner";
 import { ToastOptions } from "./toast-types";
+
+type SonnerToastOptions = {
+  description?: string;
+  duration?: number;
+  id?: string;
+  [key: string]: any;
+};
 
 /**
  * Formats toast options based on variant and displays the appropriate Sonner toast
  */
 export const formatToastVariant = (
   options: ToastOptions, 
-  sonnerOptions: SonnerToastOptions & { id?: string }
+  sonnerOptions: SonnerToastOptions
 ) => {
   if (options.variant === "destructive") {
     sonnerToast.error(options.title, { 
@@ -20,9 +27,9 @@ export const formatToastVariant = (
       ...sonnerOptions 
     });
   } else if (options.variant === "warning") {
-    sonnerToast.warning(options.title, {
+    sonnerToast.warning(options.title, { 
       description: options.description,
-      ...sonnerOptions
+      ...sonnerOptions 
     });
   } else {
     sonnerToast(options.title, { 
@@ -42,5 +49,14 @@ export const formatToastOptions = (
   return {
     ...(message ? { description: message } : {}),
     ...options,
+  };
+};
+
+/**
+ * Handles string-only toast calls by converting them to the expected format
+ */
+export const handleStringToast = (message: string): ToastOptions => {
+  return {
+    title: message
   };
 };

@@ -10,3 +10,12 @@ export interface ToastProps {
 }
 
 export type ToastOptions = ToastProps;
+
+// Define the shape of the toast function and its convenience methods
+export interface ToastFunction {
+  (options: ToastProps): string;
+  success: (title: string, options?: Omit<ToastProps, "title" | "variant">) => string;
+  error: (title: string, options?: Omit<ToastProps, "title" | "variant">) => string;
+  warning: (title: string, options?: Omit<ToastProps, "title" | "variant">) => string;
+  info: (title: string, options?: Omit<ToastProps, "title" | "variant">) => string;
+}

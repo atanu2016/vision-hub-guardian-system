@@ -1,13 +1,14 @@
 
 import { useToastContext } from "./toast-context";
-import { ToastOptions } from "./toast-types";
+import { ToastOptions, ToastFunction } from "./toast-types";
+import { handleStringToast } from "./toast-utils";
 
 export const useToast = () => {
   return useToastContext();
 };
 
 // Simple function for direct toast access
-const getToastFunction = () => {
+const getToastFunction = (): ToastFunction => {
   try {
     const toastContext = useToast();
     return toastContext.toast;
@@ -20,24 +21,45 @@ const getToastFunction = () => {
     
     // Import sonner directly as a fallback
     const { toast: sonnerToast } = require("sonner");
-    return (options: ToastOptions) => {
+    
+    // Create a base toast function
+    const toast = ((options: ToastOptions) => {
+      if (typeof options === 'string') {
+        options = handleStringToast(options);
+      }
+      
       return sonnerToast(options.title, { description: options.description });
+    }) as ToastFunction;
+    
+    // Add helper methods
+    toast.success = (title, options) => {
+      return sonnerToast.success(title, { description: options?.description });
     };
+    
+    toast.error = (title, options) => {
+      return sonnerToast.error(title, { description: options?.description });
+    };
+    
+    toast.warning = (title, options) => {
+      return sonnerToast.warning(title, { description: options?.description });
+    };
+    
+    toast.info = (title, options) => {
+      return sonnerToast(title, { description: options?.description });
+    };
+    
+    return toast;
   }
 };
 
 // Re-export as simple functions for ease of use
-export const toast = (options: ToastOptions) => {
-  const contextToast = getToastFunction();
-  return contextToast(options);
-};
+export const toast = getToastFunction();
 
 // Alias for toast
 export const notify = toast;
 
 // Re-export types
-export type { ToastOptions, ToastOptions as Toast };
-export type ToastFunction = (options: ToastOptions) => void;
+export type { ToastOptions, ToastOptions as Toast, ToastFunction };
 
 // Add these for backward compatibility
 export { ToastProvider } from "./toast-context";
