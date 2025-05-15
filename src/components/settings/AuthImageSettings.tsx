@@ -25,8 +25,16 @@ const AuthImageSettings = () => {
       localStorage.setItem('auth_logo_url', logoUrl);
       localStorage.setItem('auth_background_url', backgroundUrl);
       
-      // In a real implementation, we would save to the database too
-      // For now we're using localStorage as we don't have the exact table schema
+      // Save to the database - using advanced_settings table that exists in Supabase
+      const { error } = await supabase
+        .from('advanced_settings')
+        .update({
+          auth_logo_url: logoUrl,
+          auth_background_url: backgroundUrl
+        })
+        .eq('id', '1');
+        
+      if (error) throw error;
       
       toast.success('Auth images updated successfully');
     } catch (error) {

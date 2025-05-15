@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/components/ui/sonner';
 import { Download, Loader2 } from 'lucide-react';
-import { exportRecordings, exportAlertHistory, exportConfiguration } from '@/services/exportService';
+import { supabase } from '@/integrations/supabase/client';
+import * as FileSaver from 'file-saver';
 
 const ExportControls = () => {
   const [isExporting, setIsExporting] = useState<{
@@ -20,7 +21,31 @@ const ExportControls = () => {
   const handleExportRecordings = async () => {
     setIsExporting(prev => ({ ...prev, recordings: true }));
     try {
-      await exportRecordings();
+      // Fetch actual recording data from the cameras and recording_settings tables
+      const { data: cameras, error: camerasError } = await supabase
+        .from('cameras')
+        .select('*');
+        
+      if (camerasError) throw camerasError;
+      
+      const { data: recordingSettings, error: recordingsError } = await supabase
+        .from('recording_settings')
+        .select('*');
+        
+      if (recordingsError) throw recordingsError;
+        
+      // Combine the data for export
+      const exportData = {
+        cameras,
+        recordingSettings,
+        exportDate: new Date().toISOString(),
+      };
+      
+      // Convert to JSON and create downloadable file
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      FileSaver.saveAs(blob, `vision-hub-recordings-export-${new Date().toISOString().split('T')[0]}.json`);
+      
       toast.success('Recordings data exported successfully');
     } catch (error) {
       console.error('Export failed:', error);
@@ -33,7 +58,24 @@ const ExportControls = () => {
   const handleExportAlertHistory = async () => {
     setIsExporting(prev => ({ ...prev, alerts: true }));
     try {
-      await exportAlertHistory();
+      // Fetch actual alert data from the alert_settings table
+      const { data, error } = await supabase
+        .from('alert_settings')
+        .select('*');
+        
+      if (error) throw error;
+      
+      // Prepare data for export
+      const exportData = {
+        alertSettings: data,
+        exportDate: new Date().toISOString(),
+      };
+      
+      // Convert to JSON and create downloadable file
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      FileSaver.saveAs(blob, `vision-hub-alerts-export-${new Date().toISOString().split('T')[0]}.json`);
+      
       toast.success('Alert history exported successfully');
     } catch (error) {
       console.error('Export failed:', error);
@@ -46,7 +88,34 @@ const ExportControls = () => {
   const handleExportConfig = async () => {
     setIsExporting(prev => ({ ...prev, config: true }));
     try {
-      await exportConfiguration();
+      // Fetch configuration data from the advanced_settings table
+      const { data: advancedSettings, error: advError } = await supabase
+        .from('advanced_settings')
+        .select('*');
+        
+      if (advError) throw advError;
+      
+      // Fetch storage settings
+      const { data: storageSettings, error: storageError } = await supabase
+        .from('storage_settings')
+        .select('*');
+        
+      if (storageError) throw storageError;
+      
+      // Combine all configuration data
+      const exportData = {
+        advancedSettings,
+        storageSettings,
+        emailSettings: JSON.parse(localStorage.getItem('smtp_settings') || '{}'),
+        databaseSettings: JSON.parse(localStorage.getItem('database_settings') || '{}'),
+        exportDate: new Date().toISOString(),
+      };
+      
+      // Convert to JSON and create downloadable file
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      FileSaver.saveAs(blob, `vision-hub-configuration-export-${new Date().toISOString().split('T')[0]}.json`);
+      
       toast.success('System configuration exported successfully');
     } catch (error) {
       console.error('Export failed:', error);
