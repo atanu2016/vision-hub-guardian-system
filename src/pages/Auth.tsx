@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2 } from 'lucide-react';
@@ -9,9 +8,17 @@ import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm';
 import { AuthBranding } from '@/components/auth/AuthBranding';
 import { SignupForm } from '@/components/auth/SignupForm';
 import { MFAEnrollmentForm } from '@/components/auth/MFAEnrollmentForm';
+import { AuthContext } from '@/contexts/AuthContext';
+import { useContext } from 'react';
+
+// A standalone version of useAuth that doesn't throw when outside provider
+const useOptionalAuth = () => {
+  const context = useContext(AuthContext);
+  return context;
+};
 
 const Auth = () => {
-  const { user, isLoading, requiresMFA } = useAuth();
+  const authContext = useOptionalAuth();
   const [activeTab, setActiveTab] = useState('login');
   const location = useLocation();
   
@@ -29,6 +36,14 @@ const Auth = () => {
     }
   }, [location]);
 
+  // If we're not inside an AuthProvider, just render the login form
+  // without trying to use auth context data
+  if (!authContext) {
+    return renderAuthUI(false, false, false, activeTab, setActiveTab, null, from, backgroundUrl, LogoComponent);
+  }
+
+  const { user, isLoading, requiresMFA } = authContext;
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -40,30 +55,50 @@ const Auth = () => {
   if (user) {
     // If MFA is required but not enrolled, redirect to MFA enrollment
     if (requiresMFA) {
-      return (
-        <div className="flex min-h-screen items-center justify-center bg-vision-dark-900 p-4 sm:p-8" style={backgroundUrl ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
-          <div className="w-full max-w-md">
-            <div className="mb-8 flex justify-center">
-              <LogoComponent />
-            </div>
-            <Card className="border-vision-blue-800/30 bg-vision-dark-800/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl text-center">MFA Enrollment Required</CardTitle>
-                <CardDescription className="text-center">Please set up multi-factor authentication to proceed</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <MFAEnrollmentForm redirectUrl={from} />
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      );
+      return renderMFAEnrollment(from, backgroundUrl, LogoComponent);
     }
     
     // Otherwise, redirect to the page they were trying to access
     return <Navigate to={from} replace />;
   }
 
+  return renderAuthUI(false, false, false, activeTab, setActiveTab, null, from, backgroundUrl, LogoComponent);
+};
+
+// Helper function to render MFA enrollment UI
+const renderMFAEnrollment = (from: string, backgroundUrl: string | null, LogoComponent: React.FC) => {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-vision-dark-900 p-4 sm:p-8" style={backgroundUrl ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
+      <div className="w-full max-w-md">
+        <div className="mb-8 flex justify-center">
+          <LogoComponent />
+        </div>
+        <Card className="border-vision-blue-800/30 bg-vision-dark-800/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-xl text-center">MFA Enrollment Required</CardTitle>
+            <CardDescription className="text-center">Please set up multi-factor authentication to proceed</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <MFAEnrollmentForm redirectUrl={from} />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+// Helper function to render the main auth UI
+const renderAuthUI = (
+  isLoading: boolean,
+  isAuthenticated: boolean,
+  requiresMFA: boolean,
+  activeTab: string,
+  setActiveTab: (tab: string) => void,
+  user: any,
+  from: string,
+  backgroundUrl: string | null,
+  LogoComponent: React.FC
+) => {
   const containerStyle = backgroundUrl 
     ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } 
     : {};

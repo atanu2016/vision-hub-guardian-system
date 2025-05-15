@@ -41,33 +41,40 @@ function App() {
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vision-hub-theme">
-      <AuthProvider>
-        <Routes>
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-          <Route path="/cameras" element={<ProtectedRoute><Cameras /></ProtectedRoute>} />
-          <Route path="/cameras/:id" element={<ProtectedRoute><CameraDetail /></ProtectedRoute>} />
-          
-          {/* Settings Routes */}
-          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/settings/storage" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/settings/recordings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/settings/alerts" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/settings/webhooks" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/settings/advanced" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/settings/database" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/settings/logs" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          
-          {/* Admin Routes */}
-          <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminPage /></ProtectedRoute>} />
-          <Route path="/admin/users" element={<ProtectedRoute requireAdmin><UserManagement /></ProtectedRoute>} />
-          <Route path="/admin/users/create" element={<ProtectedRoute requireAdmin><CreateUser /></ProtectedRoute>} />
-          <Route path="/profile-settings" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
-          <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <Toaster />
-      </AuthProvider>
+      <Routes>
+        {/* Auth route is outside of AuthProvider to prevent circular dependency */}
+        <Route path="/auth" element={<Auth />} />
+        
+        {/* All protected routes wrapped in AuthProvider */}
+        <Route path="/*" element={
+          <AuthProvider>
+            <Routes>
+              <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+              <Route path="/cameras" element={<ProtectedRoute><Cameras /></ProtectedRoute>} />
+              <Route path="/cameras/:id" element={<ProtectedRoute><CameraDetail /></ProtectedRoute>} />
+              
+              {/* Settings Routes */}
+              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/settings/storage" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/settings/recordings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/settings/alerts" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/settings/webhooks" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/settings/advanced" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/settings/database" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/settings/logs" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminPage /></ProtectedRoute>} />
+              <Route path="/admin/users" element={<ProtectedRoute requireAdmin><UserManagement /></ProtectedRoute>} />
+              <Route path="/admin/users/create" element={<ProtectedRoute requireAdmin><CreateUser /></ProtectedRoute>} />
+              <Route path="/profile-settings" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
+              <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <Toaster />
+          </AuthProvider>
+        } />
+      </Routes>
     </ThemeProvider>
   );
 }
