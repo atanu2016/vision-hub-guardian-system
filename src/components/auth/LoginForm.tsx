@@ -24,7 +24,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
       <LoginFormUI 
         onSubmit={handleSubmit} 
         isSubmitting={isSubmitting}
-        buttonText={showCreateAdmin ? "Create Superadmin Account" : "Log in"}
+        buttonText="Log in"
       />
     </>
   );

@@ -23,8 +23,9 @@ export const useLoginForm = ({ onSuccess }: { onSuccess?: () => void }) => {
 
   const handleSubmit = async (values: z.infer<typeof loginSchema>) => {
     setIsSubmitting(true);
+    
     try {
-      console.log("Attempting to sign in with Supabase...");
+      console.log("Attempting to sign in with email:", values.email);
       
       // Try Supabase login first
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -34,19 +35,31 @@ export const useLoginForm = ({ onSuccess }: { onSuccess?: () => void }) => {
       
       if (error) {
         console.error("Supabase login error:", error);
+        toast.error(error.message || "Login failed. Please check your credentials.");
         
-        // If we have authContext, try Firebase next
+        // Try fallback methods if available
         if (authContext?.signIn) {
-          await authContext.signIn(values.email, values.password);
-        } else if (checkLocalAdminLogin(values.email, values.password)) {
-          // Fallback to local admin
+          try {
+            await authContext.signIn(values.email, values.password);
+            toast.success("Successfully logged in via Firebase!");
+            if (onSuccess) onSuccess();
+            return;
+          } catch (firebaseError: any) {
+            console.error("Firebase login error:", firebaseError);
+            setFirebaseError(firebaseError.message);
+          }
+        } 
+        
+        // Try local admin login as last resort
+        if (checkLocalAdminLogin(values.email, values.password)) {
           createLocalAdmin();
           toast.success("Successfully logged in as local admin");
           if (onSuccess) onSuccess();
           return;
-        } else {
-          throw new Error(error.message || "Login failed");
         }
+        
+        // If we reach here, all login methods failed
+        throw new Error(error.message || "Login failed");
       } else if (data.user) {
         // Successful Supabase login
         console.log("Successfully logged in with Supabase:", data.user);
