@@ -49,7 +49,13 @@ const Auth = () => {
           </CardHeader>
           
           <CardContent className="space-y-6">
-            <LoginForm onSuccess={handleLoginSuccess} />
+            <Button
+              onClick={handleLocalAdminLogin}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-medium"
+              disabled={isLoading}
+            >
+              One-Click Local Admin Login
+            </Button>
             
             <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">
@@ -57,19 +63,12 @@ const Auth = () => {
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-vision-dark-800 px-2 text-muted-foreground">
-                  Or continue with
+                  Or use form
                 </span>
               </div>
             </div>
             
-            <Button
-              onClick={handleLocalAdminLogin}
-              className="w-full bg-transparent hover:bg-gray-800 border border-gray-600"
-              variant="outline"
-              disabled={isLoading}
-            >
-              Continue with Local Admin
-            </Button>
+            <LoginForm onSuccess={handleLoginSuccess} />
           </CardContent>
           
           <CardFooter className="flex flex-col space-y-4">

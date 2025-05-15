@@ -75,7 +75,7 @@ export const LoginFormUI = ({
         </Button>
         
         <div className="text-center text-xs text-muted-foreground mt-2">
-          <p>Default login: admin@example.com / admin123</p>
+          <p className="font-semibold">Default login: admin@example.com / admin123</p>
         </div>
       </form>
     </Form>
@@ -89,6 +89,25 @@ export const FirebaseErrorAlert = ({ error }: { error: string | null }) => {
     <Alert className="mb-6 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300">
       <InfoIcon className="h-4 w-4" />
       <AlertTitle>Firebase Connection Error</AlertTitle>
+      <AlertDescription>
+        <p className="mb-2">{error}</p>
+        <p className="text-sm">You can use the local admin account below:</p>
+        <ul className="text-sm list-disc list-inside mt-1">
+          <li>Email: admin@example.com</li>
+          <li>Password: admin123</li>
+        </ul>
+      </AlertDescription>
+    </Alert>
+  );
+};
+
+export const SupabaseErrorAlert = ({ error }: { error: string | null }) => {
+  if (!error) return null;
+
+  return (
+    <Alert className="mb-6 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+      <InfoIcon className="h-4 w-4" />
+      <AlertTitle>Supabase Connection Error</AlertTitle>
       <AlertDescription>
         <p className="mb-2">{error}</p>
         <p className="text-sm">You can use the local admin account below:</p>

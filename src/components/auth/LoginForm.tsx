@@ -1,5 +1,5 @@
 
-import { LoginFormUI, FirebaseErrorAlert } from './LoginFormUI';
+import { LoginFormUI, FirebaseErrorAlert, SupabaseErrorAlert } from './LoginFormUI';
 import { useLoginForm } from './useLoginForm';
 
 type LoginFormProps = {
@@ -10,12 +10,14 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const {
     isSubmitting,
     firebaseError,
+    supabaseError,
     handleSubmit,
   } = useLoginForm({ onSuccess });
 
   return (
     <>
       {firebaseError && <FirebaseErrorAlert error={firebaseError} />}
+      {supabaseError && <SupabaseErrorAlert error={supabaseError} />}
 
       <LoginFormUI 
         onSubmit={handleSubmit} 
