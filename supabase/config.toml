@@ -13,3 +13,6 @@ name = "20250514000000_create_vision_hub_schema"
 
 [functions.send-test-email]
 verify_jwt = true
+
+[functions.data-migration]
+verify_jwt = true
