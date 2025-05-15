@@ -74,14 +74,15 @@ export function useToast() {
 // Create a standalone toast function with the same API as the hook
 // This is for when you don't want to use the hook
 export const toast = {
-  (title: string | ToastOptions, options?: ToastOptions): string | number {
+  // Default toast function
+  toast: (title: string | ToastOptions, options?: ToastOptions) => {
     if (typeof title === 'string') {
       return sonnerToast(title, options);
     } else {
-      // Title is actually an options object
       return sonnerToast(title.description || 'Notification');
     }
   },
+  // Utility methods
   error: (title: string | ToastOptions, options?: ToastOptions) => {
     if (typeof title === 'string') {
       return sonnerToast.error(title, options);
@@ -110,5 +111,5 @@ export const toast = {
       return sonnerToast.info(title.description || 'Information');
     }
   },
-  promise: sonnerToast.promise,
+  promise: sonnerToast.promise
 };
