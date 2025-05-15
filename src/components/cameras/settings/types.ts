@@ -9,7 +9,7 @@ export interface CameraSettingsProps {
 
 export interface SettingsSectionProps {
   cameraData: Camera;
-  handleChange: (field: keyof Camera, value: string | boolean | number) => void;
+  handleChange: (field: keyof Camera, value: string | boolean | number | string[]) => void;
   userRole?: 'superadmin' | 'admin' | 'operator' | 'user';
   disabled?: boolean;
 }

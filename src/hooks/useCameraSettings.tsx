@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Camera } from "@/types/camera";
 import { useToast } from "@/hooks/use-toast";
@@ -57,7 +56,7 @@ export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera
     return parts.every(part => part >= 0 && part <= 255);
   };
 
-  const handleChange = (field: keyof Camera, value: string | boolean | number) => {
+  const handleChange = (field: keyof Camera, value: string | boolean | number | string[]) => {
     setCameraData({
       ...cameraData,
       [field]: value
