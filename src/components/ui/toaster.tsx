@@ -1,25 +1,25 @@
 
-import * as React from "react"
+import * as React from "react";
 import {
   Toast,
   ToastClose,
   ToastDescription,
-  ToastProvider,
+  ToastProvider as RadixToastProvider,
   ToastTitle,
   ToastViewport,
-} from "@/components/ui/toast"
-import { useToast } from "@/hooks/use-toast"
-import { Toaster as SonnerToaster } from "sonner"
+} from "@/components/ui/toast";
+import { ToastProvider } from "@/hooks/toast-context";
+import { Toaster as SonnerToaster } from "sonner";
 
 export function Toaster() {
-  const { toast } = useToast()
-  
   return (
-    <>
-      <ToastProvider>
-        <ToastViewport />
-      </ToastProvider>
-      <SonnerToaster />
-    </>
-  )
+    <ToastProvider>
+      <>
+        <RadixToastProvider>
+          <ToastViewport />
+        </RadixToastProvider>
+        <SonnerToaster />
+      </>
+    </ToastProvider>
+  );
 }

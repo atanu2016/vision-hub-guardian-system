@@ -1,12 +1,13 @@
 
 import { useState, useEffect } from 'react';
 import { Notification } from '@/components/layout/NotificationDropdown';
-import { notify } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 const NOTIFICATIONS_STORAGE_KEY = 'vision-hub-notifications';
 
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { success, error, toast } = useToast();
 
   // Load notifications from storage on component mount
   useEffect(() => {
@@ -37,11 +38,11 @@ export const useNotifications = () => {
     
     // Also show a toast for real-time feedback
     if (notification.type === 'error') {
-      notify.error(notification.title);
+      error(notification.title, { description: notification.message });
     } else if (notification.type === 'success') {
-      notify.success(notification.title);
+      success(notification.title, { description: notification.message });
     } else {
-      notify({
+      toast({
         title: notification.title,
         description: notification.message
       });

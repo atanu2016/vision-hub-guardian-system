@@ -12,10 +12,10 @@ import NotFound from "@/pages/NotFound";
 import Admin from "@/pages/Admin";
 import ProfileSettings from "@/pages/ProfileSettings";
 import Notifications from "@/pages/Notifications";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster";
 import { useEffect } from "react";
 import { initializeSystem } from "@/data/mockData";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 
 function App() {
   // Initialize the system when the app starts
@@ -26,7 +26,8 @@ function App() {
         console.log("System initialized with database integration");
       } catch (error) {
         console.error("Failed to initialize system:", error);
-        toast("System Initialization Error", {
+        toast({
+          title: "System Initialization Error",
           description: "Failed to connect to the database"
         });
       }
