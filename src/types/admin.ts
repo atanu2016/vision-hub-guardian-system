@@ -10,3 +10,9 @@ export type UserData = {
   mfa_required: boolean;
   created_at: string;
 };
+
+export type MFASessionData = {
+  factorId: string | null;
+  qrCode: string | null;
+  verified: boolean;
+};
