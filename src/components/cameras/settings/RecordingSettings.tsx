@@ -8,9 +8,17 @@ import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
+import { QualityType, ScheduleType } from "@/types/camera";
 
-const RecordingSettings = ({ cameraData, handleChange }: SettingsSectionProps) => {
+const RecordingSettings = ({ cameraData, handleChange, userRole, disabled = false }: SettingsSectionProps) => {
   const [activeTab, setActiveTab] = useState("settings");
+  
+  // Set default values for the recording settings if they don't exist
+  const quality = cameraData.quality || "medium";
+  const scheduleType = cameraData.scheduleType || "always";
+  const timeStart = cameraData.timeStart || "00:00";
+  const timeEnd = cameraData.timeEnd || "23:59";
+  const daysOfWeek = cameraData.daysOfWeek || [];
   
   return (
     <Card className="shadow-md hover:shadow-lg transition-shadow">
@@ -38,6 +46,7 @@ const RecordingSettings = ({ cameraData, handleChange }: SettingsSectionProps) =
                     checked={!!cameraData.recording}
                     onCheckedChange={(checked) => handleChange('recording', checked)}
                     className="data-[state=checked]:bg-vision-blue"
+                    disabled={disabled}
                   />
                 </div>
                 
@@ -51,6 +60,7 @@ const RecordingSettings = ({ cameraData, handleChange }: SettingsSectionProps) =
                     checked={!!cameraData.motionDetection}
                     onCheckedChange={(checked) => handleChange('motionDetection', checked)}
                     className="data-[state=checked]:bg-vision-blue"
+                    disabled={disabled}
                   />
                 </div>
                 
@@ -58,8 +68,9 @@ const RecordingSettings = ({ cameraData, handleChange }: SettingsSectionProps) =
                   <Label htmlFor="quality" className="text-base font-medium">Recording Quality</Label>
                   <p className="text-sm text-muted-foreground mt-1 mb-3">Select the quality level for recordings</p>
                   <Select 
-                    value={cameraData.quality || "medium"}
-                    onValueChange={(value) => handleChange('quality', value)}
+                    value={quality}
+                    onValueChange={(value: QualityType) => handleChange('quality', value)}
+                    disabled={disabled}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select quality" />
@@ -98,8 +109,9 @@ const RecordingSettings = ({ cameraData, handleChange }: SettingsSectionProps) =
               <Label htmlFor="scheduleType" className="text-base font-medium">Recording Schedule Type</Label>
               <p className="text-sm text-muted-foreground mt-1 mb-3">When should recording be active</p>
               <Select 
-                value={cameraData.scheduleType || "always"} 
-                onValueChange={(value) => handleChange('scheduleType', value)}
+                value={scheduleType}
+                onValueChange={(value: ScheduleType) => handleChange('scheduleType', value)}
+                disabled={disabled}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select schedule type" />
@@ -113,7 +125,7 @@ const RecordingSettings = ({ cameraData, handleChange }: SettingsSectionProps) =
               </Select>
             </div>
             
-            {cameraData.scheduleType === 'custom' && (
+            {scheduleType === 'custom' && (
               <div className="space-y-4">
                 <div className="p-4 rounded-lg border border-border">
                   <h3 className="text-base font-medium mb-2">Custom Recording Hours</h3>
@@ -121,8 +133,9 @@ const RecordingSettings = ({ cameraData, handleChange }: SettingsSectionProps) =
                     <div>
                       <Label htmlFor="timeStart">Start Time</Label>
                       <Select 
-                        value={cameraData.timeStart || "00:00"} 
+                        value={timeStart}
                         onValueChange={(value) => handleChange('timeStart', value)}
+                        disabled={disabled}
                       >
                         <SelectTrigger id="timeStart">
                           <SelectValue placeholder="Start time" />
@@ -139,8 +152,9 @@ const RecordingSettings = ({ cameraData, handleChange }: SettingsSectionProps) =
                     <div>
                       <Label htmlFor="timeEnd">End Time</Label>
                       <Select 
-                        value={cameraData.timeEnd || "23:59"} 
+                        value={timeEnd}
                         onValueChange={(value) => handleChange('timeEnd', value)}
+                        disabled={disabled}
                       >
                         <SelectTrigger id="timeEnd">
                           <SelectValue placeholder="End time" />
@@ -165,9 +179,9 @@ const RecordingSettings = ({ cameraData, handleChange }: SettingsSectionProps) =
                       <div key={day} className="flex flex-col items-center">
                         <div className="mb-1">{day}</div>
                         <Switch 
-                          checked={(cameraData.daysOfWeek || []).includes(day.toLowerCase())}
+                          checked={daysOfWeek.includes(day.toLowerCase())}
                           onCheckedChange={(checked) => {
-                            const days = [...(cameraData.daysOfWeek || [])];
+                            const days = [...(daysOfWeek || [])];
                             const dayLower = day.toLowerCase();
                             
                             if (checked && !days.includes(dayLower)) {
@@ -179,6 +193,7 @@ const RecordingSettings = ({ cameraData, handleChange }: SettingsSectionProps) =
                             
                             handleChange('daysOfWeek', days);
                           }}
+                          disabled={disabled}
                         />
                       </div>
                     ))}
