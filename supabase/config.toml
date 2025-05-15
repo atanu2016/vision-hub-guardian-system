@@ -16,3 +16,4 @@ verify_jwt = true
 
 [functions.data-migration]
 verify_jwt = true
+

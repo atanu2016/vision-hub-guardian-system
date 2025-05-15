@@ -1,229 +1,342 @@
 
 import { useState } from 'react';
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { toast } from 'sonner';
-import { AlertTriangle, ArrowRightLeft, Loader2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Label } from '@/components/ui/label';
-import { 
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger
-} from '@/components/ui/accordion';
-import { ProgressBar } from '@/components/ui/progress-bar';
+import { supabase } from '@/integrations/supabase/client';
+import { Database, AlertCircle, CheckCircle } from 'lucide-react';
+import { toast } from 'sonner';
+
+// Form schema
+const formSchema = z.object({
+  apiKey: z.string().min(1, 'API Key is required'),
+  authDomain: z.string().min(1, 'Auth Domain is required'),
+  projectId: z.string().min(1, 'Project ID is required'),
+  storageBucket: z.string().optional(),
+  databaseURL: z.string().optional(),
+  serviceAccountJson: z.string().min(1, 'Service account JSON is required'),
+  migrateCameras: z.boolean().default(true),
+  migrateUsers: z.boolean().default(false),
+  migrateSettings: z.boolean().default(true),
+  migrateRecordings: z.boolean().default(false)
+});
 
 export default function FirebaseMigrationForm() {
-  const [projectId, setProjectId] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [serviceAccountJson, setServiceAccountJson] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [migrationStatus, setMigrationStatus] = useState<{
-    status: 'idle' | 'in-progress' | 'completed' | 'error';
-    message: string;
-    progress: number;
-    details: string[];
-  }>({
-    status: 'idle',
-    message: '',
-    progress: 0,
-    details: []
+  const [isLoading, setIsLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [migrationStatus, setMigrationStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
+  const [migrationDetails, setMigrationDetails] = useState<string | null>(null);
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      apiKey: '',
+      authDomain: '',
+      projectId: '',
+      storageBucket: '',
+      databaseURL: '',
+      serviceAccountJson: '',
+      migrateCameras: true,
+      migrateUsers: false,
+      migrateSettings: true,
+      migrateRecordings: false
+    }
   });
 
-  const handleSubmitMigration = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!projectId || !apiKey || !serviceAccountJson) {
-      toast.error('All fields are required for migration');
-      return;
-    }
-
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      setIsSubmitting(true);
-      setMigrationStatus({
-        status: 'in-progress',
-        message: 'Starting migration...',
-        progress: 5,
-        details: ['Preparing for migration...']
-      });
-
-      // Simulate steps of the migration process
-      await simulateMigrationStep('Connecting to Firebase...', 10);
-      await simulateMigrationStep('Validating credentials...', 20);
-      await simulateMigrationStep('Reading user data...', 30);
-      await simulateMigrationStep('Reading camera configurations...', 50);
-      await simulateMigrationStep('Reading settings data...', 70);
-      await simulateMigrationStep('Importing data to current system...', 90);
-      await simulateMigrationStep('Finalizing migration...', 100);
-
-      // In a real implementation, we would call the backend migration service here
-      // const response = await fetch('/api/migrate/firebase', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ projectId, apiKey, serviceAccountJson })
-      // });
-      // 
-      // if (!response.ok) {
-      //   const error = await response.json();
-      //   throw new Error(error.message || 'Migration failed');
-      // }
-
-      setMigrationStatus({
-        status: 'completed',
-        message: 'Migration completed successfully',
-        progress: 100,
-        details: [...migrationStatus.details, 'Migration completed successfully!']
-      });
+      if (!confirm('This operation will migrate data from Firebase to your current Supabase instance. This may override existing data. Are you sure you want to continue?')) {
+        return;
+      }
       
-      toast.success('Firebase migration completed successfully');
-    } catch (error: any) {
-      console.error('Migration error:', error);
-      setMigrationStatus({
-        status: 'error',
-        message: `Migration failed: ${error.message}`,
-        progress: 0,
-        details: [...migrationStatus.details, `Error: ${error.message}`]
-      });
-      toast.error(`Migration failed: ${error.message}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+      setIsLoading(true);
+      setProgress(0);
+      setMigrationStatus('running');
+      setMigrationDetails(null);
 
-  // Helper function to simulate migration steps with delays
-  const simulateMigrationStep = async (message: string, progress: number) => {
-    return new Promise<void>(resolve => {
+      // Call the edge function for migration
+      const { data, error } = await supabase.functions.invoke('data-migration', {
+        body: {
+          source: 'firebase',
+          config: {
+            apiKey: values.apiKey,
+            authDomain: values.authDomain,
+            projectId: values.projectId,
+            storageBucket: values.storageBucket,
+            databaseURL: values.databaseURL,
+            serviceAccountJson: values.serviceAccountJson,
+          },
+          options: {
+            migrateCameras: values.migrateCameras,
+            migrateUsers: values.migrateUsers,
+            migrateSettings: values.migrateSettings,
+            migrateRecordings: values.migrateRecordings,
+          }
+        }
+      });
+
+      if (error) {
+        throw new Error(`Migration error: ${error.message}`);
+      }
+
+      // Simulate progress (real progress would come from webhook callbacks)
+      const progressInterval = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 100) {
+            clearInterval(progressInterval);
+            return 100;
+          }
+          return prev + 5;
+        });
+      }, 1000);
+
+      // Wait for migration to complete (this would normally happen asynchronously)
       setTimeout(() => {
-        setMigrationStatus(prev => ({
-          ...prev,
-          progress,
-          message,
-          details: [...prev.details, message]
-        }));
-        resolve();
-      }, 1000); // Simulate each step taking 1 second
-    });
+        clearInterval(progressInterval);
+        setProgress(100);
+        setMigrationStatus('success');
+        setMigrationDetails(data?.message || 'Migration completed successfully');
+        toast.success('Firebase migration complete!', {
+          description: `Successfully migrated the selected data from Firebase`
+        });
+      }, 20000);
+
+    } catch (error: any) {
+      console.error('Firebase migration error:', error);
+      setMigrationStatus('error');
+      setMigrationDetails(error.message);
+      toast.error('Migration failed', {
+        description: error.message
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="space-y-6">
-      <Alert className="bg-amber-500/20 border-amber-500/50">
-        <AlertTriangle className="h-4 w-4 text-amber-500" />
-        <AlertTitle>Firebase Migration Tool</AlertTitle>
-        <AlertDescription>
-          This tool will migrate data from a Firebase project to your current system. 
-          You'll need Firebase credentials with appropriate permissions.
-        </AlertDescription>
-      </Alert>
-
-      {migrationStatus.status === 'in-progress' && (
+      {migrationStatus === 'running' && (
         <div className="space-y-4">
-          <p className="font-medium">{migrationStatus.message}</p>
-          <ProgressBar value={migrationStatus.progress} />
-          <div className="text-sm text-muted-foreground max-h-40 overflow-y-auto border rounded p-2">
-            {migrationStatus.details.map((detail, index) => (
-              <div key={index} className="py-1 border-b border-muted last:border-0">
-                {detail}
-              </div>
-            ))}
+          <div className="flex items-center justify-between">
+            <p>Migration in progress...</p>
+            <span>{progress}%</span>
           </div>
+          <Progress value={progress} />
         </div>
       )}
 
-      {migrationStatus.status === 'completed' && (
-        <Alert className="bg-green-500/20 border-green-500/50">
-          <AlertTitle>Migration Completed</AlertTitle>
-          <AlertDescription>
-            Your Firebase data has been successfully migrated.
-          </AlertDescription>
+      {migrationStatus === 'success' && (
+        <Alert className="border-green-500 bg-green-500/10">
+          <CheckCircle className="h-4 w-4 text-green-500" />
+          <AlertTitle>Migration completed</AlertTitle>
+          <AlertDescription>{migrationDetails}</AlertDescription>
         </Alert>
       )}
 
-      {migrationStatus.status === 'error' && (
-        <Alert className="bg-red-500/20 border-red-500/50">
-          <AlertTitle>Migration Failed</AlertTitle>
-          <AlertDescription>
-            {migrationStatus.message}
-          </AlertDescription>
+      {migrationStatus === 'error' && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Migration failed</AlertTitle>
+          <AlertDescription>{migrationDetails}</AlertDescription>
         </Alert>
       )}
 
-      <form onSubmit={handleSubmitMigration} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="projectId">Firebase Project ID</Label>
-          <Input
-            id="projectId"
-            placeholder="my-project-123"
-            value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
-            required
-            disabled={isSubmitting || migrationStatus.status === 'in-progress'}
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="apiKey"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Firebase API Key</FormLabel>
+                  <FormControl>
+                    <Input placeholder="AIzaSyA..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="projectId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Firebase Project ID</FormLabel>
+                  <FormControl>
+                    <Input placeholder="my-project-id" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="authDomain"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Firebase Auth Domain</FormLabel>
+                  <FormControl>
+                    <Input placeholder="my-project.firebaseapp.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="storageBucket"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Firebase Storage Bucket (optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="my-project.appspot.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="databaseURL"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Firebase Database URL (optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://my-project.firebaseio.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <FormField
+            control={form.control}
+            name="serviceAccountJson"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Firebase Service Account JSON</FormLabel>
+                <FormControl>
+                  <Textarea 
+                    placeholder="{...}" 
+                    {...field} 
+                    className="font-mono h-32"
+                  />
+                </FormControl>
+                <FormDescription>
+                  Paste your Firebase service account JSON credentials here
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="apiKey">Firebase API Key</Label>
-          <Input
-            id="apiKey"
-            type="password"
-            placeholder="API Key"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            required
-            disabled={isSubmitting || migrationStatus.status === 'in-progress'}
-          />
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="serviceAccountJson">Firebase Service Account JSON</Label>
-          <Textarea
-            id="serviceAccountJson"
-            placeholder="Paste your service account JSON here"
-            value={serviceAccountJson}
-            onChange={(e) => setServiceAccountJson(e.target.value)}
-            rows={5}
-            required
-            disabled={isSubmitting || migrationStatus.status === 'in-progress'}
-          />
-        </div>
-        
-        <Accordion type="single" collapsible className="w-full">
-          <AccordionItem value="instructions">
-            <AccordionTrigger className="text-sm">
-              How to get Firebase credentials
-            </AccordionTrigger>
-            <AccordionContent>
-              <ol className="list-decimal ml-4 space-y-2 text-sm text-muted-foreground">
-                <li>Go to the Firebase console</li>
-                <li>Select your project</li>
-                <li>Go to Project settings</li>
-                <li>Under "General" tab, find your Project ID</li>
-                <li>Under "Service accounts" tab, click "Generate new private key" to get your service account JSON</li>
-                <li>Under "Web API Key" in the "General" tab, you'll find your API key</li>
-              </ol>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-        
-        <Button 
-          type="submit" 
-          className="w-full"
-          disabled={isSubmitting || migrationStatus.status === 'in-progress'}
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Migrating...
-            </>
-          ) : (
-            <>
-              <ArrowRightLeft className="mr-2 h-4 w-4" />
-              Start Firebase Migration
-            </>
-          )}
-        </Button>
-      </form>
+
+          <div className="bg-muted/50 p-4 rounded-md space-y-4 border">
+            <h3 className="font-semibold">Data to Migrate</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="migrateCameras"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox 
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Camera data</FormLabel>
+                      <FormDescription>
+                        Camera configurations and settings
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="migrateUsers"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox 
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>User accounts</FormLabel>
+                      <FormDescription>
+                        User profiles and authentication data
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="migrateSettings"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox 
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>System settings</FormLabel>
+                      <FormDescription>
+                        Storage, recording, and alert configurations
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="migrateRecordings"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox 
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Recording data</FormLabel>
+                      <FormDescription>
+                        Video recordings and events (may take longer)
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+
+          <Button type="submit" disabled={isLoading || migrationStatus === 'running'} className="w-full">
+            {isLoading ? 'Starting Migration...' : 'Start Firebase Data Migration'}
+          </Button>
+        </form>
+      </Form>
     </div>
   );
 }

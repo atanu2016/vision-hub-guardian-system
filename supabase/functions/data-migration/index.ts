@@ -1,180 +1,143 @@
 
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+// Follow Deno Edge Function conventions
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
-interface FirebaseMigrationPayload {
-  type: 'firebase';
-  projectId: string;
+interface FirebaseMigrationConfig {
   apiKey: string;
+  authDomain: string;
+  projectId: string;
+  storageBucket?: string;
+  databaseURL?: string;
   serviceAccountJson: string;
 }
 
-interface SupabaseMigrationPayload {
-  type: 'supabase';
+interface SupabaseMigrationConfig {
   url: string;
-  anonKey: string;
-  serviceKey: string;
+  key: string;
+  database?: string;
+  schema?: string;
 }
 
-type MigrationPayload = FirebaseMigrationPayload | SupabaseMigrationPayload;
+interface MigrationOptions {
+  migrateCameras?: boolean;
+  migrateUsers?: boolean;
+  migrateSettings?: boolean;
+  migrateRecordings?: boolean;
+}
 
-serve(async (req) => {
+interface RequestBody {
+  source: 'firebase' | 'supabase' | 'mysql';
+  config: FirebaseMigrationConfig | SupabaseMigrationConfig;
+  options: MigrationOptions;
+}
+
+serve(async (req: Request) => {
   try {
-    // CORS headers
-    const headers = {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    };
-
-    // Handle preflight OPTIONS request
-    if (req.method === "OPTIONS") {
-      return new Response(null, { headers, status: 204 });
-    }
-
-    // Only allow POST
-    if (req.method !== "POST") {
-      return new Response(JSON.stringify({ error: "Method not allowed" }), {
-        headers,
+    // Only process POST requests
+    if (req.method !== 'POST') {
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), {
         status: 405,
+        headers: { 'Content-Type': 'application/json' },
       });
     }
-
-    // Get current environment
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-    // Create Supabase client with service role key
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Parse request body
-    const requestData = await req.json() as MigrationPayload;
+    const requestBody: RequestBody = await req.json();
+    const { source, config, options } = requestBody;
 
-    // Log the start of migration
-    await supabase.from('system_logs').insert({
-      level: 'info',
-      source: 'data-migration',
-      message: `Starting ${requestData.type} migration`,
-      details: JSON.stringify({
-        type: requestData.type,
-        timestamp: new Date().toISOString()
-      })
-    });
+    // Add logging
+    console.log(`Starting migration from ${source}`);
+    console.log(`Migration options:`, JSON.stringify(options));
 
-    // Based on migration type, handle accordingly
-    let migrationResult;
-    if (requestData.type === 'firebase') {
-      migrationResult = await handleFirebaseMigration(requestData, supabase);
-    } else if (requestData.type === 'supabase') {
-      migrationResult = await handleSupabaseMigration(requestData, supabase);
-    } else {
-      throw new Error('Invalid migration type');
+    // Validate required fields based on source
+    if (source === 'firebase') {
+      const firebaseConfig = config as FirebaseMigrationConfig;
+      if (!firebaseConfig.apiKey || !firebaseConfig.projectId || !firebaseConfig.authDomain || !firebaseConfig.serviceAccountJson) {
+        return new Response(JSON.stringify({ error: 'Missing required Firebase configuration' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    } else if (source === 'supabase') {
+      const supabaseConfig = config as SupabaseMigrationConfig;
+      if (!supabaseConfig.url || !supabaseConfig.key) {
+        return new Response(JSON.stringify({ error: 'Missing required Supabase configuration' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
     }
 
-    // Log completion
-    await supabase.from('system_logs').insert({
-      level: 'info',
-      source: 'data-migration',
-      message: `Migration completed successfully`,
-      details: JSON.stringify({
-        type: requestData.type,
-        timestamp: new Date().toISOString(),
-        result: migrationResult
-      })
-    });
+    // In a real implementation, start a background task with EdgeRuntime.waitUntil()
+    // for the actual migration process, which would communicate progress via webhooks
+    
+    // Mock implementation for demonstration purposes:
+    // Normally, you would connect to Firebase, fetch data, and import it into Supabase
+    
+    // Execute the migration
+    const migrationResult = await performMigration(source, config, options);
 
-    return new Response(JSON.stringify({ 
-      success: true, 
-      message: "Migration completed successfully",
-      data: migrationResult
-    }), { 
-      headers, 
-      status: 200 
+    return new Response(JSON.stringify({
+      status: 'started',
+      message: 'Migration process has been initiated',
+      jobId: crypto.randomUUID(),
+      estimatedTime: '2-5 minutes',
+      details: migrationResult
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error("Error in migration:", error.message);
+    console.error('Migration error:', error);
     
-    // Try to log the error if we can
-    try {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      
-      await supabase.from('system_logs').insert({
-        level: 'error',
-        source: 'data-migration',
-        message: `Migration failed: ${error.message}`,
-        details: JSON.stringify({
-          error: error.message,
-          stack: error.stack,
-          timestamp: new Date().toISOString()
-        })
-      });
-    } catch (logError) {
-      console.error("Failed to log error:", logError);
-    }
-    
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: error.message 
-    }), { 
-      headers: { "Content-Type": "application/json" }, 
-      status: 500 
+    return new Response(JSON.stringify({
+      error: error.message || 'Unknown error occurred during migration',
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 });
 
-// Firebase migration handler (placeholder)
-async function handleFirebaseMigration(
-  payload: FirebaseMigrationPayload, 
-  supabase: any
-) {
-  // This would contain the actual Firebase migration logic
-  // For now, we'll simulate it with a delay
+// Mock function to simulate migration process
+async function performMigration(
+  source: string, 
+  config: FirebaseMigrationConfig | SupabaseMigrationConfig,
+  options: MigrationOptions
+): Promise<string> {
+  // In a real implementation, this would:
+  // 1. Connect to the source database
+  // 2. Extract the data
+  // 3. Transform it as needed
+  // 4. Load it into Supabase
+  
+  // This is a placeholder/mock implementation
+  const migrationSteps = [];
+  
+  if (options.migrateCameras) {
+    // Simulate camera migration
+    migrationSteps.push("• Cameras and camera groups migrated");
+  }
+  
+  if (options.migrateUsers) {
+    // Simulate user migration
+    migrationSteps.push("• User accounts and profiles migrated");
+  }
+  
+  if (options.migrateSettings) {
+    // Simulate settings migration
+    migrationSteps.push("• System settings migrated");
+    migrationSteps.push("• Recording configurations migrated");
+    migrationSteps.push("• Alert settings migrated");
+  }
+  
+  if (options.migrateRecordings) {
+    // Simulate recordings migration
+    migrationSteps.push("• Recording data migrated");
+  }
+  
+  // Add a delay to simulate processing time
   await new Promise(resolve => setTimeout(resolve, 2000));
   
-  // In a real implementation, you would:
-  // 1. Validate Firebase credentials
-  // 2. Connect to Firebase using the provided credentials
-  // 3. Fetch data from Firebase collections (users, cameras, settings, etc.)
-  // 4. Transform data to match your Supabase schema
-  // 5. Import data into your Supabase tables
-  // 6. Handle any conflicts and validate the data
-  
-  return {
-    migrated: true,
-    tables: ['users', 'cameras', 'settings'],
-    records: {
-      users: 5,
-      cameras: 10,
-      settings: 12
-    }
-  };
-}
-
-// Supabase migration handler (placeholder)
-async function handleSupabaseMigration(
-  payload: SupabaseMigrationPayload,
-  destinationSupabase: any
-) {
-  // This would contain the actual Supabase migration logic
-  // For now, we'll simulate it with a delay
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  
-  // In a real implementation, you would:
-  // 1. Create a new Supabase client for the source project
-  // 2. Fetch data from source tables
-  // 3. Import data into destination tables
-  // 4. Handle any conflicts and validate the data
-  
-  return {
-    migrated: true,
-    tables: ['users', 'cameras', 'settings'],
-    records: {
-      users: 8,
-      cameras: 15,
-      settings: 20
-    }
-  };
+  return `Migration from ${source} completed successfully:\n${migrationSteps.join('\n')}`;
 }

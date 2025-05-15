@@ -221,6 +221,8 @@ export type Database = {
           full_name: string | null
           id: string
           is_admin: boolean | null
+          mfa_enrolled: boolean | null
+          mfa_required: boolean | null
           updated_at: string | null
         }
         Insert: {
@@ -228,6 +230,8 @@ export type Database = {
           full_name?: string | null
           id: string
           is_admin?: boolean | null
+          mfa_enrolled?: boolean | null
+          mfa_required?: boolean | null
           updated_at?: string | null
         }
         Update: {
@@ -235,6 +239,8 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_admin?: boolean | null
+          mfa_enrolled?: boolean | null
+          mfa_required?: boolean | null
           updated_at?: string | null
         }
         Relationships: []
@@ -431,6 +437,30 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       webhooks: {
         Row: {
           active: boolean
@@ -466,13 +496,56 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_role: {
+        Args: { _user_id?: string }
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
+      gtrgm_compress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_decompress: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_in: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      gtrgm_options: {
+        Args: { "": unknown }
+        Returns: undefined
+      }
+      gtrgm_out: {
+        Args: { "": unknown }
+        Returns: unknown
+      }
+      has_role: {
+        Args: {
+          _user_id: string
+          _role: Database["public"]["Enums"]["user_role"]
+        }
+        Returns: boolean
+      }
       is_admin: {
         Args: { user_id?: string }
         Returns: boolean
       }
+      set_limit: {
+        Args: { "": number }
+        Returns: number
+      }
+      show_limit: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      show_trgm: {
+        Args: { "": string }
+        Returns: string[]
+      }
     }
     Enums: {
-      [_ in never]: never
+      user_role: "superadmin" | "admin" | "operator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -587,6 +660,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_role: ["superadmin", "admin", "operator", "user"],
+    },
   },
 } as const

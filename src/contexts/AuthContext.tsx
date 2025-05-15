@@ -5,21 +5,29 @@ import { Session, User } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/components/ui/sonner';
 
+export type UserRole = 'superadmin' | 'admin' | 'operator' | 'user';
+
 export type Profile = {
   id: string;
   full_name: string | null;
   is_admin: boolean;
+  mfa_enrolled: boolean;
+  mfa_required: boolean;
 };
 
 type AuthContextType = {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
+  role: UserRole;
   isLoading: boolean;
   isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  requiresMFA: boolean;
+  isSuperAdmin: boolean;
+  isOperator: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,6 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [role, setRole] = useState<UserRole>('user');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const navigate = useNavigate();
 
@@ -41,11 +50,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Reset profile when signing out
         if (event === 'SIGNED_OUT') {
           setProfile(null);
+          setRole('user');
         }
 
         // Fetch user profile when signed in
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && currentSession?.user) {
           fetchUserProfile(currentSession.user.id);
+          fetchUserRole(currentSession.user.id);
         }
       }
     );
@@ -57,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (currentSession?.user) {
         fetchUserProfile(currentSession.user.id);
+        fetchUserRole(currentSession.user.id);
       }
       
       setIsLoading(false);
@@ -71,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, is_admin')
+        .select('id, full_name, is_admin, mfa_enrolled, mfa_required')
         .eq('id', userId)
         .single();
 
@@ -79,6 +91,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(data as Profile);
     } catch (error) {
       console.error('Error fetching user profile:', error);
+    }
+  };
+
+  const fetchUserRole = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) throw error;
+      
+      if (data) {
+        setRole(data.role as UserRole);
+      } else {
+        // Default to 'user' if no role is assigned
+        setRole('user');
+      }
+    } catch (error) {
+      console.error('Error fetching user role:', error);
+      setRole('user'); // Default to regular user on error
     }
   };
 
@@ -122,17 +156,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const requiresMFA = !!(profile?.mfa_required && !profile?.mfa_enrolled);
+  const isAdmin = role === 'admin' || role === 'superadmin' || !!profile?.is_admin;
+  const isSuperAdmin = role === 'superadmin';
+  const isOperator = role === 'operator' || isAdmin;
+
   return (
     <AuthContext.Provider
       value={{
         session,
         user,
         profile,
+        role,
         isLoading,
-        isAdmin: !!profile?.is_admin,
+        isAdmin,
+        isSuperAdmin,
+        isOperator,
         signIn,
         signOut,
         resetPassword,
+        requiresMFA,
       }}
     >
       {children}
