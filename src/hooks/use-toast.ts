@@ -1,9 +1,20 @@
 
-// Implement toast functionality
-import { toast as sonnerToast, type Toast as SonnerToast } from "sonner";
+// Implement toast functionality with proper hooks pattern
+import { toast as sonnerToast } from "sonner";
 
-// Export the toast function
+// Re-export the toast function from sonner
 export const toast = sonnerToast;
 
-// Re-export the toast type
-export type Toast = SonnerToast;
+// Create a custom useToast hook
+export function useToast() {
+  return { toast };
+}
+
+// Export toast type
+export type Toast = {
+  id: string | number;
+  title?: string;
+  description?: string;
+  action?: React.ReactNode;
+  variant?: "default" | "destructive";
+};

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Camera } from "@/types/camera";
 import { Button } from "@/components/ui/button";
@@ -30,17 +29,12 @@ const CameraSettings = ({ camera, onSave }: CameraSettingsProps) => {
     setIsLoading(true);
     try {
       onSave(cameraData);
-      toast({
-        title: "Settings saved",
+      toast("Settings saved", {
         description: "Camera settings have been updated successfully."
       });
     } catch (error) {
       console.error("Error saving camera settings:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save camera settings. Please try again.",
-        variant: "destructive"
-      });
+      toast.error("Failed to save camera settings. Please try again.");
     } finally {
       setIsLoading(false);
     }

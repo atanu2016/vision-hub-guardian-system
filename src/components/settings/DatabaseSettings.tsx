@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -87,11 +86,7 @@ export function DatabaseSettings() {
         connected: false,
         version: 'Unknown',
       }));
-      toast({
-        title: "Connection Error",
-        description: "Could not connect to database.",
-        variant: "destructive"
-      });
+      toast.error("Could not connect to database.");
     } finally {
       setLoading(false);
     }

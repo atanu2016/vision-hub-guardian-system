@@ -27,7 +27,7 @@ import { useState, useEffect } from "react";
 import AddCameraModal from "@/components/cameras/AddCameraModal";
 import { Camera } from "@/types/camera";
 import { getCameras, saveCamera } from "@/data/mockData";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { NotificationDropdown } from "./NotificationDropdown";
 import { useNotifications } from "@/hooks/useNotifications";
 

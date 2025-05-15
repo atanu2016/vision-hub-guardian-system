@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { Camera, CameraConnectionType, CameraStatus } from "@/types/camera";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -53,11 +52,7 @@ const AddCameraModal = ({ isOpen, onClose, onAdd, existingGroups }: AddCameraMod
 
     // Basic validation
     if (!name || !location) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
+      toast.error("Please fill in all required fields");
       return;
     }
 
@@ -126,11 +121,7 @@ const AddCameraModal = ({ isOpen, onClose, onAdd, existingGroups }: AddCameraMod
     if (group === "new" && newGroupName) {
       finalGroup = newGroupName.trim();
     } else if (group === "new" && !newGroupName) {
-      toast({
-        title: "Validation Error",
-        description: "Please provide a name for the new group",
-        variant: "destructive",
-      });
+      toast.error("Please provide a name for the new group");
       return;
     }
 
@@ -160,18 +151,13 @@ const AddCameraModal = ({ isOpen, onClose, onAdd, existingGroups }: AddCameraMod
       };
 
       onAdd(newCamera);
-      toast({
-        title: "Camera Added Successfully",
-        description: `${name} has been added to ${finalGroup}`,
+      toast("Camera Added Successfully", {
+        description: `${name} has been added to ${finalGroup}`
       });
       resetForm();
       onClose();
     } catch (error) {
-      toast({
-        title: "Connection Failed",
-        description: "Could not connect to camera. Check credentials and try again.",
-        variant: "destructive",
-      });
+      toast.error("Could not connect to camera. Check credentials and try again.");
     } finally {
       setIsVerifying(false);
     }

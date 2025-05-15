@@ -1,11 +1,10 @@
-
 import { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 import { setupCameraStream } from "@/services/apiService";
 import { Camera } from "@/types/camera";
 import { Button } from "@/components/ui/button";
 import { PlayCircle, PauseCircle, Volume2, VolumeX } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 
 interface CameraStreamPlayerProps {
   camera: Camera;
@@ -75,11 +74,7 @@ const CameraStreamPlayer = ({ camera, autoPlay = true, className = "" }: CameraS
                 setError("Stream unavailable");
                 
                 if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                  toast({
-                    title: "Network Error",
-                    description: "Unable to load the camera stream due to network issues.",
-                    variant: "destructive",
-                  });
+                  toast.error("Unable to load the camera stream due to network issues.");
                 }
                 
                 // Try to recover on fatal errors
@@ -160,7 +155,7 @@ const CameraStreamPlayer = ({ camera, autoPlay = true, className = "" }: CameraS
     return () => {
       cleanup();
     };
-  }, [camera, toast, isPlaying]);
+  }, [camera, isPlaying]);
   
   const togglePlay = () => {
     if (!videoRef.current) return;
@@ -170,11 +165,7 @@ const CameraStreamPlayer = ({ camera, autoPlay = true, className = "" }: CameraS
     } else {
       videoRef.current.play().catch(e => {
         console.warn("Play prevented:", e);
-        toast({
-          title: "Playback Error",
-          description: "Unable to play the video. Please try again.",
-          variant: "destructive",
-        });
+        toast.error("Unable to play the video. Please try again.");
       });
     }
     
