@@ -84,10 +84,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error, data } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      
+      // The navigation will happen automatically in the Auth component
+      // when the user state changes due to the onAuthStateChange listener
       toast.success('Successfully signed in');
-      navigate('/');
     } catch (error: any) {
       toast.error(error.message || 'Error signing in');
       throw error;
@@ -98,6 +100,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      
+      // Navigate after successful sign out
       navigate('/auth');
       toast.success('Successfully signed out');
     } catch (error: any) {

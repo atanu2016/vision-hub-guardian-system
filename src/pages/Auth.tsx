@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
@@ -26,6 +26,10 @@ const Auth = () => {
   const { signIn, resetPassword, user, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('login');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const location = useLocation();
+  
+  // Get the return path from location state, or default to '/'
+  const from = location.state?.from || '/';
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -41,6 +45,9 @@ const Auth = () => {
     setIsSubmitting(true);
     try {
       await signIn(values.email, values.password);
+      // No need to navigate here as it's handled in AuthContext
+    } catch (error) {
+      console.error('Login error:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -64,7 +71,8 @@ const Auth = () => {
   }
   
   if (user) {
-    return <Navigate to="/" />;
+    // Redirect to the page they were trying to access, or home
+    return <Navigate to={from} replace />;
   }
 
   return (

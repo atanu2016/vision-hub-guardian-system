@@ -20,14 +20,17 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
     );
   }
 
+  // If no user is logged in, redirect to the auth page
   if (!user) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+    return <Navigate to="/auth" state={{ from: location.pathname }} replace />;
   }
 
+  // If admin access is required but user is not an admin, redirect to home
   if (requireAdmin && !isAdmin) {
     return <Navigate to="/" replace />;
   }
 
+  // User is authenticated (and is admin if required), allow access to the route
   return <>{children}</>;
 };
 
