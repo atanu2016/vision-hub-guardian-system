@@ -11,7 +11,7 @@ import { Camera } from "@/types/camera";
 import { useToast } from "@/hooks/use-toast";
 import CameraStreamPlayer from "@/components/cameras/CameraStreamPlayer";
 import CameraSettings from "@/components/cameras/CameraSettings";
-import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -32,7 +32,7 @@ const CameraDetail = () => {
   const [activeTab, setActiveTab] = useState("live");
   const [showSettings, setShowSettings] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const { toast: hookToast } = useToast();
+  const { toast } = useToast();
   
   useEffect(() => {
     const fetchCamera = async () => {
@@ -43,11 +43,11 @@ const CameraDetail = () => {
         if (foundCamera) {
           setCamera(foundCamera);
         } else {
-          hookToast.error("The requested camera could not be found.");
+          toast.error("The requested camera could not be found.");
         }
       } catch (error) {
         console.error("Error fetching camera:", error);
-        hookToast.error("Could not load camera details. Please try again.");
+        toast.error("Could not load camera details. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -62,12 +62,12 @@ const CameraDetail = () => {
   
   const handleTakeSnapshot = () => {
     if (!isStreaming || camera?.status !== 'online') {
-      hookToast.error("Camera must be online and streaming to take a snapshot.");
+      toast.error("Camera must be online and streaming to take a snapshot.");
       return;
     }
 
     // Implementation would capture a frame from the video
-    hookToast.success("Screenshot saved to recordings folder.");
+    toast.success("Screenshot saved to recordings folder.");
   };
 
   const handleSaveSettings = async (updatedCamera: Camera) => {
@@ -75,10 +75,10 @@ const CameraDetail = () => {
       await saveCamera(updatedCamera);
       setCamera(updatedCamera);
       setShowSettings(false);
-      hookToast.success("Camera settings updated successfully.");
+      toast.success("Camera settings updated successfully.");
     } catch (error) {
       console.error("Error saving camera settings:", error);
-      hookToast.error("Failed to save camera settings.");
+      toast.error("Failed to save camera settings.");
     }
   };
   
@@ -87,11 +87,11 @@ const CameraDetail = () => {
     
     try {
       await deleteCamera(camera.id);
-      hookToast.success("Camera has been successfully deleted.");
+      toast.success("Camera has been successfully deleted.");
       navigate('/');
     } catch (error) {
       console.error("Error deleting camera:", error);
-      hookToast.error("Failed to delete camera.");
+      toast.error("Failed to delete camera.");
     }
   };
   
@@ -296,11 +296,7 @@ const CameraDetail = () => {
                         videoElement.requestFullscreen();
                       } 
                     } else {
-                      hookToast({
-                        title: "Full screen error",
-                        description: "Unable to enter full screen mode.",
-                        variant: "destructive",
-                      });
+                      toast.error("Unable to enter full screen mode.");
                     }
                   }}
                   disabled={!isOnline}
@@ -319,7 +315,7 @@ const CameraDetail = () => {
                     
                     setCamera(updatedCamera);
                     saveCamera(updatedCamera).then(() => {
-                      hookToast(updatedCamera.recording ? "Recording started" : "Recording stopped", {
+                      toast(updatedCamera.recording ? "Recording started" : "Recording stopped", {
                         description: updatedCamera.recording ? 
                           "Camera has started recording." : 
                           "Camera recording has been stopped.",
