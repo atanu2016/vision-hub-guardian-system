@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -84,7 +84,7 @@ export function DatabaseSettings() {
           'camera_recording_status', 
           'alert_settings',
           'advanced_settings'
-        ] as const;
+        ];
         
         // Use Promise.all to check if each table exists
         const tableChecks = await Promise.all(
@@ -535,72 +535,68 @@ export function DatabaseSettings() {
                 <Label htmlFor="smtpEnabled">Enable Email Notifications</Label>
               </div>
 
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="smtpServer">SMTP Server</Label>
-                    <Input 
-                      id="smtpServer" 
-                      value={smtpConfig.server} 
-                      onChange={(e) => setSmtpConfig({...smtpConfig, server: e.target.value})}
-                      placeholder="smtp.example.com"
-                      disabled={!smtpConfig.enabled}
-                    />
+              {smtpConfig.enabled && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="smtpServer">SMTP Server</Label>
+                      <Input 
+                        id="smtpServer" 
+                        value={smtpConfig.server} 
+                        onChange={(e) => setSmtpConfig({...smtpConfig, server: e.target.value})}
+                        placeholder="smtp.example.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="smtpPort">Port</Label>
+                      <Input 
+                        id="smtpPort" 
+                        value={smtpConfig.port} 
+                        onChange={(e) => setSmtpConfig({...smtpConfig, port: e.target.value})}
+                        placeholder="587"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="smtpUsername">Username</Label>
+                      <Input 
+                        id="smtpUsername" 
+                        value={smtpConfig.username} 
+                        onChange={(e) => setSmtpConfig({...smtpConfig, username: e.target.value})}
+                        placeholder="user@example.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="smtpPassword">Password</Label>
+                      <Input 
+                        id="smtpPassword" 
+                        type="password"
+                        value={smtpConfig.password} 
+                        onChange={(e) => setSmtpConfig({...smtpConfig, password: e.target.value})}
+                        placeholder="••••••••"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="smtpPort">Port</Label>
+                    <Label htmlFor="fromEmail">From Email Address</Label>
                     <Input 
-                      id="smtpPort" 
-                      value={smtpConfig.port} 
-                      onChange={(e) => setSmtpConfig({...smtpConfig, port: e.target.value})}
-                      placeholder="587"
-                      disabled={!smtpConfig.enabled}
+                      id="fromEmail" 
+                      value={smtpConfig.fromEmail} 
+                      onChange={(e) => setSmtpConfig({...smtpConfig, fromEmail: e.target.value})}
+                      placeholder="notifications@yourapp.com"
                     />
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="smtpUsername">Username</Label>
-                    <Input 
-                      id="smtpUsername" 
-                      value={smtpConfig.username} 
-                      onChange={(e) => setSmtpConfig({...smtpConfig, username: e.target.value})}
-                      placeholder="user@example.com"
-                      disabled={!smtpConfig.enabled}
+                  <div className="flex items-center space-x-2">
+                    <Switch 
+                      id="useSsl" 
+                      checked={smtpConfig.useSsl} 
+                      onCheckedChange={(checked) => setSmtpConfig({...smtpConfig, useSsl: checked})}
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="smtpPassword">Password</Label>
-                    <Input 
-                      id="smtpPassword" 
-                      type="password"
-                      value={smtpConfig.password} 
-                      onChange={(e) => setSmtpConfig({...smtpConfig, password: e.target.value})}
-                      placeholder="••••••••"
-                      disabled={!smtpConfig.enabled}
-                    />
+                    <Label htmlFor="useSsl">Use SSL/TLS</Label>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="fromEmail">From Email Address</Label>
-                  <Input 
-                    id="fromEmail" 
-                    value={smtpConfig.fromEmail} 
-                    onChange={(e) => setSmtpConfig({...smtpConfig, fromEmail: e.target.value})}
-                    placeholder="notifications@yourapp.com"
-                    disabled={!smtpConfig.enabled}
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Switch 
-                    id="useSsl" 
-                    checked={smtpConfig.useSsl} 
-                    onCheckedChange={(checked) => setSmtpConfig({...smtpConfig, useSsl: checked})}
-                    disabled={!smtpConfig.enabled}
-                  />
-                  <Label htmlFor="useSsl">Use SSL/TLS</Label>
-                </div>
-              </div>
+              )}
             </CardContent>
             <CardFooter className="flex justify-between">
               <Button 

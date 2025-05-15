@@ -12,10 +12,23 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
 import { Navigate, useLocation } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
+import { useEffect } from 'react';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+});
+
+const signupSchema = z.object({
+  email: z.string().email({ message: 'Please enter a valid email address' }),
+  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+  confirmPassword: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+  fullName: z.string().min(2, { message: 'Full name is required' }),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
 const resetSchema = z.object({
@@ -26,6 +39,8 @@ const Auth = () => {
   const { signIn, resetPassword, user, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('login');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [logoUrl, setLogoUrl] = useState('/logo.svg');
+  const [backgroundUrl, setBackgroundUrl] = useState('');
   const location = useLocation();
   
   // Get the return path from location state, or default to '/'
@@ -36,10 +51,40 @@ const Auth = () => {
     defaultValues: { email: '', password: '' },
   });
 
+  const signupForm = useForm<z.infer<typeof signupSchema>>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: { email: '', password: '', confirmPassword: '', fullName: '' },
+  });
+
   const resetForm = useForm<z.infer<typeof resetSchema>>({
     resolver: zodResolver(resetSchema),
     defaultValues: { email: '' },
   });
+
+  // Load custom branding
+  useEffect(() => {
+    const fetchBranding = async () => {
+      try {
+        const { data: settings } = await supabase
+          .from('advanced_settings')
+          .select('*')
+          .single();
+        
+        if (settings) {
+          // These would be actual fields in your database
+          const customLogoUrl = localStorage.getItem('auth_logo_url');
+          const customBackgroundUrl = localStorage.getItem('auth_background_url');
+          
+          if (customLogoUrl) setLogoUrl(customLogoUrl);
+          if (customBackgroundUrl) setBackgroundUrl(customBackgroundUrl);
+        }
+      } catch (error) {
+        console.error('Error loading branding:', error);
+      }
+    };
+    
+    fetchBranding();
+  }, []);
 
   const handleLogin = async (values: z.infer<typeof loginSchema>) => {
     setIsSubmitting(true);
@@ -48,6 +93,40 @@ const Auth = () => {
       // No need to navigate here as it's handled in AuthContext
     } catch (error) {
       console.error('Login error:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSignup = async (values: z.infer<typeof signupSchema>) => {
+    setIsSubmitting(true);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: {
+            full_name: values.fullName,
+          },
+        },
+      });
+      
+      if (error) throw error;
+      
+      // Switch to login tab on successful signup
+      setActiveTab('login');
+      loginForm.setValue('email', values.email);
+      loginForm.setValue('password', '');
+      
+      // Automatically sign in if email verification is disabled
+      if (data?.user && !data?.session) {
+        // Show message about email verification
+        alert('Please check your email to verify your account.');
+      }
+      
+    } catch (error: any) {
+      console.error('Signup error:', error);
+      alert(`Signup failed: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -75,17 +154,33 @@ const Auth = () => {
     return <Navigate to={from} replace />;
   }
 
+  const containerStyle = backgroundUrl 
+    ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } 
+    : {};
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-vision-dark-900 p-4 sm:p-8">
+    <div className="flex min-h-screen items-center justify-center bg-vision-dark-900 p-4 sm:p-8" style={containerStyle}>
       <div className="w-full max-w-md">
         <div className="mb-8 flex justify-center">
           <div className="flex items-center gap-2">
             <div className="bg-vision-blue-500 p-1.5 rounded">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
-                <path d="M15.24 2.042a10 10 0 0 1 4.958 13.17M10.66 5.22a7.5 7.5 0 1 1-5.88 13.82"/>
-                <circle cx="12" cy="12" r="2.5"/>
-                <path d="M20 17.607a10 10 0 0 0-16.465-11"/>
-              </svg>
+              {logoUrl ? (
+                <div className="w-6 h-6">
+                  <AspectRatio ratio={1/1}>
+                    <img 
+                      src={logoUrl} 
+                      alt="Logo" 
+                      className="w-full h-full object-contain"
+                    />
+                  </AspectRatio>
+                </div>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                  <path d="M15.24 2.042a10 10 0 0 1 4.958 13.17M10.66 5.22a7.5 7.5 0 1 1-5.88 13.82"/>
+                  <circle cx="12" cy="12" r="2.5"/>
+                  <path d="M20 17.607a10 10 0 0 0-16.465-11"/>
+                </svg>
+              )}
             </div>
             <h1 className="text-2xl font-bold text-white">Vision Hub</h1>
           </div>
@@ -98,8 +193,9 @@ const Auth = () => {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsList className="grid w-full grid-cols-3 mb-6">
                 <TabsTrigger value="login">Login</TabsTrigger>
+                <TabsTrigger value="signup">Sign Up</TabsTrigger>
                 <TabsTrigger value="reset">Reset</TabsTrigger>
               </TabsList>
 
@@ -140,6 +236,75 @@ const Auth = () => {
                         </>
                       ) : (
                         'Log in'
+                      )}
+                    </Button>
+                  </form>
+                </Form>
+              </TabsContent>
+
+              <TabsContent value="signup">
+                <Form {...signupForm}>
+                  <form onSubmit={signupForm.handleSubmit(handleSignup)} className="space-y-4">
+                    <FormField
+                      control={signupForm.control}
+                      name="fullName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Full Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="John Doe" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={signupForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="mail@example.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={signupForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="********" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={signupForm.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Confirm Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="********" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" className="w-full" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating account...
+                        </>
+                      ) : (
+                        'Create account'
                       )}
                     </Button>
                   </form>
