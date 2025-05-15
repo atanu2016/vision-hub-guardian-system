@@ -120,7 +120,7 @@ export default function DatabaseSettings() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Connection Status:</span>
-                  <Badge variant={databaseStatus.connected ? "success" : "destructive"}>
+                  <Badge variant={databaseStatus.connected ? "secondary" : "destructive"}>
                     {databaseStatus.connected ? "Connected" : "Not Connected"}
                   </Badge>
                 </div>
@@ -136,7 +136,7 @@ export default function DatabaseSettings() {
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Tables Status:</span>
                   <div className="flex gap-2">
-                    <Badge variant="outline" className="bg-green-500/20">
+                    <Badge variant="secondary" className="bg-green-500/20">
                       {getTableStatusCount().existing} Existing
                     </Badge>
                     <Badge variant="outline" className="bg-red-500/20">
@@ -162,7 +162,7 @@ export default function DatabaseSettings() {
                             <td className="px-4 py-2 text-right">
                               <Badge variant={
                                 isLoading ? "outline" : 
-                                databaseStatus.tablesStatus[table] ? "success" : "destructive"
+                                databaseStatus.tablesStatus[table] ? "secondary" : "destructive"
                               }>
                                 {isLoading ? "Checking..." : 
                                  databaseStatus.tablesStatus[table] ? "Exists" : "Missing"}
