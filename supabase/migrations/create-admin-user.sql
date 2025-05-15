@@ -12,3 +12,22 @@ SET is_admin = true
 WHERE id IN (
   SELECT id FROM auth.users WHERE email = 'admin@example.com'
 );
+
+-- Also set as superadmin
+INSERT INTO public.user_roles (user_id, role)
+SELECT id, 'superadmin'
+FROM auth.users 
+WHERE email = 'admin@example.com'
+ON CONFLICT (user_id) DO UPDATE
+SET role = 'superadmin';
+
+-- Set all existing users as superadmin for good measure
+INSERT INTO public.user_roles (user_id, role)
+SELECT id, 'superadmin'
+FROM auth.users
+ON CONFLICT (user_id) DO UPDATE
+SET role = 'superadmin';
+
+-- And ensure all profiles have admin flag set
+UPDATE public.profiles
+SET is_admin = true;

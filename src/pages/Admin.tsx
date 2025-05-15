@@ -27,7 +27,8 @@ const Admin = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      // Get all profiles from Supabase
+      const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select(`
           id,
@@ -36,16 +37,41 @@ const Admin = () => {
           created_at
         `);
 
-      if (error) throw error;
+      if (profilesError) throw profilesError;
 
-      // For each profile, get the user email
+      if (!profiles || profiles.length === 0) {
+        console.log("No profiles found in Supabase");
+        setUsers([]);
+        setLoading(false);
+        return;
+      }
+
+      // For each profile, try to get the user email
       const usersWithEmail = await Promise.all(
-        data.map(async (profile) => {
-          const { data: userData } = await supabase.auth.admin.getUserById(profile.id);
-          return {
-            ...profile,
-            email: userData?.user?.email || 'Unknown',
-          };
+        profiles.map(async (profile) => {
+          try {
+            // Try to get user from Supabase Auth
+            const { data: userData, error: userError } = await supabase.auth.admin.getUserById(profile.id);
+            
+            if (userError) {
+              console.error("Error fetching user:", userError);
+              return {
+                ...profile,
+                email: 'Unknown',
+              };
+            }
+
+            return {
+              ...profile,
+              email: userData?.user?.email || 'Unknown',
+            };
+          } catch (error) {
+            console.error("Error processing user:", error);
+            return {
+              ...profile,
+              email: 'Unknown',
+            };
+          }
         })
       );
 
@@ -60,6 +86,7 @@ const Admin = () => {
 
   const toggleAdminStatus = async (userId: string, currentStatus: boolean) => {
     try {
+      // Update user's admin status in Supabase
       const { error } = await supabase
         .from('profiles')
         .update({ is_admin: !currentStatus })
@@ -67,6 +94,7 @@ const Admin = () => {
 
       if (error) throw error;
 
+      // Update local state
       setUsers((prevUsers) =>
         prevUsers.map((user) =>
           user.id === userId ? { ...user, is_admin: !currentStatus } : user
@@ -126,35 +154,43 @@ const Admin = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
-                    <tr key={user.id} className="border-b">
-                      <td className="py-3 px-4">{user.full_name || 'N/A'}</td>
-                      <td className="py-3 px-4">{user.email}</td>
-                      <td className="py-3 px-4">
-                        {user.is_admin ? (
-                          <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                            Admin
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800/30 dark:text-gray-400">
-                            User
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4">
-                        {new Date(user.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => toggleAdminStatus(user.id, user.is_admin)}
-                        >
-                          {user.is_admin ? 'Remove Admin' : 'Make Admin'}
-                        </Button>
+                  {users.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-muted-foreground">
+                        No users found. Make sure you're connected to Supabase.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    users.map((user) => (
+                      <tr key={user.id} className="border-b">
+                        <td className="py-3 px-4">{user.full_name || 'N/A'}</td>
+                        <td className="py-3 px-4">{user.email}</td>
+                        <td className="py-3 px-4">
+                          {user.is_admin ? (
+                            <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                              Admin
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center rounded-full bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800/30 dark:text-gray-400">
+                              User
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          {new Date(user.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleAdminStatus(user.id, user.is_admin)}
+                          >
+                            {user.is_admin ? 'Remove Admin' : 'Make Admin'}
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
