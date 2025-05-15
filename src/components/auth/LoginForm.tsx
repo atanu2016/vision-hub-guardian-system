@@ -6,14 +6,21 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useAuth } from '@/contexts/AuthContext';
-import { Loader2 } from 'lucide-react';
+import { AuthContext } from '@/contexts/AuthContext';
+import { Loader2, InfoIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { auth, firestore } from '@/integrations/firebase/client';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { InfoIcon } from 'lucide-react';
+import { useContext } from 'react';
+import { checkLocalAdminLogin, createLocalAdmin } from '@/services/userService';
+
+// Define a version of useAuth that doesn't throw when outside provider
+const useOptionalAuth = () => {
+  const context = useContext(AuthContext);
+  return context;
+};
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
@@ -25,7 +32,8 @@ type LoginFormProps = {
 };
 
 export const LoginForm = ({ onSuccess }: LoginFormProps) => {
-  const { signIn } = useAuth();
+  // Use the optional auth to avoid errors when rendered outside AuthProvider
+  const authContext = useOptionalAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCreateAdmin, setShowCreateAdmin] = useState(false);
   const [firebaseError, setFirebaseError] = useState<string | null>(null);
@@ -82,7 +90,22 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
     setIsSubmitting(true);
     try {
       console.log("Attempting to sign in...");
-      await signIn(values.email, values.password);
+      
+      // If we have authContext, use that, otherwise try with local admin
+      if (authContext?.signIn) {
+        await authContext.signIn(values.email, values.password);
+      } else {
+        // Fallback if no auth context is available
+        if (checkLocalAdminLogin(values.email, values.password)) {
+          createLocalAdmin();
+          toast.success("Successfully logged in as local admin");
+          if (onSuccess) onSuccess();
+          return;
+        } else {
+          throw new Error("Auth provider not available");
+        }
+      }
+      
       toast.success("Successfully logged in!");
       if (onSuccess) onSuccess();
     } catch (error: any) {

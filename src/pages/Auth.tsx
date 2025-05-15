@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2 } from 'lucide-react';
@@ -9,7 +9,6 @@ import { AuthBranding } from '@/components/auth/AuthBranding';
 import { SignupForm } from '@/components/auth/SignupForm';
 import { MFAEnrollmentForm } from '@/components/auth/MFAEnrollmentForm';
 import { AuthContext } from '@/contexts/AuthContext';
-import { useContext } from 'react';
 
 // A standalone version of useAuth that doesn't throw when outside provider
 const useOptionalAuth = () => {
@@ -39,7 +38,8 @@ const Auth = () => {
   // If we're not inside an AuthProvider, just render the login form
   // without trying to use auth context data
   if (!authContext) {
-    return renderAuthUI(false, false, false, activeTab, setActiveTab, null, from, backgroundUrl, LogoComponent);
+    console.log("Auth context not available, rendering login form without context");
+    return renderAuthUI('login', setActiveTab, from, backgroundUrl, LogoComponent);
   }
 
   const { user, isLoading, requiresMFA } = authContext;
@@ -62,7 +62,7 @@ const Auth = () => {
     return <Navigate to={from} replace />;
   }
 
-  return renderAuthUI(false, false, false, activeTab, setActiveTab, null, from, backgroundUrl, LogoComponent);
+  return renderAuthUI(activeTab, setActiveTab, from, backgroundUrl, LogoComponent);
 };
 
 // Helper function to render MFA enrollment UI
@@ -87,14 +87,10 @@ const renderMFAEnrollment = (from: string, backgroundUrl: string | null, LogoCom
   );
 };
 
-// Helper function to render the main auth UI
+// Helper function to render the main auth UI - simplified signature
 const renderAuthUI = (
-  isLoading: boolean,
-  isAuthenticated: boolean,
-  requiresMFA: boolean,
   activeTab: string,
   setActiveTab: (tab: string) => void,
-  user: any,
   from: string,
   backgroundUrl: string | null,
   LogoComponent: React.FC
