@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { DayProps } from "react-day-picker";
 
 // Define the props
 interface RecordingCalendarProps {
@@ -89,7 +90,9 @@ export default function RecordingCalendar({ cameraId }: RecordingCalendarProps) 
     );
   }
 
-  function renderDay(day: Date) {
+  // Fixed: Updated the renderDay function to accept DayProps instead of Date
+  function renderDay(props: DayProps) {
+    const { date: day, ...dayProps } = props;
     const isRecording = isRecordingDate(day);
     
     return (
@@ -136,7 +139,7 @@ export default function RecordingCalendar({ cameraId }: RecordingCalendarProps) 
                 onSelect={handleDateSelect}
                 initialFocus
                 components={{
-                  Day: renderDay  // Fixed: Changed 'day' to 'Day' (capitalized)
+                  Day: renderDay  // Using Day with proper DayProps
                 }}
               />
             </PopoverContent>
