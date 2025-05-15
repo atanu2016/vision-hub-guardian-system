@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import { 
   ToastActionElement, 
@@ -18,7 +19,7 @@ export interface Toast extends ToastProps {
 export type ToasterToast = Toast
 
 export type ToastOptions = Partial<
-  Pick<Toast, "title" | "description" | "action" | "variant" | "duration">
+  Pick<Toast, "title" | "description" | "action" | "variant" | "duration" | "id">
 > & {
   promise?: {
     error: string;
@@ -34,10 +35,10 @@ export type ToastOptions = Partial<
 // Define the type for toast function with methods
 export interface ToastFunction {
   (opts: string | ToastOptions): string;
-  error: (message: string, opts?: Omit<ToastOptions, "variant">) => string;
-  success: (message: string, opts?: Omit<ToastOptions, "variant">) => string;
-  warning: (message: string, opts?: Omit<ToastOptions, "variant">) => string;
-  info: (message: string, opts?: Omit<ToastOptions, "variant">) => string;
+  error: (message: string) => string;
+  success: (message: string) => string;
+  warning: (message: string) => string;
+  info: (message: string) => string;
 }
 
 const actionTypes = {
@@ -69,12 +70,10 @@ type Action =
   | {
       type: ActionType["DISMISS_TOAST"]
       toastId?: string
-      id?: string
     }
   | {
       type: ActionType["REMOVE_TOAST"]
       toastId?: string
-      id?: string
     }
 
 interface State {
@@ -92,7 +91,7 @@ const addToRemoveQueue = (toastId: string) => {
     toastTimeouts.delete(toastId)
     dispatch({
       type: "REMOVE_TOAST",
-      id: toastId,
+      toastId,
     })
   }, TOAST_REMOVE_DELAY)
 
@@ -116,10 +115,9 @@ export const reducer = (state: State, action: Action): State => {
       }
 
     case "DISMISS_TOAST": {
-      const { id, toastId = id } = action
+      const { toastId } = action
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
+      // Side effects - This could be extracted into a dismissToast() action
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {
@@ -141,7 +139,7 @@ export const reducer = (state: State, action: Action): State => {
       }
     }
     case "REMOVE_TOAST":
-      if (action.id === undefined) {
+      if (action.toastId === undefined) {
         return {
           ...state,
           toasts: [],
@@ -149,7 +147,7 @@ export const reducer = (state: State, action: Action): State => {
       }
       return {
         ...state,
-        toasts: state.toasts.filter((t) => t.id !== action.id),
+        toasts: state.toasts.filter((t) => t.id !== action.toastId),
       }
   }
 }
@@ -165,7 +163,8 @@ function dispatch(action: Action) {
   })
 }
 
-function toast(opts: string | ToastOptions): string {
+// Create a toast function that accepts either a string or options object
+export const toast = ((opts: string | ToastOptions) => {
   const id = genId()
 
   const update = (props: ToastOptions) =>
@@ -175,9 +174,9 @@ function toast(opts: string | ToastOptions): string {
       toast: { ...props },
     })
 
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", id })
+  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
   
-  let toastOptions: ToastOptions = typeof opts === 'string' ? { title: opts } : opts
+  const toastOptions: ToastOptions = typeof opts === 'string' ? { title: opts } : opts
 
   dispatch({
     type: "ADD_TOAST",
@@ -192,23 +191,23 @@ function toast(opts: string | ToastOptions): string {
   })
 
   return id
-}
+}) as ToastFunction
 
 // Helper methods for different toast variants
-toast.error = (message: string, opts?: Omit<ToastOptions, "variant">): string => {
-  return toast({ ...opts, title: message, variant: "destructive" });
+toast.error = (message: string): string => {
+  return toast({ title: message, variant: "destructive" });
 };
 
-toast.success = (message: string, opts?: Omit<ToastOptions, "variant">): string => {
-  return toast({ ...opts, title: message, variant: "default" });
+toast.success = (message: string): string => {
+  return toast({ title: message, variant: "default" });
 };
 
-toast.warning = (message: string, opts?: Omit<ToastOptions, "variant">): string => {
-  return toast({ ...opts, title: message, variant: "default" });
+toast.warning = (message: string): string => {
+  return toast({ title: message, variant: "default" });
 };
 
-toast.info = (message: string, opts?: Omit<ToastOptions, "variant">): string => {
-  return toast({ ...opts, title: message, variant: "default" });
+toast.info = (message: string): string => {
+  return toast({ title: message, variant: "default" });
 };
 
 export function useToast() {
@@ -227,11 +226,9 @@ export function useToast() {
   return {
     ...state,
     toast,
-    dismiss: (id?: string) => dispatch({ type: "DISMISS_TOAST", id }),
+    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
   }
 }
-
-export { toast }
 
 // For backwards compatibility with existing code that might use notify
 export const notify = toast;

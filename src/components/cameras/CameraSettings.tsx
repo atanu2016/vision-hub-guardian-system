@@ -36,7 +36,10 @@ const CameraSettings = ({ camera, onSave }: CameraSettingsProps) => {
       });
     } catch (error) {
       console.error("Error saving camera settings:", error);
-      toast.error("Failed to save camera settings. Please try again.");
+      toast({
+        title: "Failed to save camera settings",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }

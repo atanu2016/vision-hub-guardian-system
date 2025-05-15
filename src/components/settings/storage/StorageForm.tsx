@@ -12,7 +12,7 @@ import StorageProviderSelector from "./StorageProviderSelector";
 import StorageProviderFields from "./StorageProviderFields";
 import RetentionPolicyForm from "./RetentionPolicyForm";
 
-// Define form schema for storage settings
+// Define form schema for storage settings - make type non-optional
 const storageFormSchema = z.object({
   type: z.enum(["local", "nas", "s3", "dropbox", "google_drive", "onedrive", "azure_blob", "backblaze"]),
   path: z.string().optional(),
@@ -44,7 +44,7 @@ const storageFormSchema = z.object({
 });
 
 // Extract type from schema
-type StorageFormSchemaType = z.infer<typeof storageFormSchema>;
+export type StorageFormSchemaType = z.infer<typeof storageFormSchema>;
 
 interface StorageFormProps {
   initialSettings: StorageSettingsType;
@@ -54,7 +54,7 @@ interface StorageFormProps {
 }
 
 const StorageForm = ({ initialSettings, isLoading, isSaving, onSave }: StorageFormProps) => {
-  // Initialize form
+  // Initialize form with proper defaultValues ensuring type is not optional
   const form = useForm<StorageFormSchemaType>({
     resolver: zodResolver(storageFormSchema),
     defaultValues: {

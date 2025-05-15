@@ -3,34 +3,7 @@ import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/for
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UseFormReturn } from "react-hook-form";
 import { HardDrive, Server, Cloud } from "lucide-react";
-
-// Storage form schema type with required type field
-type StorageFormSchemaType = {
-  type: "local" | "nas" | "s3" | "dropbox" | "google_drive" | "onedrive" | "azure_blob" | "backblaze";
-  path?: string;
-  retentionDays: number;
-  overwriteOldest: boolean;
-  nasAddress?: string;
-  nasPath?: string;
-  nasUsername?: string;
-  nasPassword?: string;
-  s3Endpoint?: string;
-  s3Bucket?: string;
-  s3AccessKey?: string;
-  s3SecretKey?: string;
-  s3Region?: string;
-  dropboxToken?: string;
-  dropboxFolder?: string;
-  googleDriveToken?: string;
-  googleDriveFolderId?: string;
-  oneDriveToken?: string;
-  oneDriveFolderId?: string;
-  azureConnectionString?: string;
-  azureContainer?: string;
-  backblazeKeyId?: string;
-  backblazeApplicationKey?: string;
-  backblazeBucket?: string;
-};
+import { StorageFormSchemaType } from "./StorageForm";
 
 interface StorageProviderSelectorProps {
   form: UseFormReturn<StorageFormSchemaType>;
