@@ -21,7 +21,7 @@ export default function DatabaseMigration() {
     const checkAccess = async () => {
       if (user) {
         setLoading(true);
-        const access = await checkMigrationAccess(user.id);
+        const access = await checkMigrationAccess(user.uid);
         setHasAccess(access);
         setLoading(false);
       } else {
