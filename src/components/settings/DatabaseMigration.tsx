@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,18 +8,46 @@ import MigrationAlert from './migration/MigrationAlert';
 import FirebaseMigrationForm from './migration/FirebaseMigrationForm';
 import SupabaseMigrationForm from './migration/SupabaseMigrationForm';
 import { useAuth } from '@/contexts/AuthContext';
-import { checkMigrationAccess } from '@/services/userService';
+import { checkMigrationAccess, ensureUserIsAdmin } from '@/services/userService';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export default function DatabaseMigration() {
   const [activeTab, setActiveTab] = useState('supabase');
   const [hasAccess, setHasAccess] = useState(false);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, profile, role } = useAuth();
   
   useEffect(() => {
     const checkAccess = async () => {
       if (user) {
         setLoading(true);
+        
+        // Check via profile is_admin first
+        if (profile?.is_admin) {
+          setHasAccess(true);
+          setLoading(false);
+          return;
+        }
+        
+        // Check via role
+        if (role === 'admin' || role === 'superadmin') {
+          setHasAccess(true);
+          setLoading(false);
+          return;
+        }
+        
+        // Check for admin@home.local special case
+        const { data: userData } = await supabase.auth.admin.getUserById(user.id);
+        if (userData?.user?.email === 'admin@home.local') {
+          // Force update to ensure admin privileges
+          await ensureUserIsAdmin(user.id);
+          setHasAccess(true);
+          setLoading(false);
+          return;
+        }
+        
+        // Fallback to full DB check
         const access = await checkMigrationAccess(user.id);
         setHasAccess(access);
         setLoading(false);
@@ -31,7 +58,7 @@ export default function DatabaseMigration() {
     };
     
     checkAccess();
-  }, [user]);
+  }, [user, profile, role]);
   
   if (loading) {
     return (

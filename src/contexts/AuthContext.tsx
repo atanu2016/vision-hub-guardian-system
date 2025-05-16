@@ -81,6 +81,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log("Fetching profile for user:", userId);
+      
+      // Special handling for admin@home.local
+      const { data: userData } = await supabase.auth.admin.getUserById(userId);
+      if (userData?.user && userData.user.email === 'admin@home.local') {
+        console.log("admin@home.local detected - ensuring admin status");
+        
+        // Make sure they're set as admin in profiles
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
+          
+        if (profileError || !profileData || !profileData.is_admin) {
+          // Create or update admin profile
+          await supabase
+            .from('profiles')
+            .upsert({
+              id: userId,
+              full_name: 'Administrator',
+              is_admin: true,
+              mfa_required: false
+            });
+            
+          // Also ensure role is set
+          await supabase
+            .from('user_roles')
+            .upsert({
+              user_id: userId,
+              role: 'superadmin'
+            });
+            
+          // Fetch the updated profile
+          const { data } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+            
+          setProfile(data as Profile);
+          setRole('superadmin');
+          return;
+        }
+      }
+      
+      // Normal profile fetch
       const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name, is_admin, mfa_enrolled, mfa_required')
@@ -92,6 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       
+      console.log("Profile fetched:", data);
       setProfile(data as Profile);
       
       // If this is the first user (likely an admin), set admin status if not already set
@@ -102,6 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
         if (count === 1) {
           // This is the first and only user, make them admin
+          console.log("First user detected, setting as admin");
           await supabase
             .from('profiles')
             .update({ is_admin: true })
@@ -118,6 +167,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserRole = async (userId: string) => {
     try {
+      console.log("Fetching role for user:", userId);
+      
+      // Special handling for admin@home.local - always superadmin
+      const { data: userData } = await supabase.auth.admin.getUserById(userId);
+      if (userData?.user && userData.user.email === 'admin@home.local') {
+        console.log("admin@home.local detected - setting as superadmin");
+        
+        // Ensure they have superadmin role
+        await supabase
+          .from('user_roles')
+          .upsert({
+            user_id: userId,
+            role: 'superadmin'
+          });
+        
+        setRole('superadmin');
+        return;
+      }
+      
+      // Normal role fetch
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
@@ -130,6 +199,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       
+      console.log("Role data:", data);
+      
       if (data) {
         setRole(data.role as UserRole);
       } else {
@@ -140,9 +211,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
         if (count === 1) {
           // This is the first and only user, make them superadmin
+          console.log("First user detected, setting as superadmin");
           await supabase
             .from('user_roles')
-            .insert({ user_id: userId, role: 'superadmin' });
+            .upsert({ 
+              user_id: userId, 
+              role: 'superadmin' 
+            });
             
           // Update local state
           setRole('superadmin');

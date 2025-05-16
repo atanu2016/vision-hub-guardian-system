@@ -21,39 +21,69 @@ export default function MigrationSettings() {
       if (user) {
         setLoading(true);
         
-        // First check - via profile object
+        // First check - via profile object (quickest)
         if (profile?.is_admin) {
+          console.log("Access granted via profile.is_admin");
           setHasAccess(true);
           setLoading(false);
           return;
         }
         
-        // Second check - via role
+        // Second check - via role (if available)
         if (role === 'admin' || role === 'superadmin') {
+          console.log("Access granted via role:", role);
           setHasAccess(true);
           setLoading(false);
           return;
         }
         
-        // Third check - via database check (backstop)
-        const access = await checkMigrationAccess(user.id);
-        setHasAccess(access);
-        
-        // If user still doesn't have access but they're the only user in the system, grant admin
-        if (!access) {
+        // Third check - via database query (most reliable but slowest)
+        try {
+          console.log("Checking access via database for user:", user.id);
+          const access = await checkMigrationAccess(user.id);
+          console.log("Database access check result:", access);
+          
+          if (access) {
+            setHasAccess(true);
+            setLoading(false);
+            return;
+          }
+          
+          // Special case for admin@home.local
+          const { data: userData } = await supabase
+            .from('auth.users')
+            .select('email')
+            .eq('id', user.id)
+            .single();
+            
+          if (userData?.email === 'admin@home.local') {
+            console.log("Granting access to admin@home.local");
+            const success = await ensureUserIsAdmin(user.id);
+            if (success) {
+              toast.success('Admin access granted');
+              setHasAccess(true);
+              setLoading(false);
+              return;
+            }
+          }
+  
+          // If user still doesn't have access but they're the only user in the system, grant admin
           const { count } = await supabase
             .from('profiles')
             .select('*', { count: 'exact', head: true });
-            
+              
           if (count === 1) {
             // This is the first and only user, update them to admin
+            console.log("First user detected, granting admin access");
             const success = await ensureUserIsAdmin(user.id);
-            
+              
             if (success) {
               toast.success('You have been granted admin access as the first user');
               setHasAccess(true);
             }
           }
+        } catch (error) {
+          console.error("Error checking migration access:", error);
         }
         
         setLoading(false);

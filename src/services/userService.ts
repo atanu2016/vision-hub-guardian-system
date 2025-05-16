@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { UserRole, UserData } from '@/types/admin';
 import { toast } from 'sonner';
@@ -124,7 +123,21 @@ export async function toggleMfaRequirement(userId: string, required: boolean): P
 // Updated function to check admin access for migration tools
 export async function checkMigrationAccess(userId: string): Promise<boolean> {
   try {
-    // Check if the user is an admin based on profile flag first
+    console.log("Checking migration access for userId:", userId);
+    
+    // Direct query to check email for admin@home.local
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+    
+    if (userData?.user && userData.user.email === 'admin@home.local') {
+      console.log("User is admin@home.local, granting access");
+      return true;
+    }
+    
+    if (userError) {
+      console.error("Error checking user email:", userError);
+    }
+    
+    // Check if the user is an admin based on profile flag
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('is_admin')
@@ -137,6 +150,7 @@ export async function checkMigrationAccess(userId: string): Promise<boolean> {
     
     // If user has admin flag in profile, grant access
     if (profileData && profileData.is_admin === true) {
+      console.log("User has is_admin=true, granting access");
       return true;
     }
     
@@ -152,15 +166,18 @@ export async function checkMigrationAccess(userId: string): Promise<boolean> {
     }
     
     // Grant access if user has admin or superadmin role
-    return roleData && (roleData.role === 'admin' || roleData.role === 'superadmin');
+    const hasAdminRole = roleData && (roleData.role === 'admin' || roleData.role === 'superadmin');
+    console.log("User has admin role:", hasAdminRole);
+    return hasAdminRole || false;
   } catch (error) {
     console.error('Error checking migration access:', error);
     return false;
   }
 }
 
-// New helper function to create or ensure a user is admin
+// Updated helper function to create or ensure a user is admin
 export async function ensureUserIsAdmin(userId: string): Promise<boolean> {
+  console.log("Ensuring user is admin:", userId);
   try {
     // First update profile to have admin flag
     const { error: profileError } = await supabase
@@ -170,7 +187,24 @@ export async function ensureUserIsAdmin(userId: string): Promise<boolean> {
     
     if (profileError) {
       console.error('Error updating profile admin status:', profileError);
-      return false;
+      
+      // If update failed, try insert
+      const { data: userData } = await supabase.auth.admin.getUserById(userId);
+      if (userData?.user) {
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({ 
+            id: userId,
+            full_name: userData.user.email?.split('@')[0] || 'Administrator',
+            is_admin: true,
+            mfa_required: false
+          });
+          
+        if (insertError) {
+          console.error('Error inserting profile:', insertError);
+          return false;
+        }
+      }
     }
     
     // Then ensure they have a superadmin role
@@ -187,6 +221,7 @@ export async function ensureUserIsAdmin(userId: string): Promise<boolean> {
       return false;
     }
     
+    console.log("Successfully granted admin privileges to user:", userId);
     return true;
   } catch (error) {
     console.error('Error ensuring user is admin:', error);
