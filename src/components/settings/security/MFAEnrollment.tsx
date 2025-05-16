@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,24 +16,32 @@ export default function MFAEnrollment() {
   const [verificationCode, setVerificationCode] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Check if MFA is already enabled
+  // Check if MFA is already enabled for this specific user
   useEffect(() => {
     const checkMFAStatus = async () => {
-      if (!user) return;
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
       
       try {
+        // Query the user's specific profile
         const { data, error } = await supabase
-          .from('advanced_settings')
+          .from('profiles')
           .select('mfa_enabled, mfa_secret')
+          .eq('id', user.id)
           .single();
           
         if (error) throw error;
         
-        setMfaEnabled(data.mfa_enabled || false);
-        setSecret(data.mfa_secret || null);
+        setMfaEnabled(data?.mfa_enabled || false);
+        setSecret(data?.mfa_secret || null);
+        setIsLoading(false);
       } catch (error) {
         console.error('Failed to check MFA status:', error);
+        setIsLoading(false);
       }
     };
     
@@ -74,14 +82,14 @@ export default function MFAEnrollment() {
       const isValid = verificationCode.length === 6;
       
       if (isValid) {
-        // Save the MFA secret and enabled status to the database
+        // Save the MFA secret and enabled status to the database for THIS specific user
         const { error } = await supabase
-          .from('advanced_settings')
+          .from('profiles')
           .update({
             mfa_enabled: true,
             mfa_secret: secret
           })
-          .eq('id', '1');
+          .eq('id', user.id);
           
         if (error) throw error;
         
@@ -112,13 +120,14 @@ export default function MFAEnrollment() {
     
     setIsVerifying(true);
     try {
+      // Update THIS specific user's profile
       const { error } = await supabase
-        .from('advanced_settings')
+        .from('profiles')
         .update({
           mfa_enabled: false,
           mfa_secret: null
         })
-        .eq('id', '1');
+        .eq('id', user.id);
         
       if (error) throw error;
       
@@ -169,6 +178,17 @@ export default function MFAEnrollment() {
           <CardDescription>
             Please sign in to manage MFA settings
           </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Multi-Factor Authentication</CardTitle>
+          <CardDescription>Loading MFA settings...</CardDescription>
         </CardHeader>
       </Card>
     );

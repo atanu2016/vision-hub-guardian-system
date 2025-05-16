@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import MFAEnrollment from '@/components/settings/security/MFAEnrollment';
-import MigrationSettings from '@/components/settings/MigrationSettings';
 
 export default function AdvancedSettings() {
   const [activeTab, setActiveTab] = useState('general');
@@ -21,7 +20,6 @@ export default function AdvancedSettings() {
         <TabsList>
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
-          <TabsTrigger value="migrations">Data Migration</TabsTrigger>
           <TabsTrigger value="debugging">Debugging</TabsTrigger>
         </TabsList>
         
@@ -39,10 +37,6 @@ export default function AdvancedSettings() {
         
         <TabsContent value="security" className="space-y-6">
           <MFAEnrollment />
-        </TabsContent>
-        
-        <TabsContent value="migrations" className="space-y-6">
-          <MigrationSettings />
         </TabsContent>
         
         <TabsContent value="debugging" className="space-y-6">

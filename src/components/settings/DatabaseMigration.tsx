@@ -36,9 +36,10 @@ export default function DatabaseMigration() {
           <MigrationAlert />
           
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3 mb-6">
-              <TabsTrigger value="supabase">Supabase Migration</TabsTrigger>
-              <TabsTrigger value="firebase">Firebase Migration</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4 mb-6">
+              <TabsTrigger value="supabase">Supabase</TabsTrigger>
+              <TabsTrigger value="firebase">Firebase</TabsTrigger>
+              <TabsTrigger value="mysql">MySQL</TabsTrigger>
               <TabsTrigger value="connection">Connection Settings</TabsTrigger>
             </TabsList>
             
@@ -48,6 +49,10 @@ export default function DatabaseMigration() {
             
             <TabsContent value="firebase">
               <FirebaseMigrationForm />
+            </TabsContent>
+            
+            <TabsContent value="mysql">
+              <MySQLMigrationForm />
             </TabsContent>
             
             <TabsContent value="connection">
