@@ -32,6 +32,7 @@ export function SignupForm() {
     try {
       setIsLoading(true);
       
+      // First register the user with Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
@@ -44,6 +45,38 @@ export function SignupForm() {
 
       if (error) {
         throw error;
+      }
+
+      if (data?.user) {
+        // Explicitly create the profile (redundant but ensures the profile exists)
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            full_name: values.fullName,
+            is_admin: false, // default to non-admin
+            mfa_required: false  // default to not requiring MFA
+          })
+          .select()
+          .single();
+        
+        if (profileError && !profileError.message.includes('duplicate')) {
+          console.error('Error creating profile:', profileError);
+          // Continue anyway since the trigger should have created the profile
+        }
+        
+        // Also ensure the user has a role
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: data.user.id,
+            role: 'user' // default role
+          });
+          
+        if (roleError && !roleError.message.includes('duplicate')) {
+          console.error('Error setting user role:', roleError);
+          // Continue anyway as this is not critical
+        }
       }
 
       toast.success('Registration successful', {

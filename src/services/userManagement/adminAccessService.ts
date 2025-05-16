@@ -18,24 +18,7 @@ export async function checkMigrationAccess(userId: string): Promise<boolean> {
       return true;
     }
     
-    // Check if the user is an admin based on profile flag
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', userId)
-      .single();
-      
-    if (profileError) {
-      console.error('Error checking profile admin status:', profileError);
-    }
-    
-    // If user has admin flag in profile, grant access
-    if (profileData && profileData.is_admin === true) {
-      console.log("User has is_admin=true, granting access");
-      return true;
-    }
-    
-    // Also check for admin or superadmin role in user_roles table
+    // Check if the user has admin role directly from user_roles
     const { data: roleData, error: roleError } = await supabase
       .from('user_roles')
       .select('role')
@@ -44,12 +27,36 @@ export async function checkMigrationAccess(userId: string): Promise<boolean> {
       
     if (roleError) {
       console.error('Error checking user role:', roleError);
+      // Don't return early, continue checking other methods
     }
     
     // Grant access if user has admin or superadmin role
-    const hasAdminRole = roleData && (roleData.role === 'admin' || roleData.role === 'superadmin');
-    console.log("User has admin role:", hasAdminRole);
-    return hasAdminRole || false;
+    if (roleData && (roleData.role === 'admin' || roleData.role === 'superadmin')) {
+      console.log("User has admin role:", roleData.role);
+      return true;
+    }
+    
+    // Check if the user is an admin based on profile flag 
+    // Note: We're querying this after checking user_roles to avoid potential RLS issues
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', userId)
+      .maybeSingle();
+      
+    if (profileError) {
+      console.error('Error checking profile admin status:', profileError);
+      // Continue execution
+    }
+    
+    // If user has admin flag in profile, grant access
+    if (profileData && profileData.is_admin === true) {
+      console.log("User has is_admin=true, granting access");
+      return true;
+    }
+    
+    console.log("No admin access granted");
+    return false;
   } catch (error) {
     console.error('Error checking migration access:', error);
     return false;
@@ -62,7 +69,21 @@ export async function checkMigrationAccess(userId: string): Promise<boolean> {
 export async function ensureUserIsAdmin(userId: string): Promise<boolean> {
   console.log("Ensuring user is admin:", userId);
   try {
-    // First update profile to have admin flag
+    // First ensure they have a superadmin role (avoids RLS issues)
+    const { error: roleError } = await supabase
+      .from('user_roles')
+      .upsert({ 
+        user_id: userId, 
+        role: 'superadmin',
+        updated_at: new Date().toISOString()
+      });
+    
+    if (roleError) {
+      console.error('Error updating user role:', roleError);
+      return false;
+    }
+    
+    // Then update profile to have admin flag
     const { error: profileError } = await supabase
       .from('profiles')
       .update({ is_admin: true })
@@ -88,20 +109,6 @@ export async function ensureUserIsAdmin(userId: string): Promise<boolean> {
           return false;
         }
       }
-    }
-    
-    // Then ensure they have a superadmin role
-    const { error: roleError } = await supabase
-      .from('user_roles')
-      .upsert({ 
-        user_id: userId, 
-        role: 'superadmin',
-        updated_at: new Date().toISOString()
-      });
-    
-    if (roleError) {
-      console.error('Error updating user role:', roleError);
-      return false;
     }
     
     console.log("Successfully granted admin privileges to user:", userId);
