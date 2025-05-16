@@ -29,13 +29,15 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   useEffect(() => {
     const checkForUsers = async () => {
       try {
-        const { data, error } = await supabase
+        const { count } = await supabase
           .from('profiles')
-          .select('count')
-          .single();
+          .select('*', { count: 'exact', head: true });
         
-        if (!error && data && data.count === 0) {
+        if (count === 0) {
           setShowCreateAdmin(true);
+          console.log('No users found, showing create admin form');
+        } else {
+          console.log('Users found:', count);
         }
       } catch (error) {
         console.error('Error checking for users:', error);
@@ -53,7 +55,9 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const handleSubmit = async (values: z.infer<typeof loginSchema>) => {
     setIsSubmitting(true);
     try {
+      console.log('Attempting to sign in with:', values.email);
       await signIn(values.email, values.password);
+      console.log('Sign in successful');
       if (onSuccess) onSuccess();
     } catch (error: any) {
       console.error('Login error:', error);
@@ -66,6 +70,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const handleCreateAdmin = async (values: z.infer<typeof loginSchema>) => {
     setIsSubmitting(true);
     try {
+      console.log('Creating admin account with:', values.email);
       // Register the user first
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: values.email,
@@ -75,15 +80,16 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
       if (authError) throw authError;
       
       if (authData.user) {
-        // Add the user to the profiles table with superadmin role
-        const { error: userError } = await supabase
+        console.log('User created:', authData.user.id);
+        // Add the user to the user_roles table with superadmin role
+        const { error: userRoleError } = await supabase
           .from('user_roles')
           .insert({
             user_id: authData.user.id,
             role: 'superadmin',
           });
           
-        if (userError) throw userError;
+        if (userRoleError) throw userRoleError;
         
         // Also add to profiles table
         const { error: profileError } = await supabase
@@ -92,6 +98,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
             id: authData.user.id,
             full_name: values.email.split('@')[0],
             is_admin: true,
+            mfa_required: false,
           });
           
         if (profileError) throw profileError;
