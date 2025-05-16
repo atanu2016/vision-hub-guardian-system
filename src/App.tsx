@@ -1,7 +1,7 @@
 
 import { Route, Routes } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme/theme-provider";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider } from "@/contexts/auth";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "@/pages/Index";
 import Cameras from "@/pages/Cameras";

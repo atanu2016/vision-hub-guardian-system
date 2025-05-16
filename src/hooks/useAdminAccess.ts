@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/auth';
 import { checkMigrationAccess, ensureUserIsAdmin } from '@/services/userService';
 import { toast } from 'sonner';
 
