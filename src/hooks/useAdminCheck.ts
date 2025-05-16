@@ -2,75 +2,32 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-export const useAdminCheck = () => {
+export function useAdminCheck() {
   const [showCreateAdmin, setShowCreateAdmin] = useState(false);
   const [adminCheckComplete, setAdminCheckComplete] = useState(false);
-  
+
   useEffect(() => {
-    const checkForAdmins = async () => {
+    async function checkForAdminUsers() {
       try {
-        // First try to find admin by role
-        const { data: adminRoles, error: adminRolesError } = await supabase
-          .from('user_roles')
-          .select('user_id')
-          .in('role', ['admin', 'superadmin'])
-          .limit(1);
-          
-        if (!adminRolesError && adminRoles && adminRoles.length > 0) {
-          console.log('Admin found by role:', adminRoles);
-          setShowCreateAdmin(false);
-          setAdminCheckComplete(true);
-          return;
-        }
-        
-        // If no admin roles, check for admin flag in profiles
-        const { data: adminProfiles, error: adminProfilesError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('is_admin', true)
-          .limit(1);
-        
-        if (!adminProfilesError && adminProfiles && adminProfiles.length > 0) {
-          console.log('Admin found by profile flag:', adminProfiles);
-          setShowCreateAdmin(false);
-          setAdminCheckComplete(true);
-          return;
-        }
-        
-        // If we get here, no admins exist - check profile count
+        // Check if any admin users exist
         const { count, error } = await supabase
           .from('profiles')
-          .select('*', { count: 'exact', head: true });
+          .select('*', { count: 'exact', head: true })
+          .eq('is_admin', true);
         
-        if (error) {
-          console.warn('Error checking profiles:', error);
-          // Don't automatically show create admin on error
-          setShowCreateAdmin(false);
-        } else if (count === 0) {
-          console.log('No users found, showing create admin form');
-          setShowCreateAdmin(true);
-        } else {
-          console.log('Users found but no admins:', count);
-          setShowCreateAdmin(false);
-        }
+        if (error) throw error;
         
-        setAdminCheckComplete(true);
+        // If no admin users exist, show the create admin form
+        setShowCreateAdmin(count === 0);
       } catch (error) {
         console.error('Error checking for admin users:', error);
-        setShowCreateAdmin(false);
+      } finally {
         setAdminCheckComplete(true);
       }
-    };
-    
-    checkForAdmins().catch(err => {
-      console.error("Failed to check for admin users:", err);
-      setAdminCheckComplete(true);
-    });
+    }
+
+    checkForAdminUsers();
   }, []);
 
-  return {
-    showCreateAdmin,
-    setShowCreateAdmin,
-    adminCheckComplete
-  };
-};
+  return { showCreateAdmin, setShowCreateAdmin, adminCheckComplete };
+}

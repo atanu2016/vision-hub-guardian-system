@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import {
   SidebarGroup,
@@ -9,7 +8,7 @@ import {
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import { Home, Camera, Settings, Shield } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 
 interface MainNavigationProps {
   isActive: (path: string) => boolean;
