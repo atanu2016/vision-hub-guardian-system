@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Shield, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserTable } from '@/components/admin/UserTable';
-import { fetchUsers, updateUserRole, toggleMfaRequirement, deleteUser } from '@/services/userService';
+import { fetchUsers } from '@/services/userManagement/userFetchService';
+import { updateUserRole, toggleMfaRequirement, deleteUser } from '@/services/userService';
 import type { UserData, UserRole } from '@/types/admin';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -23,9 +24,12 @@ export default function UserManagement() {
   async function loadUsers() {
     try {
       setLoading(true);
+      console.log("Attempting to load users...");
       const usersData = await fetchUsers();
+      console.log("Loaded users:", usersData);
       setUsers(usersData);
     } catch (error) {
+      console.error("Failed to load users:", error);
       toast.error('Failed to load users');
     } finally {
       setLoading(false);
@@ -85,7 +89,7 @@ export default function UserManagement() {
   }
 
   return (
-    <Card>
+    <Card className="w-full">
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle className="flex items-center gap-2">

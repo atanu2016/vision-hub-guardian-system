@@ -7,35 +7,42 @@ import type { UserRole, UserData } from '@/types/admin';
  */
 export async function fetchUsers(): Promise<UserData[]> {
   try {
-    // Get all auth users - only available to superadmin
-    const { data: authUsers, error: authError } = await supabase
-      .from('profiles')
-      .select('id, full_name, mfa_enrolled, mfa_required, created_at');
+    console.log('Fetching users from database...');
     
-    if (authError) throw authError;
+    // Get all profiles first - this should work better with RLS
+    const { data: profiles, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, full_name, mfa_enrolled, mfa_required, created_at, is_admin');
+    
+    if (profileError) {
+      console.error('Error fetching profiles:', profileError);
+      throw profileError;
+    }
 
-    // For each user, get roles
+    console.log(`Found ${profiles.length} profiles`);
+    
+    // For each profile, get roles and email
     const usersWithRoles = await Promise.all(
-      authUsers.map(async (user) => {
+      profiles.map(async (profile) => {
         // Get user role
         const { data: roleData } = await supabase
           .from('user_roles')
           .select('role')
-          .eq('user_id', user.id)
+          .eq('user_id', profile.id)
           .maybeSingle();
           
-        // Get user email - we can't query the auth.users table directly from client
-        // so we use admin api, which requires appropriate permissions
-        const { data: userData } = await supabase.auth.admin.getUserById(user.id);
+        // Get user email from auth.users via admin API
+        const { data: userData } = await supabase.auth.admin.getUserById(profile.id);
         
         return {
-          ...user,
+          ...profile,
           email: userData?.user?.email || 'No email',
-          role: (roleData?.role as UserRole) || 'user',
+          role: (roleData?.role as UserRole) || (profile.is_admin ? 'admin' : 'user'),
         };
       })
     );
 
+    console.log('Processed users with roles:', usersWithRoles);
     return usersWithRoles;
   } catch (error) {
     console.error('Error fetching users:', error);

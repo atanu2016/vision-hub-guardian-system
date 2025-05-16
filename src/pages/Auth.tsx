@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +7,6 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm';
 import { AuthBranding } from '@/components/auth/AuthBranding';
-import { SignupForm } from '@/components/auth/SignupForm';
 import { MFAEnrollmentForm } from '@/components/auth/MFAEnrollmentForm';
 
 const Auth = () => {
@@ -25,7 +23,7 @@ const Auth = () => {
     // Check URL params for tab selection
     const params = new URLSearchParams(location.search);
     const tab = params.get('tab');
-    if (tab && (tab === 'login' || tab === 'reset' || tab === 'signup')) {
+    if (tab === 'login' || tab === 'reset') {
       setActiveTab(tab);
     }
   }, [location]);
@@ -87,18 +85,13 @@ const Auth = () => {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3 mb-6">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
                 <TabsTrigger value="reset">Reset</TabsTrigger>
               </TabsList>
 
               <TabsContent value="login">
                 <LoginForm />
-              </TabsContent>
-
-              <TabsContent value="signup">
-                <SignupForm />
               </TabsContent>
 
               <TabsContent value="reset">

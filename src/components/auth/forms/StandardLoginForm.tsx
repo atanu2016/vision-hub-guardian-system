@@ -6,15 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
 import { loginSchema, LoginFormValues } from './LoginFormSchema';
 
 interface StandardLoginFormProps {
   onSubmit: (values: LoginFormValues) => Promise<void>;
-  onCreateAdminClick: () => void;
+  onCreateAdminClick?: () => void;
+  showCreateAdminButton?: boolean;
 }
 
-export const StandardLoginForm = ({ onSubmit, onCreateAdminClick }: StandardLoginFormProps) => {
+export const StandardLoginForm = ({ 
+  onSubmit, 
+  onCreateAdminClick,
+  showCreateAdminButton = false 
+}: StandardLoginFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<LoginFormValues>({
@@ -72,14 +76,16 @@ export const StandardLoginForm = ({ onSubmit, onCreateAdminClick }: StandardLogi
             'Log in'
           )}
         </Button>
-        <Button 
-          variant="ghost" 
-          type="button" 
-          className="w-full" 
-          onClick={onCreateAdminClick}
-        >
-          Create Admin Account
-        </Button>
+        {showCreateAdminButton && onCreateAdminClick && (
+          <Button 
+            variant="ghost" 
+            type="button" 
+            className="w-full" 
+            onClick={onCreateAdminClick}
+          >
+            Create Admin Account
+          </Button>
+        )}
       </form>
     </Form>
   );

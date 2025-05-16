@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, Database, Users, UserPlus, LayoutDashboard } from 'lucide-react';
+import { Shield, Database, LayoutDashboard, UserPlus } from 'lucide-react';
 import UserManagement from './UserManagement';
 import DatabaseMigration from '@/components/settings/DatabaseMigration';
 import { useAuth } from '@/contexts/auth';
@@ -35,7 +35,7 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto max-w-7xl py-6 space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
@@ -63,7 +63,7 @@ export default function AdminPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
+        <TabsList className="w-full sm:w-auto">
           <TabsTrigger value="users" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
             <span>User Management</span>
