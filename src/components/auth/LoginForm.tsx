@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -7,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
@@ -24,6 +24,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const { signIn } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCreateAdmin, setShowCreateAdmin] = useState(false);
+  const [emailLoginsDisabled, setEmailLoginsDisabled] = useState(false);
   
   // We'll show the admin creation form immediately to avoid database errors
   useEffect(() => {
@@ -69,10 +70,19 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
       if (onSuccess) onSuccess();
     } catch (error: any) {
       console.error('Login error:', error);
-      // More user-friendly error message
-      if (error.message?.includes('Database error querying schema')) {
+      
+      // Check for the specific "Email logins are disabled" error
+      if (error.message?.includes('Email logins are disabled')) {
+        setEmailLoginsDisabled(true);
+        toast.error('Email logins are disabled in Supabase settings');
+      } 
+      // Database error handling
+      else if (error.message?.includes('Database error querying schema')) {
         toast.error('Database setup issue. Try creating an admin account first.');
-      } else {
+        setShowCreateAdmin(true);
+      } 
+      // Other errors
+      else {
         toast.error(error.message || 'Login failed. Please check your credentials.');
       }
     } finally {
@@ -90,7 +100,14 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
         password: values.password,
       });
       
-      if (authError) throw authError;
+      if (authError) {
+        // Check for email logins disabled error
+        if (authError.message.includes('Email signups are disabled')) {
+          setEmailLoginsDisabled(true);
+          throw new Error('Email signups are disabled in Supabase settings');
+        }
+        throw authError;
+      }
       
       if (authData.user) {
         console.log('User created:', authData.user.id);
@@ -137,6 +154,31 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
       setIsSubmitting(false);
     }
   };
+
+  if (emailLoginsDisabled) {
+    return (
+      <Alert variant="destructive" className="mb-6">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Authentication Error</AlertTitle>
+        <AlertDescription>
+          <p>Email logins are disabled in your Supabase project settings.</p>
+          <p className="mt-2">To enable email logins, go to your Supabase dashboard:</p>
+          <ol className="list-decimal pl-5 mt-1">
+            <li>Navigate to Authentication &gt; Providers</li>
+            <li>Enable "Email" provider</li>
+            <li>Make sure "Confirm email" is disabled for easier testing</li>
+          </ol>
+          <Button 
+            variant="outline" 
+            className="mt-3 w-full"
+            onClick={() => setEmailLoginsDisabled(false)}
+          >
+            Try Again
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <Form {...form}>
