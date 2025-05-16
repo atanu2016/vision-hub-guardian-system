@@ -1,5 +1,5 @@
 
-// Import database service functions directly
+// Import database service functions from the new location
 import {
   fetchCamerasFromDB as getCameras,
   fetchSystemStatsFromDB as getSystemStats,
@@ -8,7 +8,7 @@ import {
   fetchStorageSettingsFromDB as getStorageSettings,
   saveStorageSettingsToDB as saveStorageSettings,
   checkDatabaseSetup as initializeSystem
-} from "@/services/databaseService";
+} from "@/services/database";
 
 // Export all database functions directly
 export {

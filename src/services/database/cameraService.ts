@@ -1,7 +1,7 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Camera } from "@/types/camera";
 import { logDatabaseError } from "./baseService";
+import { toast } from "sonner";
 
 // Camera operations
 export const fetchCamerasFromDB = async (): Promise<Camera[]> => {

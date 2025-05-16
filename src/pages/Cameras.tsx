@@ -8,7 +8,7 @@ import AddCameraModal from "@/components/cameras/AddCameraModal";
 import { Camera } from "@/types/camera";
 import { useToast } from "@/hooks/use-toast";
 import { getCameras, saveCamera, deleteCamera } from "@/services/apiService";
-import { checkDatabaseSetup } from "@/services/databaseService";
+import { checkDatabaseSetup } from "@/services/database";
 
 const Cameras = () => {
   const { toast } = useToast();
