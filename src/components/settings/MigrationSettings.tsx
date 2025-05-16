@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -51,11 +50,10 @@ export default function MigrationSettings() {
               .update({ is_admin: true })
               .eq('id', user.id);
               
+            // Use upsert instead of insert+onConflict for TypeScript compatibility
             await supabase
               .from('user_roles')
-              .insert({ user_id: user.id, role: 'superadmin' })
-              .onConflict(['user_id'])
-              .merge();
+              .upsert({ user_id: user.id, role: 'superadmin' });
               
             setHasAccess(true);
           }
