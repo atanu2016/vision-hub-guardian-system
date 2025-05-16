@@ -2,20 +2,35 @@
 project_id = "csmsqglfbycodrqipbca"
 
 [api]
-enabled = true
-port = 54321
-schemas = ["public", "storage", "graphql_public"]
-extra_search_path = ["public", "extensions"]
-max_rows = 1000
+# enabled = true
+# port = 54321
+# schemas = ["public", "storage"]
+# extra_search_path = ["public", "extensions"]
+# max_rows = 1000
 
-[[db.migrations]]
-name = "20250514000000_create_vision_hub_schema"
+[db]
+# port = 54322
+# shadow_port = 54320
 
-[functions.send-test-email]
-verify_jwt = true
+[studio]
+# port = 54323
 
-[functions.data-migration]
-verify_jwt = true
+[inbucket]
+# port = 54324
+# smtp_port = 54325
+# pop3_port = 54326
 
-[functions.supabase-migration]
+[storage]
+# enabled = true
+
+[auth]
+# enabled = true
+
+[realtime]
+# enabled = true
+
+# Allow insecure local development
+# enabled_local_routing = true
+
+[functions.admin-create-user]
 verify_jwt = true

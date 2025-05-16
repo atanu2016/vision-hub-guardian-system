@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/auth';
 import { ArrowLeft } from 'lucide-react';
 import { CreateUserForm } from '@/components/admin/users/CreateUserForm';
+import { useEffect } from 'react';
+import { toast } from 'sonner';
 
 export default function CreateUser() {
   const navigate = useNavigate();
@@ -14,8 +16,14 @@ export default function CreateUser() {
     navigate('/admin');
   };
   
+  useEffect(() => {
+    if (!isSuperAdmin) {
+      toast.error('Only superadmin users can create new users');
+      navigate('/admin');
+    }
+  }, [isSuperAdmin, navigate]);
+  
   if (!isSuperAdmin) {
-    navigate('/admin');
     return null;
   }
 

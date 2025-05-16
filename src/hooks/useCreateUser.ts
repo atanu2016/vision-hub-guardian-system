@@ -59,54 +59,27 @@ export function useCreateUser({ onSuccess }: UseCreateUserOptions = {}) {
     setIsSubmitting(true);
     
     try {
-      console.log("Creating user with email:", formData.email);
-      
-      // Create user in Supabase Auth
-      const { data: userData, error: authError } = await supabase.auth.admin.createUser({
-        email: formData.email,
-        password: formData.password,
-        email_confirm: true,
-        user_metadata: { full_name: formData.fullName }
+      // Create the user through a secure backend function
+      const { data, error } = await supabase.functions.invoke('admin-create-user', {
+        body: {
+          email: formData.email,
+          password: formData.password,
+          user_metadata: { full_name: formData.fullName },
+          role: formData.role,
+          mfa_required: formData.mfaRequired
+        }
       });
       
-      if (authError) throw authError;
+      if (error) throw error;
       
-      if (!userData.user) {
+      if (!data || !data.userId) {
         throw new Error('Failed to create user');
       }
       
-      console.log("User created successfully:", userData.user.id);
+      console.log("User created successfully:", data.userId);
       
-      // Create/Update profile 
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: userData.user.id,
-          full_name: formData.fullName,
-          is_admin: formData.role === 'admin' || formData.role === 'superadmin',
-          mfa_required: formData.mfaRequired
-        });
-      
-      if (profileError) {
-        console.error('Profile creation error:', profileError);
-        // Don't throw here as the profile might be created by trigger
-      }
-      
-      // Update user role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .upsert({
-          user_id: userData.user.id,
-          role: formData.role
-        });
-        
-      if (roleError) {
-        console.error('Role assignment error:', roleError);
-        toast.error(`User created but role assignment failed: ${roleError.message}`);
-      } else {
-        toast.success('User created successfully');
-        if (onSuccess) onSuccess();
-      }
+      toast.success('User created successfully');
+      if (onSuccess) onSuccess();
       
     } catch (error: any) {
       console.error('Error creating user:', error);
