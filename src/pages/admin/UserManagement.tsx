@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Shield, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserTable } from '@/components/admin/UserTable';
-import { fetchUsers, updateUserRole, toggleMfaRequirement } from '@/services/userService';
+import { fetchUsers, updateUserRole, toggleMfaRequirement, deleteUser } from '@/services/userService';
 import type { UserData, UserRole } from '@/types/admin';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -55,6 +55,17 @@ export default function UserManagement() {
       // Error is already handled in the service
     }
   }
+  
+  async function handleDeleteUser(userId: string) {
+    try {
+      await deleteUser(userId);
+      // Remove user from local state
+      setUsers(users.filter(u => u.id !== userId));
+      toast.success('User deleted successfully');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete user');
+    }
+  }
 
   const handleCreateUserClick = () => {
     navigate('/admin/users/create');
@@ -100,6 +111,7 @@ export default function UserManagement() {
           currentUserId={user?.id}
           updateUserRole={handleUpdateUserRole}
           toggleMfaRequirement={handleToggleMfaRequirement}
+          deleteUser={handleDeleteUser}
           loading={loading}
         />
       </CardContent>

@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole } from '@/types/admin';
+import { ArrowLeft } from 'lucide-react';
 
 export default function CreateUser() {
   const navigate = useNavigate();
@@ -111,6 +112,17 @@ export default function CreateUser() {
 
   return (
     <div className="container mx-auto py-8 max-w-md">
+      <div className="mb-6">
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate('/admin')}
+          className="flex items-center gap-2 mb-6"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Admin
+        </Button>
+      </div>
+      
       <Card>
         <CardHeader>
           <CardTitle>Create New User</CardTitle>

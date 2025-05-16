@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, Database, Users, UserPlus } from 'lucide-react';
+import { Shield, Database, Users, UserPlus, LayoutDashboard } from 'lucide-react';
 import UserManagement from './UserManagement';
 import DatabaseMigration from '@/components/settings/DatabaseMigration';
 import { useAuth } from '@/contexts/auth';
@@ -30,6 +30,10 @@ export default function AdminPage() {
     navigate('/admin/users/create');
   };
 
+  const handleDashboardClick = () => {
+    navigate('/');
+  };
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -39,13 +43,23 @@ export default function AdminPage() {
             System administration and management tools
           </p>
         </div>
-        <Button 
-          onClick={handleCreateUser}
-          className="bg-vision-blue hover:bg-vision-blue-600"
-        >
-          <UserPlus className="mr-2 h-4 w-4" />
-          Create User
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={handleDashboardClick}
+            className="flex items-center gap-2"
+          >
+            <LayoutDashboard className="mr-2 h-4 w-4" />
+            Dashboard
+          </Button>
+          <Button 
+            onClick={handleCreateUser}
+            className="bg-vision-blue hover:bg-vision-blue-600"
+          >
+            <UserPlus className="mr-2 h-4 w-4" />
+            Create User
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
