@@ -56,6 +56,6 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
     ? <CreateAdminForm onBackToLogin={() => setShowCreateAdmin(false)} />
     : <StandardLoginForm 
         onSubmit={onLoginSubmit} 
-        showCreateAdminButton={false} // We disable this button now
+        showCreateAdminButton={false} // We disable this button completely
       />;
 };

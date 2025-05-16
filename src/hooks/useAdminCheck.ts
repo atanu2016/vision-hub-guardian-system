@@ -19,11 +19,11 @@ export function useAdminCheck() {
         
         if (profileError) throw profileError;
         
-        // Then check for users with superadmin role in user_roles
+        // Then check for users with admin or superadmin role in user_roles
         const { count: roleAdminCount, error: roleError } = await supabase
           .from('user_roles')
           .select('*', { count: 'exact', head: true })
-          .eq('role', 'superadmin');
+          .in('role', ['admin', 'superadmin']);
         
         if (roleError) throw roleError;
         

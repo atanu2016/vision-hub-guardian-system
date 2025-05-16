@@ -7,7 +7,7 @@ import App from './App.tsx'
 import './index.css'
 
 createRoot(document.getElementById("root")!).render(
-  <ThemeProvider defaultTheme="dark" storageKey="vision-hub-theme">
+  <ThemeProvider defaultTheme="dark" storageKey="videoguard-theme">
     <ToastProvider>
       <BrowserRouter>
         <App />

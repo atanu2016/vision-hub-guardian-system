@@ -1,12 +1,12 @@
+
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
+import { 
   LogOut,
   PlusCircle,
   Search,
   Settings,
   User,
-  UserCog,
+  Bell,
 } from "lucide-react";
 import { 
   DropdownMenu, 
@@ -16,25 +16,23 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
 import AddCameraModal from "@/components/cameras/AddCameraModal";
 import { Camera } from "@/types/camera";
 import { getCameras, saveCamera } from "@/data/mockData";
-import { toast, useToast } from "@/hooks/use-toast";
 import { NotificationDropdown } from "./NotificationDropdown";
 import { useNotifications } from "@/hooks/useNotifications";
 import SearchBar from "@/components/search/SearchBar";
 
 const TopBar = () => {
   const { user, profile, signOut, isAdmin } = useAuth();
-  const { toast: hookToast } = useToast();
+  const location = useLocation();
   const navigate = useNavigate();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [cameras, setCameras] = useState<Camera[]>([]);
@@ -45,6 +43,8 @@ const TopBar = () => {
     clearAll, 
     addNotification 
   } = useNotifications();
+  
+  const pageTitle = getPageTitle(location.pathname);
   
   // Load cameras when component mounts
   useEffect(() => {
@@ -85,7 +85,7 @@ const TopBar = () => {
     const updatedCameras = [...cameras, camera];
     setCameras(updatedCameras);
     
-    // Save to storage - fix the function name from saveCameras to saveCamera
+    // Save to storage
     saveCamera(camera);
     
     // Add notification
@@ -96,31 +96,32 @@ const TopBar = () => {
     });
   };
 
+  // Function to get the page title based on URL path
+  function getPageTitle(path: string): string {
+    const pathWithoutSlash = path.startsWith('/') ? path.substring(1) : path;
+    if (pathWithoutSlash === '') return 'Dashboard';
+    
+    // Convert kebab case to title case
+    const words = pathWithoutSlash.split('-');
+    return words.map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  }
+
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 dark:bg-vision-dark-900 dark:border-vision-dark-800">
       <div className="flex h-16 items-center px-4 md:px-6 gap-4">
         <div className="md:hidden">
           <SidebarTrigger />
         </div>
         
-        <div className="hidden md:flex md:w-56 items-center gap-2">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="bg-vision-blue-500 p-1.5 rounded">
-              <User size={20} className="text-white" />
-            </div>
-            <h2 className="text-lg font-semibold">Vision Hub</h2>
-          </Link>
-        </div>
-
         <div className="flex-1">
-          <form className="hidden md:flex max-w-sm">
-            <div className="relative w-full">
-              <SearchBar />
-            </div>
-          </form>
+          <h1 className="text-xl font-semibold">{pageTitle}</h1>
         </div>
 
         <div className="flex items-center gap-2">
+          <div className="hidden md:flex">
+            <SearchBar />
+          </div>
+          
           <div className="hidden md:flex">
             <ThemeToggle />
           </div>
@@ -133,15 +134,15 @@ const TopBar = () => {
             onViewAll={() => navigate('/notifications')}
           />
           
-          <Separator orientation="vertical" className="hidden md:block h-8" />
-          
-          <Button 
-            variant="outline" 
-            className="flex"
-            onClick={() => setIsAddModalOpen(true)}
-          >
-            <PlusCircle className="mr-2 h-4 w-4" /> Add Camera
-          </Button>
+          {location.pathname.includes('/cameras') && (
+            <Button 
+              variant="outline" 
+              className="flex"
+              onClick={() => setIsAddModalOpen(true)}
+            >
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Camera
+            </Button>
+          )}
           
           {user ? (
             <DropdownMenu>
@@ -173,25 +174,10 @@ const TopBar = () => {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link to="/profile-settings">
-                    <UserCog className="mr-2 h-4 w-4" />
+                    <User className="mr-2 h-4 w-4" />
                     Profile Settings
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/settings">
-                    <Settings className="mr-2 h-4 w-4" />
-                    System Settings
-                  </Link>
-                </DropdownMenuItem>
-                {isAdmin && (
-                  <DropdownMenuItem asChild>
-                    <Link to="/admin">
-                      <User className="mr-2 h-4 w-4" />
-                      Admin Panel
-                    </Link>
-                  </DropdownMenuItem>
-                )}
                 <DropdownMenuSeparator />
                 <div className="p-2 md:hidden">
                   <ThemeToggle />

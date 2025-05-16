@@ -14,14 +14,14 @@ interface AppLayoutProps {
 const AppLayout = ({ children, className, fullWidth = false }: AppLayoutProps) => {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full overflow-hidden bg-background">
+      <div className="flex min-h-screen w-full overflow-hidden bg-background dark:bg-vision-dark-950">
         <Sidebar />
         <div className="flex flex-col flex-1 w-full">
           <TopBar />
           <ScrollArea className="flex-1 w-full h-[calc(100vh-64px)]">
             <main className={cn(
               "flex-1 p-4 md:p-6 w-full",
-              !fullWidth && "max-w-7xl mx-auto",
+              !fullWidth && "max-w-full mx-auto",
               className
             )}>
               <div className="animate-fade-in">

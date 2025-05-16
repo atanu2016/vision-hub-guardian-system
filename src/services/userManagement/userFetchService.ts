@@ -9,7 +9,15 @@ export async function fetchUsers(): Promise<UserData[]> {
   try {
     console.log('Fetching users from database...');
     
-    // Get all profiles first - this should work better with RLS
+    // Fetch all auth users first to make sure we have complete data
+    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+    
+    if (authError) {
+      console.error('Error fetching auth users:', authError);
+      throw authError;
+    }
+
+    // Get all profiles
     const { data: profiles, error: profileError } = await supabase
       .from('profiles')
       .select('id, full_name, mfa_enrolled, mfa_required, created_at, is_admin');
@@ -20,23 +28,31 @@ export async function fetchUsers(): Promise<UserData[]> {
     }
 
     console.log(`Found ${profiles.length} profiles`);
+    console.log(`Found ${authUsers?.users?.length || 0} auth users`);
     
-    // For each profile, get roles and email
+    // Map auth users to our UserData format
     const usersWithRoles = await Promise.all(
-      profiles.map(async (profile) => {
+      (authUsers?.users || []).map(async (authUser) => {
+        // Find matching profile
+        const profile = profiles.find(p => p.id === authUser.id) || {
+          id: authUser.id,
+          full_name: authUser.user_metadata?.full_name || '',
+          mfa_enrolled: false,
+          mfa_required: false,
+          created_at: authUser.created_at,
+          is_admin: false
+        };
+
         // Get user role
         const { data: roleData } = await supabase
           .from('user_roles')
           .select('role')
-          .eq('user_id', profile.id)
+          .eq('user_id', authUser.id)
           .maybeSingle();
           
-        // Get user email from auth.users via admin API
-        const { data: userData } = await supabase.auth.admin.getUserById(profile.id);
-        
         return {
           ...profile,
-          email: userData?.user?.email || 'No email',
+          email: authUser.email || 'No email',
           role: (roleData?.role as UserRole) || (profile.is_admin ? 'admin' : 'user'),
         };
       })
