@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,7 +9,6 @@ import FirebaseMigrationForm from './migration/FirebaseMigrationForm';
 import SupabaseMigrationForm from './migration/SupabaseMigrationForm';
 import { useAuth } from '@/contexts/AuthContext';
 import { checkMigrationAccess, ensureUserIsAdmin } from '@/services/userService';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export default function DatabaseMigration() {
