@@ -88,7 +88,7 @@ export default function UserManagement() {
         <Button 
           onClick={handleCreateUserClick}
           size="sm"
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 bg-vision-blue hover:bg-vision-blue-600"
         >
           <UserPlus className="h-4 w-4" />
           Create User

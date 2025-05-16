@@ -37,7 +37,7 @@ export default function AdminPage() {
         </div>
         <Button 
           onClick={() => navigate('/admin/users/create')}
-          className="bg-vision-blue"
+          className="bg-vision-blue hover:bg-vision-blue-600"
         >
           <Users className="mr-2 h-4 w-4" />
           Create User

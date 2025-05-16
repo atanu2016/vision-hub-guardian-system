@@ -47,7 +47,7 @@ export default function CreateUser() {
     setIsSubmitting(true);
     
     try {
-      // Create user in Supabase Auth (using admin API)
+      // Create user in Supabase Auth
       const { data: userData, error: authError } = await supabase.auth.admin.createUser({
         email: formData.email,
         password: formData.password,
@@ -61,7 +61,7 @@ export default function CreateUser() {
         throw new Error('Failed to create user');
       }
       
-      // Create/Update profile manually to avoid RLS issues
+      // Create/Update profile 
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
@@ -73,7 +73,7 @@ export default function CreateUser() {
       
       if (profileError) {
         console.error('Profile creation error:', profileError);
-        // Continue anyway as the trigger might have created it
+        // Don't throw here as the profile might be created by trigger
       }
       
       // Update user role
@@ -84,10 +84,13 @@ export default function CreateUser() {
           role: formData.role
         });
         
-      if (roleError) throw roleError;
-      
-      toast.success('User created successfully');
-      navigate('/admin');
+      if (roleError) {
+        console.error('Role assignment error:', roleError);
+        toast.error(`User created but role assignment failed: ${roleError.message}`);
+      } else {
+        toast.success('User created successfully');
+        navigate('/admin');
+      }
       
     } catch (error: any) {
       console.error('Error creating user:', error);
