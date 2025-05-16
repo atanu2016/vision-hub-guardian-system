@@ -82,7 +82,7 @@ export default function MFAEnrollment() {
       const isValid = verificationCode.length === 6;
       
       if (isValid) {
-        // Save the MFA secret and enabled status to the database for THIS specific user
+        // Save the MFA secret and enrolled status to the database for THIS specific user
         const { error } = await supabase
           .from('profiles')
           .update({
