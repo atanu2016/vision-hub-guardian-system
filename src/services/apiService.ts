@@ -19,7 +19,7 @@ import {
   addLogToDB,
   saveCameraRecordingStatus,
   checkDatabaseSetup
-} from './databaseService';
+} from './database';
 
 // Camera API
 export const getCameras = fetchCamerasFromDB;
