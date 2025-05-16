@@ -87,8 +87,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return;
+      }
+      
       setProfile(data as Profile);
+      
+      // If this is the first user (likely an admin), set admin status if not already set
+      if (data && !data.is_admin) {
+        const { count } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+          
+        if (count === 1) {
+          // This is the first and only user, make them admin
+          await supabase
+            .from('profiles')
+            .update({ is_admin: true })
+            .eq('id', userId);
+            
+          // Update local state to reflect admin status
+          setProfile({...data, is_admin: true} as Profile);
+        }
+      }
     } catch (error) {
       console.error('Error fetching user profile:', error);
     }
@@ -102,13 +124,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('user_id', userId)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching user role:', error);
+        setRole('user'); // Default to regular user on error
+        return;
+      }
       
       if (data) {
         setRole(data.role as UserRole);
       } else {
-        // Default to 'user' if no role is assigned
-        setRole('user');
+        // If this is the first user and no role exists, create a superadmin role
+        const { count } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+          
+        if (count === 1) {
+          // This is the first and only user, make them superadmin
+          await supabase
+            .from('user_roles')
+            .insert({ user_id: userId, role: 'superadmin' });
+            
+          // Update local state
+          setRole('superadmin');
+        } else {
+          // Default to 'user' if no role is assigned
+          setRole('user');
+        }
       }
     } catch (error) {
       console.error('Error fetching user role:', error);
@@ -157,8 +198,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const requiresMFA = !!(profile?.mfa_required && !profile?.mfa_enrolled);
+  
+  // Updated to check both profile.is_admin and role for admin status
   const isAdmin = role === 'admin' || role === 'superadmin' || !!profile?.is_admin;
-  const isSuperAdmin = role === 'superadmin';
+  const isSuperAdmin = role === 'superadmin' || (!!profile?.is_admin && role === 'admin');
   const isOperator = role === 'operator' || isAdmin;
 
   return (

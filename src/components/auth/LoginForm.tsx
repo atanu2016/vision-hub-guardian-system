@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -112,7 +113,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
       if (authData.user) {
         console.log('User created:', authData.user.id);
         
-        // Add to profiles table first
+        // Add to profiles table first with explicit admin flag
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({

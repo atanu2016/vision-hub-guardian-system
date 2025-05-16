@@ -7,19 +7,60 @@ import { useAuth } from '@/contexts/AuthContext';
 import FirebaseMigrationForm from './migration/FirebaseMigrationForm';
 import SupabaseMigrationForm from './migration/SupabaseMigrationForm';
 import { checkMigrationAccess } from '@/services/userService';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function MigrationSettings() {
   const [activeTab, setActiveTab] = useState('firebase');
   const [hasAccess, setHasAccess] = useState(false);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, profile, role } = useAuth();
   
   useEffect(() => {
     const checkAccess = async () => {
       if (user) {
         setLoading(true);
+        
+        // First check - via profile object
+        if (profile?.is_admin) {
+          setHasAccess(true);
+          setLoading(false);
+          return;
+        }
+        
+        // Second check - via role
+        if (role === 'admin' || role === 'superadmin') {
+          setHasAccess(true);
+          setLoading(false);
+          return;
+        }
+        
+        // Third check - via database check (backstop)
         const access = await checkMigrationAccess(user.id);
         setHasAccess(access);
+        
+        // If user still doesn't have access but they're the only user in the system, grant admin
+        if (!access) {
+          const { count } = await supabase
+            .from('profiles')
+            .select('*', { count: 'exact', head: true });
+            
+          if (count === 1) {
+            // This is the first and only user, update them to admin
+            await supabase
+              .from('profiles')
+              .update({ is_admin: true })
+              .eq('id', user.id);
+              
+            await supabase
+              .from('user_roles')
+              .insert({ user_id: user.id, role: 'superadmin' })
+              .onConflict(['user_id'])
+              .merge();
+              
+            setHasAccess(true);
+          }
+        }
+        
         setLoading(false);
       } else {
         setHasAccess(false);
@@ -28,7 +69,7 @@ export default function MigrationSettings() {
     };
     
     checkAccess();
-  }, [user]);
+  }, [user, profile, role]);
   
   if (loading) {
     return (

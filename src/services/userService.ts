@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { UserRole, UserData } from '@/types/admin';
 import { toast } from 'sonner';
@@ -121,16 +120,37 @@ export async function toggleMfaRequirement(userId: string, required: boolean): P
   }
 }
 
-// New function to check admin access for migration tools
+// Updated function to check admin access for migration tools
 export async function checkMigrationAccess(userId: string): Promise<boolean> {
   try {
-    // Check if the user is an admin or superadmin
-    const { data: roleData } = await supabase
+    // Check if the user is an admin based on profile flag first
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', userId)
+      .single();
+      
+    if (profileError) {
+      console.error('Error checking profile admin status:', profileError);
+    }
+    
+    // If user has admin flag in profile, grant access
+    if (profileData && profileData.is_admin === true) {
+      return true;
+    }
+    
+    // Also check for admin or superadmin role in user_roles table
+    const { data: roleData, error: roleError } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
       
+    if (roleError) {
+      console.error('Error checking user role:', roleError);
+    }
+    
+    // Grant access if user has admin or superadmin role
     return roleData && (roleData.role === 'admin' || roleData.role === 'superadmin');
   } catch (error) {
     console.error('Error checking migration access:', error);
