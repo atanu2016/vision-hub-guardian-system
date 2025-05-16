@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { UserRole, UserData } from '@/types/admin';
 import { toast } from 'sonner';
@@ -154,6 +155,41 @@ export async function checkMigrationAccess(userId: string): Promise<boolean> {
     return roleData && (roleData.role === 'admin' || roleData.role === 'superadmin');
   } catch (error) {
     console.error('Error checking migration access:', error);
+    return false;
+  }
+}
+
+// New helper function to create or ensure a user is admin
+export async function ensureUserIsAdmin(userId: string): Promise<boolean> {
+  try {
+    // First update profile to have admin flag
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ is_admin: true })
+      .eq('id', userId);
+    
+    if (profileError) {
+      console.error('Error updating profile admin status:', profileError);
+      return false;
+    }
+    
+    // Then ensure they have a superadmin role
+    const { error: roleError } = await supabase
+      .from('user_roles')
+      .upsert({ 
+        user_id: userId, 
+        role: 'superadmin',
+        updated_at: new Date().toISOString()
+      });
+    
+    if (roleError) {
+      console.error('Error updating user role:', roleError);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error ensuring user is admin:', error);
     return false;
   }
 }

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -5,8 +6,9 @@ import { Database, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import FirebaseMigrationForm from './migration/FirebaseMigrationForm';
 import SupabaseMigrationForm from './migration/SupabaseMigrationForm';
-import { checkMigrationAccess } from '@/services/userService';
+import { checkMigrationAccess, ensureUserIsAdmin } from '@/services/userService';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export default function MigrationSettings() {
   const [activeTab, setActiveTab] = useState('firebase');
@@ -45,17 +47,12 @@ export default function MigrationSettings() {
             
           if (count === 1) {
             // This is the first and only user, update them to admin
-            await supabase
-              .from('profiles')
-              .update({ is_admin: true })
-              .eq('id', user.id);
-              
-            // Use upsert instead of insert+onConflict for TypeScript compatibility
-            await supabase
-              .from('user_roles')
-              .upsert({ user_id: user.id, role: 'superadmin' });
-              
-            setHasAccess(true);
+            const success = await ensureUserIsAdmin(user.id);
+            
+            if (success) {
+              toast.success('You have been granted admin access as the first user');
+              setHasAccess(true);
+            }
           }
         }
         

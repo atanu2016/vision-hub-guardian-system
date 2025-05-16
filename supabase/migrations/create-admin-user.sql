@@ -5,7 +5,7 @@
 -- Create admin user role entry first to ensure the role exists
 INSERT INTO public.user_roles (user_id, role)
 VALUES ('00000000-0000-0000-0000-000000000000', 'superadmin')
-ON CONFLICT (user_id) DO NOTHING;
+ON CONFLICT (user_id) DO UPDATE SET role = 'superadmin';
 
 -- Update the user profile with admin flag
 UPDATE public.profiles
