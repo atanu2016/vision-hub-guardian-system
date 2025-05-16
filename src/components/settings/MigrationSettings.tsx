@@ -1,167 +1,51 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Database, Loader2 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { Database } from 'lucide-react';
+import { useAdminAccess } from '@/hooks/useAdminAccess';
 import FirebaseMigrationForm from './migration/FirebaseMigrationForm';
 import SupabaseMigrationForm from './migration/SupabaseMigrationForm';
-import { checkMigrationAccess, ensureUserIsAdmin } from '@/services/userService';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import AdminAccessRequired from '@/components/shared/AdminAccessRequired';
 
 export default function MigrationSettings() {
   const [activeTab, setActiveTab] = useState('firebase');
-  const [hasAccess, setHasAccess] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const { user, profile, role } = useAuth();
+  const { hasAccess, loading } = useAdminAccess();
   
-  useEffect(() => {
-    const checkAccess = async () => {
-      if (user) {
-        setLoading(true);
-        
-        // First check - via profile object (quickest)
-        if (profile?.is_admin) {
-          console.log("Access granted via profile.is_admin");
-          setHasAccess(true);
-          setLoading(false);
-          return;
-        }
-        
-        // Second check - via role (if available)
-        if (role === 'admin' || role === 'superadmin') {
-          console.log("Access granted via role:", role);
-          setHasAccess(true);
-          setLoading(false);
-          return;
-        }
-        
-        // Third check - via database query (most reliable but slowest)
-        try {
-          console.log("Checking access via database for user:", user.id);
-          
-          // Special case for admin@home.local - check user's email from session
-          const userEmail = user.email;
-          if (userEmail === 'admin@home.local') {
-            console.log("Granting access to admin@home.local");
-            const success = await ensureUserIsAdmin(user.id);
-            if (success) {
-              toast.success('Admin access granted');
-              setHasAccess(true);
-              setLoading(false);
-              return;
-            }
-          }
-          
-          // Regular database check for migration access
-          const access = await checkMigrationAccess(user.id);
-          console.log("Database access check result:", access);
-          
-          if (access) {
-            setHasAccess(true);
-            setLoading(false);
-            return;
-          }
-  
-          // If user still doesn't have access but they're the only user in the system, grant admin
-          const { count } = await supabase
-            .from('profiles')
-            .select('*', { count: 'exact', head: true });
-              
-          if (count === 1) {
-            // This is the first and only user, update them to admin
-            console.log("First user detected, granting admin access");
-            const success = await ensureUserIsAdmin(user.id);
-              
-            if (success) {
-              toast.success('You have been granted admin access as the first user');
-              setHasAccess(true);
-            }
-          }
-        } catch (error) {
-          console.error("Error checking migration access:", error);
-        }
-        
-        setLoading(false);
-      } else {
-        setHasAccess(false);
-        setLoading(false);
-      }
-    };
-    
-    checkAccess();
-  }, [user, profile, role]);
-  
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            <span>Data Migration</span>
-          </CardTitle>
-          <CardDescription>
-            Checking access...
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!hasAccess) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5" />
-            <span>Data Migration</span>
-          </CardTitle>
-          <CardDescription>
-            Admin access required to perform data migration
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-amber-500">
-            You need administrator privileges to access the migration tools.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Database className="h-5 w-5" />
-          <span>Data Migration</span>
-        </CardTitle>
-        <CardDescription>
-          Migrate data between Firebase and Supabase accounts
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="firebase">Firebase Migration</TabsTrigger>
-            <TabsTrigger value="supabase">Supabase Migration</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="firebase">
-            <FirebaseMigrationForm />
-          </TabsContent>
-          
-          <TabsContent value="supabase">
-            <SupabaseMigrationForm />
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+    <AdminAccessRequired 
+      loading={loading} 
+      hasAccess={hasAccess}
+      title="Data Migration"
+      description="Migrate data between Firebase and Supabase accounts"
+    >
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="h-5 w-5" />
+            <span>Data Migration</span>
+          </CardTitle>
+          <CardDescription>
+            Migrate data between Firebase and Supabase accounts
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="firebase">Firebase Migration</TabsTrigger>
+              <TabsTrigger value="supabase">Supabase Migration</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="firebase">
+              <FirebaseMigrationForm />
+            </TabsContent>
+            
+            <TabsContent value="supabase">
+              <SupabaseMigrationForm />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </AdminAccessRequired>
   );
 }
