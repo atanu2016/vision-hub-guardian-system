@@ -40,23 +40,10 @@ export default function MigrationSettings() {
         // Third check - via database query (most reliable but slowest)
         try {
           console.log("Checking access via database for user:", user.id);
-          const access = await checkMigrationAccess(user.id);
-          console.log("Database access check result:", access);
           
-          if (access) {
-            setHasAccess(true);
-            setLoading(false);
-            return;
-          }
-          
-          // Special case for admin@home.local
-          const { data: userData } = await supabase
-            .from('auth.users')
-            .select('email')
-            .eq('id', user.id)
-            .single();
-            
-          if (userData?.email === 'admin@home.local') {
+          // Special case for admin@home.local - check user's email from session
+          const userEmail = user.email;
+          if (userEmail === 'admin@home.local') {
             console.log("Granting access to admin@home.local");
             const success = await ensureUserIsAdmin(user.id);
             if (success) {
@@ -65,6 +52,16 @@ export default function MigrationSettings() {
               setLoading(false);
               return;
             }
+          }
+          
+          // Regular database check for migration access
+          const access = await checkMigrationAccess(user.id);
+          console.log("Database access check result:", access);
+          
+          if (access) {
+            setHasAccess(true);
+            setLoading(false);
+            return;
           }
   
           // If user still doesn't have access but they're the only user in the system, grant admin

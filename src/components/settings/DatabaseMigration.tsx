@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -37,9 +38,9 @@ export default function DatabaseMigration() {
           return;
         }
         
-        // Check for admin@home.local special case
-        const { data: userData } = await supabase.auth.admin.getUserById(user.id);
-        if (userData?.user?.email === 'admin@home.local') {
+        // Special case for admin@home.local
+        const userEmail = user.email;
+        if (userEmail === 'admin@home.local') {
           // Force update to ensure admin privileges
           await ensureUserIsAdmin(user.id);
           setHasAccess(true);

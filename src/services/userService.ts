@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { UserRole, UserData } from '@/types/admin';
 import { toast } from 'sonner';
@@ -125,16 +126,11 @@ export async function checkMigrationAccess(userId: string): Promise<boolean> {
   try {
     console.log("Checking migration access for userId:", userId);
     
-    // Direct query to check email for admin@home.local
-    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
-    
-    if (userData?.user && userData.user.email === 'admin@home.local') {
+    // Get the current user's session to check email
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (sessionData?.session?.user?.email === 'admin@home.local') {
       console.log("User is admin@home.local, granting access");
       return true;
-    }
-    
-    if (userError) {
-      console.error("Error checking user email:", userError);
     }
     
     // Check if the user is an admin based on profile flag
@@ -189,13 +185,13 @@ export async function ensureUserIsAdmin(userId: string): Promise<boolean> {
       console.error('Error updating profile admin status:', profileError);
       
       // If update failed, try insert
-      const { data: userData } = await supabase.auth.admin.getUserById(userId);
-      if (userData?.user) {
+      const { data: userData } = await supabase.auth.getSession();
+      if (userData?.session?.user) {
         const { error: insertError } = await supabase
           .from('profiles')
           .insert({ 
             id: userId,
-            full_name: userData.user.email?.split('@')[0] || 'Administrator',
+            full_name: userData.session.user.email?.split('@')[0] || 'Administrator',
             is_admin: true,
             mfa_required: false
           });
