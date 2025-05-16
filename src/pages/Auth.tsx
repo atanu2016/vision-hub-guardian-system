@@ -29,6 +29,8 @@ const Auth = () => {
     }
   }, [location]);
 
+  console.log("Auth page: isLoading =", isLoading, "user =", !!user, "requiresMFA =", requiresMFA);
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -40,6 +42,7 @@ const Auth = () => {
   if (user) {
     // If MFA is required but not enrolled, redirect to MFA enrollment
     if (requiresMFA) {
+      console.log("Auth page: MFA required, showing enrollment form");
       return (
         <div className="flex min-h-screen items-center justify-center bg-vision-dark-900 p-4 sm:p-8" style={backgroundUrl ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
           <div className="w-full max-w-md">
@@ -61,6 +64,7 @@ const Auth = () => {
     }
     
     // Otherwise, redirect to the page they were trying to access
+    console.log("Auth page: User is logged in, redirecting to", from);
     return <Navigate to={from} replace />;
   }
 

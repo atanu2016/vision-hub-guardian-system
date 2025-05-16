@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 
 export type UserRole = 'superadmin' | 'admin' | 'operator' | 'user';
 
@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Set up the auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
+        console.log("Auth state changed:", event, currentSession?.user?.email);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
@@ -55,24 +56,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Fetch user profile when signed in
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && currentSession?.user) {
-          fetchUserProfile(currentSession.user.id);
-          fetchUserRole(currentSession.user.id);
+          // Use setTimeout to avoid potential recursive auth state changes
+          setTimeout(() => {
+            fetchUserProfile(currentSession.user.id);
+            fetchUserRole(currentSession.user.id);
+          }, 0);
         }
       }
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      
-      if (currentSession?.user) {
-        fetchUserProfile(currentSession.user.id);
-        fetchUserRole(currentSession.user.id);
+    const checkSession = async () => {
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log("Initial session check:", currentSession?.user?.email);
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        
+        if (currentSession?.user) {
+          fetchUserProfile(currentSession.user.id);
+          fetchUserRole(currentSession.user.id);
+        }
+        
+      } catch (error) {
+        console.error("Error checking session:", error);
+      } finally {
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
-    });
+    };
+    
+    checkSession();
 
     return () => {
       subscription.unsubscribe();
@@ -84,8 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("Fetching profile for user:", userId);
       
       // Special handling for admin@home.local
-      const { data: userData } = await supabase.auth.admin.getUserById(userId);
-      if (userData?.user && userData.user.email === 'admin@home.local') {
+      if (user?.email === 'admin@home.local') {
         console.log("admin@home.local detected - ensuring admin status");
         
         // Make sure they're set as admin in profiles
@@ -170,8 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("Fetching role for user:", userId);
       
       // Special handling for admin@home.local - always superadmin
-      const { data: userData } = await supabase.auth.admin.getUserById(userId);
-      if (userData?.user && userData.user.email === 'admin@home.local') {
+      if (user?.email === 'admin@home.local') {
         console.log("admin@home.local detected - setting as superadmin");
         
         // Ensure they have superadmin role
@@ -237,8 +248,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error, data } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       
-      // The navigation will happen automatically in the Auth component
-      // when the user state changes due to the onAuthStateChange listener
       toast.success('Successfully signed in');
     } catch (error: any) {
       toast.error(error.message || 'Error signing in');
@@ -252,8 +261,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       
       // Navigate after successful sign out
-      navigate('/auth');
       toast.success('Successfully signed out');
+      navigate('/auth');
     } catch (error: any) {
       toast.error(error.message || 'Error signing out');
     }

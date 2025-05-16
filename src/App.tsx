@@ -9,15 +9,14 @@ import CameraDetail from "@/pages/CameraDetail";
 import Settings from "@/pages/Settings";
 import Auth from "@/pages/Auth";
 import NotFound from "@/pages/NotFound";
-import Admin from "@/pages/Admin";
 import ProfileSettings from "@/pages/ProfileSettings";
 import Notifications from "@/pages/Notifications";
 import { Toaster } from "@/components/ui/toaster";
 import { useEffect } from "react";
 import { initializeSystem } from "@/data/mockData";
-import { toast } from "@/hooks/use-toast";
-import UserManagement from "@/pages/admin/UserManagement";
+import { toast } from "sonner";
 import AdminPage from "@/pages/admin/index";
+import UserManagement from "@/pages/admin/UserManagement";
 import CreateUser from "@/pages/admin/CreateUser";
 
 function App() {
@@ -29,8 +28,7 @@ function App() {
         console.log("System initialized with database integration");
       } catch (error) {
         console.error("Failed to initialize system:", error);
-        toast({
-          title: "System Initialization Error",
+        toast("System Initialization Error", {
           description: "Failed to connect to the database"
         });
       }
@@ -59,9 +57,9 @@ function App() {
           <Route path="/settings/logs" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           
           {/* Admin Routes */}
-          <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminPage /></ProtectedRoute>} />
-          <Route path="/admin/users" element={<ProtectedRoute requireAdmin><UserManagement /></ProtectedRoute>} />
-          <Route path="/admin/users/create" element={<ProtectedRoute requireAdmin><CreateUser /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute requireAdmin={true}><AdminPage /></ProtectedRoute>} />
+          <Route path="/admin/users" element={<ProtectedRoute requireAdmin={true}><UserManagement /></ProtectedRoute>} />
+          <Route path="/admin/users/create" element={<ProtectedRoute requireAdmin={true}><CreateUser /></ProtectedRoute>} />
           <Route path="/profile-settings" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />

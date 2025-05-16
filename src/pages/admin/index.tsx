@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, Database, Users } from 'lucide-react';
+import { Shield, Database, Users, UserPlus } from 'lucide-react';
 import UserManagement from './UserManagement';
 import DatabaseMigration from '@/components/settings/DatabaseMigration';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,6 +26,10 @@ export default function AdminPage() {
     return <Navigate to="/" />;
   }
 
+  const handleCreateUser = () => {
+    navigate('/admin/users/create');
+  };
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -36,10 +40,10 @@ export default function AdminPage() {
           </p>
         </div>
         <Button 
-          onClick={() => navigate('/admin/users/create')}
+          onClick={handleCreateUser}
           className="bg-vision-blue hover:bg-vision-blue-600"
         >
-          <Users className="mr-2 h-4 w-4" />
+          <UserPlus className="mr-2 h-4 w-4" />
           Create User
         </Button>
       </div>

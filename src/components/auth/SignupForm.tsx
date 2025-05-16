@@ -31,6 +31,7 @@ export function SignupForm() {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       setIsLoading(true);
+      console.log("Registering user:", values.email);
       
       // First register the user with Supabase Auth
       const { data, error } = await supabase.auth.signUp({
@@ -48,6 +49,8 @@ export function SignupForm() {
       }
 
       if (data?.user) {
+        console.log("User registered:", data.user.id);
+        
         // Explicitly create the profile (redundant but ensures the profile exists)
         const { error: profileError } = await supabase
           .from('profiles')
@@ -56,9 +59,7 @@ export function SignupForm() {
             full_name: values.fullName,
             is_admin: false, // default to non-admin
             mfa_required: false  // default to not requiring MFA
-          })
-          .select()
-          .single();
+          });
         
         if (profileError && !profileError.message.includes('duplicate')) {
           console.error('Error creating profile:', profileError);
@@ -77,14 +78,15 @@ export function SignupForm() {
           console.error('Error setting user role:', roleError);
           // Continue anyway as this is not critical
         }
-      }
 
-      toast.success('Registration successful', {
-        description: 'Please check your email for verification instructions.'
-      });
-      
-      form.reset();
+        toast.success('Registration successful', {
+          description: 'Please check your email for verification instructions.'
+        });
+        
+        form.reset();
+      }
     } catch (error: any) {
+      console.error("Registration error:", error);
       toast.error('Registration failed', {
         description: error.message || 'Please try again later'
       });

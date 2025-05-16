@@ -85,7 +85,10 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
       }
     };
     
-    checkForAdmins();
+    checkForAdmins().catch(err => {
+      console.error("Failed to check for admin users:", err);
+      setAdminCheckComplete(true);
+    });
   }, []);
 
   const form = useForm<z.infer<typeof loginSchema>>({
@@ -126,10 +129,16 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
     setIsSubmitting(true);
     try {
       console.log('Creating admin account with:', values.email);
+      
       // Register the user first
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
+        options: {
+          data: { 
+            full_name: values.email.split('@')[0] 
+          }
+        }
       });
       
       if (authError) {
@@ -162,7 +171,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
         // Add the user to the user_roles table with superadmin role
         const { error: userRoleError } = await supabase
           .from('user_roles')
-          .upsert({
+          .insert({
             user_id: authData.user.id,
             role: 'superadmin',
           });

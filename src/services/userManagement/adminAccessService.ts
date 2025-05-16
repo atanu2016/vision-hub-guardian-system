@@ -9,6 +9,11 @@ export async function checkMigrationAccess(userId: string): Promise<boolean> {
   try {
     console.log("Checking migration access for userId:", userId);
 
+    if (!userId) {
+      console.log("No user ID provided");
+      return false;
+    }
+
     // Check if the current user's session to check email
     const { data: sessionData } = await supabase.auth.getSession();
     const userEmail = sessionData?.session?.user?.email;

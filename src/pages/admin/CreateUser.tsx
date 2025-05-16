@@ -47,6 +47,8 @@ export default function CreateUser() {
     setIsSubmitting(true);
     
     try {
+      console.log("Creating user with email:", formData.email);
+      
       // Create user in Supabase Auth
       const { data: userData, error: authError } = await supabase.auth.admin.createUser({
         email: formData.email,
@@ -60,6 +62,8 @@ export default function CreateUser() {
       if (!userData.user) {
         throw new Error('Failed to create user');
       }
+      
+      console.log("User created successfully:", userData.user.id);
       
       // Create/Update profile 
       const { error: profileError } = await supabase
