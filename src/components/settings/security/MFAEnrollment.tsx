@@ -30,13 +30,13 @@ export default function MFAEnrollment() {
         // Query the user's specific profile
         const { data, error } = await supabase
           .from('profiles')
-          .select('mfa_enabled, mfa_secret')
+          .select('mfa_enrolled, mfa_secret')
           .eq('id', user.id)
           .single();
           
         if (error) throw error;
         
-        setMfaEnabled(data?.mfa_enabled || false);
+        setMfaEnabled(data?.mfa_enrolled || false);
         setSecret(data?.mfa_secret || null);
         setIsLoading(false);
       } catch (error) {
@@ -86,7 +86,7 @@ export default function MFAEnrollment() {
         const { error } = await supabase
           .from('profiles')
           .update({
-            mfa_enabled: true,
+            mfa_enrolled: true,
             mfa_secret: secret
           })
           .eq('id', user.id);
@@ -124,7 +124,7 @@ export default function MFAEnrollment() {
       const { error } = await supabase
         .from('profiles')
         .update({
-          mfa_enabled: false,
+          mfa_enrolled: false,
           mfa_secret: null
         })
         .eq('id', user.id);

@@ -43,7 +43,7 @@ export async function updatePersonalMfaSetting(enabled: boolean): Promise<void> 
     const { error } = await supabase
       .from('profiles')
       .update({
-        mfa_enabled: enabled,
+        mfa_enrolled: enabled,
         mfa_secret: enabled ? null : undefined // Clear secret when disabling
       })
       .eq('id', userData.user.id);
