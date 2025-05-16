@@ -1,81 +1,91 @@
+
 import * as React from "react"
-import { TooltipProvider } from "@/components/ui/tooltip"
-import { useIsMobile } from "@/hooks/use-mobile"
-import { cn } from "@/lib/utils"
+import Cookies from "js-cookie"
+import { useMediaQuery } from "@/hooks/use-mobile"
+import { SIDEBAR_COOKIE_NAME, SIDEBAR_COOKIE_MAX_AGE, SidebarContext, SidebarState } from "./types"
 import { SidebarContextObj } from "./use-sidebar"
-import { SIDEBAR_COOKIE_NAME, SIDEBAR_COOKIE_MAX_AGE, SIDEBAR_WIDTH, SIDEBAR_WIDTH_ICON, SIDEBAR_KEYBOARD_SHORTCUT } from "./types"
 
-const SidebarProvider = React.forwardRef<
-  HTMLDivElement,
-  React.ComponentProps<"div"> & {
-    defaultOpen?: boolean
-    open?: boolean
-    onOpenChange?: (open: boolean) => void
-  }
->(
-  (
-    {
-      defaultOpen = true,
-      open: openProp,
-      onOpenChange: setOpenProp,
-      className,
-      style,
-      children,
-      ...props
-    },
-    ref
-  ) => {
-    const isMobile = useIsMobile()
-    const [openMobile, setOpenMobile] = React.useState(false)
+interface SidebarProviderProps {
+  children: React.ReactNode
+  /**
+   * The default state of the sidebar.
+   * @default "expanded"
+   */
+  defaultState?: SidebarState
+  /**
+   * Whether to persist the sidebar state in a cookie.
+   * @default true
+   */
+  persist?: boolean
+  /**
+   * The storage key to save the sidebar state.
+   * @default "sidebar:state"
+   */
+  storageKey?: string
+}
 
-    // This is the internal state of the sidebar.
-    // We use openProp and setOpenProp for control from outside the component.
-    const [_open, _setOpen] = React.useState(defaultOpen)
-    const open = openProp ?? _open
-    const setOpen = React.useCallback(
-      (value: boolean | ((value: boolean) => boolean)) => {
-        const openState = typeof value === "function" ? value(open) : value
-        if (setOpenProp) {
-          setOpenProp(openState)
-        } else {
-          _setOpen(openState)
-        }
+export function SidebarProvider({
+  children,
+  defaultState = "expanded",
+  persist = true,
+  storageKey = SIDEBAR_COOKIE_NAME,
+}: SidebarProviderProps) {
+  const [state, setState] = React.useState<SidebarState>(() => {
+    // Get the saved state from cookie.
+    if (persist && typeof window !== "undefined") {
+      const savedState = Cookies.get(storageKey) as SidebarState | undefined
+      // If a saved state exists, use it. Otherwise, use the default state.
+      return savedState || defaultState
+    }
 
-        // This sets the cookie to keep the sidebar state.
-        document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
-      },
-      [setOpenProp, open]
-    )
+    // If not persisting state or SSR, use the default state.
+    return defaultState
+  })
 
-    // Helper to toggle the sidebar.
-    const toggleSidebar = React.useCallback(() => {
-      return isMobile
-        ? setOpenMobile((open) => !open)
-        : setOpen((open) => !open)
-    }, [isMobile, setOpen, setOpenMobile])
+  // Whether the sidebar is open on mobile.
+  // This is separate from the desktop state.
+  const [openMobile, setOpenMobile] = React.useState(false)
 
-    // Adds a keyboard shortcut to toggle the sidebar.
-    React.useEffect(() => {
-      const handleKeyDown = (event: KeyboardEvent) => {
-        if (
-          event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
-          (event.metaKey || event.ctrlKey)
-        ) {
-          event.preventDefault()
-          toggleSidebar()
-        }
+  // By default open is based on the state.
+  const [open, setOpen] = React.useState(state === "expanded")
+
+  // Check if we're on mobile.
+  const isMobile = useMediaQuery("(max-width: 768px)")
+
+  // When the state changes, save it to a cookie if persisting.
+  React.useEffect(() => {
+    if (!persist) return
+
+    Cookies.set(storageKey, state, { expires: SIDEBAR_COOKIE_MAX_AGE })
+
+    setOpen(state === "expanded")
+  }, [state, persist, storageKey])
+
+  // Handle keyboard shortcut.
+  React.useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key === "b") {
+        toggleSidebar()
       }
+    }
 
-      window.addEventListener("keydown", handleKeyDown)
-      return () => window.removeEventListener("keydown", handleKeyDown)
-    }, [toggleSidebar])
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [])
 
-    // We add a state so that we can do data-state="expanded" or "collapsed".
-    // This makes it easier to style the sidebar with Tailwind classes.
-    const state = open ? "expanded" : "collapsed"
+  // Toggle the sidebar state.
+  function toggleSidebar() {
+    setState((prev) => {
+      if (prev === "expanded") {
+        return "collapsed"
+      }
+      return "expanded"
+    })
+  }
 
-    const contextValue = React.useMemo(
-      () => ({
+  return (
+    <SidebarContextObj.Provider
+      value={{
         state,
         open,
         setOpen,
@@ -83,35 +93,10 @@ const SidebarProvider = React.forwardRef<
         openMobile,
         setOpenMobile,
         toggleSidebar,
-      }),
-      [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
-    )
+      }}
+    >
+      {children}
+    </SidebarContextObj.Provider>
+  )
+}
 
-    return (
-      <SidebarContextObj.Provider value={contextValue}>
-        <TooltipProvider delayDuration={0}>
-          <div
-            style={
-              {
-                "--sidebar-width": SIDEBAR_WIDTH,
-                "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
-                ...style,
-              } as React.CSSProperties
-            }
-            className={cn(
-              "group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar",
-              className
-            )}
-            ref={ref}
-            {...props}
-          >
-            {children}
-          </div>
-        </TooltipProvider>
-      </SidebarContextObj.Provider>
-    )
-  }
-)
-SidebarProvider.displayName = "SidebarProvider"
-
-export { SidebarProvider }

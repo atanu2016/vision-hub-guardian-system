@@ -1,39 +1,19 @@
 
-import { Button } from "@/components/ui/button";
-import { 
-  LogOut,
-  PlusCircle,
-  Search,
-  Settings,
-  User,
-  Bell,
-} from "lucide-react";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/contexts/auth";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
-import AddCameraModal from "@/components/cameras/AddCameraModal";
-import { Camera } from "@/types/camera";
+import { Link, useLocation } from "react-router-dom";
 import { getCameras, saveCamera } from "@/data/mockData";
-import { NotificationDropdown } from "./NotificationDropdown";
+import { Camera } from "@/types/camera";
 import { useNotifications } from "@/hooks/useNotifications";
 import SearchBar from "@/components/search/SearchBar";
+import UserMenu from "./topbar/UserMenu";
+import NotificationsButton from "./topbar/NotificationsButton";
+import AddCameraButton from "./topbar/AddCameraButton";
+import ThemeToggleButton from "./topbar/ThemeToggleButton";
+import MobileSidebarToggle from "./topbar/MobileSidebarToggle";
+import { getPageTitle } from "@/lib/navigation";
 
 const TopBar = () => {
-  const { user, profile, signOut, isAdmin } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [cameras, setCameras] = useState<Camera[]>([]);
   const { 
@@ -63,16 +43,6 @@ const TopBar = () => {
   // Generate groups dynamically based on camera data
   const existingGroups = Array.from(new Set(cameras.map(c => c.group || "Ungrouped")))
     .filter(group => group !== "Ungrouped");
-  
-  const getInitials = (name?: string | null) => {
-    if (!name) return 'U';
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2);
-  };
 
   const handleAddCamera = (newCamera: Omit<Camera, "id">) => {
     // Generate a unique ID
@@ -96,22 +66,10 @@ const TopBar = () => {
     });
   };
 
-  // Function to get the page title based on URL path
-  function getPageTitle(path: string): string {
-    const pathWithoutSlash = path.startsWith('/') ? path.substring(1) : path;
-    if (pathWithoutSlash === '') return 'Dashboard';
-    
-    // Convert kebab case to title case
-    const words = pathWithoutSlash.split('-');
-    return words.map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-  }
-
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 dark:bg-vision-dark-900 dark:border-vision-dark-800">
       <div className="flex h-16 items-center px-4 md:px-6 gap-4">
-        <div className="md:hidden">
-          <SidebarTrigger />
-        </div>
+        <MobileSidebarToggle />
         
         <div className="flex-1">
           <h1 className="text-xl font-semibold">{pageTitle}</h1>
@@ -123,85 +81,28 @@ const TopBar = () => {
           </div>
           
           <div className="hidden md:flex">
-            <ThemeToggle />
+            <ThemeToggleButton />
           </div>
           
-          <NotificationDropdown
+          <NotificationsButton 
             notifications={notifications}
             onMarkAsRead={markAsRead}
             onMarkAllAsRead={markAllAsRead}
             onClearAll={clearAll}
-            onViewAll={() => navigate('/notifications')}
           />
           
           {location.pathname.includes('/cameras') && (
-            <Button 
-              variant="outline" 
-              className="flex"
-              onClick={() => setIsAddModalOpen(true)}
-            >
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Camera
-            </Button>
+            <AddCameraButton 
+              isOpen={isAddModalOpen}
+              setIsOpen={setIsAddModalOpen}
+              onAddCamera={handleAddCamera}
+              existingGroups={existingGroups}
+            />
           )}
           
-          {user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-full border border-border"
-                >
-                  <Avatar>
-                    <AvatarFallback>{getInitials(profile?.full_name)}</AvatarFallback>
-                  </Avatar>
-                  <span className="sr-only">User menu</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-60">
-                <div className="flex items-center justify-start gap-2 p-2">
-                  <Avatar>
-                    <AvatarFallback>{getInitials(profile?.full_name)}</AvatarFallback>
-                  </Avatar>
-                  <div className="grid gap-0.5">
-                    <p className="text-sm font-medium">{profile?.full_name || 'User'}</p>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
-                    {isAdmin && (
-                      <Badge variant="outline" className="text-xs">Admin</Badge>
-                    )}
-                  </div>
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/profile-settings">
-                    <User className="mr-2 h-4 w-4" />
-                    Profile Settings
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <div className="p-2 md:hidden">
-                  <ThemeToggle />
-                </div>
-                <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Log out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Button asChild>
-              <Link to="/auth">Sign in</Link>
-            </Button>
-          )}
+          <UserMenu />
         </div>
       </div>
-      
-      <AddCameraModal 
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onAdd={handleAddCamera}
-        existingGroups={existingGroups}
-      />
     </header>
   );
 };
