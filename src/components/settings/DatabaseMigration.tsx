@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Database } from 'lucide-react';
-import MySQLMigrationForm from './migration/MySQLMigrationForm';
+import MySQLMigrationForm from './migration/mysql/MySQLMigrationForm';
 import SupabaseConnectionForm from './migration/SupabaseConnectionForm';
 import MigrationAlert from './migration/MigrationAlert';
 import FirebaseMigrationForm from './migration/FirebaseMigrationForm';
