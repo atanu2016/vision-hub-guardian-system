@@ -8,7 +8,7 @@ import type { UserRole } from '@/contexts/auth/types';
 import { getCachedRole, setCachedRole } from './roleCache';
 
 // Query result caching mechanism
-const queryCache = new Map<string, {data: any, timestamp: number}>();
+const queryCache = new Map<string, {data: UserRole, timestamp: number}>();
 const QUERY_CACHE_TTL = 15000; // 15 seconds
 
 /**
@@ -18,7 +18,8 @@ export async function fetchUserRole(userId: string): Promise<UserRole> {
   // Try to use cache first for maximum performance
   const cachedRole = getCachedRole(userId);
   if (cachedRole) {
-    return cachedRole;
+    // Ensure we return just the role value, not the object with timestamp
+    return typeof cachedRole === 'object' && 'role' in cachedRole ? cachedRole.role : cachedRole;
   }
   
   // Check query cache

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useAuth } from "@/contexts/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,15 +47,26 @@ export function useRoleSubscription() {
         console.log('[ROLE SUBSCRIPTION] Fetching current role');
         
         // Use cached role first for immediate response
-        const cachedRole = getCachedRole(userId);
-        if (cachedRole) {
+        const cachedRoleResult = getCachedRole(userId);
+        if (cachedRoleResult !== null) {
+          // Handle different return types from getCachedRole
+          const cachedRole = typeof cachedRoleResult === 'object' && 'role' in cachedRoleResult 
+            ? cachedRoleResult.role 
+            : cachedRoleResult;
+            
           console.log('[ROLE SUBSCRIPTION] Using cached role:', cachedRole);
           setRole(cachedRole);
         }
         
         // Only fetch from database if cache is older than 30 seconds
-        const cacheAge = now - (getCachedRole(userId, true)?.timestamp || 0);
-        if (cacheAge < 30000 && cachedRole) {
+        const cachedWithTimestamp = getCachedRole(userId, true);
+        const cacheTimestamp = cachedWithTimestamp && typeof cachedWithTimestamp === 'object' && 'timestamp' in cachedWithTimestamp 
+          ? cachedWithTimestamp.timestamp 
+          : 0;
+          
+        const cacheAge = now - cacheTimestamp;
+        
+        if (cacheAge < 30000 && cachedRoleResult !== null) {
           console.log('[ROLE SUBSCRIPTION] Cache is fresh, skipping database query');
           return;
         }
@@ -78,9 +90,16 @@ export function useRoleSubscription() {
         } else if (error) {
           console.error('[ROLE SUBSCRIPTION] Error fetching role:', error);
           // Use cached value or fall back to auth role
-          const fallbackRole = cachedRole || authRole;
-          console.log('[ROLE SUBSCRIPTION] Using fallback role:', fallbackRole);
-          setRole(fallbackRole);
+          if (cachedRoleResult !== null) {
+            const fallbackRole = typeof cachedRoleResult === 'object' && 'role' in cachedRoleResult 
+              ? cachedRoleResult.role 
+              : cachedRoleResult;
+              
+            console.log('[ROLE SUBSCRIPTION] Using fallback role:', fallbackRole);
+            setRole(fallbackRole);
+          } else {
+            setRole(authRole);
+          }
         }
       } catch (err) {
         console.error('[ROLE SUBSCRIPTION] Error in role fetch:', err);
