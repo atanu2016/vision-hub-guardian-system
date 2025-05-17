@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.42.0";
 
@@ -6,9 +5,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.42.0";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Methods': 'POST, PUT, DELETE, OPTIONS, GET',
 };
 
+// Handle requests
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -19,6 +19,7 @@ serve(async (req) => {
     // Get the authorization header from the request
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error("No authorization header provided");
       return new Response(JSON.stringify({ error: 'No authorization header' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401
@@ -26,53 +27,313 @@ serve(async (req) => {
     }
 
     // Create a Supabase client with the service role key
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    console.log('Getting users from auth.users');
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") as string;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string;
     
-    try {
-      // Get all users from auth.users table using the admin API
-      const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers();
-      
-      if (usersError) {
-        console.error('Error getting users:', usersError);
-        return new Response(JSON.stringify({ error: 'Error getting users' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500
-        });
-      }
-
-      // Map users with their email addresses and other needed data
-      // Make sure we're not accessing any potentially null fields directly
-      const users = usersData.users.map(user => ({
-        id: user.id,
-        email: user.email || "",
-        created_at: user.created_at || "",
-        last_sign_in_at: user.last_sign_in_at || null,
-        user_metadata: user.user_metadata || {},
-        app_metadata: user.app_metadata || {}
-      }));
-      
-      console.log(`Found ${users.length} users`);
-      
-      // Return the users
-      return new Response(JSON.stringify({ users }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200
-      });
-    } catch (innerError) {
-      console.error('Inner error in get-all-users function:', innerError);
-      return new Response(JSON.stringify({ error: innerError.message || 'Internal server error' }), {
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("Required environment variables are missing");
+      return new Response(JSON.stringify({ error: 'Server configuration error' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500
       });
     }
 
+    // Create a service role client to bypass RLS
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Create a normal client to verify the user's token
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify the token and check if user is admin
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      console.error("Auth error:", authError);
+      return new Response(JSON.stringify({ error: 'Invalid token' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401
+      });
+    }
+
+    // Log user attempting to access admin function
+    console.log(`User ${user.id} (${user.email}) is attempting to access admin function`);
+
+    // Check if user has admin privileges - first check user_roles
+    const { data: userRole, error: roleError1 } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    let isAdmin = false;
+    
+    // Check if user has admin role from user_roles
+    if (!roleError1 && userRole && (userRole.role === 'admin' || userRole.role === 'superadmin')) {
+      isAdmin = true;
+      console.log(`User ${user.id} has admin role: ${userRole.role}`);
+    } else {
+      // If no role or error, check is_admin flag in profiles
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .maybeSingle();
+        
+      if (!profileError && profile && profile.is_admin) {
+        isAdmin = true;
+        console.log(`User ${user.id} has is_admin flag in profile`);
+      }
+    }
+
+    // Special case for admin@home.local
+    if (user.email === 'admin@home.local') {
+      isAdmin = true;
+      console.log(`User is admin@home.local, granting access`);
+    }
+    
+    if (!isAdmin) {
+      console.log(`User ${user.id} denied access: not an admin`);
+      return new Response(JSON.stringify({ error: 'Permission denied' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 403
+      });
+    }
+
+    console.log(`Admin access granted to ${user.email}`);
+
+    // Handle DELETE request to delete a user
+    if (req.method === 'DELETE') {
+      try {
+        // Parse the request body to get userId
+        const body = await req.json();
+        const userId = body.userId;
+        
+        if (!userId) {
+          return new Response(JSON.stringify({ error: 'User ID is required' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400
+          });
+        }
+        
+        console.log(`Attempting to delete user: ${userId}`);
+        
+        // First delete profile directly with service role client to bypass RLS
+        const { error: profileError } = await supabaseAdmin
+          .from('profiles')
+          .delete()
+          .eq('id', userId);
+          
+        if (profileError) {
+          console.error("Error deleting user profile:", profileError);
+          // Continue anyway, as we'll try to delete the auth user
+        } else {
+          console.log(`Successfully deleted profile for user: ${userId}`);
+        }
+        
+        // Delete any user roles
+        const { error: roleError } = await supabaseAdmin
+          .from('user_roles')
+          .delete()
+          .eq('user_id', userId);
+          
+        if (roleError) {
+          console.error("Error deleting user roles:", roleError);
+          // Continue anyway
+        } else {
+          console.log(`Successfully deleted roles for user: ${userId}`);
+        }
+        
+        // Delete the user with admin API
+        const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+        
+        if (error) {
+          console.error("Error deleting auth user:", error);
+          throw error;
+        }
+        
+        console.log(`Successfully deleted auth user: ${userId}`);
+        
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        });
+      } catch (error) {
+        console.error("Error in user deletion:", error);
+        return new Response(JSON.stringify({ error: error.message || 'Failed to delete user' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500
+        });
+      }
+    }
+    
+    // Handle PUT request for MFA operations
+    if (req.method === 'PUT') {
+      try {
+        const body = await req.json();
+        const { userId, action, mfaRequired } = body;
+        
+        if (!userId || !action) {
+          return new Response(JSON.stringify({ error: 'User ID and action are required' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400
+          });
+        }
+        
+        // Handle MFA requirement toggle
+        if (action === 'toggle_mfa_requirement') {
+          console.log(`Setting MFA requirement to ${mfaRequired} for user ${userId}`);
+          
+          // Use the admin client to bypass RLS policies
+          const { error: updateError } = await supabaseAdmin
+            .from('profiles')
+            .update({
+              mfa_required: mfaRequired
+            })
+            .eq('id', userId);
+            
+          if (updateError) {
+            console.error("Error updating profile MFA requirement:", updateError);
+            throw updateError;
+          }
+          
+          console.log(`Successfully set MFA requirement to ${mfaRequired} for user: ${userId}`);
+          
+          return new Response(JSON.stringify({ success: true }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200
+          });
+        }
+        
+        // Handle MFA revocation
+        if (action === 'revoke_mfa') {
+          console.log(`Revoking MFA for user ${userId}`);
+          
+          // Update profile to clear MFA enrollment using admin client to bypass RLS
+          const { error: updateError } = await supabaseAdmin
+            .from('profiles')
+            .update({
+              mfa_enrolled: false,
+              mfa_secret: null
+            })
+            .eq('id', userId);
+            
+          if (updateError) {
+            console.error("Error updating profile MFA status:", updateError);
+            throw updateError;
+          }
+          
+          console.log(`Successfully revoked MFA for user: ${userId}`);
+          
+          return new Response(JSON.stringify({ success: true }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200
+          });
+        }
+        
+        return new Response(JSON.stringify({ error: 'Invalid action' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400
+        });
+      } catch (error) {
+        console.error("Error in MFA operation:", error);
+        return new Response(JSON.stringify({ error: error.message || 'Failed to perform MFA operation' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500
+        });
+      }
+    }
+
+    // Default GET method to fetch all users
+    if (req.method === 'GET' || req.method === 'POST') {
+      // Use the service role client to bypass RLS
+      const { data: users, error: usersError } = await supabaseAdmin
+        .from('profiles')
+        .select('id, full_name, mfa_enrolled, mfa_required, created_at, is_admin');
+
+      if (usersError) {
+        console.error("Error fetching profiles:", usersError);
+        throw usersError;
+      }
+
+      // Fetch user roles
+      const { data: userRoles, error: rolesError } = await supabaseAdmin
+        .from('user_roles')
+        .select('user_id, role');
+
+      if (rolesError) {
+        console.error("Error fetching user roles:", rolesError);
+      }
+
+      // Create a map of roles by user ID
+      const rolesMap = (userRoles || []).reduce((acc, item) => {
+        acc[item.user_id] = item.role;
+        return acc;
+      }, {} as Record<string, string>);
+
+      // Get user emails from auth.users using admin API
+      let emails: Record<string, string> = {};
+      
+      try {
+        // Always try to get emails using the service role
+        const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+        
+        if (authError) {
+          console.error("Error fetching auth users:", authError);
+        }
+        
+        if (authUsers && authUsers.users) {
+          console.log(`Found ${authUsers.users.length} users in auth table`);
+          authUsers.users.forEach((authUser: any) => {
+            if (authUser && authUser.id && authUser.email) {
+              emails[authUser.id] = authUser.email;
+            }
+          });
+        }
+      } catch (err) {
+        console.log("Could not fetch emails, will use user IDs instead");
+      }
+
+      // Map the data to include roles and emails
+      const usersData = users.map(profile => {
+        // Determine role from either role table or is_admin flag
+        let role = 'user';
+        if (rolesMap[profile.id]) {
+          role = rolesMap[profile.id];
+        } else if (profile.is_admin) {
+          role = 'admin';
+        }
+
+        return {
+          id: profile.id,
+          // Display email or user ID instead of hiding it
+          email: emails[profile.id] || profile.id,
+          full_name: profile.full_name || 'User',
+          mfa_enrolled: profile.mfa_enrolled || false,
+          mfa_required: profile.mfa_required || false,
+          created_at: profile.created_at || new Date().toISOString(),
+          is_admin: profile.is_admin || false,
+          role: role
+        };
+      });
+
+      console.log(`Successfully returning ${usersData.length} users with roles`);
+      
+      return new Response(JSON.stringify(usersData), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      });
+    }
+
+    // Handle unsupported methods
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 405
+    });
+
   } catch (error) {
-    console.error('Error in get-all-users function:', error);
-    return new Response(JSON.stringify({ error: error.message || 'Internal server error' }), {
+    console.error("Error in get-all-users function:", error);
+    return new Response(JSON.stringify({ error: error.message || 'Unknown error' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500
     });

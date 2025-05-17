@@ -9,29 +9,30 @@ import { Loader2 } from "lucide-react";
 const ProfileSettings = () => {
   const {
     user,
-    isLoading,
-    fullName,
-    email,
-    userRole,
+    profile,
+    role,
     formData,
-    isSaving,
+    avatarPreview,
+    loading,
     handleInputChange,
-    handleSaveChanges,
-    handlePasswordUpdate
+    handleAvatarChange,
+    handleProfileUpdate,
+    handlePasswordUpdate,
+    getInitials
   } = useProfileSettings();
 
   // Add logging for debugging
   useEffect(() => {
-    console.log("ProfileSettings component rendered:", {
+    console.log("ProfileSettings component:", {
       userExists: !!user,
-      fullName,
-      email,
-      userRole,
-      isLoading
+      profileExists: !!profile,
+      role,
+      formData,
+      loading
     });
-  }, [user, fullName, email, userRole, isLoading]);
+  }, [user, profile, role, formData, loading]);
 
-  if (isLoading) {
+  if (loading) {
     return (
       <AppLayout>
         <div className="flex justify-center items-center h-64">
@@ -63,8 +64,21 @@ const ProfileSettings = () => {
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <PersonalInfoCard />
-          <SecuritySettingsCard />
+          <PersonalInfoCard
+            formData={formData}
+            role={role}
+            avatarPreview={avatarPreview}
+            getInitials={getInitials}
+            handleInputChange={handleInputChange}
+            handleAvatarChange={handleAvatarChange}
+            handleProfileUpdate={handleProfileUpdate}
+          />
+
+          <SecuritySettingsCard
+            formData={formData}
+            handleInputChange={handleInputChange}
+            handlePasswordUpdate={handlePasswordUpdate}
+          />
         </div>
       </div>
     </AppLayout>

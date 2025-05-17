@@ -1,5 +1,5 @@
 
-import { fetchAllUsers } from './userManagement/userFetchService';
+import { fetchUsers } from './userManagement/userFetchService';
 import { updateUserRole, hasRole } from './userManagement/userRoleService';
 import { checkMigrationAccess, ensureUserIsAdmin } from './userManagement/adminAccessService';
 import { deleteUser } from './userManagement/userDeleteService';
@@ -16,7 +16,7 @@ import {
 } from './userManagement/mfa';
 
 export {
-  fetchAllUsers,
+  fetchUsers,
   updateUserRole,
   hasRole,
   toggleMfaRequirement,

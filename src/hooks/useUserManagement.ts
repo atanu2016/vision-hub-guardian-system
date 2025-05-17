@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
-import { fetchAllUsers } from '@/services/userManagement/userFetchService';
+import { fetchUsers } from '@/services/userManagement/userFetchService';
 import { updateUserRole } from '@/services/userManagement/userRoleService';
 import { 
   toggleMfaRequirement, 
@@ -41,7 +41,7 @@ export function useUserManagement() {
       setError(null);
       console.log("Attempting to load users from database...");
       
-      const usersData = await fetchAllUsers();
+      const usersData = await fetchUsers();
       console.log("Loaded users:", usersData);
       setUsers(usersData);
     } catch (error: any) {
