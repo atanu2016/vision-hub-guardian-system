@@ -20,6 +20,8 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
   const { role } = useAuth();
   const { hasPermission } = usePermissions();
   
+  console.log("MainNavigation rendering - User role:", role);
+  
   // Define navigation items with their required permissions
   const navigationItems = [];
   
@@ -32,16 +34,14 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
     showForRoles: ['user', 'operator', 'admin', 'superadmin']
   });
   
-  // Recordings - only for operator, admin, and superadmin
-  if (role === 'operator' || role === 'admin' || role === 'superadmin') {
-    navigationItems.push({ 
-      path: "/recordings", 
-      icon: FileText, 
-      label: "Recordings", 
-      permission: 'view-footage:assigned' as Permission,
-      showForRoles: ['operator', 'admin', 'superadmin']
-    });
-  }
+  // Recordings - for operator, admin, and superadmin
+  navigationItems.push({ 
+    path: "/recordings", 
+    icon: FileText, 
+    label: "Recordings", 
+    permission: 'view-footage:assigned' as Permission,
+    showForRoles: ['operator', 'admin', 'superadmin']
+  });
   
   // Dashboard - only for admin and superadmin
   if (role === 'admin' || role === 'superadmin') {
@@ -95,6 +95,12 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
     permission: 'manage-profile-settings' as Permission,
     showForRoles: ['user', 'operator', 'admin', 'superadmin']
   });
+  
+  // Log navigation items that will be shown to the user
+  const visibleItems = navigationItems.filter(item => 
+    item.showForRoles.includes(role) && hasPermission(item.permission)
+  );
+  console.log("Visible navigation items:", visibleItems);
   
   return (
     <SidebarGroup>

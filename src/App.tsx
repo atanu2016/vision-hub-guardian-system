@@ -35,7 +35,7 @@ function App() {
               {/* Auth route */}
               <Route path="/auth" element={<Auth />} />
               
-              {/* Redirect root to appropriate page based on role */}
+              {/* Redirect root to appropriate page */}
               <Route path="/" element={
                 <ProtectedRoute>
                   <Navigate to="/live" />
@@ -45,7 +45,7 @@ function App() {
               {/* Dashboard - only accessible to admin/superadmin */}
               <Route path="/dashboard" element={<ProtectedRoute requiredPermission="view-dashboard"><Index /></ProtectedRoute>} />
               
-              {/* Basic views - 'user' role can only access live view and profile */}
+              {/* Basic views */}
               <Route path="/cameras" element={<ProtectedRoute requiredPermission="view-cameras:all"><Cameras /></ProtectedRoute>} />
               <Route path="/cameras/:id" element={<ProtectedRoute requiredPermission="view-cameras:assigned"><CameraDetail /></ProtectedRoute>} />
               <Route path="/live" element={<ProtectedRoute requiredPermission="view-cameras:assigned"><LiveView /></ProtectedRoute>} />

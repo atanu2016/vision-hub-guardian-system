@@ -12,9 +12,12 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
   // If no role, no permissions
   if (!userRole) return false;
 
+  console.log(`Checking permission: ${permission} for role: ${userRole}`);
+
   switch (permission) {
     // User level permissions - available to all roles
     case 'view-dashboard':
+      return roleHierarchy[userRole] >= roleHierarchy['admin'];
     case 'view-profile':
     case 'manage-mfa-enrollment':
     case 'manage-profile-settings':
