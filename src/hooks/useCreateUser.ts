@@ -103,7 +103,10 @@ export function useCreateUser({ onSuccess, onError }: UseCreateUserOptions = {})
         body: {
           email: formData.email,
           password: formData.password,
-          user_metadata: { full_name: formData.fullName },
+          user_metadata: { 
+            full_name: formData.fullName,
+            role: formData.role // Include role in user metadata for easier access
+          },
           role: formData.role,
           mfa_required: formData.mfaRequired
         }

@@ -126,32 +126,27 @@ async function fetchUsersDirectly(): Promise<UserData[]> {
       return acc;
     }, {} as Record<string, UserRole>);
     
-    // Get emails if possible via the admin function
-    // This won't work without proper permissions, but we'll still have profile data
+    // Get emails via auth.users table - should now be accessible through service role
     let emailsMap: Record<string, string> = {};
     
     try {
-      // Explicitly define the expected structure
-      interface AuthUser {
-        id: string;
-        email: string;
-        created_at?: string;
-        [key: string]: any;
+      const { data: authData, error } = await supabase.auth.admin.listUsers();
+      
+      if (error) {
+        console.error('Error listing users:', error);
       }
-      
-      const { data: authData } = await supabase.auth.admin.listUsers();
-      
+
       if (authData && 'users' in authData && Array.isArray(authData.users)) {
-        // Safely cast to our known structure
-        const typedUsers = authData.users as AuthUser[];
-        typedUsers.forEach(user => {
+        console.log(`Found ${authData.users.length} users in auth table`);
+        // Map user emails by ID
+        authData.users.forEach(user => {
           if (user && typeof user.id === 'string' && typeof user.email === 'string') {
             emailsMap[user.id] = user.email;
           }
         });
       }
     } catch (error) {
-      console.log('Could not fetch emails, will use placeholders');
+      console.error('Could not fetch emails:', error);
     }
     
     // Return profile data with available email information
@@ -160,7 +155,7 @@ async function fetchUsersDirectly(): Promise<UserData[]> {
       const role = rolesMap[profile.id] || (profile.is_admin ? 'admin' : 'user');
       return {
         id: profile.id,
-        email: emailsMap[profile.id] || 'Email hidden', 
+        email: emailsMap[profile.id] || profile.id, // Use ID as fallback instead of hiding email
         full_name: profile.full_name || 'User',
         mfa_enrolled: profile.mfa_enrolled || false,
         mfa_required: profile.mfa_required || false,

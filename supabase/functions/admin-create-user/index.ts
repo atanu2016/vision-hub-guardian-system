@@ -50,16 +50,21 @@ serve(async (req) => {
       mfa_required
     } = requestData;
 
+    console.log("[ADMIN-CREATE-USER] Creating user with role:", role);
+
     // Create the user using the admin API
     const { data: userData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
-      user_metadata
+      user_metadata: {
+        ...user_metadata,
+        role: role // Make sure role is included in user metadata
+      }
     });
 
     if (authError) {
-      console.error("Auth error:", authError);
+      console.error("[ADMIN-CREATE-USER] Auth error:", authError);
       return new Response(JSON.stringify({ error: authError.message }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400
@@ -73,6 +78,8 @@ serve(async (req) => {
       });
     }
 
+    console.log("[ADMIN-CREATE-USER] User created successfully:", userData.user.id);
+
     // Create/Update profile
     const { error: profileError } = await supabase
       .from('profiles')
@@ -84,11 +91,13 @@ serve(async (req) => {
       });
 
     if (profileError) {
-      console.error('Profile creation error:', profileError);
+      console.error('[ADMIN-CREATE-USER] Profile creation error:', profileError);
       // Don't throw here as the profile might be created by trigger
     }
 
-    // Update user role
+    console.log("[ADMIN-CREATE-USER] Assigning role:", role, "to user:", userData.user.id);
+    
+    // Update user role - Use upsert to ensure it works whether or not the row already exists
     const { error: roleError } = await supabase
       .from('user_roles')
       .upsert({
@@ -97,7 +106,7 @@ serve(async (req) => {
       });
 
     if (roleError) {
-      console.error('Role assignment error:', roleError);
+      console.error('[ADMIN-CREATE-USER] Role assignment error:', roleError);
       return new Response(JSON.stringify({ 
         userId: userData.user.id,
         warning: `User created but role assignment failed: ${roleError.message}`
@@ -106,6 +115,8 @@ serve(async (req) => {
         status: 207
       });
     }
+
+    console.log("[ADMIN-CREATE-USER] Role assigned successfully:", role);
 
     return new Response(JSON.stringify({ 
       userId: userData.user.id,

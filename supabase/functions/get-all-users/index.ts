@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.42.0";
 
@@ -276,8 +275,15 @@ serve(async (req) => {
       let emails: Record<string, string> = {};
       
       try {
-        const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+        // Always try to get emails using the service role
+        const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+        
+        if (authError) {
+          console.error("Error fetching auth users:", authError);
+        }
+        
         if (authUsers && authUsers.users) {
+          console.log(`Found ${authUsers.users.length} users in auth table`);
           authUsers.users.forEach((authUser: any) => {
             if (authUser && authUser.id && authUser.email) {
               emails[authUser.id] = authUser.email;
@@ -285,7 +291,7 @@ serve(async (req) => {
           });
         }
       } catch (err) {
-        console.log("Could not fetch emails, will use placeholders");
+        console.log("Could not fetch emails, will use user IDs instead");
       }
 
       // Map the data to include roles and emails
@@ -300,7 +306,8 @@ serve(async (req) => {
 
         return {
           id: profile.id,
-          email: emails[profile.id] || 'Email hidden', 
+          // Display email or user ID instead of hiding it
+          email: emails[profile.id] || profile.id,
           full_name: profile.full_name || 'User',
           mfa_enrolled: profile.mfa_enrolled || false,
           mfa_required: profile.mfa_required || false,

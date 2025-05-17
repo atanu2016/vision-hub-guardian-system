@@ -1,176 +1,90 @@
 
-import { useState, useEffect } from "react";
-import { toast } from "sonner";
-import { useAuth } from "@/contexts/auth";
-import { supabase } from "@/integrations/supabase/client";
-
-export interface ProfileFormData {
-  fullName: string;
-  email: string;
-  currentPassword: string;
-  newPassword: string;
-  confirmPassword: string;
-}
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/auth';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { UserRole } from '@/types/admin';
 
 export function useProfileSettings() {
-  const { user, profile, role } = useAuth();
-  const [loading, setLoading] = useState(true);
+  const { user, profile, role: authRole } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [userRole, setUserRole] = useState<UserRole>('user');
+  const [isSaving, setIsSaving] = useState(false);
 
-  const [formData, setFormData] = useState<ProfileFormData>({
-    fullName: "",
-    email: "",
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
-
-  const [avatarPreview, setAvatarPreview] = useState<string | undefined>(undefined);
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  
-  // Update form data when user and profile are loaded
+  // Immediately set initial data from auth context
   useEffect(() => {
-    const initializeProfile = async () => {
-      setLoading(true);
-      try {
-        if (user) {
-          // Set initial values from auth context
-          setFormData(prev => ({
-            ...prev,
-            fullName: profile?.full_name || "",
-            email: user.email || ""
-          }));
-          
-          console.log("Profile data loaded:", {
-            fullName: profile?.full_name,
-            email: user.email,
-            role
-          });
+    if (user) {
+      setEmail(user.email || '');
+      setFullName(profile?.full_name || '');
+      
+      // Get the role directly from auth context
+      setUserRole(authRole);
+      
+      setIsLoading(false);
+    }
+  }, [user, profile, authRole]);
+
+  // Also fetch the role directly from the database to ensure accuracy
+  useEffect(() => {
+    if (user?.id) {
+      const fetchUserRole = async () => {
+        try {
+          // Try to get role from user_roles table
+          const { data: roleData, error: roleError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .single();
+
+          if (roleData && !roleError) {
+            console.log("[PROFILE] Fetched user role from database:", roleData.role);
+            setUserRole(roleData.role as UserRole);
+          } else if (roleError && roleError.code !== 'PGRST116') {
+            // PGRST116 is "no rows returned" error - it's normal if user has no explicit role
+            console.error("[PROFILE] Error fetching user role:", roleError);
+          }
+        } catch (error) {
+          console.error("[PROFILE] Failed to fetch user role:", error);
         }
-      } catch (error) {
-        console.error("Error initializing profile data:", error);
-        toast.error("Failed to load profile information");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializeProfile();
-  }, [user, profile, role]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setAvatarFile(file);
-      
-      // Create a preview URL
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result as string);
       };
-      reader.readAsDataURL(file);
-    }
-  };
 
-  const handleProfileUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validate inputs
-    if (!formData.fullName.trim()) {
-      toast.error("Please fill in your full name");
-      return;
+      fetchUserRole();
     }
+  }, [user]);
 
+  const handleSaveChanges = async () => {
+    if (!user) return;
+
+    setIsSaving(true);
     try {
-      // Update profile in Supabase
-      if (user) {
-        const { error } = await supabase
-          .from('profiles')
-          .update({ 
-            full_name: formData.fullName,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', user.id);
+      // Update profile in database
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: fullName,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
 
-        if (error) throw error;
-      }
-
-      toast.success("Profile updated successfully");
-    } catch (error: any) {
-      console.error("Error updating profile:", error);
-      toast.error(error.message || "Failed to update profile");
+      if (error) throw error;
+      toast.success('Profile updated successfully');
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error('Failed to update profile');
+    } finally {
+      setIsSaving(false);
     }
-  };
-
-  const handlePasswordUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Check if changing password
-    if (formData.newPassword && formData.confirmPassword) {
-      if (!formData.currentPassword) {
-        toast.error("Current password is required");
-        return;
-      }
-      
-      if (formData.newPassword !== formData.confirmPassword) {
-        toast.error("New passwords do not match");
-        return;
-      }
-      
-      if (formData.newPassword.length < 8) {
-        toast.error("Password must be at least 8 characters");
-        return;
-      }
-
-      try {
-        // Update password
-        const { error } = await supabase.auth.updateUser({
-          password: formData.newPassword
-        });
-
-        if (error) throw error;
-        
-        // Clear password fields
-        setFormData(prev => ({
-          ...prev,
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: "",
-        }));
-        
-        toast.success("Password updated successfully");
-      } catch (error: any) {
-        console.error("Error updating password:", error);
-        toast.error(error.message || "Failed to update password");
-      }
-    } else if (formData.newPassword || formData.confirmPassword || formData.currentPassword) {
-      toast.error("Please complete all password fields");
-    }
-  };
-
-  const getInitials = (name: string = "") => {
-    return name
-      .split(' ')
-      .map(part => part[0])
-      .join('')
-      .toUpperCase();
   };
 
   return {
-    user,
-    profile,
-    role,
-    formData,
-    avatarPreview,
-    loading,
-    handleInputChange,
-    handleAvatarChange,
-    handleProfileUpdate,
-    handlePasswordUpdate,
-    getInitials
+    fullName,
+    email,
+    userRole,
+    isLoading,
+    isSaving,
+    setFullName,
+    handleSaveChanges
   };
 }
