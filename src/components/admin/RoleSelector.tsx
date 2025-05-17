@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Shield, ShieldCheck, User, Eye } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { UserRole } from '@/types/admin';
+import type { UserRole } from '@/contexts/auth/types';
 import { useAuth } from '@/contexts/auth';
 import { canManageRole } from '@/utils/permissionUtils';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -24,23 +24,33 @@ export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole 
   // Update local state when prop changes
   useEffect(() => {
     setSelectedRole(currentRole);
-  }, [currentRole]);
+    console.log(`[RoleSelector] Current role for user ${userId} is ${currentRole}`);
+  }, [currentRole, userId]);
 
-  // Check if user can assign roles (superadmin only)
+  // Check if user can assign roles (superadmin or admin)
   const canAssignRoles = hasPermission('assign-roles');
 
   const handleRoleChange = async (value: string) => {
+    if (value === selectedRole) return; // No change
+    
     setIsUpdating(true);
     try {
-      setSelectedRole(value as UserRole);
-      console.log(`[RoleSelector] Changing role to: ${value} for user: ${userId}`);
+      const newRole = value as UserRole;
+      setSelectedRole(newRole);
+      console.log(`[RoleSelector] Changing role to: ${newRole} for user: ${userId}`);
       
-      await onUpdateRole(userId, value as UserRole);
+      await onUpdateRole(userId, newRole);
       
       // Show feedback with fixed role
-      toast.success(`Role updated to ${value}`, {
+      toast.success(`Role updated to ${newRole}`, {
         description: "The user's role was successfully updated in the database."
       });
+      
+      // Force component refresh
+      setTimeout(() => {
+        console.log(`[RoleSelector] Confirming role change to: ${newRole}`);  
+      }, 1000);
+      
     } catch (error: any) {
       console.error('[RoleSelector] Error updating role:', error);
       toast.error(error.message || 'Failed to update role', {

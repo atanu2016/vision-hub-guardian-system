@@ -1,134 +1,96 @@
 
-import { UserRole } from "@/types/admin";
-
-export const roleHierarchy: Record<UserRole, number> = {
-  'user': 0,
-  'observer': 1,  // Observer role is between user and admin in the hierarchy
-  'admin': 2,
-  'superadmin': 3
-};
-
-export function hasPermission(userRole: UserRole, permission: Permission): boolean {
-  // If no role, no permissions
-  if (!userRole) return false;
-
-  console.log(`[PERMISSION-UTILS] Checking permission: ${permission} for role: ${userRole}`);
-
-  switch (permission) {
-    // User level permissions - available to all roles
-    case 'view-dashboard':
-      return roleHierarchy[userRole] >= roleHierarchy['user'];
-    case 'view-profile':
-    case 'manage-mfa-enrollment':
-    case 'manage-profile-settings':
-      return roleHierarchy[userRole] >= roleHierarchy['user'];
-
-    // Cameras view permissions
-    case 'view-cameras:assigned':
-      return roleHierarchy[userRole] >= roleHierarchy['user'];
-    case 'view-cameras:all':
-      return roleHierarchy[userRole] >= roleHierarchy['admin'];
-    
-    // Footage permissions - make accessible to observers
-    case 'view-footage:assigned':
-      return roleHierarchy[userRole] >= roleHierarchy['observer'] || userRole === 'observer';
-    case 'view-footage:all':
-      return roleHierarchy[userRole] >= roleHierarchy['admin'];
-    
-    // User management permissions
-    case 'manage-users:lower':
-      return roleHierarchy[userRole] >= roleHierarchy['admin'];
-    case 'manage-users:all':
-    case 'assign-roles':
-      return userRole === 'superadmin';
-    
-    // Camera assignment permissions
-    case 'assign-cameras':
-      return roleHierarchy[userRole] >= roleHierarchy['admin'];
-
-    // Camera management
-    case 'manage-cameras:assigned':
-      return roleHierarchy[userRole] >= roleHierarchy['admin'];
-    case 'manage-cameras:all':
-      return roleHierarchy[userRole] >= roleHierarchy['admin'];
-    
-    // Storage and configuration
-    case 'configure-storage':
-    case 'configure-camera-settings':
-      return roleHierarchy[userRole] >= roleHierarchy['admin'];
-    
-    // Policy and system settings
-    case 'configure-global-policies':
-    case 'manage-system':
-      return userRole === 'superadmin';
-    
-    // Logs and audit access
-    case 'access-logs':
-    case 'access-audit-trails':
-      return roleHierarchy[userRole] >= roleHierarchy['admin'];
-
-    // Advanced admin features
-    case 'system-migration':
-    case 'manage-ssl-certificates':
-    case 'manage-webhooks':
-    case 'system-updates':
-      return userRole === 'superadmin';
-
-    default:
-      return false;
-  }
-}
-
-export function canManageRole(currentUserRole: UserRole, targetRole: UserRole): boolean {
-  // Superadmins can manage all roles
-  if (currentUserRole === 'superadmin') {
-    return true;
-  }
-
-  // Admins can only manage users, observers, not other admins or superadmins
-  if (currentUserRole === 'admin') {
-    return targetRole === 'user' || targetRole === 'observer';
-  }
-
-  // Regular users cannot manage roles
-  return false;
-}
+import { UserRole } from "@/contexts/auth/types";
 
 export type Permission = 
-  // Basic permissions
-  | 'view-dashboard'
   | 'view-profile'
-  | 'manage-mfa-enrollment'
-  | 'manage-profile-settings'
-  
-  // Camera viewing permissions
-  | 'view-cameras:assigned'
-  | 'view-cameras:all'
-  
-  // Footage viewing permissions
-  | 'view-footage:assigned'
-  | 'view-footage:all'
-  
-  // User management permissions
-  | 'manage-users:lower'
+  | 'edit-profile'
+  | 'view-admin-panel'
   | 'manage-users:all'
+  | 'manage-users:lower'
   | 'assign-roles'
+  | 'view-logs'
+  | 'view-system-stats'
+  | 'view-cameras:all' 
+  | 'view-cameras:assigned'
+  | 'view-footage:all'
+  | 'view-footage:assigned'
+  | 'manage-cameras'
   | 'assign-cameras'
+  | 'delete-footage'
+  | 'access-settings'
+  | 'backup-restore';
+
+type RolePermissionsMap = {
+  [R in UserRole]: Permission[];
+};
+
+// Define permissions for each role
+const rolePermissions: RolePermissionsMap = {
+  superadmin: [
+    'view-profile',
+    'edit-profile',
+    'view-admin-panel',
+    'manage-users:all',
+    'assign-roles',
+    'view-logs',
+    'view-system-stats',
+    'view-cameras:all',
+    'view-footage:all',
+    'manage-cameras',
+    'assign-cameras',
+    'delete-footage',
+    'access-settings',
+    'backup-restore'
+  ],
+  admin: [
+    'view-profile',
+    'edit-profile',
+    'view-admin-panel',
+    'manage-users:lower',
+    'view-logs',
+    'view-system-stats',
+    'view-cameras:all',
+    'view-footage:all',
+    'manage-cameras',
+    'assign-cameras',
+    'delete-footage',
+    'access-settings',
+  ],
+  observer: [
+    'view-profile',
+    'edit-profile',
+    'view-cameras:assigned',
+    'view-footage:assigned',
+  ],
+  user: [
+    'view-profile',
+    'edit-profile'
+  ]
+};
+
+// Check if a role has a specific permission
+export const hasPermission = (role: UserRole, permission: Permission): boolean => {
+  // Special handling for observer role to ensure it works
+  if (role === 'observer') {
+    console.log(`[Permissions] Checking permission ${permission} for observer role`);
+    return rolePermissions.observer.includes(permission);
+  }
   
-  // Camera management
-  | 'manage-cameras:assigned'
-  | 'manage-cameras:all'
-  
-  // Configuration permissions
-  | 'configure-storage'
-  | 'configure-camera-settings'
-  | 'configure-global-policies'
-  
-  // System permissions
-  | 'manage-system'
-  | 'access-logs'
-  | 'access-audit-trails'
-  | 'system-migration'
-  | 'manage-ssl-certificates'
-  | 'manage-webhooks'
-  | 'system-updates';
+  return rolePermissions[role]?.includes(permission) || false;
+};
+
+// Check if a user can manage another user based on roles
+export const canManageRole = (managerRole: UserRole, targetRole: UserRole): boolean => {
+  if (!managerRole || !targetRole) return false;
+
+  // Role hierarchy
+  const roleHierarchy: { [key in UserRole]: number } = {
+    superadmin: 3,
+    admin: 2,
+    observer: 1,
+    user: 0
+  };
+
+  // Return true if manager's role is higher in hierarchy
+  return roleHierarchy[managerRole] > roleHierarchy[targetRole];
+};

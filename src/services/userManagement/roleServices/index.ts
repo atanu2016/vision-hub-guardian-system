@@ -18,6 +18,9 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
   try {
     console.log(`[Role Service] Updating role for user ${userId} to ${newRole}`);
     
+    // Immediately invalidate cache to ensure fresh data
+    invalidateRoleCache(userId);
+    
     // Don't allow changing your own role if you're a superadmin to avoid accidentally removing your own permissions
     if (userId === currentUserId && newRole !== 'superadmin') {
       // Special case: allow admin@home.local to change between admin and superadmin
@@ -32,18 +35,11 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
 
     // Get current role for logging
     let oldRole: UserRole = 'user';
-    const cachedRole = getCachedRole(userId);
-    
-    if (cachedRole) {
-      oldRole = cachedRole;
-      console.log(`[Role Service] Using cached role: ${oldRole}`);
-    } else {
-      try {
-        oldRole = await fetchUserRole(userId);
-        console.log(`[Role Service] Current role from DB: ${oldRole}, New role: ${newRole}`);
-      } catch (roleError) {
-        console.error('[Role Service] Error fetching current role:', roleError);
-      }
+    try {
+      oldRole = await fetchUserRole(userId);
+      console.log(`[Role Service] Current role from DB: ${oldRole}, New role: ${newRole}`);
+    } catch (roleError) {
+      console.error('[Role Service] Error fetching current role:', roleError);
     }
 
     // Validate the role is a valid UserRole type
@@ -54,71 +50,86 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
       throw new Error(`Invalid role specified: ${newRole}`);
     }
 
-    // Try using direct update/insert first
+    // Use multiple approaches for reliability
+    let succeeded = false;
+    
+    // Approach 1: Direct update with user_roles table
     try {
-      // Check if user role already exists
+      // First check if role exists
       const roleExists = await checkRoleExists(userId);
       
       if (roleExists) {
         console.log('[Role Service] Role exists, updating existing role');
-        // Update existing role
         await updateExistingRole(userId, newRole);
       } else {
         console.log('[Role Service] Role does not exist, inserting new role');
-        // Insert new role
         await insertNewRole(userId, newRole);
       }
       
-      // Update the cache with new role
+      // Update cache with new role
       setCachedRole(userId, newRole);
+      succeeded = true;
+      console.log(`[Role Service] Direct update succeeded`);
       
       // Try to notify about role change
       await notifyRoleChange(userId);
       
-    } catch (error: any) {
-      console.error('[Role Service] Error updating role with direct approach:', error);
-      
-      // Retry using Edge Functions as fallback
+    } catch (error) {
+      console.error('[Role Service] Error with direct approach:', error);
+      // Continue to next approach
+    }
+    
+    // Approach 2: upsert operation
+    if (!succeeded) {
+      try {
+        console.log('[Role Service] Attempting upsert operation...');
+        const { error } = await supabase
+          .from('user_roles')
+          .upsert({
+            user_id: userId,
+            role: newRole,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id'
+          });
+          
+        if (error) {
+          console.error('[Role Service] Upsert failed:', error);
+        } else {
+          console.log('[Role Service] Upsert succeeded');
+          setCachedRole(userId, newRole);
+          succeeded = true;
+        }
+      } catch (error) {
+        console.error('[Role Service] Error with upsert approach:', error);
+        // Continue to next approach
+      }
+    }
+    
+    // Approach 3: Edge Function fallback
+    if (!succeeded) {
       try {
         console.log('[Role Service] Attempting fallback via edge function...');
         await updateRoleViaEdgeFunction(userId, newRole);
-        // Update the cache with new role if edge function succeeded
+        // Update the cache with new role
         setCachedRole(userId, newRole);
-        toast.success(`User role updated to ${newRole} (via fallback)`);
-        return;
-      } catch (fallbackError: any) {
-        // If both methods fail, try one more direct approach with different syntax
-        try {
-          console.log('[Role Service] Attempting final direct insertion...');
-          const { error: finalError } = await supabase
-            .from('user_roles')
-            .upsert({
-              user_id: userId,
-              role: newRole,
-              updated_at: new Date().toISOString()
-            }, {
-              onConflict: 'user_id'
-            });
-            
-          if (finalError) {
-            console.error('[Role Service] Final attempt also failed:', finalError);
-            throw finalError;
-          } else {
-            console.log('[Role Service] Final direct insertion succeeded');
-            setCachedRole(userId, newRole);
-            toast.success(`User role updated to ${newRole} (final attempt)`);
-            return;
-          }
-        } catch (finalAttemptError) {
-          console.error('[Role Service] All role update methods failed:', finalAttemptError);
-          throw error || fallbackError || finalAttemptError;
-        }
+        console.log(`[Role Service] Edge function approach succeeded`);
+        succeeded = true;
+      } catch (error) {
+        console.error('[Role Service] Edge function approach failed:', error);
+        // Continue to next approach
       }
     }
-
+    
+    // If all approaches failed, throw error
+    if (!succeeded) {
+      console.error('[Role Service] All role update methods failed');
+      throw new Error('Failed to update user role after multiple attempts');
+    }
+    
     toast.success(`User role updated to ${newRole}`);
     
-    // Trigger role change notifications via realtime
+    // Trigger role change notification via realtime
     try {
       await triggerRealtimeNotification(userId);
     } catch (notifyError) {
@@ -129,17 +140,31 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
     if (userId === currentUserId) {
       try {
         console.log('[Role Service] Forcing role reload for current user');
-        const { data: freshRole } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', userId)
-          .maybeSingle();
-          
-        if (freshRole && freshRole.role) {
-          setCachedRole(userId, freshRole.role as UserRole);
-          // Force session refresh to update roles
-          await supabase.auth.refreshSession();
-        }
+        
+        // First update cache
+        setCachedRole(userId, newRole);
+        
+        // Then refresh session
+        await supabase.auth.refreshSession();
+        console.log('[Role Service] Session refreshed');
+        
+        // Force another reload in 1 second for good measure
+        setTimeout(async () => {
+          try {
+            const { data: freshRole } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', userId)
+              .maybeSingle();
+              
+            if (freshRole && freshRole.role) {
+              console.log(`[Role Service] Secondary refresh fetched role: ${freshRole.role}`);
+              setCachedRole(userId, freshRole.role as UserRole);
+            }
+          } catch (e) {
+            console.error('[Role Service] Error in secondary refresh:', e);
+          }
+        }, 1000);
       } catch (reloadError) {
         console.error('[Role Service] Error forcing role reload:', reloadError);
       }

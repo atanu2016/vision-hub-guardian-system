@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "@/contexts/auth/types";
+import { invalidateRoleCache, getCachedRole, setCachedRole } from "@/services/userManagement/roleServices/roleCache";
 
 export function useRoleSubscription() {
   const { role: authRole, user } = useAuth();
@@ -12,9 +13,22 @@ export function useRoleSubscription() {
   useEffect(() => {
     if (!user?.id) return;
     
+    console.log(`[Role Subscription] Initializing for user ${user.id}, starting with authRole: ${authRole}`);
+    
+    // Always invalidate cache on initial load to ensure fresh data
+    invalidateRoleCache(user.id);
+    
     const fetchCurrentRole = async () => {
       try {
-        // Fetch fresh role directly from database
+        // First check if we have a cached role - but with reduced TTL
+        const cachedRole = getCachedRole(user.id);
+        if (cachedRole) {
+          console.log(`[Role Subscription] Using cached role: ${cachedRole}`);
+          setRole(cachedRole);
+        }
+        
+        // Always fetch fresh role directly from database
+        console.log(`[Role Subscription] Fetching fresh role for user ${user.id}`);
         const { data, error } = await supabase
           .from('user_roles')
           .select('role')
@@ -22,45 +36,41 @@ export function useRoleSubscription() {
           .maybeSingle();
           
         if (!error && data) {
-          console.log(`[Role Subscription] Fetched role from database: ${data.role} for user ${user.id} (${user.email || 'unknown'})`);
-          setRole(data.role as UserRole);
+          const fetchedRole = data.role as UserRole;
+          console.log(`[Role Subscription] Fetched role from database: ${fetchedRole} for user ${user.id} (${user.email || 'unknown'})`);
           
-          // Cache role information
-          localStorage.setItem(`user_role_${user.id}`, data.role);
-          localStorage.setItem(`user_role_time_${user.id}`, Date.now().toString());
+          // Only update if role has changed
+          if (fetchedRole !== role) {
+            console.log(`[Role Subscription] Role changed from ${role} to ${fetchedRole}`);
+            setRole(fetchedRole);
+            setCachedRole(user.id, fetchedRole);
+          }
+          
         } else if (error) {
           console.error('[PERMISSIONS] Error fetching role:', error);
+          // Fallback to auth context role
           setRole(authRole);
         } else {
+          // No role found, use auth role
+          console.log(`[Role Subscription] No role record found, using authRole: ${authRole}`);
           setRole(authRole);
         }
         
-        // Special handling for test accounts
-        if (user.email === 'operator@home.local') {
-          // Make sure operator@home.local users have user role
-          if (!data || data.role !== 'user') {
-            await supabase
-              .from('user_roles')
-              .upsert({ 
-                user_id: user.id, 
-                role: 'user',
-                updated_at: new Date().toISOString() 
-              }, { onConflict: 'user_id' });
-          }
-        } else if (user.email === 'user@home.local') {
-          // Make sure user@home.local users have user role
-          if (!data || data.role !== 'user') {
-            await supabase
-              .from('user_roles')
-              .upsert({ 
-                user_id: user.id, 
-                role: 'user',
-                updated_at: new Date().toISOString() 
-              }, { onConflict: 'user_id' });
-          }
-        } else if (user.email === 'test@home.local') {
-          console.log(`[Role Subscription] Special handling for test@home.local, current role: ${data?.role}`);
+        // Special handling for observer role
+        if (data?.role === 'observer') {
+          console.log(`[Role Subscription] Observer role detected, ensuring it's applied`);
+          setRole('observer');
+          setCachedRole(user.id, 'observer');
         }
+        
+        // Special handling for test accounts
+        if (user.email === 'test@home.local') {
+          console.log(`[Role Subscription] special account test@home.local detected, checking assigned role: ${data?.role}`);
+          if (data?.role === 'observer') {
+            console.log(`[Role Subscription] Confirmed observer role for test@home.local`);
+          }
+        }
+        
       } catch (err) {
         console.error('[PERMISSIONS] Error fetching role:', err);
         setRole(authRole);
@@ -70,10 +80,12 @@ export function useRoleSubscription() {
     // Initial fetch
     fetchCurrentRole();
     
-    // Set up subscription for role changes - with optimized checks
+    // Set up subscription for role changes with improved channel configuration
     if (!subscriptionRef.current) {
+      console.log(`[Role Subscription] Setting up realtime subscription for user ${user.id}`);
+      
       subscriptionRef.current = supabase
-        .channel('role-changes')
+        .channel(`role-changes-${user.id}`)
         .on('postgres_changes', { 
           event: '*', 
           schema: 'public', 
@@ -82,26 +94,37 @@ export function useRoleSubscription() {
         }, (payload) => {
           console.log(`[Role Subscription] Received role change event:`, payload);
           if (payload.new && typeof payload.new === 'object' && 'role' in payload.new) {
-            console.log(`[Role Subscription] Setting new role: ${payload.new.role}`);
-            setRole(payload.new.role as UserRole);
+            const newRole = payload.new.role as UserRole;
+            console.log(`[Role Subscription] Setting new role from realtime event: ${newRole}`);
+            setRole(newRole);
+            setCachedRole(user.id, newRole);
+            
+            // Force session refresh when role changes
+            supabase.auth.refreshSession().then(() => {
+              console.log(`[Role Subscription] Session refreshed after role change`);
+            });
           }
         })
-        .subscribe();
+        .subscribe((status) => {
+          console.log(`[Role Subscription] Subscription status:`, status);
+        });
     }
     
-    // Refresh permissions every 15 seconds - reduced from 30 seconds for more responsive updates
+    // Shorten refresh interval to 10 seconds for more responsive updates
     const intervalId = setInterval(() => {
       fetchCurrentRole();
-    }, 15000);
+    }, 10000);
       
     return () => {
       clearInterval(intervalId);
       if (subscriptionRef.current) {
+        console.log(`[Role Subscription] Cleaning up subscription`);
         subscriptionRef.current.unsubscribe();
         subscriptionRef.current = null;
       }
     };
   }, [user?.id, authRole]);
   
+  // Return both the current role and the authRole for fallback
   return { role, authRole };
 }

@@ -159,7 +159,7 @@ const ProfileSettings = () => {
   }, [user, role]);
 
   // Add a debug mode state
-  const [showDebugTools, setShowDebugTools] = useState(false);
+  const [showDebugTools, setShowDebugTools] = useState(true);
 
   const toggleDebugTools = () => {
     setShowDebugTools(prev => !prev);
@@ -306,6 +306,14 @@ const ProfileSettings = () => {
           </Button>
         </div>
 
+        {/* Debug section - moved before the grid to make it more prominent */}
+        {showDebugTools && (
+          <div className="mb-4">
+            <h2 className="text-xl font-bold mb-4">Role Debug Information</h2>
+            <RoleDiagnosticTool />
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <PersonalInfoCard
             formData={formData}
@@ -323,14 +331,6 @@ const ProfileSettings = () => {
             handlePasswordUpdate={handlePasswordUpdate}
           />
         </div>
-        
-        {/* Debug section */}
-        {showDebugTools && (
-          <div className="mt-8">
-            <h2 className="text-xl font-bold mb-4">Debug Information</h2>
-            <RoleDiagnosticTool />
-          </div>
-        )}
       </div>
     </AppLayout>
   );
