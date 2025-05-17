@@ -2,35 +2,26 @@
 project_id = "csmsqglfbycodrqipbca"
 
 [api]
-# enabled = true
-# port = 54321
-# schemas = ["public", "storage"]
-# extra_search_path = ["public", "extensions"]
-# max_rows = 1000
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
 
 [db]
-# port = 54322
-# shadow_port = 54320
+port = 54322
+shadow_port = 54320
+major_version = 15
 
 [studio]
-# port = 54323
+enabled = true
+port = 54323
+api_url = "http://localhost"
 
-[inbucket]
-# port = 54324
-# smtp_port = 54325
-# pop3_port = 54326
-
-[storage]
-# enabled = true
-
-[auth]
-# enabled = true
-
-[realtime]
-# enabled = true
-
-# Allow insecure local development
-# enabled_local_routing = true
-
+[functions]
 [functions.admin-create-user]
 verify_jwt = true
+[functions.get-all-users]
+verify_jwt = true
+
+[auth]
+port = 54324
+uri = "postgres://postgres:postgres@localhost:54322/postgres"

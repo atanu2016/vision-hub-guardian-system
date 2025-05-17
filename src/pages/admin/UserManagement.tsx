@@ -11,6 +11,7 @@ import type { UserData, UserRole } from '@/types/admin';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function UserManagement() {
   const [users, setUsers] = useState<UserData[]>([]);
@@ -28,12 +29,29 @@ export default function UserManagement() {
       setLoading(true);
       setError(null);
       console.log("Attempting to load users from database...");
+      
+      // First try the Edge Function approach
+      try {
+        const { data: functionData, error: functionError } = await supabase.functions.invoke('get-all-users');
+        if (functionError) throw functionError;
+        
+        if (Array.isArray(functionData)) {
+          console.log("Loaded users from edge function:", functionData);
+          setUsers(functionData);
+          setLoading(false);
+          return;
+        }
+      } catch (functionErr) {
+        console.warn("Edge function failed, falling back to direct fetch:", functionErr);
+      }
+      
+      // Fallback to direct database approach
       const usersData = await fetchUsers();
       console.log("Loaded users:", usersData);
       setUsers(usersData);
     } catch (error: any) {
       console.error("Failed to load users:", error);
-      setError(error?.message || 'Failed to load users. Please check your database connection.');
+      setError(error?.message || 'Failed to load users. Please check your permissions.');
       toast.error('Failed to load users');
     } finally {
       setLoading(false);

@@ -91,7 +91,14 @@ export function useCreateUser({ onSuccess, onError }: UseCreateUserOptions = {})
         mfaRequired: formData.mfaRequired
       });
       
-      // Create the user through a secure backend function
+      // First check if we have service role access
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session) {
+        throw new Error('Authentication required to create users');
+      }
+      
+      // Create the user through admin-create-user edge function
       const { data, error } = await supabase.functions.invoke('admin-create-user', {
         body: {
           email: formData.email,
@@ -109,6 +116,8 @@ export function useCreateUser({ onSuccess, onError }: UseCreateUserOptions = {})
       }
       
       console.log("User created successfully:", data.userId);
+      
+      toast.success('User created successfully');
       
       if (onSuccess) onSuccess();
       

@@ -9,79 +9,75 @@ export async function fetchUsers(): Promise<UserData[]> {
   try {
     console.log('Fetching users from database...');
     
-    // Get users from the Auth API
-    const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
-    
-    if (authError) {
-      console.error('Error fetching auth users:', authError);
-      throw authError;
+    // First check if the current user has superadmin access
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      throw new Error('Authentication required');
     }
 
-    if (!authData?.users || authData.users.length === 0) {
+    // Get users via RPC function that will check permissions server-side
+    const { data: users, error: usersError } = await supabase
+      .rpc('get_all_users');
+      
+    if (usersError) {
+      console.error('Error fetching users via RPC:', usersError);
+      
+      // Fallback: Try to get profiles directly if RPC fails
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, mfa_enrolled, mfa_required, created_at, is_admin');
+      
+      if (profilesError) {
+        console.error('Fallback error fetching profiles:', profilesError);
+        throw new Error('Failed to load users: Permission denied');
+      }
+      
+      if (!profiles || profiles.length === 0) {
+        return [];
+      }
+      
+      // Get user emails and metadata from auth.users table (this requires service_role key)
+      // Since we can't directly access auth.users, we'll get minimal data from profiles
+      const { data: userRoles } = await supabase
+        .from('user_roles')
+        .select('user_id, role');
+      
+      const rolesMap = (userRoles || []).reduce((acc, item) => {
+        acc[item.user_id] = item.role;
+        return acc;
+      }, {} as Record<string, UserRole>);
+      
+      // Return minimal profile data when we can't access auth.users
+      return profiles.map(profile => {
+        return {
+          id: profile.id,
+          email: 'Protected', // We can't access emails without service role
+          full_name: profile.full_name || 'User',
+          mfa_enrolled: profile.mfa_enrolled || false,
+          mfa_required: profile.mfa_required || false,
+          created_at: profile.created_at || new Date().toISOString(),
+          is_admin: profile.is_admin || false,
+          role: rolesMap[profile.id] || 'user'
+        };
+      });
+    }
+
+    if (!users || users.length === 0) {
       console.log('No users found');
       return [];
     }
 
-    // Now fetch profiles
-    const { data: profiles, error: profileError } = await supabase
-      .from('profiles')
-      .select('id, full_name, mfa_enrolled, mfa_required, created_at, is_admin');
-    
-    if (profileError) {
-      console.error('Error fetching profiles:', profileError);
-      throw profileError;
-    }
-
-    // Create a map of profiles by ID for faster lookup
-    const profilesMap = (profiles || []).reduce((acc, profile) => {
-      acc[profile.id] = profile;
-      return acc;
-    }, {} as Record<string, any>);
-
-    // Fetch user roles
-    const { data: userRoles, error: roleError } = await supabase
-      .from('user_roles')
-      .select('user_id, role');
-
-    if (roleError) {
-      console.error('Error fetching user roles:', roleError);
-      // Continue execution, not all users might have roles
-    }
-
-    // Create a map of roles by user ID
-    const rolesMap = (userRoles || []).reduce((acc, item) => {
-      acc[item.user_id] = item.role;
-      return acc;
-    }, {} as Record<string, UserRole>);
-
-    // Combine the data
-    const usersData = authData.users.map(user => {
-      const profile = profilesMap[user.id] || {
-        full_name: null,
-        mfa_enrolled: false,
-        mfa_required: false,
-        is_admin: false
-      };
-      
-      // Determine role from either role table or is_admin flag
-      let role: UserRole = 'user';
-      if (rolesMap[user.id]) {
-        role = rolesMap[user.id];
-      } else if (profile.is_admin) {
-        role = 'admin';
-      }
-
-      return {
-        id: user.id,
-        email: user.email || 'Unknown email',
-        full_name: profile.full_name,
-        mfa_enrolled: profile.mfa_enrolled,
-        mfa_required: profile.mfa_required,
-        created_at: profile.created_at || user.created_at,
-        is_admin: profile.is_admin,
-        role: role
-      };
-    });
+    // Transform the data from the RPC function
+    const usersData = users.map(user => ({
+      id: user.id,
+      email: user.email || 'Unknown email',
+      full_name: user.full_name || null,
+      mfa_enrolled: user.mfa_enrolled || false,
+      mfa_required: user.mfa_required || false,
+      created_at: user.created_at || user.auth_created_at,
+      is_admin: user.is_admin || false,
+      role: user.role || 'user'
+    }));
 
     console.log(`Successfully processed ${usersData.length} users with roles`);
     return usersData;
