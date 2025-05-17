@@ -1,11 +1,12 @@
 
-import { useState } from 'react';
-import { Shield, ShieldCheck, ShieldX, User } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Shield, ShieldCheck, ShieldX, User, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { UserRole } from '@/types/admin';
 import { useAuth } from '@/contexts/auth';
 import { canManageRole } from '@/utils/permissionUtils';
 import { usePermissions } from '@/hooks/usePermissions';
+import { toast } from 'sonner';
 
 interface RoleSelectorProps {
   userId: string;
@@ -16,19 +17,31 @@ interface RoleSelectorProps {
 
 export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole }: RoleSelectorProps) {
   const [isUpdating, setIsUpdating] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<UserRole>(currentRole);
   const { role: currentUserRole } = useAuth();
   const { hasPermission } = usePermissions();
+
+  // Update local state when prop changes
+  useEffect(() => {
+    setSelectedRole(currentRole);
+  }, [currentRole]);
 
   // Check if user can assign roles (superadmin only)
   const canAssignRoles = hasPermission('assign-roles');
 
   const handleRoleChange = async (value: string) => {
     setIsUpdating(true);
-    console.log(`[RoleSelector] Changing role to: ${value} for user: ${userId}`);
     try {
+      setSelectedRole(value as UserRole);
+      console.log(`[RoleSelector] Changing role to: ${value} for user: ${userId}`);
+      
       await onUpdateRole(userId, value as UserRole);
-    } catch (error) {
+      toast.success(`Role updated to ${value}`);
+    } catch (error: any) {
       console.error('[RoleSelector] Error updating role:', error);
+      toast.error(error.message || 'Failed to update role');
+      // Revert selection on error
+      setSelectedRole(currentRole);
     } finally {
       setIsUpdating(false);
     }
@@ -59,14 +72,23 @@ export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole 
 
   return (
     <div className="flex items-center gap-2">
-      {getRoleIcon(currentRole)}
+      {getRoleIcon(selectedRole)}
       <Select
-        defaultValue={currentRole}
+        value={selectedRole}
         onValueChange={handleRoleChange}
         disabled={disabled}
       >
         <SelectTrigger className="w-32">
-          <SelectValue placeholder="Role" />
+          <SelectValue placeholder="Role">
+            {isUpdating ? (
+              <div className="flex items-center">
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                <span>Updating...</span>
+              </div>
+            ) : (
+              selectedRole
+            )}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="superadmin" disabled={currentUserRole !== 'superadmin'}>Superadmin</SelectItem>

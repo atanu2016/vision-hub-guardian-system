@@ -18,7 +18,7 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
     // Don't allow changing your own role if you're a superadmin
     if (userId === currentUserId && newRole !== 'superadmin') {
       toast.error("You cannot downgrade your own superadmin role");
-      return;
+      throw new Error("Cannot downgrade your own superadmin role");
     }
 
     // Get current role for logging - use cache if available
@@ -29,11 +29,15 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
       oldRole = cachedRole.role;
       console.log(`[Role Service] Using cached role: ${oldRole}`);
     } else {
-      const { data: currentRoleData } = await supabase
+      const { data: currentRoleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
         .maybeSingle();
+      
+      if (roleError) {
+        console.error('[Role Service] Error fetching current role:', roleError);
+      }
       
       oldRole = (currentRoleData?.role as UserRole) || 'user';
       console.log(`[Role Service] Current role from DB: ${oldRole}, New role: ${newRole}`);
@@ -43,16 +47,20 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
     }
 
     // Check if user role already exists
-    const { data: existingRole } = await supabase
+    const { data: existingRole, error: existingRoleError } = await supabase
       .from('user_roles')
       .select('id')
       .eq('user_id', userId)
       .maybeSingle();
+      
+    if (existingRoleError) {
+      console.error('[Role Service] Error checking existing role:', existingRoleError);
+    }
 
     let error;
     
     if (existingRole) {
-      // Update existing role
+      // Update existing role - using update instead of upsert for existing records
       console.log(`[Role Service] Updating existing role record for user ${userId}`);
       const { error: updateError } = await supabase
         .from('user_roles')
@@ -71,22 +79,8 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
         // Update the cache with new role
         roleCache.set(userId, { role: newRole, timestamp: Date.now() });
         
-        // Add special operator checks
-        if (newRole === 'operator') {
-          console.log('[Role Service] Operator role assigned - forcing auth refresh');
-          
-          try {
-            // We have to use a type assertion here since the function is new and not in the types yet
-            const { error: signalError } = await supabase
-              .rpc('notify_role_change' as any, { user_id: userId });
-            
-            if (signalError) {
-              console.warn('[Role Service] Error signaling role change:', signalError);
-            }
-          } catch (err) {
-            console.error('[Role Service] Error calling notify_role_change:', err);
-          }
-        }
+        // Try to notify about role change
+        await notifyRoleChange(userId);
       }
     } else {
       // Insert new role
@@ -95,7 +89,9 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
         .from('user_roles')
         .insert({ 
           user_id: userId, 
-          role: newRole 
+          role: newRole,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         });
         
       error = insertError;
@@ -107,35 +103,63 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
         // Update the cache with new role
         roleCache.set(userId, { role: newRole, timestamp: Date.now() });
         
-        // Add special operator checks
-        if (newRole === 'operator') {
-          console.log('[Role Service] Operator role assigned - forcing auth refresh');
-          
-          try {
-            // We have to use a type assertion here since the function is new and not in the types yet
-            const { error: signalError } = await supabase
-              .rpc('notify_role_change' as any, { user_id: userId });
-            
-            if (signalError) {
-              console.warn('[Role Service] Error signaling role change:', signalError);
-            }
-          } catch (err) {
-            console.error('[Role Service] Error calling notify_role_change:', err);
-          }
-        }
+        // Try to notify about role change
+        await notifyRoleChange(userId);
       }
     }
 
     if (error) throw error;
     
     // Log this action
-    await logRoleChange(userId, oldRole, newRole);
+    try {
+      await logRoleChange(userId, oldRole, newRole);
+    } catch (logError) {
+      console.error('[Role Service] Error logging role change:', logError);
+      // Continue despite logging error
+    }
     
     toast.success(`User role updated to ${newRole}`);
-  } catch (error) {
+    
+    // Trigger role change notifications via realtime
+    try {
+      await supabase
+        .from('user_roles')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('user_id', userId);
+    } catch (notifyError) {
+      console.error('[Role Service] Error triggering role change notification:', notifyError);
+    }
+    
+    return;
+  } catch (error: any) {
     console.error('Error updating user role:', error);
-    toast.error('Failed to update user role');
+    toast.error('Failed to update user role: ' + (error.message || 'Unknown error'));
     throw error;
+  }
+}
+
+/**
+ * Helper function to notify about role changes via RPC if available
+ */
+async function notifyRoleChange(userId: string): Promise<void> {
+  try {
+    console.log('[Role Service] Attempting to notify about role change');
+    
+    // Try to use notify_role_change RPC if it exists
+    const { error: signalError } = await supabase
+      .rpc('notify_role_change', { user_id: userId })
+      .catch((err) => {
+        console.warn('[Role Service] notify_role_change RPC might not exist:', err);
+        return { error: err };
+      });
+      
+    if (signalError) {
+      console.warn('[Role Service] Error signaling role change:', signalError);
+    } else {
+      console.log('[Role Service] Successfully notified about role change');
+    }
+  } catch (err) {
+    console.error('[Role Service] Error calling notify_role_change:', err);
   }
 }
 
@@ -158,7 +182,10 @@ export async function hasRole(userId: string, role: UserRole): Promise<boolean> 
       .eq('role', role)
       .maybeSingle();
       
-    if (error) throw error;
+    if (error) {
+      console.error('[Role Service] Error checking user role:', error);
+      throw error;
+    }
     
     // Update cache if we got data
     if (data) {
@@ -167,7 +194,7 @@ export async function hasRole(userId: string, role: UserRole): Promise<boolean> 
     
     return !!data;
   } catch (error) {
-    console.error('Error checking user role:', error);
+    console.error('[Role Service] Error checking user role:', error);
     return false;
   }
 }

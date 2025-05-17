@@ -1,0 +1,185 @@
+
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.42.0";
+
+// Define CORS headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders, status: 204 });
+  }
+
+  try {
+    // Get the authorization header from the request
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'No authorization header' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401
+      });
+    }
+
+    // Create a Supabase client with the service role key
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") as string;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return new Response(JSON.stringify({ error: 'Server configuration error' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500
+      });
+    }
+
+    // Create a service role client to bypass RLS
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Create a normal client to verify the user's token
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Invalid token' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401
+      });
+    }
+
+    // Check if the user is a superadmin
+    const { data: userRole, error: roleError } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (roleError || !userRole || userRole.role !== 'superadmin') {
+      return new Response(JSON.stringify({ error: 'Only superadmins can fix user roles' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 403
+      });
+    }
+    
+    // Get request data
+    const { userId, role, action } = await req.json();
+    
+    if (action === 'fix') {
+      const targetUserId = userId || null;
+      
+      if (!targetUserId) {
+        return new Response(JSON.stringify({ error: 'User ID is required' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400
+        });
+      }
+      
+      // Check if user exists in auth
+      const { data: targetUser, error: targetUserError } = await supabaseAdmin.auth.admin.getUserById(targetUserId);
+      
+      if (targetUserError || !targetUser) {
+        return new Response(JSON.stringify({ error: 'Target user not found' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 404
+        });
+      }
+      
+      // Fix the user role
+      const newRole = role || 'user';
+      
+      // Insert or update the role
+      const { error: upsertError } = await supabaseAdmin
+        .from('user_roles')
+        .upsert({
+          user_id: targetUserId,
+          role: newRole,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
+        
+      if (upsertError) {
+        return new Response(JSON.stringify({ error: `Failed to update role: ${upsertError.message}` }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500
+        });
+      }
+      
+      // Try to notify about role change if the RPC exists
+      try {
+        await supabaseAdmin.rpc('notify_role_change', { user_id: targetUserId });
+      } catch (error) {
+        console.log('notify_role_change RPC might not exist:', error);
+      }
+      
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: `User ${targetUserId} role has been set to ${newRole}` 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      });
+    } else if (action === 'diagnose') {
+      // Get all users with roles
+      const { data: usersWithRoles, error: usersRolesError } = await supabaseAdmin
+        .from('user_roles')
+        .select('*');
+        
+      if (usersRolesError) {
+        return new Response(JSON.stringify({ error: `Failed to fetch user roles: ${usersRolesError.message}` }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500
+        });
+      }
+      
+      // Get all auth users
+      const { data: authUsers, error: authUsersError } = await supabaseAdmin.auth.admin.listUsers();
+      
+      if (authUsersError) {
+        return new Response(JSON.stringify({ error: `Failed to fetch auth users: ${authUsersError.message}` }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500
+        });
+      }
+      
+      const userRoleMap = usersWithRoles?.reduce<{[key: string]: any}>((acc, role) => {
+        acc[role.user_id] = role;
+        return acc;
+      }, {}) || {};
+      
+      const diagnosticInfo = authUsers.users.map(user => {
+        return {
+          id: user.id,
+          email: user.email,
+          roleRecord: userRoleMap[user.id] || null,
+          hasRoleRecord: !!userRoleMap[user.id],
+          currentRole: userRoleMap[user.id]?.role || 'user'
+        };
+      });
+      
+      return new Response(JSON.stringify({ 
+        success: true, 
+        diagnosticInfo,
+        totalUsers: authUsers.users.length,
+        usersWithRoles: usersWithRoles?.length || 0,
+        usersWithoutRoles: authUsers.users.length - (usersWithRoles?.length || 0)
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      });
+    }
+    
+    return new Response(JSON.stringify({ error: 'Invalid action. Use "fix" or "diagnose".' }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400
+    });
+    
+  } catch (error: any) {
+    return new Response(JSON.stringify({ error: error.message || 'Unknown error' }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 500
+    });
+  }
+});

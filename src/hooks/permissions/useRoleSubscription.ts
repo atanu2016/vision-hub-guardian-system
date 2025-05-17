@@ -39,17 +39,41 @@ export function useRoleSubscription() {
           // Cache the result
           localStorage.setItem(`user_role_${user.id}`, data.role);
           localStorage.setItem(`user_role_time_${user.id}`, Date.now().toString());
-        } else {
+        } else if (error) {
+          console.error('[PERMISSIONS] Error fetching role:', error);
           // Fallback to auth context
           console.log(`[PERMISSIONS] Using auth context role: ${authRole}`);
+          setRole(authRole);
+        } else {
+          // No data found, fallback to auth context
+          console.log(`[PERMISSIONS] No role found in database, using auth context role: ${authRole}`);
           setRole(authRole);
           
           // Special handling for operator role from auth context
           if (authRole === 'operator') {
             console.log(`[PERMISSIONS] ▶️ OPERATOR ROLE detected from auth context - ensuring proper access`);
             localStorage.setItem('operator_role_confirmed', 'true');
-          } else {
-            localStorage.removeItem('operator_role_confirmed');
+          }
+        }
+        
+        // Special case for operator@home.local
+        if (user.email === 'operator@home.local') {
+          console.log(`[PERMISSIONS] operator@home.local detected - ensuring operator role`);
+          setRole('operator');
+          localStorage.setItem('operator_role_confirmed', 'true');
+          
+          // Update the role in the database if it doesn't match
+          if (!data || data.role !== 'operator') {
+            console.log(`[PERMISSIONS] Updating operator@home.local role in database`);
+            await supabase
+              .from('user_roles')
+              .upsert({ 
+                user_id: user.id, 
+                role: 'operator',
+                updated_at: new Date().toISOString() 
+              }, { 
+                onConflict: 'user_id' 
+              });
           }
         }
       } catch (err) {
@@ -100,7 +124,9 @@ export function useRoleSubscription() {
             }
           }
         })
-        .subscribe();
+        .subscribe((status) => {
+          console.log(`[PERMISSIONS] Subscription status: ${status}`);
+        });
     }
       
     return () => {
@@ -110,7 +136,7 @@ export function useRoleSubscription() {
         subscriptionRef.current = null;
       }
     };
-  }, [user?.id, authRole, role]);
+  }, [user?.id, authRole]);
   
   return { role, authRole };
 }
