@@ -21,10 +21,13 @@ const AppLayout = ({ children, className, fullWidth = false }: AppLayoutProps) =
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full overflow-hidden bg-background dark:bg-vision-dark-950">
+        {/* Fixed position sidebar */}
         <Sidebar />
+        
+        {/* Main content area with margin that respects sidebar width */}
         <div className={cn(
-          "flex flex-col flex-1 w-full transition-all duration-200", 
-          !isMobile && (sidebarCollapsed ? "md:ml-[3rem]" : "md:ml-[16rem]")
+          "flex flex-col flex-1 w-full transition-all duration-300", 
+          !isMobile && (sidebarCollapsed ? "ml-[3rem]" : "ml-[16rem]")
         )}>
           <TopBar />
           <ScrollArea className="flex-1 w-full h-[calc(100vh-64px)]">
