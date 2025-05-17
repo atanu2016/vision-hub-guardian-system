@@ -26,9 +26,9 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
     case 'view-cameras:all':
       return roleHierarchy[userRole] >= roleHierarchy['admin'];
     
-    // Footage permissions - users and operators can view footage
+    // Footage permissions - only operators and above can view footage
     case 'view-footage:assigned':
-      return roleHierarchy[userRole] >= roleHierarchy['user']; // Changed from operator to user
+      return roleHierarchy[userRole] >= roleHierarchy['operator']; 
     case 'view-footage:all':
       return roleHierarchy[userRole] >= roleHierarchy['operator'];
     
@@ -36,12 +36,11 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
     case 'manage-users:lower':
       return roleHierarchy[userRole] >= roleHierarchy['admin'];
     case 'manage-users:all':
+    case 'assign-roles':
       return userRole === 'superadmin';
     
     // Camera assignment permissions
     case 'assign-cameras':
-      return roleHierarchy[userRole] >= roleHierarchy['admin'];
-    case 'assign-roles':
       return roleHierarchy[userRole] >= roleHierarchy['admin'];
 
     // Camera management
