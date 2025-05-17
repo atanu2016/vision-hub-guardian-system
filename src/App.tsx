@@ -1,5 +1,5 @@
 
-import { Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "./App.css";
 import Index from "./pages/Index";
 import LiveView from "./pages/LiveView";
@@ -16,7 +16,6 @@ import { AuthProvider } from "./contexts/auth";
 import AdminRoutes from "./pages/admin";
 import { Toaster } from "./components/ui/sonner";
 import { useInitializeApp } from "./hooks/useInitializeApp";
-import { SidebarProvider } from "./components/ui/sidebar";
 
 // Individual Settings Pages
 import RecordingsPage from "./pages/settings/RecordingsPage";
@@ -29,11 +28,11 @@ import AdvancedSettings from "./pages/settings/AdvancedSettings";
 
 function App() {
   return (
-    <AuthProvider>
-      <SidebarProvider>
+    <Router>
+      <AuthProvider>
         <AppContent />
-      </SidebarProvider>
-    </AuthProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 
