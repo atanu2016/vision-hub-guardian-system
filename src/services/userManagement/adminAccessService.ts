@@ -14,13 +14,20 @@ export async function checkMigrationAccess(userId: string): Promise<boolean> {
       return false;
     }
 
-    // Check if the current user's session to check email
+    // Check the current user's session to check email
     const { data: sessionData } = await supabase.auth.getSession();
     const userEmail = sessionData?.session?.user?.email;
     
+    // Special case for admin@home.local
     if (userEmail === 'admin@home.local') {
       console.log("User is admin@home.local, granting access");
-      return true;
+      
+      // Ensure the user has admin rights
+      const success = await ensureUserIsAdmin(userId);
+      if (success) {
+        console.log("Successfully granted admin rights to admin@home.local");
+        return true;
+      }
     }
     
     // Check if the user has admin role directly from user_roles
@@ -42,7 +49,6 @@ export async function checkMigrationAccess(userId: string): Promise<boolean> {
     }
     
     // Check if the user is an admin based on profile flag 
-    // Note: We're querying this after checking user_roles to avoid potential RLS issues
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('is_admin')
@@ -74,7 +80,7 @@ export async function checkMigrationAccess(userId: string): Promise<boolean> {
 export async function ensureUserIsAdmin(userId: string): Promise<boolean> {
   console.log("Ensuring user is admin:", userId);
   try {
-    // First ensure they have a superadmin role (avoids RLS issues)
+    // First ensure they have a superadmin role
     const { error: roleError } = await supabase
       .from('user_roles')
       .upsert({ 
@@ -85,7 +91,20 @@ export async function ensureUserIsAdmin(userId: string): Promise<boolean> {
     
     if (roleError) {
       console.error('Error updating user role:', roleError);
-      return false;
+      
+      // Try to insert if upsert failed
+      const { error: insertError } = await supabase
+        .from('user_roles')
+        .insert({ 
+          user_id: userId, 
+          role: 'superadmin',
+          updated_at: new Date().toISOString()
+        });
+        
+      if (insertError) {
+        console.error('Error inserting user role:', insertError);
+        return false;
+      }
     }
     
     // Then update profile to have admin flag
@@ -117,6 +136,7 @@ export async function ensureUserIsAdmin(userId: string): Promise<boolean> {
     }
     
     console.log("Successfully granted admin privileges to user:", userId);
+    toast.success("Admin privileges granted");
     return true;
   } catch (error) {
     console.error('Error ensuring user is admin:', error);

@@ -28,6 +28,7 @@ serve(async (req) => {
     // Get the authorization header from the request
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error("No authorization header provided");
       return new Response(JSON.stringify({ error: 'No authorization header' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401
@@ -63,45 +64,64 @@ serve(async (req) => {
     // Log user attempting to access admin function
     console.log(`User ${user.id} (${user.email}) is attempting to access admin function`);
 
-    // Check if user is admin or superadmin
-    const { data: userRole } = await supabase
+    // Check if user has admin privileges - first check user_roles
+    const { data: userRole, error: roleError } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
       .single();
 
-    const isAdmin = userRole && (userRole.role === 'admin' || userRole.role === 'superadmin');
-    if (!isAdmin) {
-      const { data: profile } = await supabase
+    let isAdmin = false;
+    
+    // Check if user has admin role from user_roles
+    if (!roleError && userRole && (userRole.role === 'admin' || userRole.role === 'superadmin')) {
+      isAdmin = true;
+      console.log(`User ${user.id} has admin role: ${userRole.role}`);
+    } else {
+      // If no role or error, check is_admin flag in profiles
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('is_admin')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
         
-      if (!profile || !profile.is_admin) {
-        console.log(`User ${user.id} denied access: not an admin`);
-        return new Response(JSON.stringify({ error: 'Permission denied' }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 403
-        });
+      if (!profileError && profile && profile.is_admin) {
+        isAdmin = true;
+        console.log(`User ${user.id} has is_admin flag in profile`);
       }
+    }
+
+    // Special case for admin@home.local
+    if (user.email === 'admin@home.local') {
+      isAdmin = true;
+      console.log(`User is admin@home.local, granting access`);
+    }
+    
+    if (!isAdmin) {
+      console.log(`User ${user.id} denied access: not an admin`);
+      return new Response(JSON.stringify({ error: 'Permission denied' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 403
+      });
     }
 
     console.log(`Admin access granted to ${user.email}`);
 
-    // Get users from the Auth API
-    const { data: authData, error: authUsersError } = await supabase.auth.admin.listUsers();
+    // Get users from the Auth API with the service role
+    const { data: authUsers, error: authUsersError } = await supabase.auth.admin.listUsers();
     
     if (authUsersError) {
+      console.error("Error fetching auth users:", authUsersError);
       throw authUsersError;
     }
 
-    // Now fetch profiles
+    // Fetch profiles for additional user information
     const { data: profiles, error: profileError } = await supabase
       .from('profiles')
       .select('id, full_name, mfa_enrolled, mfa_required, created_at, is_admin');
     
     if (profileError) {
+      console.error("Error fetching profiles:", profileError);
       throw profileError;
     }
 
@@ -116,19 +136,28 @@ serve(async (req) => {
       .from('user_roles')
       .select('user_id, role');
 
+    if (roleError) {
+      console.error("Error fetching user roles:", roleError);
+    }
+
     // Create a map of roles by user ID
     const rolesMap = (userRoles || []).reduce((acc, item) => {
       acc[item.user_id] = item.role;
       return acc;
     }, {} as Record<string, string>);
 
-    // Combine the data
-    const usersData = authData.users.map(user => {
+    // Combine the data - ensure users is actually accessible
+    const users = authUsers?.users || [];
+    console.log(`Found ${users.length} auth users`);
+    
+    // Map the users to include profile and role information
+    const usersData = users.map(user => {
       const profile = profilesMap[user.id] || {
         full_name: null,
         mfa_enrolled: false,
         mfa_required: false,
-        is_admin: false
+        is_admin: false,
+        created_at: user.created_at
       };
       
       // Determine role from either role table or is_admin flag
@@ -143,16 +172,16 @@ serve(async (req) => {
         id: user.id,
         email: user.email,
         full_name: profile.full_name,
-        mfa_enrolled: profile.mfa_enrolled,
-        mfa_required: profile.mfa_required,
+        mfa_enrolled: profile.mfa_enrolled || false,
+        mfa_required: profile.mfa_required || false,
         created_at: profile.created_at || user.created_at,
         auth_created_at: user.created_at,
-        is_admin: profile.is_admin,
+        is_admin: profile.is_admin || false,
         role: role
       };
     });
 
-    console.log(`Successfully returning ${usersData.length} users`);
+    console.log(`Successfully returning ${usersData.length} users with roles`);
     
     return new Response(JSON.stringify(usersData), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

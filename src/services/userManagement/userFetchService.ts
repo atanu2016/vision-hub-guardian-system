@@ -14,78 +14,121 @@ export async function fetchUsers(): Promise<UserData[]> {
     if (!session) {
       throw new Error('Authentication required');
     }
-
-    // Attempt to fetch users via edge function with proper error handling
+    
     console.log('Attempting to fetch users via edge function...');
-    const { data: users, error: funcError } = await supabase.functions.invoke('get-all-users', {
-      method: 'POST' // Explicitly set method to POST as required by Edge Functions
+    
+    // Call the edge function with proper type checking
+    const { data, error } = await supabase.functions.invoke<unknown>('get-all-users', {
+      method: 'POST'
     });
       
-    if (funcError || !users) {
-      console.error('Error fetching users via Edge Function:', funcError);
+    if (error) {
+      console.error('Error fetching users via Edge Function:', error);
       
       // Fallback: Try to get profiles directly if edge function fails
-      console.log('Falling back to direct database fetch...');
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, full_name, mfa_enrolled, mfa_required, created_at, is_admin');
+      return await fetchUsersDirectly();
+    }
+
+    // Type checking for the response
+    if (!data || !Array.isArray(data)) {
+      console.error('Invalid response format from edge function:', data);
       
-      if (profilesError) {
-        console.error('Fallback error fetching profiles:', profilesError);
-        throw new Error('Failed to load users: Permission denied');
-      }
-      
-      if (!profiles || profiles.length === 0) {
-        return [];
-      }
-      
-      // Get user roles from user_roles table for mapping
-      const { data: userRoles } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
-      
-      const rolesMap = (userRoles || []).reduce((acc, item) => {
-        acc[item.user_id] = item.role;
-        return acc;
-      }, {} as Record<string, UserRole>);
-      
-      // Return minimal profile data when we can't access auth.users
-      return profiles.map(profile => {
+      // Fallback to direct database query
+      return await fetchUsersDirectly();
+    }
+
+    console.log(`Successfully received ${data.length} users from edge function`);
+
+    // Transform and type-check the edge function response
+    const usersData = data.map(user => {
+      // Ensure we have a valid user object
+      if (!user || typeof user !== 'object') {
         return {
-          id: profile.id,
-          email: 'Protected', // We can't access emails without service role
-          full_name: profile.full_name || 'User',
-          mfa_enrolled: profile.mfa_enrolled || false,
-          mfa_required: profile.mfa_required || false,
-          created_at: profile.created_at || new Date().toISOString(),
-          is_admin: profile.is_admin || false,
-          role: rolesMap[profile.id] || 'user'
+          id: '',
+          email: 'Invalid user data',
+          full_name: null,
+          mfa_enrolled: false,
+          mfa_required: false,
+          created_at: new Date().toISOString(),
+          is_admin: false,
+          role: 'user' as UserRole
         };
-      });
-    }
+      }
 
-    // Type check and handle the edge function response data
-    if (!Array.isArray(users)) {
-      console.error('Invalid response format from edge function:', users);
-      return [];
-    }
+      const typedUser = user as Record<string, any>;
 
-    // Transform the data from the edge function with proper type checking
-    const usersData = users.map(user => ({
-      id: user.id || '',
-      email: user.email || 'Unknown email',
-      full_name: user.full_name || null,
-      mfa_enrolled: user.mfa_enrolled || false,
-      mfa_required: user.mfa_required || false,
-      created_at: user.created_at || user.auth_created_at || new Date().toISOString(),
-      is_admin: user.is_admin || false,
-      role: user.role || 'user'
-    }));
+      return {
+        id: typedUser.id || '',
+        email: typedUser.email || 'Unknown email',
+        full_name: typedUser.full_name || null,
+        mfa_enrolled: !!typedUser.mfa_enrolled,
+        mfa_required: !!typedUser.mfa_required,
+        created_at: typedUser.created_at || typedUser.auth_created_at || new Date().toISOString(),
+        is_admin: !!typedUser.is_admin,
+        role: (typedUser.role || 'user') as UserRole
+      };
+    });
 
     console.log(`Successfully processed ${usersData.length} users with roles`);
     return usersData;
+    
   } catch (error) {
     console.error('Error in fetchUsers:', error);
-    throw error;
+    
+    // Try direct database approach as a final fallback
+    try {
+      return await fetchUsersDirectly();
+    } catch (fallbackError) {
+      console.error('Fallback approach also failed:', fallbackError);
+      throw new Error('Failed to load users: Permission denied');
+    }
   }
+}
+
+/**
+ * Fallback function that tries to fetch users directly from the database
+ * when the edge function approach fails
+ */
+async function fetchUsersDirectly(): Promise<UserData[]> {
+  console.log('Falling back to direct database fetch...');
+  
+  // Try to get profiles directly
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, full_name, mfa_enrolled, mfa_required, created_at, is_admin');
+  
+  if (profilesError) {
+    console.error('Fallback error fetching profiles:', profilesError);
+    throw new Error('Failed to load users: Permission denied');
+  }
+  
+  if (!profiles || profiles.length === 0) {
+    console.log('No profiles found in direct database query');
+    return [];
+  }
+  
+  // Get user roles from user_roles table for mapping
+  const { data: userRoles } = await supabase
+    .from('user_roles')
+    .select('user_id, role');
+  
+  const rolesMap = (userRoles || []).reduce((acc, item) => {
+    acc[item.user_id] = item.role as UserRole;
+    return acc;
+  }, {} as Record<string, UserRole>);
+  
+  // Return minimal profile data when we can't access auth.users
+  console.log(`Found ${profiles.length} profiles in direct database query`);
+  return profiles.map(profile => {
+    return {
+      id: profile.id,
+      email: 'Protected', // We can't access emails without service role
+      full_name: profile.full_name || 'User',
+      mfa_enrolled: profile.mfa_enrolled || false,
+      mfa_required: profile.mfa_required || false,
+      created_at: profile.created_at || new Date().toISOString(),
+      is_admin: profile.is_admin || false,
+      role: rolesMap[profile.id] || 'user'
+    };
+  });
 }

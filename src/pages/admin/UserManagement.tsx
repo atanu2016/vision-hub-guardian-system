@@ -16,12 +16,18 @@ export default function UserManagement() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { isSuperAdmin, user } = useAuth();
+  const { isSuperAdmin, user, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    loadUsers();
-  }, []);
+    // Redirect if not an admin
+    if (!isAdmin && !loading) {
+      toast.error('Only administrators can access user management');
+      navigate('/');
+    } else {
+      loadUsers();
+    }
+  }, [isAdmin, navigate]);
 
   async function loadUsers() {
     try {
@@ -86,13 +92,13 @@ export default function UserManagement() {
     loadUsers();
   };
 
-  if (!isSuperAdmin) {
+  if (!isAdmin && !isSuperAdmin) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>User Management</CardTitle>
           <CardDescription>
-            You need superadmin privileges to access this page.
+            You need administrator privileges to access this page.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -136,8 +142,8 @@ export default function UserManagement() {
         {error && (
           <Alert variant="destructive" className="mb-4">
             <AlertTitle>Error loading users</AlertTitle>
-            <AlertDescription>
-              {error}
+            <AlertDescription className="flex items-center justify-between">
+              <span>{error}</span>
               <Button variant="outline" size="sm" onClick={handleRetry} className="ml-2">
                 Retry
               </Button>
