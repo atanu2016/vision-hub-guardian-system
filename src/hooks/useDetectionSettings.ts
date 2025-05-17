@@ -37,8 +37,14 @@ export const useDetectionSettings = () => {
   const updateDetectionSettings = useCallback(async (settings) => {
     setIsSaving(true);
     try {
-      await saveDetectionSettings(settings);
-      setDetectionSettings(settings);
+      // Ensure all required properties are present when updating state
+      const updatedSettings = {
+        ...detectionSettings, // Keep existing values
+        ...settings // Apply new values
+      };
+      
+      await saveDetectionSettings(updatedSettings);
+      setDetectionSettings(updatedSettings);
       toast.success("Detection settings updated");
     } catch (error) {
       console.error("Error saving detection settings:", error);
@@ -46,7 +52,7 @@ export const useDetectionSettings = () => {
     } finally {
       setIsSaving(false);
     }
-  }, []);
+  }, [detectionSettings]); // Add detectionSettings as a dependency
 
   return {
     detectionSettings,
