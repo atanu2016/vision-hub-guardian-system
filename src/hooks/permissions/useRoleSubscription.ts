@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,12 +29,16 @@ export function useRoleSubscription() {
           console.log(`[PERMISSIONS] Direct DB role fetch for ${user.id}: ${data.role}`);
           setRole(data.role as UserRole);
           
-          // Special handling for operator role
+          // Special handling for operator and monitoringOfficer roles
           if (data.role === 'operator') {
             console.log(`[PERMISSIONS] ▶️ OPERATOR ROLE detected from database - ensuring proper access`);
             localStorage.setItem('operator_role_confirmed', 'true');
+          } else if (data.role === 'monitoringOfficer') {
+            console.log(`[PERMISSIONS] 👁️ MONITORING OFFICER ROLE detected from database - ensuring proper access`);
+            localStorage.setItem('monitoring_officer_confirmed', 'true');
           } else {
             localStorage.removeItem('operator_role_confirmed');
+            localStorage.removeItem('monitoring_officer_confirmed');
           }
           
           // Cache the result
@@ -50,13 +55,17 @@ export function useRoleSubscription() {
           setRole(authRole);
           
           // Special handling for operator role from auth context
-          if (authRole === 'operator') {
-            console.log(`[PERMISSIONS] ▶️ OPERATOR ROLE detected from auth context - ensuring proper access`);
-            localStorage.setItem('operator_role_confirmed', 'true');
+          if (authRole === 'operator' || authRole === 'monitoringOfficer') {
+            console.log(`[PERMISSIONS] ${authRole.toUpperCase()} ROLE detected from auth context - ensuring proper access`);
+            if (authRole === 'operator') {
+              localStorage.setItem('operator_role_confirmed', 'true');
+            } else if (authRole === 'monitoringOfficer') {
+              localStorage.setItem('monitoring_officer_confirmed', 'true');
+            }
           }
         }
         
-        // Special case for operator@home.local
+        // Special case for operator@home.local and user@home.local
         if (user.email === 'operator@home.local') {
           console.log(`[PERMISSIONS] operator@home.local detected - ensuring operator role`);
           setRole('operator');
@@ -75,15 +84,39 @@ export function useRoleSubscription() {
                 onConflict: 'user_id' 
               });
           }
+        } else if (user.email === 'user@home.local') {
+          console.log(`[PERMISSIONS] user@home.local detected - checking if should be monitoringOfficer`);
+          
+          // For user@home.local, we want to make sure it has the correct role but not override
+          // if it was manually assigned to monitoringOfficer
+          if (!data || (data.role !== 'monitoringOfficer' && data.role === 'user')) {
+            console.log(`[PERMISSIONS] Updating user@home.local role in database to monitoringOfficer`);
+            await supabase
+              .from('user_roles')
+              .upsert({ 
+                user_id: user.id, 
+                role: 'monitoringOfficer',
+                updated_at: new Date().toISOString() 
+              }, { 
+                onConflict: 'user_id' 
+              });
+            
+            setRole('monitoringOfficer');
+            localStorage.setItem('monitoring_officer_confirmed', 'true');
+          }
         }
       } catch (err) {
         console.error('[PERMISSIONS] Error fetching role:', err);
         setRole(authRole);
         
-        // Special handling for operator role from auth context after error
-        if (authRole === 'operator') {
-          console.log(`[PERMISSIONS] ▶️ OPERATOR ROLE detected from auth context (after error) - ensuring proper access`);
-          localStorage.setItem('operator_role_confirmed', 'true');
+        // Special handling for roles from auth context after error
+        if (authRole === 'operator' || authRole === 'monitoringOfficer') {
+          console.log(`[PERMISSIONS] ${authRole.toUpperCase()} ROLE detected from auth context (after error) - ensuring proper access`);
+          if (authRole === 'operator') {
+            localStorage.setItem('operator_role_confirmed', 'true');
+          } else if (authRole === 'monitoringOfficer') {
+            localStorage.setItem('monitoring_officer_confirmed', 'true');
+          }
         }
       }
     };
@@ -91,10 +124,11 @@ export function useRoleSubscription() {
     // Initial fetch
     fetchCurrentRole();
     
-    // Also refetch every 10 seconds for operator role to ensure permissions stay current
+    // Also refetch every 10 seconds for special roles to ensure permissions stay current
     const intervalId = setInterval(() => {
-      if (role === 'operator' || authRole === 'operator') {
-        console.log('[PERMISSIONS] Refreshing operator permissions');
+      if (role === 'operator' || role === 'monitoringOfficer' || 
+          authRole === 'operator' || authRole === 'monitoringOfficer') {
+        console.log('[PERMISSIONS] Refreshing special role permissions');
         fetchCurrentRole();
       }
     }, 10000);
@@ -115,12 +149,18 @@ export function useRoleSubscription() {
             console.log(`[PERMISSIONS] Updating role to: ${payload.new.role}`);
             setRole(payload.new.role as UserRole);
             
-            // Special handling for operator role changes
+            // Special handling for operator and monitoringOfficer role changes
             if (payload.new.role === 'operator') {
               console.log(`[PERMISSIONS] ▶️ OPERATOR ROLE change detected - ensuring proper access`);
               localStorage.setItem('operator_role_confirmed', 'true');
+              localStorage.removeItem('monitoring_officer_confirmed');
+            } else if (payload.new.role === 'monitoringOfficer') {
+              console.log(`[PERMISSIONS] 👁️ MONITORING OFFICER ROLE change detected - ensuring proper access`);
+              localStorage.setItem('monitoring_officer_confirmed', 'true');
+              localStorage.removeItem('operator_role_confirmed');
             } else {
               localStorage.removeItem('operator_role_confirmed');
+              localStorage.removeItem('monitoring_officer_confirmed');
             }
           }
         })

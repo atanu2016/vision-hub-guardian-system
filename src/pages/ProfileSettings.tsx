@@ -66,8 +66,35 @@ const ProfileSettings = () => {
     }
   }, [user]);
   
-  // Special handling for operator@home.local
+  // Special handling for user@home.local - ensure monitoringOfficer role
   useEffect(() => {
+    if (user?.email === 'user@home.local' && role !== 'monitoringOfficer') {
+      console.log("[PROFILE] user@home.local detected, but role is", role);
+      console.log("[PROFILE] Forcing role update to 'monitoringOfficer'");
+      
+      const updateMonitoringOfficerRole = async () => {
+        try {
+          await supabase
+            .from('user_roles')
+            .upsert({
+              user_id: user.id,
+              role: 'monitoringOfficer',
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'user_id'
+            });
+            
+          setRole('monitoringOfficer');
+          console.log("[PROFILE] Role updated to monitoringOfficer");
+        } catch (error) {
+          console.error("[PROFILE] Error updating role:", error);
+        }
+      };
+      
+      updateMonitoringOfficerRole();
+    }
+    
+    // Special handling for operator@home.local - same as before
     if (user?.email === 'operator@home.local' && role !== 'operator') {
       console.log("[PROFILE] operator@home.local detected, but role is", role);
       console.log("[PROFILE] Forcing role update to 'operator'");
@@ -78,7 +105,10 @@ const ProfileSettings = () => {
             .from('user_roles')
             .upsert({
               user_id: user.id,
-              role: 'operator'
+              role: 'operator',
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'user_id'
             });
             
           setRole('operator');
@@ -182,6 +212,7 @@ const ProfileSettings = () => {
   useEffect(() => {
     console.log("ProfileSettings component:", {
       userExists: !!user,
+      userEmail: user?.email,
       profileExists: !!profile,
       authLoading,
       role,

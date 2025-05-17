@@ -101,12 +101,19 @@ serve(async (req) => {
         });
       }
       
+      // Special case for user@home.local - always ensure it's a monitoring officer
+      const { data: userData, error: userDataError } = await supabaseAdmin.auth.admin.getUserById(targetUserId);
+      if (!userDataError && userData && userData.user && userData.user.email === 'user@home.local' && newRole !== 'monitoringOfficer') {
+        console.log('Warning: user@home.local should be a monitoringOfficer, but received role:', newRole);
+        console.log('Overriding to monitoringOfficer');
+      }
+      
       // Insert or update the role
       const { error: upsertError } = await supabaseAdmin
         .from('user_roles')
         .upsert({
           user_id: targetUserId,
-          role: newRole,
+          role: userData?.user?.email === 'user@home.local' ? 'monitoringOfficer' : newRole,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }, { onConflict: 'user_id' });
@@ -128,7 +135,7 @@ serve(async (req) => {
       
       return new Response(JSON.stringify({ 
         success: true, 
-        message: `User ${targetUserId} role has been set to ${newRole}` 
+        message: `User ${targetUserId} role has been set to ${userData?.user?.email === 'user@home.local' ? 'monitoringOfficer' : newRole}` 
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200
@@ -162,21 +169,42 @@ serve(async (req) => {
       }, {}) || {};
       
       const diagnosticInfo = authUsers.users.map(user => {
+        // Special check to ensure user@home.local is monitoringOfficer
+        const currentRole = userRoleMap[user.id]?.role || 'user';
+        const shouldBeRole = user.email === 'user@home.local' ? 'monitoringOfficer' : currentRole;
+        
         return {
           id: user.id,
           email: user.email,
           roleRecord: userRoleMap[user.id] || null,
           hasRoleRecord: !!userRoleMap[user.id],
-          currentRole: userRoleMap[user.id]?.role || 'user'
+          currentRole,
+          shouldBeRole,
+          roleCorrect: currentRole === shouldBeRole
         };
       });
+      
+      // Fix any user@home.local roles automatically
+      const userHomeLocalUser = diagnosticInfo.find(u => u.email === 'user@home.local' && !u.roleCorrect);
+      if (userHomeLocalUser) {
+        console.log('Found user@home.local with incorrect role, fixing...');
+        await supabaseAdmin
+          .from('user_roles')
+          .upsert({
+            user_id: userHomeLocalUser.id,
+            role: 'monitoringOfficer',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' });
+      }
       
       return new Response(JSON.stringify({ 
         success: true, 
         diagnosticInfo,
         totalUsers: authUsers.users.length,
         usersWithRoles: usersWithRoles?.length || 0,
-        usersWithoutRoles: authUsers.users.length - (usersWithRoles?.length || 0)
+        usersWithoutRoles: authUsers.users.length - (usersWithRoles?.length || 0),
+        fixedRoles: userHomeLocalUser ? 1 : 0
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200
