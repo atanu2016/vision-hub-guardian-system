@@ -1,8 +1,7 @@
 
 import { Camera } from "@/types/camera";
-import CameraGrid from "@/components/cameras/CameraGrid";
-import { Button } from "@/components/ui/button";
-import { Camera as CameraIcon } from "lucide-react";
+import EmptyCameraState from "./EmptyCameraState";
+import CameraGroupDisplay from "./CameraGroupDisplay";
 
 interface GroupedCameras {
   id: string;
@@ -25,35 +24,31 @@ const CameraTabContent = ({
   emptyCamerasDescription,
   showManageCamerasButton = false
 }: CameraTabContentProps) => {
+  const isEmpty = 
+    groupedCameras.length === 0 || 
+    (groupedCameras.length === 1 && groupedCameras[0].cameras.length === 0);
+  
+  if (isEmpty) {
+    return (
+      <EmptyCameraState
+        message={emptyCamerasMessage}
+        description={emptyCamerasDescription}
+        showManageCamerasButton={showManageCamerasButton}
+      />
+    );
+  }
+  
   return (
     <>
       {groupedCameras.map(group => (
-        <div key={group.id} className="mb-8">
-          {groupBy !== "none" && <h3 className="text-xl font-semibold mb-4">{group.name}</h3>}
-          <CameraGrid cameras={group.cameras} />
-        </div>
+        <CameraGroupDisplay
+          key={group.id}
+          id={group.id}
+          name={group.name}
+          cameras={group.cameras}
+          showGroupTitle={groupBy !== "none"}
+        />
       ))}
-      
-      {groupedCameras.length === 0 || 
-       (groupedCameras.length === 1 && groupedCameras[0].cameras.length === 0) ? (
-        <div className="text-center py-12">
-          <h3 className="text-lg font-medium">{emptyCamerasMessage}</h3>
-          {emptyCamerasDescription && (
-            <p className="text-muted-foreground mt-2">
-              {emptyCamerasDescription}
-            </p>
-          )}
-          {showManageCamerasButton && (
-            <Button 
-              className="mt-4"
-              onClick={() => window.location.href = "/cameras"}
-            >
-              <CameraIcon className="mr-2 h-4 w-4" />
-              Manage Cameras
-            </Button>
-          )}
-        </div>
-      ) : null}
     </>
   );
 };
