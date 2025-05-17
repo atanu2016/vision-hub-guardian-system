@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import {
   SidebarGroup,
@@ -28,116 +27,37 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
     console.log("[NAV] MainNavigation rendering - Auth role:", authRole);
     console.log("[NAV] MainNavigation rendering - Current role:", currentRole);
     
-    // Add specific logging for operator role
+    // Log when operator role is detected
     if (role === 'operator') {
       console.log("[NAV] OPERATOR ROLE DETECTED in MainNavigation");
     }
   }, [authRole, currentRole, role]);
   
-  // Create a direct check for showing recordings menu - simplified logic
+  // Simplified function to determine if recordings should be shown
+  // This function prioritizes showing recordings for operators
   const shouldShowRecordings = () => {
+    // Explicit log for debugging
     console.log("[NAV] Checking if recordings should be shown for role:", role);
-    // Explicitly show for operators, admins, and superadmins
-    const showForRole = role === 'operator' || role === 'admin' || role === 'superadmin';
-    console.log("[NAV] shouldShowRecordings result:", showForRole);
-    return showForRole;
+
+    // Always show recordings for operators - this is the critical fix
+    return role === 'operator' || role === 'admin' || role === 'superadmin';
   };
-  
+
   useEffect(() => {
-    // For operators, always log detailed permission checks
     if (role === 'operator') {
-      console.log("[NAV] OPERATOR ROLE DETECTED - permission checks:");
-      console.log("[NAV] - view-footage:assigned:", hasPermission('view-footage:assigned'));
-      console.log("[NAV] - view-cameras:assigned:", hasPermission('view-cameras:assigned'));
+      // Enhanced logging for operators to help with debugging
+      console.log("[NAV] OPERATOR PERMISSIONS CHECK:");
+      console.log("[NAV] - has view-footage:assigned:", hasPermission('view-footage:assigned'));
+      console.log("[NAV] - has view-cameras:assigned:", hasPermission('view-cameras:assigned'));
+      console.log("[NAV] - shouldShowRecordings():", shouldShowRecordings());
     }
   }, [role, hasPermission]);
-  
-  // Define navigation items with their required permissions
-  const navigationItems = [];
-  
-  // Live View - available to all user roles (this should be first for users and operators)
-  navigationItems.push({ 
-    path: "/live", 
-    icon: Video, 
-    label: "Live View", 
-    permission: 'view-cameras:assigned' as Permission,
-    showForRoles: ['user', 'operator', 'admin', 'superadmin']
-  });
-  
-  // Recordings - for operator, admin, and superadmin - CRITICAL ITEM!
-  if (shouldShowRecordings()) {
-    navigationItems.push({ 
-      path: "/recordings", 
-      icon: FileText, 
-      label: "Recordings", 
-      permission: 'view-footage:assigned' as Permission,
-      showForRoles: ['operator', 'admin', 'superadmin']
-    });
-  }
-  
-  // Dashboard - only for admin and superadmin
-  if (role === 'admin' || role === 'superadmin') {
-    navigationItems.push({ 
-      path: "/", 
-      icon: Home, 
-      label: "Dashboard", 
-      permission: 'view-dashboard' as Permission,
-      showForRoles: ['admin', 'superadmin']
-    });
-  }
-  
-  // Cameras - only for admin and superadmin
-  if (role === 'admin' || role === 'superadmin') {
-    navigationItems.push({ 
-      path: "/cameras", 
-      icon: Camera, 
-      label: "Cameras", 
-      permission: 'view-cameras:all' as Permission,
-      showForRoles: ['admin', 'superadmin']
-    });
-  }
-  
-  // Settings - only for admin and superadmin
-  if (role === 'admin' || role === 'superadmin') {
-    navigationItems.push({ 
-      path: "/settings", 
-      icon: Settings, 
-      label: "Settings", 
-      permission: 'configure-camera-settings' as Permission,
-      showForRoles: ['admin', 'superadmin']
-    });
-  }
-  
-  // Admin - only for admin and superadmin
-  if (role === 'admin' || role === 'superadmin') {
-    navigationItems.push({ 
-      path: "/admin", 
-      icon: Shield, 
-      label: "Admin",
-      permission: 'manage-users:lower' as Permission,
-      showForRoles: ['admin', 'superadmin']
-    });
-  }
 
-  // Profile Settings - available to all users
-  navigationItems.push({
-    path: "/profile-settings",
-    icon: User,
-    label: "Profile",
-    permission: 'manage-profile-settings' as Permission,
-    showForRoles: ['user', 'operator', 'admin', 'superadmin']
-  });
-  
-  // Extended logging for recordings menu item
-  console.log(`[NAV] shouldShowRecordings() = ${shouldShowRecordings()}`);
-  console.log(`[NAV] User role = ${role}`);
-  console.log(`[NAV] hasPermission('view-footage:assigned') = ${hasPermission('view-footage:assigned')}`);
-  
   return (
     <SidebarGroup>
       <SidebarGroupContent>
         <SidebarMenu>
-          {/* Special case for operator role: directly render required items without checks */}
+          {/* Special hardcoded section for operator role to guarantee correct menu items */}
           {role === 'operator' && (
             <>
               <SidebarMenuItem>
@@ -148,6 +68,8 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              
+              {/* This is the critical item for operators */}
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={isActive("/recordings")} className="hover:bg-vision-dark-800">
                   <Link to="/recordings">
@@ -156,6 +78,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={isActive("/profile-settings")} className="hover:bg-vision-dark-800">
                   <Link to="/profile-settings">
@@ -168,24 +91,89 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
           )}
 
           {/* Other roles use the dynamic navigation items */}
-          {role !== 'operator' && navigationItems
-            .filter(item => {
-              const hasRequiredRole = item.showForRoles.includes(role);
-              const hasRequiredPermission = hasPermission(item.permission);
-              
-              console.log(`[NAV] Item ${item.label}: hasRole=${hasRequiredRole}, hasPermission=${hasRequiredPermission}`);
-              return hasRequiredRole && hasRequiredPermission;
-            })
-            .map(({ path, icon: Icon, label }) => (
-              <SidebarMenuItem key={path}>
-                <SidebarMenuButton asChild isActive={isActive(path)} className="hover:bg-vision-dark-800">
-                  <Link to={path}>
-                    <Icon />
-                    <span>{label}</span>
+          {role !== 'operator' && (
+            <>
+              {/* Navigation for Live View - available to all user roles */}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive("/live")} className="hover:bg-vision-dark-800">
+                  <Link to="/live">
+                    <Video />
+                    <span>Live View</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            ))}
+
+              {/* Recordings - show for admin and superadmin through dynamic check */}
+              {shouldShowRecordings() && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/recordings")} className="hover:bg-vision-dark-800">
+                    <Link to="/recordings">
+                      <FileText />
+                      <span>Recordings</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {/* Dashboard - only for admin and superadmin */}
+              {(role === 'admin' || role === 'superadmin') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/")} className="hover:bg-vision-dark-800">
+                    <Link to="/">
+                      <Home />
+                      <span>Dashboard</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {/* Cameras - only for admin and superadmin */}
+              {(role === 'admin' || role === 'superadmin') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/cameras")} className="hover:bg-vision-dark-800">
+                    <Link to="/cameras">
+                      <Camera />
+                      <span>Cameras</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {/* Settings - only for admin and superadmin */}
+              {(role === 'admin' || role === 'superadmin') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/settings")} className="hover:bg-vision-dark-800">
+                    <Link to="/settings">
+                      <Settings />
+                      <span>Settings</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {/* Admin - only for admin and superadmin */}
+              {(role === 'admin' || role === 'superadmin') && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/admin")} className="hover:bg-vision-dark-800">
+                    <Link to="/admin">
+                      <Shield />
+                      <span>Admin</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {/* Profile Settings - available to all users */}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive("/profile-settings")} className="hover:bg-vision-dark-800">
+                  <Link to="/profile-settings">
+                    <User />
+                    <span>Profile</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </>
+          )}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>

@@ -1,4 +1,3 @@
-
 import { UserRole } from "@/types/admin";
 
 export const roleHierarchy: Record<UserRole, number> = {
@@ -14,8 +13,10 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
 
   console.log(`[PERMISSION-UTILS] Checking permission: ${permission} for role: ${userRole}`);
 
-  // Special handling for operator role with very explicit permission granting
+  // CRITICAL FIX: Direct permission grants for operator role
+  // This ensures operators always have access to recordings regardless of other logic
   if (userRole === 'operator') {
+    // Expanded operator permissions with recordings explicitly included
     const operatorPermissions = [
       'view-footage:assigned',
       'view-footage:all',
@@ -29,6 +30,13 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
     
     if (operatorPermissions.includes(permission)) {
       console.log(`[PERMISSION-UTILS] OPERATOR ROLE - Directly granting permission: ${permission}`);
+      return true;
+    }
+    
+    // Explicit hardcoded check specifically for recordings-related permissions for operators
+    // This is a fail-safe to ensure operators can always access recordings
+    if (permission === 'view-footage:assigned' || permission === 'view-footage:all') {
+      console.log(`[PERMISSION-UTILS] OPERATOR ROLE - Force allowing critical permission: ${permission}`);
       return true;
     }
   }
@@ -97,6 +105,17 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
     default:
       return false;
   }
+
+  // Add a final fallback for recordings permissions for operators
+  // This ensures that if we somehow missed granting these permissions above,
+  // operators will still have access to recordings
+  if (userRole === 'operator' && 
+      (permission === 'view-footage:assigned' || permission === 'view-footage:all')) {
+    console.log(`[PERMISSION-UTILS] OPERATOR FALLBACK - Ensuring recordings access: ${permission}`);
+    return true;
+  }
+
+  return false;
 }
 
 export function canManageRole(currentUserRole: UserRole, targetRole: UserRole): boolean {
