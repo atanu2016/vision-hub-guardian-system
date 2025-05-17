@@ -37,6 +37,15 @@ serve(async (req) => {
     // Create a Supabase client with the service role key
     const supabaseUrl = Deno.env.get("SUPABASE_URL") as string;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("Required environment variables are missing");
+      return new Response(JSON.stringify({ error: 'Server configuration error' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500
+      });
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Verify the token and check if user is admin
@@ -44,11 +53,15 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
+      console.error("Auth error:", authError);
       return new Response(JSON.stringify({ error: 'Invalid token' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401
       });
     }
+
+    // Log user attempting to access admin function
+    console.log(`User ${user.id} (${user.email}) is attempting to access admin function`);
 
     // Check if user is admin or superadmin
     const { data: userRole } = await supabase
@@ -66,12 +79,15 @@ serve(async (req) => {
         .single();
         
       if (!profile || !profile.is_admin) {
+        console.log(`User ${user.id} denied access: not an admin`);
         return new Response(JSON.stringify({ error: 'Permission denied' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 403
         });
       }
     }
+
+    console.log(`Admin access granted to ${user.email}`);
 
     // Get users from the Auth API
     const { data: authData, error: authUsersError } = await supabase.auth.admin.listUsers();
@@ -136,6 +152,8 @@ serve(async (req) => {
       };
     });
 
+    console.log(`Successfully returning ${usersData.length} users`);
+    
     return new Response(JSON.stringify(usersData), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200
@@ -143,7 +161,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error("Error in get-all-users function:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error.message || 'Unknown error' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500
     });

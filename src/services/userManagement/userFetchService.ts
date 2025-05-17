@@ -15,21 +15,17 @@ export async function fetchUsers(): Promise<UserData[]> {
       throw new Error('Authentication required');
     }
 
-    // Get users via RPC function that will check permissions server-side
-    // Using a direct function invoke since the function is not recognized in TypeScript
-    const { data: users, error: usersError } = await supabase
-      .from('user_roles')
-      .select('user_id, role')
-      .then(async () => {
-        // This is just to "touch" the user_roles table - we're actually using the edge function
-        // This helps TypeScript recognize we're doing a valid operation before trying the function
-        return await supabase.functions.invoke('get-all-users');
-      });
+    // Attempt to fetch users via edge function with proper error handling
+    console.log('Attempting to fetch users via edge function...');
+    const { data: users, error: funcError } = await supabase.functions.invoke('get-all-users', {
+      method: 'POST' // Explicitly set method to POST as required by Edge Functions
+    });
       
-    if (usersError) {
-      console.error('Error fetching users via RPC:', usersError);
+    if (funcError || !users) {
+      console.error('Error fetching users via Edge Function:', funcError);
       
-      // Fallback: Try to get profiles directly if RPC fails
+      // Fallback: Try to get profiles directly if edge function fails
+      console.log('Falling back to direct database fetch...');
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('id, full_name, mfa_enrolled, mfa_required, created_at, is_admin');
@@ -43,8 +39,7 @@ export async function fetchUsers(): Promise<UserData[]> {
         return [];
       }
       
-      // Get user emails and metadata from auth.users table (this requires service_role key)
-      // Since we can't directly access auth.users, we'll get minimal data from profiles
+      // Get user roles from user_roles table for mapping
       const { data: userRoles } = await supabase
         .from('user_roles')
         .select('user_id, role');
@@ -69,19 +64,20 @@ export async function fetchUsers(): Promise<UserData[]> {
       });
     }
 
-    if (!users || !Array.isArray(users) || users.length === 0) {
-      console.log('No users found');
+    // Type check and handle the edge function response data
+    if (!Array.isArray(users)) {
+      console.error('Invalid response format from edge function:', users);
       return [];
     }
 
-    // Transform the data from the RPC function
-    const usersData = (users as any[]).map(user => ({
-      id: user.id,
+    // Transform the data from the edge function with proper type checking
+    const usersData = users.map(user => ({
+      id: user.id || '',
       email: user.email || 'Unknown email',
       full_name: user.full_name || null,
       mfa_enrolled: user.mfa_enrolled || false,
       mfa_required: user.mfa_required || false,
-      created_at: user.created_at || user.auth_created_at,
+      created_at: user.created_at || user.auth_created_at || new Date().toISOString(),
       is_admin: user.is_admin || false,
       role: user.role || 'user'
     }));
