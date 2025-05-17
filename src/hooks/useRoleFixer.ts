@@ -1,8 +1,8 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole } from '@/types/admin';
 import { toast } from 'sonner';
+import { invalidateRoleCache } from '@/services/userManagement/roleServices';
 
 interface DiagnosticInfo {
   id: string;
@@ -52,6 +52,9 @@ export function useRoleFixer() {
       });
       
       if (error) throw error;
+      
+      // Invalidate the role cache for this user after a successful fix
+      invalidateRoleCache(userId);
       
       toast.success(data.message || `User role updated to ${role}`);
       

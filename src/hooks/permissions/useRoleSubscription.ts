@@ -1,8 +1,8 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "@/types/admin";
+import { setCachedRole } from "@/services/userManagement/roleServices/roleCache";
 
 export function useRoleSubscription() {
   const { role: authRole, user } = useAuth();

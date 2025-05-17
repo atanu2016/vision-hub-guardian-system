@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { fetchAllUsers } from '@/services/userManagement/userFetchService';
-import { updateUserRole } from '@/services/userManagement/userRoleService';
+import { updateUserRole } from '@/services/userManagement/roleServices';
 import { 
   toggleMfaRequirement, 
   revokeMfaEnrollment 
