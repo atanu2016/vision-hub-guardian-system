@@ -117,7 +117,7 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
         onvifPath: cam.onvifpath,
         manufacturer: cam.manufacturer,
         model: cam.model,
-        status: cam.status as CameraStatus, // Cast to CameraStatus enum
+        status: cam.status as CameraStatus,
         lastSeen: cam.lastseen,
         motionDetection: cam.motiondetection,
         recording: cam.recording,
@@ -154,7 +154,7 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
       onvifPath: cam.onvifpath,
       manufacturer: cam.manufacturer,
       model: cam.model,
-      status: cam.status as CameraStatus, // Cast to CameraStatus enum
+      status: cam.status as CameraStatus,
       lastSeen: cam.lastseen,
       motionDetection: cam.motiondetection,
       recording: cam.recording,

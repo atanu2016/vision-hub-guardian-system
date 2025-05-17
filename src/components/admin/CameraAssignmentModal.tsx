@@ -65,7 +65,7 @@ export default function CameraAssignmentModal({
         onvifPath: cam.onvifpath,
         manufacturer: cam.manufacturer,
         model: cam.model,
-        status: cam.status as CameraStatus, // Cast to CameraStatus enum
+        status: cam.status as CameraStatus,
         lastSeen: cam.lastseen,
         motionDetection: cam.motiondetection,
         recording: cam.recording,

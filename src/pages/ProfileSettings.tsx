@@ -1,50 +1,40 @@
+
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Camera, User } from "lucide-react";
-
-interface UserProfile {
-  id: string;
-  fullName: string;
-  email: string;
-  avatar?: string;
-  role: string;
-}
+import { useAuth } from "@/contexts/auth";
+import { supabase } from "@/integrations/supabase/client";
 
 const ProfileSettings = () => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-
-  // Get user from localStorage (in a real app, this would come from an auth context)
-  const [profile, setProfile] = useState<UserProfile>(() => {
-    const storedProfile = localStorage.getItem('userProfile');
-    if (storedProfile) {
-      return JSON.parse(storedProfile);
-    }
-    return {
-      id: "1",
-      fullName: "Admin User",
-      email: "admin@example.com",
-      role: "Administrator",
-    };
-  });
+  const { user, profile, role } = useAuth();
 
   const [formData, setFormData] = useState({
-    fullName: profile.fullName || "",
-    email: profile.email || "",
+    fullName: "",
+    email: "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
 
-  const [avatarPreview, setAvatarPreview] = useState<string | undefined>(profile.avatar);
+  const [avatarPreview, setAvatarPreview] = useState<string | undefined>(undefined);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  
+  // Update form data when user and profile are loaded
+  useEffect(() => {
+    if (user && profile) {
+      setFormData(prev => ({
+        ...prev,
+        fullName: profile.full_name || "",
+        email: user.email || ""
+      }));
+    }
+  }, [user, profile]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -65,99 +55,86 @@ const ProfileSettings = () => {
     }
   };
 
-  const handleProfileUpdate = (e: React.FormEvent) => {
+  const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate inputs
-    if (!formData.fullName.trim() || !formData.email.trim()) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
+    if (!formData.fullName.trim()) {
+      toast.error("Please fill in your full name");
       return;
     }
 
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address",
-        variant: "destructive",
-      });
-      return;
-    }
+    try {
+      // Update profile in Supabase
+      if (user) {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ 
+            full_name: formData.fullName,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id);
 
-    // Check if changing password
-    if (formData.newPassword || formData.confirmPassword) {
-      if (!formData.currentPassword) {
-        toast({
-          title: "Current Password Required",
-          description: "Please enter your current password",
-          variant: "destructive",
+        if (error) throw error;
+      }
+
+      // Check if changing password
+      if (formData.newPassword && formData.confirmPassword) {
+        if (!formData.currentPassword) {
+          toast.error("Current password is required");
+          return;
+        }
+        
+        if (formData.newPassword !== formData.confirmPassword) {
+          toast.error("New passwords do not match");
+          return;
+        }
+        
+        if (formData.newPassword.length < 8) {
+          toast.error("Password must be at least 8 characters");
+          return;
+        }
+
+        // Update password
+        const { error } = await supabase.auth.updateUser({
+          password: formData.newPassword
         });
-        return;
+
+        if (error) throw error;
+        
+        // Clear password fields
+        setFormData(prev => ({
+          ...prev,
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        }));
       }
       
-      if (formData.newPassword !== formData.confirmPassword) {
-        toast({
-          title: "Password Mismatch",
-          description: "New passwords do not match",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      if (formData.newPassword.length < 8) {
-        toast({
-          title: "Password Too Short",
-          description: "Password must be at least 8 characters",
-          variant: "destructive",
-        });
-        return;
-      }
+      toast.success("Profile updated successfully");
+    } catch (error: any) {
+      console.error("Error updating profile:", error);
+      toast.error(error.message || "Failed to update profile");
     }
-
-    // In a real app, this would call an API to update the profile
-    // and handle the avatar upload separately
-    
-    // Update the profile
-    const updatedProfile = {
-      ...profile,
-      fullName: formData.fullName,
-      email: formData.email,
-    };
-    
-    if (avatarPreview) {
-      updatedProfile.avatar = avatarPreview;
-    }
-    
-    // Save to localStorage for demo
-    setProfile(updatedProfile);
-    localStorage.setItem('userProfile', JSON.stringify(updatedProfile));
-    
-    toast({
-      title: "Profile Updated",
-      description: "Your profile has been updated successfully",
-    });
-    
-    // Clear password fields
-    setFormData(prev => ({
-      ...prev,
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-    }));
   };
 
-  const getInitials = (name: string) => {
+  const getInitials = (name: string = "") => {
     return name
       .split(' ')
       .map(part => part[0])
       .join('')
       .toUpperCase();
   };
+
+  if (!user || !profile) {
+    return (
+      <AppLayout>
+        <div className="flex justify-center items-center h-64">
+          <p>Loading profile information...</p>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -225,13 +202,15 @@ const ProfileSettings = () => {
                       type="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      required
+                      disabled
+                      className="bg-muted"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">Email cannot be changed</p>
                   </div>
                   <div>
                     <Label>User Role</Label>
                     <Input
-                      value={profile.role}
+                      value={role.charAt(0).toUpperCase() + role.slice(1)}
                       disabled
                       className="bg-muted"
                     />

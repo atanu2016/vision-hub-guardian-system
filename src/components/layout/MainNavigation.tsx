@@ -7,7 +7,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { Home, Camera, Settings, Shield, Video } from "lucide-react";
+import { Home, Camera, Settings, Shield, Video, FileText } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Permission } from "@/utils/permissionUtils";
@@ -30,12 +30,6 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
       permission: 'view-dashboard' as Permission 
     },
     { 
-      path: "/cameras", 
-      icon: Camera, 
-      label: "Cameras", 
-      permission: 'view-cameras:assigned' as Permission 
-    },
-    { 
       path: "/live", 
       icon: Video, 
       label: "Live View", 
@@ -43,9 +37,15 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
     },
     { 
       path: "/recordings", 
-      icon: Video, 
+      icon: FileText, 
       label: "Recordings", 
       permission: 'view-footage:assigned' as Permission 
+    },
+    { 
+      path: "/cameras", 
+      icon: Camera, 
+      label: "Cameras", 
+      permission: 'view-cameras:all' as Permission 
     },
     { 
       path: "/settings", 
@@ -55,8 +55,8 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
     },
   ];
   
-  // Only show admin route if user has admin privileges
-  if (role === 'admin' || role === 'superadmin') {
+  // Only show admin route if user has appropriate permissions
+  if (hasPermission('manage-users:lower')) {
     navigationItems.push({ 
       path: "/admin", 
       icon: Shield, 
