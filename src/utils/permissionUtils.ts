@@ -3,8 +3,6 @@ import { UserRole } from "@/types/admin";
 
 export const roleHierarchy: Record<UserRole, number> = {
   'user': 0,
-  'monitoringOfficer': 1, // Same level as operator for permissions
-  'operator': 1,
   'admin': 2,
   'superadmin': 3
 };
@@ -15,45 +13,6 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
 
   console.log(`[PERMISSION-UTILS] Checking permission: ${permission} for role: ${userRole}`);
 
-  // OPERATOR ROLE - CRITICAL ACCESS GUARANTEE
-  // This ensures operators always have access to recordings regardless of other logic
-  if (userRole === 'operator') {
-    // Explicit list of guaranteed operator permissions - CRITICAL for application functionality
-    const guaranteedOperatorPermissions: Permission[] = [
-      'view-footage:assigned',
-      'view-footage:all',
-      'view-cameras:assigned',
-      'manage-profile-settings',
-      'manage-mfa-enrollment',
-      'view-profile',
-      'view-dashboard',
-      'manage-cameras:assigned'
-    ];
-    
-    if (guaranteedOperatorPermissions.includes(permission)) {
-      console.log(`[PERMISSION-UTILS] OPERATOR ROLE - Directly granting permission: ${permission}`);
-      return true;
-    }
-  }
-
-  // MONITORING OFFICER ROLE - NEW ROLE
-  // This ensures monitoring officers have access to live view, recordings and profile
-  if (userRole === 'monitoringOfficer') {
-    const guaranteedMonitoringPermissions: Permission[] = [
-      'view-footage:assigned',
-      'view-footage:all',
-      'view-cameras:assigned',
-      'manage-profile-settings',
-      'manage-mfa-enrollment',
-      'view-profile'
-    ];
-    
-    if (guaranteedMonitoringPermissions.includes(permission)) {
-      console.log(`[PERMISSION-UTILS] MONITORING OFFICER ROLE - Directly granting permission: ${permission}`);
-      return true;
-    }
-  }
-
   switch (permission) {
     // User level permissions - available to all roles
     case 'view-dashboard':
@@ -63,17 +22,17 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
     case 'manage-profile-settings':
       return roleHierarchy[userRole] >= roleHierarchy['user'];
 
-    // Cameras view permissions - all users can view assigned cameras
+    // Cameras view permissions
     case 'view-cameras:assigned':
       return roleHierarchy[userRole] >= roleHierarchy['user'];
     case 'view-cameras:all':
       return roleHierarchy[userRole] >= roleHierarchy['admin'];
     
-    // Footage permissions - CRITICAL: Always grant to operators and monitoring officers
+    // Footage permissions
     case 'view-footage:assigned':
-      return userRole === 'operator' || userRole === 'monitoringOfficer' || roleHierarchy[userRole] >= roleHierarchy['operator'];
+      return roleHierarchy[userRole] >= roleHierarchy['admin'];
     case 'view-footage:all':
-      return userRole === 'operator' || userRole === 'monitoringOfficer' || roleHierarchy[userRole] >= roleHierarchy['operator'];
+      return roleHierarchy[userRole] >= roleHierarchy['admin'];
     
     // User management permissions
     case 'manage-users:lower':
@@ -88,7 +47,7 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
 
     // Camera management
     case 'manage-cameras:assigned':
-      return roleHierarchy[userRole] >= roleHierarchy['operator'];
+      return roleHierarchy[userRole] >= roleHierarchy['admin'];
     case 'manage-cameras:all':
       return roleHierarchy[userRole] >= roleHierarchy['admin'];
     
@@ -125,12 +84,12 @@ export function canManageRole(currentUserRole: UserRole, targetRole: UserRole): 
     return true;
   }
 
-  // Admins can manage operators, monitoring officers and users, but not other admins or superadmins
+  // Admins can only manage users, not other admins or superadmins
   if (currentUserRole === 'admin') {
-    return targetRole === 'operator' || targetRole === 'monitoringOfficer' || targetRole === 'user';
+    return targetRole === 'user';
   }
 
-  // Operators and users cannot manage roles
+  // Regular users cannot manage roles
   return false;
 }
 

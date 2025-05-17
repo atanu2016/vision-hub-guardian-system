@@ -1,7 +1,7 @@
 
 import { Session, User } from '@supabase/supabase-js';
 
-export type UserRole = 'superadmin' | 'admin' | 'operator' | 'user' | 'monitoringOfficer';
+export type UserRole = 'superadmin' | 'admin' | 'user';
 
 export type Profile = {
   id: string;
@@ -22,7 +22,6 @@ export interface AuthState {
 export interface AuthContextType extends AuthState {
   isAdmin: boolean;
   isSuperAdmin: boolean;
-  isOperator: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;

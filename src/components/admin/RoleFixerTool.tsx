@@ -107,7 +107,6 @@ export function RoleFixerTool() {
                     <SelectContent>
                       <SelectItem value="superadmin">Superadmin</SelectItem>
                       <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="operator">Operator</SelectItem>
                       <SelectItem value="user">User</SelectItem>
                     </SelectContent>
                   </Select>

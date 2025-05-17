@@ -10,8 +10,6 @@ import {
 import { Home, Camera, Settings, Shield, Video, FileText, User } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { usePermissions } from "@/hooks/usePermissions";
-import { Permission } from "@/utils/permissionUtils";
-import { useEffect } from "react";
 
 interface MainNavigationProps {
   isActive: (path: string) => boolean;
@@ -23,45 +21,6 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
   
   // Using both authRole and currentRole from usePermissions for redundancy
   const role = currentRole || authRole;
-  
-  useEffect(() => {
-    console.log("[NAV] MainNavigation rendering - Auth role:", authRole);
-    console.log("[NAV] MainNavigation rendering - Current role:", currentRole);
-    console.log("[NAV] MainNavigation rendering - Final role used:", role);
-    
-    // Log when special roles are detected
-    if (role === 'operator') {
-      console.log("[NAV] OPERATOR ROLE DETECTED in MainNavigation - Recordings should be visible");
-    }
-    
-    if (role === 'monitoringOfficer') {
-      console.log("[NAV] MONITORING OFFICER ROLE DETECTED in MainNavigation - Recordings should be visible");
-    }
-  }, [authRole, currentRole, role]);
-
-  // Always check permissions with multiple approaches for safety
-  const hasFeetageAssignedPermission = hasPermission('view-footage:assigned');
-  const hasFeetageAllPermission = hasPermission('view-footage:all');
-  const isRoleWithRecordingsAccess = role === 'operator' || role === 'admin' || role === 'superadmin' || role === 'monitoringOfficer';
-  
-  // Force recordings access for operators and monitoring officers - critical for application functionality
-  const shouldShowRecordings = () => {
-    // This is a critical check that ensures operators and monitoring officers always have access to recordings
-    if (role === 'operator' || role === 'monitoringOfficer') {
-      console.log(`[NAV] ${role.toUpperCase()} ROLE - Force enabling recordings access`);
-      return true;
-    }
-    
-    // For other roles, use standard permission checks
-    const hasAccess = hasFeetageAssignedPermission || hasFeetageAllPermission || isRoleWithRecordingsAccess;
-    console.log("[NAV] Recordings access check:", { 
-      hasFeetageAssignedPermission, 
-      hasFeetageAllPermission, 
-      isRoleWithRecordingsAccess,
-      finalDecision: hasAccess
-    });
-    return hasAccess;
-  };
 
   return (
     <SidebarGroup>
@@ -77,8 +36,8 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
             </SidebarMenuButton>
           </SidebarMenuItem>
 
-          {/* CRITICAL: Recordings - Always show for operators and monitoring officers */}
-          {shouldShowRecordings() && (
+          {/* Recordings - Only for admins */}
+          {hasPermission('view-footage:assigned') && (
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={isActive("/recordings")} className="hover:bg-vision-dark-800">
                 <Link to="/recordings">

@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Shield, ShieldCheck, ShieldX, User, Loader2, Eye } from 'lucide-react';
+import { Shield, ShieldCheck, User } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { UserRole } from '@/types/admin';
 import { useAuth } from '@/contexts/auth';
@@ -60,10 +60,6 @@ export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole 
         return <Shield className="h-5 w-5 text-red-500" />;
       case 'admin': 
         return <ShieldCheck className="h-5 w-5 text-amber-500" />;
-      case 'operator': 
-        return <ShieldX className="h-5 w-5 text-blue-500" />;
-      case 'monitoringOfficer': 
-        return <Eye className="h-5 w-5 text-green-500" />;
       default: 
         return <User className="h-5 w-5 text-gray-500" />;
     }
@@ -91,7 +87,6 @@ export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole 
           <SelectValue placeholder="Role">
             {isUpdating ? (
               <div className="flex items-center">
-                <Loader2 className="h-4 w-4 animate-spin mr-1" />
                 <span>Updating...</span>
               </div>
             ) : (
@@ -102,8 +97,6 @@ export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole 
         <SelectContent>
           <SelectItem value="superadmin" disabled={currentUserRole !== 'superadmin'}>Superadmin</SelectItem>
           <SelectItem value="admin" disabled={currentUserRole !== 'superadmin'}>Admin</SelectItem>
-          <SelectItem value="operator" disabled={!canManageUser}>Operator</SelectItem>
-          <SelectItem value="monitoringOfficer" disabled={!canManageUser}>Monitoring Officer</SelectItem>
           <SelectItem value="user" disabled={!canManageUser}>User</SelectItem>
         </SelectContent>
       </Select>
