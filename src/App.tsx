@@ -19,6 +19,8 @@ import { toast } from "sonner";
 import AdminPage from "@/pages/admin/index";
 import UserManagement from "@/pages/admin/UserManagement";
 import CreateUser from "@/pages/admin/CreateUser";
+import LiveView from "@/pages/LiveView";
+import Recordings from "@/pages/Recordings";
 
 function App() {
   // Initialize the system when the app starts
@@ -44,7 +46,7 @@ function App() {
         <Routes>
           <Route path="/auth" element={<Auth />} />
           
-          {/* Wrap protected routes with SidebarProvider */}
+          {/* All protected routes wrapped with SidebarProvider */}
           <Route path="/" element={
             <SidebarProvider>
               <ProtectedRoute><Index /></ProtectedRoute>
@@ -58,6 +60,16 @@ function App() {
           <Route path="/cameras/:id" element={
             <SidebarProvider>
               <ProtectedRoute><CameraDetail /></ProtectedRoute>
+            </SidebarProvider>
+          } />
+          <Route path="/live-view" element={
+            <SidebarProvider>
+              <ProtectedRoute><LiveView /></ProtectedRoute>
+            </SidebarProvider>
+          } />
+          <Route path="/recordings" element={
+            <SidebarProvider>
+              <ProtectedRoute><Recordings /></ProtectedRoute>
             </SidebarProvider>
           } />
           
