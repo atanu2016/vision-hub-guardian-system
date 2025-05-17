@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Shield, UserPlus } from 'lucide-react';
+import { Shield, UserPlus, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserTable } from '@/components/admin/UserTable';
 import { fetchUsers } from '@/services/userManagement/userFetchService';
@@ -10,10 +10,12 @@ import { updateUserRole, toggleMfaRequirement, deleteUser } from '@/services/use
 import type { UserData, UserRole } from '@/types/admin';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function UserManagement() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { isSuperAdmin, user } = useAuth();
   const navigate = useNavigate();
 
@@ -24,12 +26,14 @@ export default function UserManagement() {
   async function loadUsers() {
     try {
       setLoading(true);
-      console.log("Attempting to load users...");
+      setError(null);
+      console.log("Attempting to load users from database...");
       const usersData = await fetchUsers();
       console.log("Loaded users:", usersData);
       setUsers(usersData);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load users:", error);
+      setError(error?.message || 'Failed to load users. Please check your database connection.');
       toast.error('Failed to load users');
     } finally {
       setLoading(false);
@@ -43,8 +47,9 @@ export default function UserManagement() {
       setUsers(users.map(u => 
         u.id === userId ? { ...u, role: newRole } : u
       ));
-    } catch (error) {
-      // Error is already handled in the service
+      toast.success(`User role updated to ${newRole}`);
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to update user role');
     }
   }
 
@@ -55,8 +60,9 @@ export default function UserManagement() {
       setUsers(users.map(u => 
         u.id === userId ? { ...u, mfa_required: required } : u
       ));
-    } catch (error) {
-      // Error is already handled in the service
+      toast.success(`MFA ${required ? 'required' : 'optional'} for user`);
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to update MFA requirement');
     }
   }
   
@@ -67,12 +73,16 @@ export default function UserManagement() {
       setUsers(users.filter(u => u.id !== userId));
       toast.success('User deleted successfully');
     } catch (error: any) {
-      toast.error(error.message || 'Failed to delete user');
+      toast.error(error?.message || 'Failed to delete user');
     }
   }
 
   const handleCreateUserClick = () => {
     navigate('/admin/users/create');
+  };
+
+  const handleRetry = () => {
+    loadUsers();
   };
 
   if (!isSuperAdmin) {
@@ -100,16 +110,40 @@ export default function UserManagement() {
             Manage user roles and security settings
           </CardDescription>
         </div>
-        <Button 
-          onClick={handleCreateUserClick}
-          size="sm"
-          className="flex items-center gap-2 bg-vision-blue hover:bg-vision-blue-600"
-        >
-          <UserPlus className="h-4 w-4" />
-          Create User
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline"
+            size="sm"
+            onClick={handleRetry}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button 
+            onClick={handleCreateUserClick}
+            size="sm"
+            className="flex items-center gap-2 bg-vision-blue hover:bg-vision-blue-600"
+          >
+            <UserPlus className="h-4 w-4" />
+            Create User
+          </Button>
+        </div>
       </CardHeader>
+
       <CardContent>
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertTitle>Error loading users</AlertTitle>
+            <AlertDescription>
+              {error}
+              <Button variant="outline" size="sm" onClick={handleRetry} className="ml-2">
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <UserTable 
           users={users}
           currentUserId={user?.id}

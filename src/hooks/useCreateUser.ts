@@ -13,12 +13,20 @@ interface CreateUserFormData {
   mfaRequired: boolean;
 }
 
-interface UseCreateUserOptions {
-  onSuccess?: () => void;
+interface ValidationErrors {
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
 }
 
-export function useCreateUser({ onSuccess }: UseCreateUserOptions = {}) {
+interface UseCreateUserOptions {
+  onSuccess?: () => void;
+  onError?: (error: string) => void;
+}
+
+export function useCreateUser({ onSuccess, onError }: UseCreateUserOptions = {}) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [formData, setFormData] = useState<CreateUserFormData>({
     email: '',
     fullName: '',
@@ -30,22 +38,39 @@ export function useCreateUser({ onSuccess }: UseCreateUserOptions = {}) {
   
   const handleChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear validation errors when field is updated
+    if (field in validationErrors) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field as keyof ValidationErrors];
+        return newErrors;
+      });
+    }
   };
   
   const validateForm = (): boolean => {
+    const errors: ValidationErrors = {};
+    
+    // Email validation
+    if (!formData.email) {
+      errors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      errors.email = 'Email is invalid';
+    }
+    
+    // Password validation
+    if (formData.password.length < 8) {
+      errors.password = 'Password must be at least 8 characters long';
+    }
+    
     // Password match validation
     if (formData.password !== formData.confirmPassword) {
-      toast.error('Passwords do not match');
-      return false;
+      errors.confirmPassword = 'Passwords do not match';
     }
     
-    // Password length validation
-    if (formData.password.length < 8) {
-      toast.error('Password must be at least 8 characters long');
-      return false;
-    }
-    
-    return true;
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -59,6 +84,13 @@ export function useCreateUser({ onSuccess }: UseCreateUserOptions = {}) {
     setIsSubmitting(true);
     
     try {
+      console.log("Creating new user:", { 
+        email: formData.email,
+        fullName: formData.fullName,
+        role: formData.role,
+        mfaRequired: formData.mfaRequired
+      });
+      
       // Create the user through a secure backend function
       const { data, error } = await supabase.functions.invoke('admin-create-user', {
         body: {
@@ -78,12 +110,13 @@ export function useCreateUser({ onSuccess }: UseCreateUserOptions = {}) {
       
       console.log("User created successfully:", data.userId);
       
-      toast.success('User created successfully');
       if (onSuccess) onSuccess();
       
     } catch (error: any) {
       console.error('Error creating user:', error);
-      toast.error(error.message || 'Failed to create user');
+      const errorMessage = error?.message || 'Failed to create user';
+      toast.error(errorMessage);
+      if (onError) onError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -93,6 +126,7 @@ export function useCreateUser({ onSuccess }: UseCreateUserOptions = {}) {
     formData,
     handleChange,
     handleSubmit,
-    isSubmitting
+    isSubmitting,
+    validationErrors
   };
 }

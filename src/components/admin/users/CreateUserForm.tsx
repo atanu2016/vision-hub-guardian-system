@@ -8,18 +8,51 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UserRole } from '@/types/admin';
 import { useCreateUser } from '@/hooks/useCreateUser';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface CreateUserFormProps {
   onCancel: () => void;
 }
 
 export function CreateUserForm({ onCancel }: CreateUserFormProps) {
-  const { formData, handleChange, handleSubmit, isSubmitting } = useCreateUser({
-    onSuccess: () => onCancel()
+  const navigate = useNavigate();
+  const [formError, setFormError] = useState<string | null>(null);
+  
+  const { 
+    formData, 
+    handleChange, 
+    handleSubmit: submitForm, 
+    isSubmitting,
+    validationErrors
+  } = useCreateUser({
+    onSuccess: () => {
+      toast.success("User created successfully");
+      // Navigate to user management page after success
+      navigate('/admin');
+    },
+    onError: (error) => {
+      setFormError(error);
+    }
   });
+  
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+    submitForm(e);
+  };
   
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {formError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{formError}</AlertDescription>
+        </Alert>
+      )}
+      
       <div className="space-y-2">
         <Label htmlFor="email">Email Address</Label>
         <Input
@@ -29,7 +62,11 @@ export function CreateUserForm({ onCancel }: CreateUserFormProps) {
           onChange={(e) => handleChange('email', e.target.value)}
           placeholder="user@example.com"
           required
+          className={validationErrors.email ? "border-red-500" : ""}
         />
+        {validationErrors.email && (
+          <p className="text-red-500 text-sm">{validationErrors.email}</p>
+        )}
       </div>
       
       <div className="space-y-2">
@@ -52,7 +89,11 @@ export function CreateUserForm({ onCancel }: CreateUserFormProps) {
           onChange={(e) => handleChange('password', e.target.value)}
           placeholder="••••••••"
           required
+          className={validationErrors.password ? "border-red-500" : ""}
         />
+        {validationErrors.password && (
+          <p className="text-red-500 text-sm">{validationErrors.password}</p>
+        )}
       </div>
       
       <div className="space-y-2">
@@ -64,7 +105,11 @@ export function CreateUserForm({ onCancel }: CreateUserFormProps) {
           onChange={(e) => handleChange('confirmPassword', e.target.value)}
           placeholder="••••••••"
           required
+          className={validationErrors.confirmPassword ? "border-red-500" : ""}
         />
+        {validationErrors.confirmPassword && (
+          <p className="text-red-500 text-sm">{validationErrors.confirmPassword}</p>
+        )}
       </div>
       
       <div className="space-y-2">
