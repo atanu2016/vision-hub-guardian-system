@@ -15,7 +15,7 @@ import { DeleteUserButton } from "./DeleteUserButton";
 import { useAuth } from "@/contexts/auth";
 import { Button } from "@/components/ui/button";
 import { Camera } from "lucide-react";
-import { UserData, UserRole } from "@/types/admin";
+import { UserData, UserRole, MfaToggleProps, DeleteUserButtonProps } from "@/types/admin";
 import { usePermissions } from "@/hooks/usePermissions";
 
 interface UserTableProps {

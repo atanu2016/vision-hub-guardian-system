@@ -28,3 +28,19 @@ export interface AuthState {
   session: any;
   loading: boolean;
 }
+
+// MFA Toggle Props for the component
+export interface MfaToggleProps {
+  userId: string;
+  mfaRequired: boolean;
+  mfaEnrolled: boolean;
+  onToggleMfaRequirement: (userId: string, required: boolean) => Promise<void>;
+  onRevokeMfaEnrollment: (userId: string) => Promise<void>;
+}
+
+// Delete User Button Props
+export interface DeleteUserButtonProps {
+  userId: string;
+  userEmail: string;
+  onDelete: (userId: string) => Promise<void>;
+}
