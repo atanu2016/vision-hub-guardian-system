@@ -3,6 +3,7 @@ import { UserRole } from "@/types/admin";
 
 export const roleHierarchy: Record<UserRole, number> = {
   'user': 0,
+  'observer': 1,  // Observer role is between user and admin in the hierarchy
   'admin': 2,
   'superadmin': 3
 };
@@ -28,9 +29,9 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
     case 'view-cameras:all':
       return roleHierarchy[userRole] >= roleHierarchy['admin'];
     
-    // Footage permissions
+    // Footage permissions - make accessible to observers
     case 'view-footage:assigned':
-      return roleHierarchy[userRole] >= roleHierarchy['admin'];
+      return roleHierarchy[userRole] >= roleHierarchy['observer'] || userRole === 'observer';
     case 'view-footage:all':
       return roleHierarchy[userRole] >= roleHierarchy['admin'];
     
@@ -84,9 +85,9 @@ export function canManageRole(currentUserRole: UserRole, targetRole: UserRole): 
     return true;
   }
 
-  // Admins can only manage users, not other admins or superadmins
+  // Admins can only manage users, observers, not other admins or superadmins
   if (currentUserRole === 'admin') {
-    return targetRole === 'user';
+    return targetRole === 'user' || targetRole === 'observer';
   }
 
   // Regular users cannot manage roles

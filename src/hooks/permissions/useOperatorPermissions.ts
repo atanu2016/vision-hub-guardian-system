@@ -13,6 +13,10 @@ export function useOperatorPermissions(role: UserRole, authRole: UserRole) {
       'user': [
         'view-profile'
       ],
+      'observer': [
+        'view-profile',
+        'view-footage:assigned'
+      ],
       'admin': [],
       'superadmin': [],
     };

@@ -36,7 +36,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
             </SidebarMenuButton>
           </SidebarMenuItem>
 
-          {/* Recordings - Only for admins */}
+          {/* Recordings - For admins and observers */}
           {hasPermission('view-footage:assigned') && (
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={isActive("/recordings")} className="hover:bg-vision-dark-800">
