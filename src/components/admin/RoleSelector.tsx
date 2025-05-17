@@ -36,10 +36,17 @@ export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole 
       console.log(`[RoleSelector] Changing role to: ${value} for user: ${userId}`);
       
       await onUpdateRole(userId, value as UserRole);
-      toast.success(`Role updated to ${value}`);
+      
+      // Show feedback with fixed role
+      toast.success(`Role updated to ${value}`, {
+        description: "The user's role was successfully updated in the database."
+      });
     } catch (error: any) {
       console.error('[RoleSelector] Error updating role:', error);
-      toast.error(error.message || 'Failed to update role');
+      toast.error(error.message || 'Failed to update role', {
+        description: "You may try using the Role Manager tool if you continue to have issues."
+      });
+      
       // Revert selection on error
       setSelectedRole(currentRole);
     } finally {
@@ -71,14 +78,14 @@ export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole 
   const disabled = (isSelf && currentRole !== 'superadmin') || !canManageUser || isUpdating || !canAssignRoles;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 relative">
       {getRoleIcon(selectedRole)}
       <Select
         value={selectedRole}
         onValueChange={handleRoleChange}
         disabled={disabled}
       >
-        <SelectTrigger className="w-32">
+        <SelectTrigger className="w-32 relative">
           <SelectValue placeholder="Role">
             {isUpdating ? (
               <div className="flex items-center">

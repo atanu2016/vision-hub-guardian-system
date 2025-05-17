@@ -73,6 +73,28 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
       error = updateError;
       if (updateError) {
         console.error('[Role Service] Error updating role:', updateError);
+        
+        // Try using the edge function as fallback
+        console.log('[Role Service] Attempting to use fix-user-roles function as fallback...');
+        
+        try {
+          const { error: fnError } = await supabase.functions.invoke('fix-user-roles', {
+            body: { action: 'fix', userId, role: newRole }
+          });
+          
+          if (fnError) {
+            throw fnError;
+          } else {
+            console.log('[Role Service] Successfully updated role via edge function');
+            // Update the cache with new role
+            roleCache.set(userId, { role: newRole, timestamp: Date.now() });
+            toast.success(`User role updated to ${newRole}`);
+            return;
+          }
+        } catch (fallbackError) {
+          console.error('[Role Service] Fallback also failed:', fallbackError);
+          throw updateError || fallbackError;
+        }
       } else {
         console.log(`[Role Service] Role successfully updated to ${newRole}`);
         
@@ -97,6 +119,28 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
       error = insertError;
       if (insertError) {
         console.error('[Role Service] Error inserting role:', insertError);
+        
+        // Try using the edge function as fallback
+        console.log('[Role Service] Attempting to use fix-user-roles function as fallback...');
+        
+        try {
+          const { error: fnError } = await supabase.functions.invoke('fix-user-roles', {
+            body: { action: 'fix', userId, role: newRole }
+          });
+          
+          if (fnError) {
+            throw fnError;
+          } else {
+            console.log('[Role Service] Successfully created role via edge function');
+            // Update the cache with new role
+            roleCache.set(userId, { role: newRole, timestamp: Date.now() });
+            toast.success(`User role updated to ${newRole}`);
+            return;
+          }
+        } catch (fallbackError) {
+          console.error('[Role Service] Fallback also failed:', fallbackError);
+          throw insertError || fallbackError;
+        }
       } else {
         console.log(`[Role Service] Role successfully created as ${newRole}`);
         
@@ -146,7 +190,6 @@ async function notifyRoleChange(userId: string): Promise<void> {
     console.log('[Role Service] Attempting to notify about role change');
     
     // Try to use notify_role_change RPC if it exists
-    // Fix: Remove the .catch() and use a try-catch block instead
     try {
       const { error: signalError } = await supabase
         .rpc('notify_role_change', { user_id: userId });

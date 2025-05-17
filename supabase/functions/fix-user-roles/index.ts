@@ -58,6 +58,8 @@ serve(async (req) => {
       .single();
 
     if (roleError || !userRole || userRole.role !== 'superadmin') {
+      console.log('User role check failed:', roleError);
+      console.log('User role data:', userRole);
       return new Response(JSON.stringify({ error: 'Only superadmins can fix user roles' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 403
@@ -101,6 +103,7 @@ serve(async (req) => {
         }, { onConflict: 'user_id' });
         
       if (upsertError) {
+        console.error('Error upserting role:', upsertError);
         return new Response(JSON.stringify({ error: `Failed to update role: ${upsertError.message}` }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 500
@@ -177,6 +180,7 @@ serve(async (req) => {
     });
     
   } catch (error: any) {
+    console.error('Error in fix-user-roles function:', error);
     return new Response(JSON.stringify({ error: error.message || 'Unknown error' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500
