@@ -2,16 +2,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { UserData, UserRole } from "@/types/admin";
 
-export interface User {
-  id: string;
-  email: string;
-  full_name?: string;
-  role: string;
-  mfa_required?: boolean;
-  mfa_enrolled?: boolean;
-  created_at?: string;
-}
-
 export async function fetchAllUsers(): Promise<UserData[]> {
   try {
     console.log("Fetching all users...");

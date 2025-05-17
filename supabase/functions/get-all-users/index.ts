@@ -32,38 +32,47 @@ serve(async (req) => {
 
     console.log('Getting users from auth.users');
     
-    // Get all users from auth.users table using the admin API
-    const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers();
-    
-    if (usersError) {
-      console.error('Error getting users:', usersError);
-      return new Response(JSON.stringify({ error: 'Error getting users' }), {
+    try {
+      // Get all users from auth.users table using the admin API
+      const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers();
+      
+      if (usersError) {
+        console.error('Error getting users:', usersError);
+        return new Response(JSON.stringify({ error: 'Error getting users' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500
+        });
+      }
+
+      // Map users with their email addresses and other needed data
+      // Make sure we're not accessing any potentially null fields directly
+      const users = usersData.users.map(user => ({
+        id: user.id,
+        email: user.email || "",
+        created_at: user.created_at || "",
+        last_sign_in_at: user.last_sign_in_at || null,
+        user_metadata: user.user_metadata || {},
+        app_metadata: user.app_metadata || {}
+      }));
+      
+      console.log(`Found ${users.length} users`);
+      
+      // Return the users
+      return new Response(JSON.stringify({ users }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      });
+    } catch (innerError) {
+      console.error('Inner error in get-all-users function:', innerError);
+      return new Response(JSON.stringify({ error: innerError.message || 'Internal server error' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500
       });
     }
 
-    // Map users with their email addresses and other needed data
-    const users = usersData.users.map(user => ({
-      id: user.id,
-      email: user.email,
-      created_at: user.created_at,
-      last_sign_in_at: user.last_sign_in_at,
-      user_metadata: user.user_metadata,
-      app_metadata: user.app_metadata
-    }));
-    
-    console.log(`Found ${users.length} users`);
-    
-    // Return the users
-    return new Response(JSON.stringify({ users }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200
-    });
-
   } catch (error) {
     console.error('Error in get-all-users function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error.message || 'Internal server error' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500
     });
