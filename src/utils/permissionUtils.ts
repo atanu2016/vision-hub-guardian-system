@@ -18,7 +18,16 @@ export type Permission =
   | 'assign-cameras'
   | 'delete-footage'
   | 'access-settings'
-  | 'backup-restore';
+  | 'backup-restore'
+  // Adding the missing permissions:
+  | 'view-dashboard'
+  | 'manage-profile-settings'
+  | 'configure-camera-settings'
+  | 'configure-storage'
+  | 'configure-global-policies'
+  | 'manage-system'
+  | 'access-logs'
+  | 'system-migration';
 
 type RolePermissionsMap = {
   [R in UserRole]: Permission[];
@@ -40,7 +49,16 @@ const rolePermissions: RolePermissionsMap = {
     'assign-cameras',
     'delete-footage',
     'access-settings',
-    'backup-restore'
+    'backup-restore',
+    // Add missing permissions for superadmin
+    'view-dashboard',
+    'manage-profile-settings',
+    'configure-camera-settings',
+    'configure-storage',
+    'configure-global-policies',
+    'manage-system',
+    'access-logs',
+    'system-migration'
   ],
   admin: [
     'view-profile',
@@ -55,16 +73,26 @@ const rolePermissions: RolePermissionsMap = {
     'assign-cameras',
     'delete-footage',
     'access-settings',
+    // Add missing permissions for admin
+    'view-dashboard',
+    'manage-profile-settings',
+    'configure-camera-settings',
+    'configure-storage',
+    'configure-global-policies',
+    'manage-system',
+    'access-logs',
   ],
   observer: [
     'view-profile',
     'edit-profile',
     'view-cameras:assigned',
     'view-footage:assigned',
+    'manage-profile-settings'
   ],
   user: [
     'view-profile',
-    'edit-profile'
+    'edit-profile',
+    'manage-profile-settings'
   ]
 };
 
