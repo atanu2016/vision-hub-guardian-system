@@ -1,208 +1,57 @@
 
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/auth';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Shield, UserPlus, RefreshCw } from 'lucide-react';
-import { toast } from 'sonner';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { UserTable } from '@/components/admin/UserTable';
-import { fetchUsers } from '@/services/userManagement/userFetchService';
-import { updateUserRole } from '@/services/userManagement/userRoleService';
-import { toggleMfaRequirement, revokeMfaEnrollment } from '@/services/userManagement/userMfaService';
-import { deleteUser } from '@/services/userManagement/userDeleteService';
-import type { UserData, UserRole } from '@/types/admin';
-import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { usePermissions } from '@/hooks/usePermissions';
+import { UserManagementHeader } from '@/components/admin/UserManagementHeader';
+import { ErrorAlert } from '@/components/admin/ErrorAlert';
+import { useUserManagement } from '@/hooks/useUserManagement';
 
 export default function UserManagement() {
-  const [users, setUsers] = useState<UserData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { user, isAdmin, role } = useAuth();
-  const { hasPermission } = usePermissions();
-  const navigate = useNavigate();
+  const {
+    users,
+    loading,
+    error,
+    user,
+    role,
+    loadUsers,
+    handleUpdateUserRole,
+    handleToggleMfaRequirement,
+    handleRevokeMfaEnrollment,
+    handleDeleteUser,
+    handleCreateUserClick
+  } = useUserManagement();
 
-  const canManageAllUsers = hasPermission('manage-users:all');
-  const canManageSomeUsers = hasPermission('manage-users:lower');
-  const canAssignRoles = hasPermission('assign-roles');
-
-  useEffect(() => {
-    // Redirect if not an admin or operator
-    if (!isAdmin && !loading) {
-      toast.error('Only administrators can access user management');
-      navigate('/');
-    } else {
-      loadUsers();
-    }
-  }, [isAdmin, navigate]);
-
-  async function loadUsers() {
-    try {
-      setLoading(true);
-      setError(null);
-      console.log("Attempting to load users from database...");
-      
-      const usersData = await fetchUsers();
-      console.log("Loaded users:", usersData);
-      setUsers(usersData);
-    } catch (error: any) {
-      console.error("Failed to load users:", error);
-      setError(error?.message || 'Failed to load users. Please check your permissions.');
-      toast.error('Failed to load users');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleUpdateUserRole(userId: string, newRole: UserRole) {
-    // Check permission to assign this role
-    if (!canAssignRoles) {
-      toast.error("You don't have permission to assign roles");
-      return;
-    }
-    
-    try {
-      await updateUserRole(userId, newRole, user?.id);
-      // Update local state
-      setUsers(users.map(u => 
-        u.id === userId ? { ...u, role: newRole } : u
-      ));
-      toast.success(`User role updated to ${newRole}`);
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to update user role');
-    }
-  }
-
-  async function handleToggleMfaRequirement(userId: string, required: boolean) {
-    // Only allow admins and superadmins to modify MFA requirements
-    if (!canManageAllUsers && !canManageSomeUsers) {
-      toast.error("You don't have permission to modify MFA requirements");
-      return;
-    }
-    
-    try {
-      await toggleMfaRequirement(userId, required);
-      // Update local state
-      setUsers(users.map(u => 
-        u.id === userId ? { ...u, mfa_required: required } : u
-      ));
-      toast.success(`MFA ${required ? 'required' : 'optional'} for user`);
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to update MFA requirement');
-    }
-  }
-  
-  async function handleRevokeMfaEnrollment(userId: string) {
-    // Only allow admins and superadmins to revoke MFA enrollment
-    if (!canManageAllUsers && !canManageSomeUsers) {
-      toast.error("You don't have permission to revoke MFA enrollment");
-      return;
-    }
-    
-    try {
-      await revokeMfaEnrollment(userId);
-      // Update local state
-      setUsers(users.map(u => 
-        u.id === userId ? { ...u, mfa_enrolled: false } : u
-      ));
-      toast.success('MFA enrollment revoked. User will need to re-enroll.');
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to revoke MFA enrollment');
-    }
-  }
-  
-  async function handleDeleteUser(userId: string) {
-    // Check if the current user has permission to delete this user
-    const userToDelete = users.find(u => u.id === userId);
-    if (!userToDelete) return;
-    
-    const isSuperadmin = userToDelete.role === 'superadmin';
-    const isAdmin = userToDelete.role === 'admin';
-    
-    // Only superadmins can delete superadmins or admins
-    if ((isSuperadmin || isAdmin) && role !== 'superadmin') {
-      toast.error("Only superadmins can delete admin users");
-      return;
-    }
-    
-    try {
-      await deleteUser(userId);
-      // Remove user from local state
-      setUsers(users.filter(u => u.id !== userId));
-      toast.success('User deleted successfully');
-    } catch (error: any) {
-      toast.error(error?.message || 'Failed to delete user');
-    }
-  }
-
-  const handleCreateUserClick = () => {
-    navigate('/admin/users/create');
-  };
-
-  const handleRetry = () => {
-    loadUsers();
-  };
-
-  if (!isAdmin) {
+  if (!role || (role !== 'admin' && role !== 'superadmin')) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>User Management</CardTitle>
-          <CardDescription>
-            You need administrator privileges to access this page.
-          </CardDescription>
+          <UserManagementHeader 
+            onRefresh={loadUsers}
+            onCreateUser={handleCreateUserClick}
+            loading={loading}
+            showCreateButton={false}
+          />
         </CardHeader>
+        <CardContent>
+          <p>You need administrator privileges to access this page.</p>
+        </CardContent>
       </Card>
     );
   }
 
   return (
     <Card className="w-full">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            <span>User Management</span>
-          </CardTitle>
-          <CardDescription>
-            Manage user roles and security settings
-          </CardDescription>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline"
-            size="sm"
-            onClick={handleRetry}
-            disabled={loading}
-          >
-            <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          {(role === 'superadmin') && (
-            <Button 
-              onClick={handleCreateUserClick}
-              size="sm"
-              className="flex items-center gap-2 bg-vision-blue hover:bg-vision-blue-600"
-            >
-              <UserPlus className="h-4 w-4" />
-              Create User
-            </Button>
-          )}
-        </div>
+      <CardHeader>
+        <UserManagementHeader 
+          onRefresh={loadUsers}
+          onCreateUser={handleCreateUserClick}
+          loading={loading}
+          showCreateButton={role === 'superadmin'}
+        />
       </CardHeader>
 
       <CardContent>
         {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertTitle>Error loading users</AlertTitle>
-            <AlertDescription className="flex items-center justify-between">
-              <span>{error}</span>
-              <Button variant="outline" size="sm" onClick={handleRetry} className="ml-2">
-                Retry
-              </Button>
-            </AlertDescription>
-          </Alert>
+          <ErrorAlert error={error} onRetry={loadUsers} />
         )}
 
         <UserTable 

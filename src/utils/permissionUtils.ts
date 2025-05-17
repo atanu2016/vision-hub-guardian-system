@@ -1,3 +1,4 @@
+
 import { UserRole } from "@/types/admin";
 
 export const roleHierarchy: Record<UserRole, number> = {
@@ -17,6 +18,12 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
     case 'manage-users:all':
     case 'assign-roles':
       return userRole === 'superadmin';
+    case 'configure-storage':
+    case 'configure-camera-settings':
+    case 'configure-global-policies':
+    case 'manage-system':
+    case 'access-logs':
+      return roleHierarchy[userRole] >= roleHierarchy['admin'];
     default:
       return false;
   }
@@ -41,4 +48,9 @@ export type Permission =
   | 'view-footage:assigned'
   | 'manage-users:all'
   | 'manage-users:lower'
-  | 'assign-roles';
+  | 'assign-roles'
+  | 'configure-storage'
+  | 'configure-camera-settings'
+  | 'configure-global-policies'
+  | 'manage-system'
+  | 'access-logs';

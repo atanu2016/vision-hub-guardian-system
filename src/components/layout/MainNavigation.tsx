@@ -10,6 +10,7 @@ import {
 import { Home, Camera, Settings, Shield, Video } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { usePermissions } from "@/hooks/usePermissions";
+import { Permission } from "@/utils/permissionUtils";
 
 interface MainNavigationProps {
   isActive: (path: string) => boolean;
@@ -22,9 +23,9 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
   
   const navigationItems = [
     { path: "/", icon: Home, label: "Dashboard" },
-    { path: "/cameras", icon: Camera, label: "Cameras", permission: 'view-cameras:assigned' as const },
-    { path: "/live", icon: Video, label: "Live View", permission: 'view-cameras:assigned' as const },
-    { path: "/recordings", icon: Video, label: "Recordings", permission: 'view-footage:assigned' as const },
+    { path: "/cameras", icon: Camera, label: "Cameras", permission: 'view-cameras:assigned' as Permission },
+    { path: "/live", icon: Video, label: "Live View", permission: 'view-cameras:assigned' as Permission },
+    { path: "/recordings", icon: Video, label: "Recordings", permission: 'view-footage:assigned' as Permission },
     { path: "/settings", icon: Settings, label: "Settings" },
   ];
   
@@ -34,7 +35,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
       path: "/admin", 
       icon: Shield, 
       label: "Admin",
-      permission: 'manage-users:lower' as const
+      permission: 'manage-users:lower' as Permission
     });
   }
   
