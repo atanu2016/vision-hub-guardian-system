@@ -72,7 +72,9 @@ CREATE TABLE IF NOT EXISTS public.storage_settings (
     s3accesskey TEXT,
     s3secretkey TEXT,
     s3bucket TEXT,
-    s3region TEXT
+    s3region TEXT,
+    max_storage_gb INTEGER DEFAULT 500,
+    backup_schedule TEXT DEFAULT 'never'
 );
 
 -- Create camera_recording_status table
@@ -130,7 +132,14 @@ CREATE TABLE IF NOT EXISTS public.advanced_settings (
     mfa_secret TEXT,
     log_retention_days INTEGER DEFAULT 30,
     min_log_level TEXT DEFAULT 'info',
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+    dark_mode BOOLEAN DEFAULT FALSE,
+    notifications_enabled BOOLEAN DEFAULT TRUE,
+    audio_enabled BOOLEAN DEFAULT TRUE,
+    motion_sensitivity INTEGER DEFAULT 50,
+    version TEXT DEFAULT '1.0.0',
+    license_status TEXT DEFAULT 'Active',
+    last_updated TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
 -- Create database_config table for storing database configuration

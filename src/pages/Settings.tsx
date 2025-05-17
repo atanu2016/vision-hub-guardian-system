@@ -2,7 +2,10 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
-import { FileSpreadsheet, Link as LinkIcon, AlertTriangle, DatabaseZap, HardDrive, Bell, Shield, Settings as SettingsIcon } from 'lucide-react';
+import { 
+  FileSpreadsheet, Link as LinkIcon, AlertTriangle, DatabaseZap, 
+  HardDrive, Bell, Shield, Settings as SettingsIcon, Sliders 
+} from 'lucide-react';
 
 // Import all settings pages
 import StorageSettings from '@/pages/settings/StorageSettings';
@@ -12,6 +15,7 @@ import WebhooksSettings from '@/pages/settings/WebhooksSettings';
 import AdvancedSettings from '@/pages/settings/AdvancedSettings';
 import DatabaseSettings from '@/components/settings/DatabaseSettings';
 import LogsSettings from '@/pages/settings/LogsSettings';
+import SystemSettings from '@/pages/settings/SystemSettings';
 
 const Settings = () => {
   const location = useLocation();
@@ -26,6 +30,7 @@ const Settings = () => {
   const isAdvancedActive = path === 'advanced';
   const isDatabaseActive = path === 'database';
   const isLogsActive = path === 'logs';
+  const isSystemSettingsActive = path === 'system';
 
   return (
     <AppLayout>
@@ -40,6 +45,50 @@ const Settings = () => {
             {/* Settings sidebar */}
             <div className="col-span-12 md:col-span-4 lg:col-span-3">
               <div className="space-y-8">
+                {/* System Section */}
+                <div className="space-y-4">
+                  <h3 className="font-medium text-lg">System</h3>
+                  <p className="text-sm text-muted-foreground">System-wide settings and configurations</p>
+                  
+                  <div className="space-y-2">
+                    <div
+                      className={`flex items-start gap-4 rounded-lg border p-3 text-left cursor-pointer transition-all
+                        ${isSystemSettingsActive ? 'bg-accent' : 'hover:bg-accent/50'}`}
+                      onClick={() => navigate('/settings/system')}
+                    >
+                      <Sliders className="mt-0.5 h-5 w-5" />
+                      <div>
+                        <p className="font-medium">System Settings</p>
+                        <p className="text-sm text-muted-foreground">Configure system appearance and behavior</p>
+                      </div>
+                    </div>
+                    
+                    <div
+                      className={`flex items-start gap-4 rounded-lg border p-3 text-left cursor-pointer transition-all
+                        ${isAdvancedActive ? 'bg-accent' : 'hover:bg-accent/50'}`}
+                      onClick={() => navigate('/settings/advanced')}
+                    >
+                      <Shield className="mt-0.5 h-5 w-5" />
+                      <div>
+                        <p className="font-medium">Advanced Settings</p>
+                        <p className="text-sm text-muted-foreground">Configure security and advanced options</p>
+                      </div>
+                    </div>
+                    
+                    <div
+                      className={`flex items-start gap-4 rounded-lg border p-3 text-left cursor-pointer transition-all
+                        ${isDatabaseActive ? 'bg-accent' : 'hover:bg-accent/50'}`}
+                      onClick={() => navigate('/settings/database')}
+                    >
+                      <DatabaseZap className="mt-0.5 h-5 w-5" />
+                      <div>
+                        <p className="font-medium">Database</p>
+                        <p className="text-sm text-muted-foreground">Configure database connection</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
                 {/* Storage Section */}
                 <div className="space-y-4">
                   <h3 className="font-medium text-lg">Storage</h3>
@@ -104,36 +153,12 @@ const Settings = () => {
                   </div>
                 </div>
                 
-                {/* System Section */}
+                {/* Logs Section */}
                 <div className="space-y-4">
-                  <h3 className="font-medium text-lg">System</h3>
-                  <p className="text-sm text-muted-foreground">System-wide settings and configurations</p>
+                  <h3 className="font-medium text-lg">Monitoring</h3>
+                  <p className="text-sm text-muted-foreground">View system logs and debug information</p>
                   
                   <div className="space-y-2">
-                    <div
-                      className={`flex items-start gap-4 rounded-lg border p-3 text-left cursor-pointer transition-all
-                        ${isAdvancedActive ? 'bg-accent' : 'hover:bg-accent/50'}`}
-                      onClick={() => navigate('/settings/advanced')}
-                    >
-                      <Shield className="mt-0.5 h-5 w-5" />
-                      <div>
-                        <p className="font-medium">Advanced Settings</p>
-                        <p className="text-sm text-muted-foreground">Configure security and advanced options</p>
-                      </div>
-                    </div>
-                    
-                    <div
-                      className={`flex items-start gap-4 rounded-lg border p-3 text-left cursor-pointer transition-all
-                        ${isDatabaseActive ? 'bg-accent' : 'hover:bg-accent/50'}`}
-                      onClick={() => navigate('/settings/database')}
-                    >
-                      <DatabaseZap className="mt-0.5 h-5 w-5" />
-                      <div>
-                        <p className="font-medium">Database</p>
-                        <p className="text-sm text-muted-foreground">Configure database connection</p>
-                      </div>
-                    </div>
-                    
                     <div
                       className={`flex items-start gap-4 rounded-lg border p-3 text-left cursor-pointer transition-all
                         ${isLogsActive ? 'bg-accent' : 'hover:bg-accent/50'}`}
@@ -152,6 +177,7 @@ const Settings = () => {
             
             {/* Settings content */}
             <div className="col-span-12 md:col-span-8 lg:col-span-9 border rounded-lg p-6">
+              {isSystemSettingsActive && <SystemSettings />}
               {isStorageActive && <StorageSettings />}
               {isRecordingsActive && <RecordingsPage />}
               {isAlertsActive && <AlertsPage />}

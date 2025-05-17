@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
-import { Settings, ChevronRight, PlaySquare, Bell, HardDrive } from "lucide-react";
+import { Settings, ChevronRight, PlaySquare, Bell, HardDrive, Sliders } from "lucide-react";
 
 interface MenuItem {
   title: string;
@@ -68,7 +69,8 @@ const SidebarSettingsMenu = ({ isActive }: { isActive: (path: string) => boolean
     location.pathname.startsWith("/settings") || 
     location.pathname.startsWith("/settings/recordings") || 
     location.pathname.startsWith("/settings/alerts") || 
-    location.pathname.startsWith("/settings/storage")
+    location.pathname.startsWith("/settings/storage") ||
+    location.pathname.startsWith("/settings/system")
   );
 
   // Update expanded state when route changes
@@ -77,7 +79,8 @@ const SidebarSettingsMenu = ({ isActive }: { isActive: (path: string) => boolean
       location.pathname.startsWith("/settings") || 
       location.pathname.startsWith("/settings/recordings") || 
       location.pathname.startsWith("/settings/alerts") || 
-      location.pathname.startsWith("/settings/storage")
+      location.pathname.startsWith("/settings/storage") ||
+      location.pathname.startsWith("/settings/system")
     );
   }, [location.pathname]);
 
@@ -98,6 +101,19 @@ const SidebarSettingsMenu = ({ isActive }: { isActive: (path: string) => boolean
       
       {isSettingsExpanded && (
         <>
+          <SidebarMenuItem>
+            <SidebarMenuButton 
+              asChild 
+              isActive={isActive("/settings/system")}
+              className="pl-8"
+            >
+              <Link to="/settings/system">
+                <Sliders />
+                <span>System Settings</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
           <SidebarMenuItem>
             <SidebarMenuButton 
               asChild 
