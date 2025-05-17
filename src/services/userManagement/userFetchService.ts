@@ -9,15 +9,7 @@ export async function fetchUsers(): Promise<UserData[]> {
   try {
     console.log('Fetching users from database...');
     
-    // Fetch all auth users first to make sure we have complete data
-    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-    
-    if (authError) {
-      console.error('Error fetching auth users:', authError);
-      throw authError;
-    }
-
-    // Get all profiles
+    // First get all profiles to avoid recursive policy issues
     const { data: profiles, error: profileError } = await supabase
       .from('profiles')
       .select('id, full_name, mfa_enrolled, mfa_required, created_at, is_admin');
@@ -27,39 +19,36 @@ export async function fetchUsers(): Promise<UserData[]> {
       throw profileError;
     }
 
-    console.log(`Found ${profiles.length} profiles`);
-    console.log(`Found ${authUsers?.users?.length || 0} auth users`);
-    
-    // Map auth users to our UserData format
-    const usersWithRoles = await Promise.all(
-      (authUsers?.users || []).map(async (authUser) => {
-        // Find matching profile
-        const profile = profiles.find(p => p.id === authUser.id) || {
-          id: authUser.id,
-          full_name: authUser.user_metadata?.full_name || '',
-          mfa_enrolled: false,
-          mfa_required: false,
-          created_at: authUser.created_at,
-          is_admin: false
-        };
+    // Then get emails from auth.users using admin functions 
+    const usersWithData = await Promise.all(
+      profiles.map(async (profile) => {
+        // Get user email using the admin API
+        const { data: userData, error: authError } = await supabase.auth.admin.getUserById(profile.id);
+        
+        if (authError) {
+          console.error(`Error fetching auth data for user ${profile.id}:`, authError);
+        }
 
-        // Get user role
+        // Get role information
         const { data: roleData } = await supabase
           .from('user_roles')
           .select('role')
-          .eq('user_id', authUser.id)
+          .eq('user_id', profile.id)
           .maybeSingle();
-          
+
+        // Determine role from either role table or is_admin flag
+        const role = roleData?.role || (profile.is_admin ? 'admin' : 'user');
+
         return {
           ...profile,
-          email: authUser.email || 'No email',
-          role: (roleData?.role as UserRole) || (profile.is_admin ? 'admin' : 'user'),
+          email: userData?.user?.email || 'Unknown email',
+          role: role as UserRole,
         };
       })
     );
 
-    console.log('Processed users with roles:', usersWithRoles);
-    return usersWithRoles;
+    console.log('Processed users with roles:', usersWithData);
+    return usersWithData;
   } catch (error) {
     console.error('Error fetching users:', error);
     throw error;

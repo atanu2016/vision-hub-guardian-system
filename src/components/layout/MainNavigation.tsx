@@ -1,5 +1,5 @@
 
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -16,11 +16,12 @@ interface MainNavigationProps {
 
 const MainNavigation = ({ isActive }: MainNavigationProps) => {
   const { isAdmin } = useAuth();
+  const location = useLocation();
   
   const navigationItems = [
     { path: "/", icon: Home, label: "Dashboard" },
     { path: "/cameras", icon: Camera, label: "Cameras" },
-    { path: "/live-view", icon: Video, label: "Live View" },
+    { path: "/live", icon: Video, label: "Live View" },
     { path: "/recordings", icon: Video, label: "Recordings" },
     { path: "/settings", icon: Settings, label: "Settings" },
   ];
