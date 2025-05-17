@@ -2,6 +2,7 @@
 import { Route, Routes } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { AuthProvider } from "@/contexts/auth";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "@/pages/Index";
 import Cameras from "@/pages/Cameras";
@@ -42,26 +43,93 @@ function App() {
       <AuthProvider>
         <Routes>
           <Route path="/auth" element={<Auth />} />
-          <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-          <Route path="/cameras" element={<ProtectedRoute><Cameras /></ProtectedRoute>} />
-          <Route path="/cameras/:id" element={<ProtectedRoute><CameraDetail /></ProtectedRoute>} />
+          
+          {/* Wrap protected routes with SidebarProvider */}
+          <Route path="/" element={
+            <SidebarProvider>
+              <ProtectedRoute><Index /></ProtectedRoute>
+            </SidebarProvider>
+          } />
+          <Route path="/cameras" element={
+            <SidebarProvider>
+              <ProtectedRoute><Cameras /></ProtectedRoute>
+            </SidebarProvider>
+          } />
+          <Route path="/cameras/:id" element={
+            <SidebarProvider>
+              <ProtectedRoute><CameraDetail /></ProtectedRoute>
+            </SidebarProvider>
+          } />
           
           {/* Settings Routes */}
-          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/settings/storage" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/settings/recordings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/settings/alerts" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/settings/webhooks" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/settings/advanced" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/settings/database" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/settings/logs" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/settings" element={
+            <SidebarProvider>
+              <ProtectedRoute><Settings /></ProtectedRoute>
+            </SidebarProvider>
+          } />
+          <Route path="/settings/storage" element={
+            <SidebarProvider>
+              <ProtectedRoute><Settings /></ProtectedRoute>
+            </SidebarProvider>
+          } />
+          <Route path="/settings/recordings" element={
+            <SidebarProvider>
+              <ProtectedRoute><Settings /></ProtectedRoute>
+            </SidebarProvider>
+          } />
+          <Route path="/settings/alerts" element={
+            <SidebarProvider>
+              <ProtectedRoute><Settings /></ProtectedRoute>
+            </SidebarProvider>
+          } />
+          <Route path="/settings/webhooks" element={
+            <SidebarProvider>
+              <ProtectedRoute><Settings /></ProtectedRoute>
+            </SidebarProvider>
+          } />
+          <Route path="/settings/advanced" element={
+            <SidebarProvider>
+              <ProtectedRoute><Settings /></ProtectedRoute>
+            </SidebarProvider>
+          } />
+          <Route path="/settings/database" element={
+            <SidebarProvider>
+              <ProtectedRoute><Settings /></ProtectedRoute>
+            </SidebarProvider>
+          } />
+          <Route path="/settings/logs" element={
+            <SidebarProvider>
+              <ProtectedRoute><Settings /></ProtectedRoute>
+            </SidebarProvider>
+          } />
           
           {/* Admin Routes */}
-          <Route path="/admin" element={<ProtectedRoute requireAdmin={true}><AdminPage /></ProtectedRoute>} />
-          <Route path="/admin/users" element={<ProtectedRoute requireAdmin={true}><UserManagement /></ProtectedRoute>} />
-          <Route path="/admin/users/create" element={<ProtectedRoute requireAdmin={true}><CreateUser /></ProtectedRoute>} />
-          <Route path="/profile-settings" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
-          <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+          <Route path="/admin" element={
+            <SidebarProvider>
+              <ProtectedRoute requireAdmin={true}><AdminPage /></ProtectedRoute>
+            </SidebarProvider>
+          } />
+          <Route path="/admin/users" element={
+            <SidebarProvider>
+              <ProtectedRoute requireAdmin={true}><UserManagement /></ProtectedRoute>
+            </SidebarProvider>
+          } />
+          <Route path="/admin/users/create" element={
+            <SidebarProvider>
+              <ProtectedRoute requireAdmin={true}><CreateUser /></ProtectedRoute>
+            </SidebarProvider>
+          } />
+          <Route path="/profile-settings" element={
+            <SidebarProvider>
+              <ProtectedRoute><ProfileSettings /></ProtectedRoute>
+            </SidebarProvider>
+          } />
+          <Route path="/notifications" element={
+            <SidebarProvider>
+              <ProtectedRoute><Notifications /></ProtectedRoute>
+            </SidebarProvider>
+          } />
+          
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Toaster />

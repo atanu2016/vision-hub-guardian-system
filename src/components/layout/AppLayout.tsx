@@ -1,5 +1,4 @@
 
-import { SidebarProvider } from "@/components/ui/sidebar";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,31 +18,29 @@ const AppLayout = ({ children, className, fullWidth = false }: AppLayoutProps) =
   const sidebarCollapsed = state === "collapsed";
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full overflow-hidden bg-background dark:bg-vision-dark-950">
-        {/* Fixed position sidebar */}
-        <Sidebar />
-        
-        {/* Main content area with margin that respects sidebar width */}
-        <div className={cn(
-          "flex flex-col flex-1 w-full transition-all duration-300", 
-          !isMobile && (sidebarCollapsed ? "ml-[3rem]" : "ml-[16rem]")
-        )}>
-          <TopBar />
-          <ScrollArea className="flex-1 w-full h-[calc(100vh-64px)]">
-            <main className={cn(
-              "flex-1 p-4 md:p-6 w-full",
-              !fullWidth && "max-w-full mx-auto",
-              className
-            )}>
-              <div className="animate-fade-in">
-                {children}
-              </div>
-            </main>
-          </ScrollArea>
-        </div>
+    <div className="flex min-h-screen w-full overflow-hidden bg-background dark:bg-vision-dark-950">
+      {/* Fixed position sidebar */}
+      <Sidebar />
+      
+      {/* Main content area with margin that respects sidebar width */}
+      <div className={cn(
+        "flex flex-col flex-1 w-full transition-all duration-300", 
+        !isMobile && (sidebarCollapsed ? "ml-[3rem]" : "ml-[16rem]")
+      )}>
+        <TopBar />
+        <ScrollArea className="flex-1 w-full h-[calc(100vh-64px)]">
+          <main className={cn(
+            "flex-1 p-4 md:p-6 w-full",
+            !fullWidth && "max-w-full mx-auto",
+            className
+          )}>
+            <div className="animate-fade-in">
+              {children}
+            </div>
+          </main>
+        </ScrollArea>
       </div>
-    </SidebarProvider>
+    </div>
   );
 };
 
