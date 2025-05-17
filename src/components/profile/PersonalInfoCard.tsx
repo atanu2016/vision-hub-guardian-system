@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useProfileSettings } from "@/hooks/useProfileSettings";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserRole } from "@/types/admin";
 
@@ -20,36 +19,40 @@ const getRoleDisplayName = (role: UserRole): string => {
   }
 };
 
-export function PersonalInfoCard() {
-  const { 
-    fullName, 
-    email, 
-    userRole,
-    isLoading, 
-    isSaving, 
-    setFullName, 
-    handleSaveChanges 
-  } = useProfileSettings();
-  
+interface PersonalInfoCardProps {
+  formData: {
+    fullName: string;
+    email: string;
+    currentPassword?: string;
+    newPassword?: string;
+    confirmPassword?: string;
+  };
+  role: UserRole;
+  avatarPreview: string | null;
+  getInitials: (name: string) => string;
+  handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleAvatarChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  handleProfileUpdate: (e: React.FormEvent) => void;
+}
+
+export function PersonalInfoCard({
+  formData,
+  role,
+  avatarPreview,
+  getInitials,
+  handleInputChange,
+  handleAvatarChange,
+  handleProfileUpdate
+}: PersonalInfoCardProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   
   const toggleEdit = () => {
     setIsEditingName(!isEditingName);
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleSaveChanges();
+  const onSubmit = (e: React.FormEvent) => {
+    handleProfileUpdate(e);
     setIsEditingName(false);
-  };
-  
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .substring(0, 2);
   };
 
   return (
@@ -59,57 +62,60 @@ export function PersonalInfoCard() {
         <CardDescription>Update your personal details and profile picture</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={onSubmit} className="space-y-5">
           <div className="flex items-center space-x-4">
             <Avatar className="h-16 w-16">
-              <AvatarImage src="" alt={fullName} />
+              <AvatarImage src={avatarPreview || ''} alt={formData.fullName} />
               <AvatarFallback className="text-lg">
-                {isLoading ? <Skeleton className="h-full w-full" /> : getInitials(fullName)}
+                {getInitials(formData.fullName || '')}
               </AvatarFallback>
             </Avatar>
             
             <div className="flex-1 space-y-1">
               <div className="flex justify-between items-center">
-                {isLoading ? (
-                  <Skeleton className="h-6 w-32" />
-                ) : (
-                  <div className="font-semibold text-lg">{fullName || 'Not set'}</div>
-                )}
-                {!isLoading && !isEditingName && (
+                <div className="font-semibold text-lg">
+                  {formData.fullName || 'Not set'}
+                </div>
+                {!isEditingName && (
                   <Button variant="ghost" type="button" size="sm" onClick={toggleEdit}>
                     Edit
                   </Button>
                 )}
               </div>
               
-              {isLoading ? (
-                <Skeleton className="h-4 w-48" />
-              ) : (
-                <div className="text-sm text-muted-foreground">{email}</div>
-              )}
+              <div className="text-sm text-muted-foreground">{formData.email}</div>
             </div>
           </div>
           
           {isEditingName && (
             <div className="space-y-2 pt-2">
-              <Label htmlFor="full-name">Full Name</Label>
+              <Label htmlFor="fullName">Full Name</Label>
               <Input
-                id="full-name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                id="fullName"
+                name="fullName"
+                value={formData.fullName}
+                onChange={handleInputChange}
                 placeholder="Enter your full name"
               />
+              
+              <div className="mt-2">
+                <Label htmlFor="avatar">Profile Picture</Label>
+                <Input
+                  id="avatar"
+                  name="avatar"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  className="mt-1"
+                />
+              </div>
             </div>
           )}
           
           <div className="space-y-2 pt-2">
             <Label>User Role</Label>
             <div className="p-2 border rounded-md bg-muted/50">
-              {isLoading ? (
-                <Skeleton className="h-6 w-24" />
-              ) : (
-                <div>{getRoleDisplayName(userRole)}</div>
-              )}
+              <div>{getRoleDisplayName(role)}</div>
             </div>
             <p className="text-xs text-muted-foreground">
               Your account role determines what actions you can perform in the system.
@@ -127,9 +133,8 @@ export function PersonalInfoCard() {
               </Button>
               <Button 
                 type="submit"
-                disabled={isSaving}
               >
-                {isSaving ? 'Saving...' : 'Save Changes'}
+                Save Changes
               </Button>
             </div>
           )}

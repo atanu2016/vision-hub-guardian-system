@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.42.0";
 
@@ -57,7 +58,7 @@ serve(async (req) => {
     }
 
     // Log user attempting to access admin function
-    console.log(`User ${user.id} (${user.email}) is attempting to access admin function`);
+    console.log(`User ${user.id} (${user.email || 'unknown'}) is attempting to access admin function`);
 
     // Check if user has admin privileges - first check user_roles
     const { data: userRole, error: roleError1 } = await supabaseAdmin
@@ -100,7 +101,7 @@ serve(async (req) => {
       });
     }
 
-    console.log(`Admin access granted to ${user.email}`);
+    console.log(`Admin access granted to ${user.email || 'unknown'}`);
 
     // Handle DELETE request to delete a user
     if (req.method === 'DELETE') {
@@ -246,14 +247,14 @@ serve(async (req) => {
 
     // Default GET method to fetch all users
     if (req.method === 'GET' || req.method === 'POST') {
-      // Use the service role client to bypass RLS
-      const { data: users, error: usersError } = await supabaseAdmin
+      // Get user profiles
+      const { data: profiles, error: profilesError } = await supabaseAdmin
         .from('profiles')
         .select('id, full_name, mfa_enrolled, mfa_required, created_at, is_admin');
 
-      if (usersError) {
-        console.error("Error fetching profiles:", usersError);
-        throw usersError;
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        throw profilesError;
       }
 
       // Fetch user roles
@@ -275,27 +276,31 @@ serve(async (req) => {
       let emails: Record<string, string> = {};
       
       try {
-        // Always try to get emails using the service role
+        // Get all auth users
         const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
         
         if (authError) {
           console.error("Error fetching auth users:", authError);
-        }
-        
-        if (authUsers && authUsers.users) {
+          // Still continue with what we have
+        } else if (authUsers && authUsers.users && Array.isArray(authUsers.users)) {
           console.log(`Found ${authUsers.users.length} users in auth table`);
-          authUsers.users.forEach((authUser: any) => {
+          
+          // Map emails by user ID
+          authUsers.users.forEach((authUser) => {
             if (authUser && authUser.id && authUser.email) {
               emails[authUser.id] = authUser.email;
             }
           });
+        } else {
+          console.log("No users found or invalid response format");
         }
       } catch (err) {
-        console.log("Could not fetch emails, will use user IDs instead");
+        console.error("Could not fetch emails:", err);
+        // Continue anyway, we'll use IDs as fallback
       }
 
       // Map the data to include roles and emails
-      const usersData = users.map(profile => {
+      const usersData = profiles.map(profile => {
         // Determine role from either role table or is_admin flag
         let role = 'user';
         if (rolesMap[profile.id]) {
@@ -304,10 +309,12 @@ serve(async (req) => {
           role = 'admin';
         }
 
+        // Always use email if available, fallback to ID for display
+        const email = emails[profile.id] || profile.id;
+
         return {
           id: profile.id,
-          // Display email or user ID instead of hiding it
-          email: emails[profile.id] || profile.id,
+          email: email,  // Use email address if available, otherwise use ID
           full_name: profile.full_name || 'User',
           mfa_enrolled: profile.mfa_enrolled || false,
           mfa_required: profile.mfa_required || false,

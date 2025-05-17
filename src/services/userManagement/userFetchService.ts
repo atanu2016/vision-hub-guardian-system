@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 /**
  * Fetches all users with their roles and profile data
  */
-export async function fetchUsers(): Promise<UserData[]> {
+export async function fetchAllUsers(): Promise<UserData[]> {
   try {
     console.log('Fetching users from database...');
     
@@ -58,7 +58,7 @@ export async function fetchUsers(): Promise<UserData[]> {
       
       return {
         id: typedUser.id || '',
-        email: typedUser.email || 'Unknown email',
+        email: typedUser.email || typedUser.id || 'Unknown email',
         full_name: typedUser.full_name || null,
         mfa_enrolled: !!typedUser.mfa_enrolled,
         mfa_required: !!typedUser.mfa_required,
@@ -72,7 +72,7 @@ export async function fetchUsers(): Promise<UserData[]> {
     return usersData;
     
   } catch (error) {
-    console.error('Error in fetchUsers:', error);
+    console.error('Error in fetchAllUsers:', error);
     
     // Try direct database approach as a final fallback
     try {
@@ -126,27 +126,21 @@ async function fetchUsersDirectly(): Promise<UserData[]> {
       return acc;
     }, {} as Record<string, UserRole>);
     
-    // Get emails via auth.users table - should now be accessible through service role
+    // Get emails - this is a best effort attempt
+    const { data: authData, error: authError } = await supabase.auth.admin.listUsers();
+    
     let emailsMap: Record<string, string> = {};
     
-    try {
-      const { data: authData, error } = await supabase.auth.admin.listUsers();
-      
-      if (error) {
-        console.error('Error listing users:', error);
-      }
-
-      if (authData && 'users' in authData && Array.isArray(authData.users)) {
-        console.log(`Found ${authData.users.length} users in auth table`);
-        // Map user emails by ID
-        authData.users.forEach(user => {
-          if (user && typeof user.id === 'string' && typeof user.email === 'string') {
-            emailsMap[user.id] = user.email;
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Could not fetch emails:', error);
+    if (authError) {
+      console.error('Error listing users:', authError);
+    } else if (authData && 'users' in authData && Array.isArray(authData.users)) {
+      console.log(`Found ${authData.users.length} users in auth table`);
+      // Map user emails by ID
+      authData.users.forEach(user => {
+        if (user && typeof user.id === 'string' && typeof user.email === 'string') {
+          emailsMap[user.id] = user.email;
+        }
+      });
     }
     
     // Return profile data with available email information
@@ -155,13 +149,13 @@ async function fetchUsersDirectly(): Promise<UserData[]> {
       const role = rolesMap[profile.id] || (profile.is_admin ? 'admin' : 'user');
       return {
         id: profile.id,
-        email: emailsMap[profile.id] || profile.id, // Use ID as fallback instead of hiding email
-        full_name: profile.full_name || 'User',
+        email: emailsMap[profile.id] || profile.id, // Use ID as fallback
+        full_name: profile.full_name || null,
         mfa_enrolled: profile.mfa_enrolled || false,
         mfa_required: profile.mfa_required || false,
         created_at: profile.created_at || new Date().toISOString(),
         is_admin: profile.is_admin || false,
-        role: role as UserRole
+        role: role
       };
     });
   } catch (error) {
