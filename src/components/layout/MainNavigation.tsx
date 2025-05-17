@@ -97,9 +97,12 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
   });
   
   // Log navigation items that will be shown to the user
-  const visibleItems = navigationItems.filter(item => 
-    item.showForRoles.includes(role) && hasPermission(item.permission)
-  );
+  const visibleItems = navigationItems.filter(item => {
+    const hasRequiredRole = item.showForRoles.includes(role);
+    const hasRequiredPermission = hasPermission(item.permission);
+    console.log(`Menu item ${item.label}: has role ${hasRequiredRole}, has permission ${hasRequiredPermission}`);
+    return hasRequiredRole && hasRequiredPermission;
+  });
   console.log("Visible navigation items:", visibleItems);
   
   return (
@@ -107,12 +110,13 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
       <SidebarGroupContent>
         <SidebarMenu>
           {navigationItems
-            .filter(item => 
+            .filter(item => {
               // Only show items for the current user's role
-              item.showForRoles.includes(role) && 
+              const hasRequiredRole = item.showForRoles.includes(role);
               // Check if user has permission
-              hasPermission(item.permission)
-            )
+              const hasRequiredPermission = hasPermission(item.permission);
+              return hasRequiredRole && hasRequiredPermission;
+            })
             .map(({ path, icon: Icon, label }) => (
               <SidebarMenuItem key={path}>
                 <SidebarMenuButton asChild isActive={isActive(path)} className="hover:bg-vision-dark-800">

@@ -29,8 +29,10 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
     case 'view-cameras:all':
       return roleHierarchy[userRole] >= roleHierarchy['admin'];
     
-    // Footage permissions - only operators and above can view footage
+    // Footage permissions - explicitly check for operator role and above
     case 'view-footage:assigned':
+      // This is the critical fix - ensure operators can view footage
+      console.log(`Checking view-footage:assigned for ${userRole}, result: ${roleHierarchy[userRole] >= roleHierarchy['operator']}`);
       return roleHierarchy[userRole] >= roleHierarchy['operator']; 
     case 'view-footage:all':
       return roleHierarchy[userRole] >= roleHierarchy['operator'];
@@ -132,3 +134,4 @@ export type Permission =
   | 'manage-ssl-certificates'
   | 'manage-webhooks'
   | 'system-updates';
+
