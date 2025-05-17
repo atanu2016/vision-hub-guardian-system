@@ -21,13 +21,19 @@ export async function logUserActivity(
       
       // Get user role if not provided
       if (!actorRole && sessionData?.session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
+        // Query the user_roles table instead of profiles table
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
           .select('role')
-          .eq('id', sessionData.session.user.id)
+          .eq('user_id', sessionData.session.user.id)
           .single();
         
-        actorRole = profile?.role || 'user';
+        if (roleError || !roleData) {
+          console.error('Error fetching role:', roleError);
+          actorRole = 'user';
+        } else {
+          actorRole = roleData.role as UserRole;
+        }
       }
     }
 
@@ -97,13 +103,19 @@ export async function logAccessAttempt(
       
       // Get user role if not provided
       if (!userRole && sessionData?.session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
+        // Query the user_roles table instead of profiles table
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
           .select('role')
-          .eq('id', sessionData.session.user.id)
+          .eq('user_id', sessionData.session.user.id)
           .single();
         
-        userRole = profile?.role || 'user';
+        if (roleError || !roleData) {
+          console.error('Error fetching role:', roleError);
+          userRole = 'user';
+        } else {
+          userRole = roleData.role as UserRole;
+        }
       }
     }
 
