@@ -4,6 +4,7 @@ import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -12,6 +13,8 @@ interface AppLayoutProps {
 }
 
 const AppLayout = ({ children, className, fullWidth = false }: AppLayoutProps) => {
+  const isMobile = useIsMobile();
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full overflow-hidden bg-background dark:bg-vision-dark-950">

@@ -2,9 +2,12 @@
 import { SidebarFooter as FooterComponent } from "@/components/ui/sidebar";
 import { LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
+import { useSidebar } from "@/components/ui/sidebar";
 
 const SidebarFooter = () => {
   const { signOut } = useAuth();
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
 
   return (
     <FooterComponent className="p-4">
@@ -12,9 +15,10 @@ const SidebarFooter = () => {
         <button 
           onClick={() => signOut()}
           className="flex items-center gap-2 w-full px-2 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-vision-dark-800 rounded transition duration-200"
+          title="Sign Out"
         >
           <LogOut size={18} />
-          <span>Sign Out</span>
+          {!isCollapsed && <span>Sign Out</span>}
         </button>
       </div>
     </FooterComponent>
