@@ -45,7 +45,7 @@ function App() {
               <Route path="/recordings" element={<ProtectedRoute requiredPermission="view-footage:assigned"><Recordings /></ProtectedRoute>} />
               
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-              <Route path="/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute requiredPermission="view-profile"><ProfileSettings /></ProtectedRoute>} />
               
               {/* Settings routes - most require admin permissions */}
               <Route path="/settings" element={<ProtectedRoute requiredPermission="configure-camera-settings"><Settings /></ProtectedRoute>} />

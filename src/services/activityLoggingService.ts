@@ -18,13 +18,24 @@ export async function logUserActivity(
     if (!actorEmail || !actorRole) {
       const { data: sessionData } = await supabase.auth.getSession();
       actorEmail = sessionData?.session?.user?.email || 'Unknown';
+      
+      // Get user role if not provided
+      if (!actorRole && sessionData?.session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', sessionData.session.user.id)
+          .single();
+        
+        actorRole = profile?.role || 'user';
+      }
     }
 
     // Insert log entry
     const { error } = await supabase.from('system_logs').insert({
       level: 'info',
       source: 'user_management',
-      message: `${action} by ${actorEmail}`,
+      message: `${action} by ${actorEmail} (${actorRole || 'Unknown role'})`,
       details: `${details}${affectedUserId ? ` (User ID: ${affectedUserId})` : ''}`,
       timestamp: new Date().toISOString()
     });
@@ -66,5 +77,52 @@ export async function logRoleChange(
     
   } catch (error) {
     console.error('Error logging role change:', error);
+  }
+}
+
+/**
+ * Log access attempts
+ */
+export async function logAccessAttempt(
+  page: string,
+  success: boolean,
+  userEmail?: string,
+  userRole?: UserRole
+): Promise<void> {
+  try {
+    // Get current user if not provided
+    if (!userEmail || !userRole) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      userEmail = sessionData?.session?.user?.email || 'Unknown';
+      
+      // Get user role if not provided
+      if (!userRole && sessionData?.session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', sessionData.session.user.id)
+          .single();
+        
+        userRole = profile?.role || 'user';
+      }
+    }
+
+    const action = success ? 'Access granted' : 'Access denied';
+    const details = `${action} to ${page}`;
+    
+    // Insert log entry
+    const { error } = await supabase.from('system_logs').insert({
+      level: success ? 'info' : 'warning',
+      source: 'access_control',
+      message: `${action} for ${userEmail} (${userRole || 'Unknown role'})`,
+      details,
+      timestamp: new Date().toISOString()
+    });
+    
+    if (error) {
+      console.error('Error logging access attempt:', error);
+    }
+  } catch (error) {
+    console.error('Failed to log access attempt:', error);
   }
 }
