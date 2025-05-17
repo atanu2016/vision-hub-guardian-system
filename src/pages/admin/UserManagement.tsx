@@ -5,11 +5,11 @@ import { ErrorAlert } from "@/components/admin/ErrorAlert";
 import { useState } from "react";
 import { useUserManagement } from "@/hooks/useUserManagement";
 import AppLayout from "@/components/layout/AppLayout";
-import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Camera } from "lucide-react";
 import CameraAssignmentModal from "@/components/admin/CameraAssignmentModal";
+import { Button } from "@/components/ui/button";
 
 const UserManagement = () => {
   const { isSuperAdmin } = useAuth();
@@ -60,19 +60,6 @@ const UserManagement = () => {
         toggleMfaRequirement={handleToggleMfaRequirement}
         revokeMfaEnrollment={handleRevokeMfaEnrollment}
         deleteUser={handleDeleteUser}
-        actionButtons={(userId, userName) => (
-          hasPermission('assign-cameras') && (
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={() => handleCameraAssignmentClick(userId, userName || 'User')}
-              className="ml-2"
-            >
-              <Camera className="h-4 w-4 mr-1" />
-              Assign Cameras
-            </Button>
-          )
-        )}
       />
 
       {selectedUserId && (
@@ -82,6 +69,20 @@ const UserManagement = () => {
           userName={selectedUserName}
           onClose={handleCameraAssignmentClose}
         />
+      )}
+
+      {/* Add assign cameras button outside of the table component */}
+      {hasPermission('assign-cameras') && (
+        <div className="flex justify-end mt-4">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowCameraAssignment(true)}
+            className="ml-2"
+          >
+            <Camera className="h-4 w-4 mr-1" />
+            Assign Cameras to Users
+          </Button>
+        </div>
       )}
     </AppLayout>
   );
