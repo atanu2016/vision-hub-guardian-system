@@ -1,6 +1,5 @@
 
 import {
-  BrowserRouter,
   Routes,
   Route,
 } from "react-router-dom";
@@ -29,38 +28,36 @@ const queryClient = new QueryClient();
 
 function App() {
   return (
-    <BrowserRouter>
-      <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-        <Toaster position="top-right" richColors />
-        <AuthProvider>
-          <QueryClientProvider client={queryClient}>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/cameras" element={<ProtectedRoute><Cameras /></ProtectedRoute>} />
-              <Route path="/cameras/:id" element={<ProtectedRoute><CameraDetail /></ProtectedRoute>} />
-              <Route path="/live" element={<ProtectedRoute><LiveView /></ProtectedRoute>} />
-              <Route path="/recordings" element={<ProtectedRoute><Recordings /></ProtectedRoute>} />
-              <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-              <Route path="/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/storage" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/recordings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/alerts" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/webhooks" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/advanced" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/database" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/logs" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/system" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/admin" element={<ProtectedRoute adminRequired><Admin /></ProtectedRoute>} />
-              <Route path="/admin/users" element={<ProtectedRoute adminRequired><UserManagement /></ProtectedRoute>} />
-              <Route path="/admin/users/create" element={<ProtectedRoute adminRequired><CreateUser /></ProtectedRoute>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </QueryClientProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </BrowserRouter>
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <Toaster position="top-right" richColors />
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/cameras" element={<ProtectedRoute><Cameras /></ProtectedRoute>} />
+            <Route path="/cameras/:id" element={<ProtectedRoute><CameraDetail /></ProtectedRoute>} />
+            <Route path="/live" element={<ProtectedRoute><LiveView /></ProtectedRoute>} />
+            <Route path="/recordings" element={<ProtectedRoute><Recordings /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings/storage" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings/recordings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings/alerts" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings/webhooks" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings/advanced" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings/database" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings/logs" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings/system" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute adminRequired={true}><Admin /></ProtectedRoute>} />
+            <Route path="/admin/users" element={<ProtectedRoute adminRequired={true}><UserManagement /></ProtectedRoute>} />
+            <Route path="/admin/users/create" element={<ProtectedRoute adminRequired={true}><CreateUser /></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </QueryClientProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

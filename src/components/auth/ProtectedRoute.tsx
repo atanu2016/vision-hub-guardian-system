@@ -5,10 +5,10 @@ import { Loader2 } from 'lucide-react';
 
 type ProtectedRouteProps = {
   children: React.ReactNode;
-  requireAdmin?: boolean;
+  adminRequired?: boolean;  // Make sure this property exists in the type
 };
 
-const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ children, adminRequired = false }: ProtectedRouteProps) => {
   const { user, isLoading, isAdmin } = useAuth();
   const location = useLocation();
 
@@ -28,7 +28,7 @@ const ProtectedRoute = ({ children, requireAdmin = false }: ProtectedRouteProps)
   }
 
   // If admin access is required but user is not an admin, redirect to home
-  if (requireAdmin && !isAdmin) {
+  if (adminRequired && !isAdmin) {
     console.log("Protected route: Admin access required but user is not admin, redirecting to /");
     return <Navigate to="/" replace />;
   }
