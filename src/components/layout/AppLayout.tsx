@@ -5,6 +5,7 @@ import TopBar from "./TopBar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useSidebar } from "@/components/ui/sidebar";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -14,12 +15,17 @@ interface AppLayoutProps {
 
 const AppLayout = ({ children, className, fullWidth = false }: AppLayoutProps) => {
   const isMobile = useIsMobile();
+  const { state } = useSidebar();
+  const sidebarCollapsed = state === "collapsed";
 
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full overflow-hidden bg-background dark:bg-vision-dark-950">
         <Sidebar />
-        <div className="flex flex-col flex-1 w-full">
+        <div className={cn(
+          "flex flex-col flex-1 w-full transition-all duration-200", 
+          !isMobile && (sidebarCollapsed ? "md:ml-[3rem]" : "md:ml-[16rem]")
+        )}>
           <TopBar />
           <ScrollArea className="flex-1 w-full h-[calc(100vh-64px)]">
             <main className={cn(

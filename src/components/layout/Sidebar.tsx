@@ -21,7 +21,10 @@ const Sidebar = () => {
   };
 
   return (
-    <SidebarComponent className="border-r border-border dark:border-vision-dark-800">
+    <SidebarComponent 
+      className="border-r border-border dark:border-vision-dark-800 fixed h-full z-40"
+      collapsible="icon"
+    >
       <SidebarHeader />
       
       <SidebarContent className="flex flex-col flex-grow">
