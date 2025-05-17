@@ -32,6 +32,11 @@ export async function deleteUser(userId: string): Promise<void> {
       }
     }
 
+    // Prevent self-deletion
+    if (userId === sessionData?.session?.user?.id) {
+      throw new Error('You cannot delete your own account');
+    }
+
     // Get the user's data for logging
     const { data: userData } = await supabase
       .from('profiles')
@@ -49,6 +54,11 @@ export async function deleteUser(userId: string): Promise<void> {
     const userRole = userRoleData?.role || 'unknown';
 
     console.log(`[DELETE-USER] Attempting to delete user: ${userId}, role: ${userRole}`);
+
+    // Check if current user can delete the target user based on roles
+    if ((userRole === 'admin' || userRole === 'superadmin') && actorRole !== 'superadmin') {
+      throw new Error('Only superadmins can delete admin users');
+    }
 
     // Call our edge function to delete the user
     const { data, error } = await supabase.functions.invoke('admin-delete-user', {

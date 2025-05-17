@@ -33,7 +33,7 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
   switch (permission) {
     // User level permissions - available to all roles
     case 'view-dashboard':
-      return roleHierarchy[userRole] >= roleHierarchy['admin'];
+      return roleHierarchy[userRole] >= roleHierarchy['user'];
     case 'view-profile':
     case 'manage-mfa-enrollment':
     case 'manage-profile-settings':

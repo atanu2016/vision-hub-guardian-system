@@ -1,27 +1,9 @@
 
+# A string used to distinguish different Supabase projects on the same host. Defaults to the project ID.
 project_id = "csmsqglfbycodrqipbca"
-
-[api]
-enabled = true
-port = 54321
-schemas = ["public", "storage", "graphql_public"]
-
-[db]
-port = 54322
-shadow_port = 54320
-major_version = 15
-
-[studio]
-enabled = true
-port = 54323
-api_url = "http://localhost"
+services = ["postgres", "api", "functions"]
+modules = []
 
 [functions]
-[functions.admin-create-user]
+[functions.admin-delete-user]
 verify_jwt = true
-[functions.get-all-users]
-verify_jwt = true
-
-[auth]
-port = 54324
-uri = "postgres://postgres:postgres@localhost:54322/postgres"
