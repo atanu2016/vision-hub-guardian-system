@@ -25,6 +25,7 @@ export function useProfileSettings() {
 
   const [avatarPreview, setAvatarPreview] = useState<string | undefined>(undefined);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Update form data when user and profile are loaded
   useEffect(() => {
@@ -34,6 +35,9 @@ export function useProfileSettings() {
         fullName: profile.full_name || "",
         email: user.email || ""
       }));
+      setIsLoading(false); // Added to properly track loading state
+    } else {
+      setIsLoading(true);
     }
   }, [user, profile]);
 
@@ -146,6 +150,7 @@ export function useProfileSettings() {
     role,
     formData,
     avatarPreview,
+    isLoading,
     handleInputChange,
     handleAvatarChange,
     handleProfileUpdate,

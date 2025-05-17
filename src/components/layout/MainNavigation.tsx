@@ -39,7 +39,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
       path: "/recordings", 
       icon: FileText, 
       label: "Recordings", 
-      permission: 'view-footage:assigned' as Permission 
+      permission: 'view-footage:assigned' as Permission // This permission is now granted to all users
     },
     { 
       path: "/cameras", 
@@ -64,6 +64,12 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
       permission: 'manage-users:lower' as Permission
     });
   }
+
+  console.log("Current user role:", role);
+  console.log("Navigation permissions check results:");
+  navigationItems.forEach(item => {
+    console.log(`${item.label}: ${hasPermission(item.permission) ? 'visible' : 'hidden'}`);
+  });
   
   return (
     <SidebarGroup>

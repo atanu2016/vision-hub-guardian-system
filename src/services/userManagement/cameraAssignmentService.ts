@@ -9,16 +9,22 @@ import { logUserActivity } from '../activityLoggingService';
  */
 export async function assignCamerasToUser(userId: string, cameraIds: string[]): Promise<boolean> {
   try {
+    console.log(`Assigning cameras to user ${userId}: ${JSON.stringify(cameraIds)}`);
+    
     // First, get current assignments to determine which ones to remove
     const { data: currentAssignments, error: fetchError } = await supabase
       .from('user_camera_access')
       .select('camera_id')
       .eq('user_id', userId);
       
-    if (fetchError) throw fetchError;
+    if (fetchError) {
+      console.error("Error fetching current assignments:", fetchError);
+      throw fetchError;
+    }
     
     // Get assigned camera IDs
     const currentCameraIds = currentAssignments?.map(a => a.camera_id) || [];
+    console.log(`Current assignments: ${JSON.stringify(currentCameraIds)}`);
     
     // Get actor information for logging
     const { data: sessionData } = await supabase.auth.getSession();
@@ -28,6 +34,9 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     const camerasToRemove = currentCameraIds.filter(id => !cameraIds.includes(id));
     const camerasToAdd = cameraIds.filter(id => !currentCameraIds.includes(id));
     
+    console.log(`Cameras to remove: ${JSON.stringify(camerasToRemove)}`);
+    console.log(`Cameras to add: ${JSON.stringify(camerasToAdd)}`);
+    
     // Remove camera assignments that are no longer in the list
     if (camerasToRemove.length > 0) {
       const { error: removeError } = await supabase
@@ -36,7 +45,10 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
         .eq('user_id', userId)
         .in('camera_id', camerasToRemove);
         
-      if (removeError) throw removeError;
+      if (removeError) {
+        console.error("Error removing camera assignments:", removeError);
+        throw removeError;
+      }
     }
     
     // Add new camera assignments
@@ -51,7 +63,10 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
         .from('user_camera_access')
         .insert(assignmentsToInsert);
         
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error("Error inserting camera assignments:", insertError);
+        throw insertError;
+      }
     }
     
     // Log the activity
@@ -76,14 +91,20 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
  */
 export async function getUserAssignedCameras(userId: string): Promise<string[]> {
   try {
+    console.log(`Getting assigned cameras for user: ${userId}`);
     const { data, error } = await supabase
       .from('user_camera_access')
       .select('camera_id')
       .eq('user_id', userId);
       
-    if (error) throw error;
+    if (error) {
+      console.error("Error fetching user assigned cameras:", error);
+      throw error;
+    }
     
-    return data?.map(item => item.camera_id) || [];
+    const cameraIds = data?.map(item => item.camera_id) || [];
+    console.log(`Found ${cameraIds.length} assigned cameras`);
+    return cameraIds;
   } catch (error) {
     console.error('Error fetching user assigned cameras:', error);
     return [];
@@ -95,13 +116,20 @@ export async function getUserAssignedCameras(userId: string): Promise<string[]> 
  */
 export async function getAccessibleCameras(userId: string, userRole: string): Promise<Camera[]> {
   try {
+    console.log(`Getting accessible cameras for user: ${userId}, role: ${userRole}`);
+    
     // If admin or superadmin, return all cameras
     if (userRole === 'admin' || userRole === 'superadmin') {
       const { data, error } = await supabase
         .from('cameras')
         .select('*');
         
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching all cameras:", error);
+        throw error;
+      }
+      
+      console.log(`Found ${data.length} cameras for admin/superadmin`);
       
       // Transform database fields to match Camera type
       return data.map(cam => ({
@@ -130,6 +158,7 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
     const assignedCameraIds = await getUserAssignedCameras(userId);
     
     if (assignedCameraIds.length === 0) {
+      console.log("No assigned cameras found for user");
       return [];
     }
     
@@ -138,7 +167,12 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
       .select('*')
       .in('id', assignedCameraIds);
       
-    if (error) throw error;
+    if (error) {
+      console.error("Error fetching assigned cameras:", error);
+      throw error;
+    }
+    
+    console.log(`Found ${data.length} assigned cameras for user/operator`);
     
     // Transform database fields to match Camera type
     return data.map(cam => ({
