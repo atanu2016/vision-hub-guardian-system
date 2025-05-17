@@ -19,7 +19,6 @@ export type Permission =
   | 'delete-footage'
   | 'access-settings'
   | 'backup-restore'
-  // Adding the missing permissions:
   | 'view-dashboard'
   | 'manage-profile-settings'
   | 'configure-camera-settings'
@@ -29,89 +28,77 @@ export type Permission =
   | 'access-logs'
   | 'system-migration';
 
-type RolePermissionsMap = {
-  [R in UserRole]: Permission[];
-};
+// Cache permissions in memory for faster lookups
+const permissionCache = new Map<string, boolean>();
+const cacheTimeout = 60000; // 1 minute cache timeout
+const cacheTimestamps = new Map<string, number>();
 
-// Define permissions for each role
-const rolePermissions: RolePermissionsMap = {
+// Define permissions for each role (moved outside of function for better performance)
+const rolePermissions = {
   superadmin: [
-    'view-profile',
-    'edit-profile',
-    'view-admin-panel',
-    'manage-users:all',
-    'assign-roles',
-    'view-logs',
-    'view-system-stats',
-    'view-cameras:all',
-    'view-footage:all',
-    'manage-cameras',
-    'assign-cameras',
-    'delete-footage',
-    'access-settings',
-    'backup-restore',
-    // Add missing permissions for superadmin
-    'view-dashboard',
-    'manage-profile-settings',
-    'configure-camera-settings',
-    'configure-storage',
-    'configure-global-policies',
-    'manage-system',
-    'access-logs',
-    'system-migration'
+    'view-profile', 'edit-profile', 'view-admin-panel', 'manage-users:all',
+    'assign-roles', 'view-logs', 'view-system-stats', 'view-cameras:all',
+    'view-footage:all', 'manage-cameras', 'assign-cameras', 'delete-footage',
+    'access-settings', 'backup-restore', 'view-dashboard', 'manage-profile-settings',
+    'configure-camera-settings', 'configure-storage', 'configure-global-policies',
+    'manage-system', 'access-logs', 'system-migration'
   ],
   admin: [
-    'view-profile',
-    'edit-profile',
-    'view-admin-panel',
-    'manage-users:lower',
-    'view-logs',
-    'view-system-stats',
-    'view-cameras:all',
-    'view-footage:all',
-    'manage-cameras',
-    'assign-cameras',
-    'delete-footage',
-    'access-settings',
-    // Add missing permissions for admin
-    'view-dashboard',
-    'manage-profile-settings',
-    'configure-camera-settings',
-    'configure-storage',
-    'configure-global-policies',
-    'manage-system',
-    'access-logs',
+    'view-profile', 'edit-profile', 'view-admin-panel', 'manage-users:lower',
+    'view-logs', 'view-system-stats', 'view-cameras:all', 'view-footage:all',
+    'manage-cameras', 'assign-cameras', 'delete-footage', 'access-settings',
+    'view-dashboard', 'manage-profile-settings', 'configure-camera-settings',
+    'configure-storage', 'configure-global-policies', 'manage-system', 'access-logs'
   ],
   observer: [
-    'view-profile',
-    'edit-profile',
-    'view-cameras:assigned',
-    'view-footage:assigned',
+    'view-profile', 'edit-profile', 'view-cameras:assigned', 'view-footage:assigned',
     'manage-profile-settings'
   ],
   user: [
-    'view-profile',
-    'edit-profile',
-    'manage-profile-settings'
+    'view-profile', 'edit-profile', 'manage-profile-settings'
   ]
 };
 
-// Check if a role has a specific permission
+// Map critical observer permissions for fast access path
+const observerCriticalPermissions = new Set([
+  'view-footage:assigned',
+  'view-cameras:assigned'
+]);
+
+// Fast permission check with caching
 export const hasPermission = (role: UserRole, permission: Permission): boolean => {
-  // Special handling for observer role to ensure it works
-  if (role === 'observer') {
-    console.log(`[Permissions] Checking permission ${permission} for observer role`);
-    return rolePermissions.observer.includes(permission);
+  // Generate cache key
+  const cacheKey = `${role}:${permission}`;
+  const now = Date.now();
+  
+  // Fast path for critical observer permissions
+  if (role === 'observer' && observerCriticalPermissions.has(permission)) {
+    return true;
   }
   
-  return rolePermissions[role]?.includes(permission) || false;
+  // Check cache first
+  if (permissionCache.has(cacheKey)) {
+    const timestamp = cacheTimestamps.get(cacheKey) || 0;
+    if (now - timestamp < cacheTimeout) {
+      return permissionCache.get(cacheKey) || false;
+    }
+  }
+  
+  // Calculate permission value
+  const hasPermission = rolePermissions[role]?.includes(permission) || false;
+  
+  // Update cache
+  permissionCache.set(cacheKey, hasPermission);
+  cacheTimestamps.set(cacheKey, now);
+  
+  return hasPermission;
 };
 
-// Check if a user can manage another user based on roles
+// Role management hierarchical helper
 export const canManageRole = (managerRole: UserRole, targetRole: UserRole): boolean => {
   if (!managerRole || !targetRole) return false;
 
-  // Role hierarchy
+  // Role hierarchy - using a simple object for faster lookups
   const roleHierarchy: { [key in UserRole]: number } = {
     superadmin: 3,
     admin: 2,
@@ -122,3 +109,10 @@ export const canManageRole = (managerRole: UserRole, targetRole: UserRole): bool
   // Return true if manager's role is higher in hierarchy
   return roleHierarchy[managerRole] > roleHierarchy[targetRole];
 };
+
+// Export optimized utility functions
+export const clearPermissionCache = () => {
+  permissionCache.clear();
+  cacheTimestamps.clear();
+};
+

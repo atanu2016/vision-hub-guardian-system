@@ -1,50 +1,51 @@
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { hasPermission as checkPermission, canManageRole } from '@/utils/permissionUtils';
 import { useRoleSubscription } from './useRoleSubscription';
 import type { Permission } from '@/utils/permissionUtils';
-import { useOperatorPermissions } from './useOperatorPermissions';
 import type { UsePermissionsReturn } from './types';
 import type { UserRole } from '@/contexts/auth/types';
 
+// Permission check result cache
+const permissionResultCache = new Map<string, boolean>();
+
 /**
- * Core hook for checking permissions with optimized performance
+ * Optimized core hook for checking permissions with improved performance
  */
 export function usePermissionsCore(): UsePermissionsReturn {
-  // Get current user role from context
+  // Get current user role from optimized subscription
   const { role, authRole } = useRoleSubscription();
   
-  // Get optimized operator permissions
-  const { isOperatorFastPathEnabled } = useOperatorPermissions(role, authRole);
-  
-  // Define the permissions checking function
-  const hasPermission = useMemo(() => {
-    return (permission: Permission): boolean => {
-      console.log(`[Permissions] Checking permission: ${permission} for role: ${role}`);
-      
-      // First check if we can use the fast path for critical operator permissions
-      if (isOperatorFastPathEnabled(permission)) {
-        console.log(`[Permissions] Fast path enabled for ${permission}, granting permission`);
-        return true;
-      }
-      
-      // For all other cases, use the full permission check
-      const hasPermission = checkPermission(role, permission);
-      console.log(`[Permissions] Permission ${permission} for role ${role}: ${hasPermission ? 'granted' : 'denied'}`);
-      return hasPermission;
-    };
-  }, [role, isOperatorFastPathEnabled]);
+  // Define the permissions checking function - memoized for performance
+  const hasPermission = useCallback((permission: Permission): boolean => {
+    // Create cache key combining role and permission
+    const cacheKey = `${role}:${permission}`;
+    
+    // Check cache first for ultra-fast response
+    if (permissionResultCache.has(cacheKey)) {
+      return permissionResultCache.get(cacheKey) || false;
+    }
+    
+    // If not in cache, compute the permission
+    const result = checkPermission(role, permission);
+    
+    // Cache the result for future fast lookups
+    permissionResultCache.set(cacheKey, result);
+    
+    return result;
+  }, [role]);
 
-  // Add canManageRole function
-  const canManageRoleFunc = (targetRole: UserRole): boolean => {
+  // Fast role management function
+  const canManageRoleFunc = useCallback((targetRole: UserRole): boolean => {
     return canManageRole(role, targetRole);
-  };
+  }, [role]);
 
-  return {
+  // Return memoized values to prevent unnecessary re-renders
+  return useMemo(() => ({
     hasPermission,
     canManageRole: canManageRoleFunc,
     role,
     currentRole: role,
     authRole
-  };
+  }), [hasPermission, canManageRoleFunc, role, authRole]);
 }
