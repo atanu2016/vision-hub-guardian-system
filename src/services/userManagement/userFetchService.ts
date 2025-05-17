@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import type { UserData, UserRole } from "@/types/admin";
 
 export interface User {
   id: string;
@@ -7,11 +8,11 @@ export interface User {
   full_name?: string;
   role: string;
   mfa_required?: boolean;
-  mfa_enabled?: boolean;
+  mfa_enrolled?: boolean;
   created_at?: string;
 }
 
-export async function fetchAllUsers(): Promise<User[]> {
+export async function fetchAllUsers(): Promise<UserData[]> {
   try {
     console.log("Fetching all users...");
     
@@ -61,28 +62,31 @@ export async function fetchAllUsers(): Promise<User[]> {
       const roleAssignment = roles.find(r => r.user_id === user.id);
       
       // Determine role from multiple sources for reliability
-      let role = 'user'; // Default role
+      let role = 'user' as UserRole; // Default role
       
       if (roleAssignment?.role) {
         // Primary source: user_roles table
-        role = roleAssignment.role;
+        role = roleAssignment.role as UserRole;
       } else if (user.user_metadata?.role) {
         // Secondary source: user metadata
-        role = user.user_metadata.role;
+        role = user.user_metadata.role as UserRole;
       } else if (profile?.is_admin) {
         // Fallback: profile.is_admin flag
-        role = 'admin';
+        role = 'admin' as UserRole;
       }
       
-      return {
+      // Map directly to UserData interface
+      const userData: UserData = {
         id: user.id,
         email: user.email || "No email",
         full_name: profile?.full_name || user.user_metadata?.full_name || "Unknown",
         role: role,
-        mfa_required: profile?.mfa_required,
-        mfa_enabled: profile?.mfa_enrolled,
-        created_at: user.created_at
+        mfa_required: profile?.mfa_required || false,
+        mfa_enrolled: profile?.mfa_enrolled || false,
+        last_sign_in: user.last_sign_in_at
       };
+      
+      return userData;
     });
     
   } catch (error) {

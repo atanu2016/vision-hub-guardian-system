@@ -43,7 +43,7 @@ serve(async (req) => {
       });
     }
 
-    // Map users with their email addresses
+    // Map users with their email addresses and other needed data
     const users = usersData.users.map(user => ({
       id: user.id,
       email: user.email,
