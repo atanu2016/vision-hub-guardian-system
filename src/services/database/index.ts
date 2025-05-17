@@ -5,7 +5,7 @@
 export * from './baseService';
 
 // Entity-specific services
-export * from './cameraService';
+export * from './camera';
 export * from './storageService';
 export * from './recordingService';
 export * from './alertService';
