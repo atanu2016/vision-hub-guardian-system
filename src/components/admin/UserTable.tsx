@@ -13,6 +13,7 @@ interface UserTableProps {
   currentUserId?: string;
   updateUserRole: (userId: string, newRole: UserRole) => Promise<void>;
   toggleMfaRequirement: (userId: string, required: boolean) => Promise<void>;
+  revokeMfaEnrollment?: (userId: string) => Promise<void>;
   deleteUser?: (userId: string) => Promise<void>;
   loading: boolean;
 }
@@ -22,6 +23,7 @@ export function UserTable({
   currentUserId, 
   updateUserRole, 
   toggleMfaRequirement,
+  revokeMfaEnrollment,
   deleteUser,
   loading 
 }: UserTableProps) {
@@ -80,8 +82,10 @@ export function UserTable({
               <TableCell>
                 <MfaToggle 
                   userId={user.id} 
-                  isRequired={user.mfa_required} 
-                  onToggle={toggleMfaRequirement} 
+                  isRequired={user.mfa_required}
+                  isEnrolled={user.mfa_enrolled}
+                  onToggle={toggleMfaRequirement}
+                  onRevoke={revokeMfaEnrollment}
                 />
               </TableCell>
               <TableCell className="text-right">

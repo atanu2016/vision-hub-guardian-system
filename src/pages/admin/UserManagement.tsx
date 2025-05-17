@@ -6,7 +6,9 @@ import { Shield, UserPlus, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserTable } from '@/components/admin/UserTable';
 import { fetchUsers } from '@/services/userManagement/userFetchService';
-import { updateUserRole, toggleMfaRequirement, deleteUser } from '@/services/userService';
+import { updateUserRole } from '@/services/userManagement/userRoleService';
+import { toggleMfaRequirement, revokeMfaEnrollment } from '@/services/userManagement/userMfaService';
+import { deleteUser } from '@/services/userManagement/userDeleteService';
 import type { UserData, UserRole } from '@/types/admin';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -70,6 +72,19 @@ export default function UserManagement() {
       toast.success(`MFA ${required ? 'required' : 'optional'} for user`);
     } catch (error: any) {
       toast.error(error?.message || 'Failed to update MFA requirement');
+    }
+  }
+  
+  async function handleRevokeMfaEnrollment(userId: string) {
+    try {
+      await revokeMfaEnrollment(userId);
+      // Update local state
+      setUsers(users.map(u => 
+        u.id === userId ? { ...u, mfa_enrolled: false } : u
+      ));
+      toast.success('MFA enrollment revoked. User will need to re-enroll.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to revoke MFA enrollment');
     }
   }
   
@@ -156,6 +171,7 @@ export default function UserManagement() {
           currentUserId={user?.id}
           updateUserRole={handleUpdateUserRole}
           toggleMfaRequirement={handleToggleMfaRequirement}
+          revokeMfaEnrollment={handleRevokeMfaEnrollment}
           deleteUser={handleDeleteUser}
           loading={loading}
         />

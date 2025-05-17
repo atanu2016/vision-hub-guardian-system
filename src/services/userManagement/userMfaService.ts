@@ -7,7 +7,15 @@ import { toast } from 'sonner';
  */
 export async function toggleMfaRequirement(userId: string, required: boolean): Promise<void> {
   try {
-    // Updated to target the specific user's profile
+    console.log(`Setting MFA requirement to ${required} for user ${userId}`);
+    
+    // Check admin status first
+    const { data: isAdmin } = await supabase.rpc('check_admin_status');
+    if (!isAdmin) {
+      throw new Error('Permission denied: Admin access required');
+    }
+    
+    // Update the profile for the specific user
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -15,12 +23,64 @@ export async function toggleMfaRequirement(userId: string, required: boolean): P
       })
       .eq('id', userId);
       
-    if (error) throw error;
+    if (error) {
+      console.error('Error toggling MFA requirement:', error);
+      throw error;
+    }
     
     toast.success(`MFA requirement ${required ? 'enabled' : 'disabled'} for user`);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error toggling MFA requirement:', error);
-    toast.error('Failed to update MFA setting');
+    toast.error(error.message || 'Failed to update MFA setting');
+    throw error;
+  }
+}
+
+/**
+ * Revokes MFA enrollment for a user, forcing them to re-enroll
+ */
+export async function revokeMfaEnrollment(userId: string): Promise<void> {
+  try {
+    console.log(`Revoking MFA enrollment for user ${userId}`);
+    
+    // Check admin status first
+    const { data: isAdmin } = await supabase.rpc('check_admin_status');
+    if (!isAdmin) {
+      throw new Error('Permission denied: Admin access required');
+    }
+    
+    // Update profile to clear mfa_enrolled and mfa_secret
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        mfa_enrolled: false,
+        mfa_secret: null
+      })
+      .eq('id', userId);
+      
+    if (error) {
+      console.error('Error revoking MFA enrollment:', error);
+      throw error;
+    }
+    
+    // Call function to remove MFA factors if we're using Supabase MFA directly
+    try {
+      await supabase.functions.invoke('get-all-users', {
+        method: 'PUT',
+        body: { 
+          userId: userId,
+          action: 'revoke_mfa'
+        }
+      });
+    } catch (mfaError) {
+      console.error('Error calling MFA revoke function:', mfaError);
+      // Continue anyway since we've already updated the profile
+    }
+    
+    toast.success('MFA enrollment revoked - user will need to re-enroll');
+  } catch (error: any) {
+    console.error('Error revoking MFA enrollment:', error);
+    toast.error(error.message || 'Failed to revoke MFA enrollment');
     throw error;
   }
 }

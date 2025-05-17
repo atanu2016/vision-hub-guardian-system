@@ -9,12 +9,30 @@ export async function deleteUser(userId: string): Promise<void> {
   try {
     console.log("Deleting user:", userId);
     
-    // Delete user using admin API
-    const { error } = await supabase.auth.admin.deleteUser(userId);
+    // First check if we have admin permissions
+    const { data: isAdmin } = await supabase.rpc('check_admin_status');
+    if (!isAdmin) {
+      throw new Error('Permission denied: Admin access required');
+    }
+
+    // Delete user's profile first (this will automatically trigger cascading deletes)
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', userId);
+      
+    if (profileError) {
+      console.error('Error deleting user profile:', profileError);
+      throw new Error('Failed to delete user profile');
+    }
+
+    // Then use edge function to delete user from auth database
+    const { error } = await supabase.functions.invoke('get-all-users', {
+      method: 'DELETE',
+      body: { userId: userId }
+    });
     
     if (error) throw error;
-    
-    // Note: Due to cascade delete settings, the user's profile and roles will be automatically deleted
     
     toast.success('User deleted successfully');
   } catch (error: any) {

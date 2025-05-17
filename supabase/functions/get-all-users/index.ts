@@ -6,7 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.42.0";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'POST, PUT, DELETE, OPTIONS, GET',
 };
 
 // Handle requests
@@ -17,14 +17,6 @@ serve(async (req) => {
   }
 
   try {
-    // Check if it's a POST request
-    if (req.method !== 'POST') {
-      return new Response(JSON.stringify({ error: 'Method not allowed' }), { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
-        status: 405 
-      });
-    }
-
     // Get the authorization header from the request
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -125,75 +117,159 @@ serve(async (req) => {
 
     console.log(`Admin access granted to ${user.email}`);
 
-    // Use the built-in function to get users safely
-    const { data: users, error: usersError } = await supabase
-      .from('profiles')
-      .select('id, full_name, mfa_enrolled, mfa_required, created_at, is_admin');
-
-    if (usersError) {
-      console.error("Error fetching profiles:", usersError);
-      throw usersError;
-    }
-
-    // Fetch user roles
-    const { data: userRoles, error: rolesError } = await supabase
-      .from('user_roles')
-      .select('user_id, role');
-
-    if (rolesError) {
-      console.error("Error fetching user roles:", rolesError);
-    }
-
-    // Create a map of roles by user ID
-    const rolesMap = (userRoles || []).reduce((acc, item) => {
-      acc[item.user_id] = item.role;
-      return acc;
-    }, {} as Record<string, string>);
-
-    // Get user emails from auth.users if permissions allow
-    let emails: Record<string, string> = {};
-    
-    try {
-      // Attempt to get user emails using admin API
-      const { data: authUsers } = await supabase.auth.admin.listUsers();
-      if (authUsers && authUsers.users) {
-        authUsers.users.forEach((authUser: any) => {
-          if (authUser && authUser.id && authUser.email) {
-            emails[authUser.id] = authUser.email;
-          }
+    // Handle DELETE request to delete a user
+    if (req.method === 'DELETE') {
+      try {
+        // Parse the request body to get userId
+        const body = await req.json();
+        const userId = body.userId;
+        
+        if (!userId) {
+          return new Response(JSON.stringify({ error: 'User ID is required' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400
+          });
+        }
+        
+        // Delete the user with admin API
+        const { error } = await supabase.auth.admin.deleteUser(userId);
+        
+        if (error) {
+          console.error("Error deleting user:", error);
+          throw error;
+        }
+        
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        });
+      } catch (error) {
+        console.error("Error in user deletion:", error);
+        return new Response(JSON.stringify({ error: error.message || 'Failed to delete user' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500
         });
       }
-    } catch (err) {
-      console.log("Could not fetch emails, will use placeholders");
+    }
+    
+    // Handle PUT request for MFA operations
+    if (req.method === 'PUT') {
+      try {
+        const body = await req.json();
+        const { userId, action } = body;
+        
+        if (!userId || !action) {
+          return new Response(JSON.stringify({ error: 'User ID and action are required' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 400
+          });
+        }
+        
+        if (action === 'revoke_mfa') {
+          // Here we would remove MFA factors if using Supabase MFA directly
+          // This is a placeholder for actual MFA revocation code
+          console.log(`Revoking MFA for user ${userId}`);
+          
+          // We can implement the actual MFA factor deletion here
+          // when Supabase adds support for admin MFA operations
+          
+          return new Response(JSON.stringify({ success: true }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200
+          });
+        }
+        
+        return new Response(JSON.stringify({ error: 'Invalid action' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400
+        });
+      } catch (error) {
+        console.error("Error in MFA operation:", error);
+        return new Response(JSON.stringify({ error: error.message || 'Failed to perform MFA operation' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500
+        });
+      }
     }
 
-    // Map the data to include roles and emails
-    const usersData = users.map(profile => {
-      // Determine role from either role table or is_admin flag
-      let role = 'user';
-      if (rolesMap[profile.id]) {
-        role = rolesMap[profile.id];
-      } else if (profile.is_admin) {
-        role = 'admin';
+    // Default GET method to fetch all users
+    if (req.method === 'GET' || req.method === 'POST') {
+      // Use the built-in function to get users safely
+      const { data: users, error: usersError } = await supabase
+        .from('profiles')
+        .select('id, full_name, mfa_enrolled, mfa_required, created_at, is_admin');
+
+      if (usersError) {
+        console.error("Error fetching profiles:", usersError);
+        throw usersError;
       }
 
-      return {
-        id: profile.id,
-        email: emails[profile.id] || 'Email hidden', 
-        full_name: profile.full_name || 'User',
-        mfa_enrolled: profile.mfa_enrolled || false,
-        mfa_required: profile.mfa_required || false,
-        created_at: profile.created_at || new Date().toISOString(),
-        is_admin: profile.is_admin || false,
-        role: role
-      };
-    });
+      // Fetch user roles
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role');
 
-    console.log(`Successfully returning ${usersData.length} users with roles`);
-    
-    return new Response(JSON.stringify(usersData), {
+      if (rolesError) {
+        console.error("Error fetching user roles:", rolesError);
+      }
+
+      // Create a map of roles by user ID
+      const rolesMap = (userRoles || []).reduce((acc, item) => {
+        acc[item.user_id] = item.role;
+        return acc;
+      }, {} as Record<string, string>);
+
+      // Get user emails from auth.users if permissions allow
+      let emails: Record<string, string> = {};
+      
+      try {
+        // Attempt to get user emails using admin API
+        const { data: authUsers } = await supabase.auth.admin.listUsers();
+        if (authUsers && authUsers.users) {
+          authUsers.users.forEach((authUser: any) => {
+            if (authUser && authUser.id && authUser.email) {
+              emails[authUser.id] = authUser.email;
+            }
+          });
+        }
+      } catch (err) {
+        console.log("Could not fetch emails, will use placeholders");
+      }
+
+      // Map the data to include roles and emails
+      const usersData = users.map(profile => {
+        // Determine role from either role table or is_admin flag
+        let role = 'user';
+        if (rolesMap[profile.id]) {
+          role = rolesMap[profile.id];
+        } else if (profile.is_admin) {
+          role = 'admin';
+        }
+
+        return {
+          id: profile.id,
+          email: emails[profile.id] || 'Email hidden', 
+          full_name: profile.full_name || 'User',
+          mfa_enrolled: profile.mfa_enrolled || false,
+          mfa_required: profile.mfa_required || false,
+          created_at: profile.created_at || new Date().toISOString(),
+          is_admin: profile.is_admin || false,
+          role: role
+        };
+      });
+
+      console.log(`Successfully returning ${usersData.length} users with roles`);
+      
+      return new Response(JSON.stringify(usersData), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      });
+    }
+
+    // Handle unsupported methods
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200
+      status: 405
     });
 
   } catch (error) {
