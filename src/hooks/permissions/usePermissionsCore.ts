@@ -1,6 +1,6 @@
 
 import { useMemo } from 'react';
-import { hasPermission as checkPermission } from '@/utils/permissionUtils';
+import { hasPermission as checkPermission, canManageRole } from '@/utils/permissionUtils';
 import { useRoleSubscription } from './useRoleSubscription';
 import type { Permission } from '@/utils/permissionUtils';
 import { useOperatorPermissions } from './useOperatorPermissions';
@@ -30,8 +30,14 @@ export function usePermissionsCore(): UsePermissionsReturn {
     };
   }, [role, isOperatorFastPathEnabled]);
 
+  // Add canManageRole function
+  const canManageRoleFunc = (targetRole: UserRole): boolean => {
+    return canManageRole(role, targetRole);
+  };
+
   return {
     hasPermission,
+    canManageRole: canManageRoleFunc,
     role,
     currentRole: role,
     authRole

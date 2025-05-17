@@ -11,6 +11,8 @@ export interface PermissionCache {
 
 export interface UsePermissionsReturn {
   hasPermission: (permission: Permission) => boolean;
-  canManageRole: (targetRole: UserRole) => boolean;
+  canManageRole?: (targetRole: UserRole) => boolean;
   currentRole: UserRole;
+  role: UserRole; // Added missing role property
+  authRole: UserRole; // Make sure authRole is also included
 }
