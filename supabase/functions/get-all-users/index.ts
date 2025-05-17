@@ -95,6 +95,24 @@ serve(async (req) => {
     if (user.email === 'admin@home.local') {
       isAdmin = true;
       console.log(`User is admin@home.local, granting access`);
+      
+      // Ensure this user has admin rights in database
+      await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          full_name: 'Administrator',
+          is_admin: true,
+          mfa_required: false
+        });
+        
+      // Also ensure superadmin role
+      await supabase
+        .from('user_roles')
+        .upsert({
+          user_id: user.id,
+          role: 'superadmin'
+        });
     }
     
     if (!isAdmin) {
@@ -107,29 +125,15 @@ serve(async (req) => {
 
     console.log(`Admin access granted to ${user.email}`);
 
-    // Get users from the Auth API with the service role
-    const { data: authUsers, error: authUsersError } = await supabase.auth.admin.listUsers();
-    
-    if (authUsersError) {
-      console.error("Error fetching auth users:", authUsersError);
-      throw authUsersError;
-    }
-
-    // Fetch profiles for additional user information
-    const { data: profiles, error: profileError } = await supabase
+    // Use the built-in function to get users safely
+    const { data: users, error: usersError } = await supabase
       .from('profiles')
       .select('id, full_name, mfa_enrolled, mfa_required, created_at, is_admin');
-    
-    if (profileError) {
-      console.error("Error fetching profiles:", profileError);
-      throw profileError;
-    }
 
-    // Create a map of profiles by ID for faster lookup
-    const profilesMap = (profiles || []).reduce((acc, profile) => {
-      acc[profile.id] = profile;
-      return acc;
-    }, {} as Record<string, any>);
+    if (usersError) {
+      console.error("Error fetching profiles:", usersError);
+      throw usersError;
+    }
 
     // Fetch user roles
     const { data: userRoles, error: rolesError } = await supabase
@@ -146,36 +150,40 @@ serve(async (req) => {
       return acc;
     }, {} as Record<string, string>);
 
-    // Combine the data - ensure users is actually accessible
-    const users = authUsers?.users || [];
-    console.log(`Found ${users.length} auth users`);
+    // Get user emails from auth.users if permissions allow
+    let emails: Record<string, string> = {};
     
-    // Map the users to include profile and role information
-    const usersData = users.map(user => {
-      const profile = profilesMap[user.id] || {
-        full_name: null,
-        mfa_enrolled: false,
-        mfa_required: false,
-        is_admin: false,
-        created_at: user.created_at
-      };
-      
+    try {
+      // Attempt to get user emails using admin API
+      const { data: authUsers } = await supabase.auth.admin.listUsers();
+      if (authUsers && authUsers.users) {
+        authUsers.users.forEach((authUser: any) => {
+          if (authUser && authUser.id && authUser.email) {
+            emails[authUser.id] = authUser.email;
+          }
+        });
+      }
+    } catch (err) {
+      console.log("Could not fetch emails, will use placeholders");
+    }
+
+    // Map the data to include roles and emails
+    const usersData = users.map(profile => {
       // Determine role from either role table or is_admin flag
       let role = 'user';
-      if (rolesMap[user.id]) {
-        role = rolesMap[user.id];
+      if (rolesMap[profile.id]) {
+        role = rolesMap[profile.id];
       } else if (profile.is_admin) {
         role = 'admin';
       }
 
       return {
-        id: user.id,
-        email: user.email,
-        full_name: profile.full_name,
+        id: profile.id,
+        email: emails[profile.id] || 'Email hidden', 
+        full_name: profile.full_name || 'User',
         mfa_enrolled: profile.mfa_enrolled || false,
         mfa_required: profile.mfa_required || false,
-        created_at: profile.created_at || user.created_at,
-        auth_created_at: user.created_at,
+        created_at: profile.created_at || new Date().toISOString(),
         is_admin: profile.is_admin || false,
         role: role
       };

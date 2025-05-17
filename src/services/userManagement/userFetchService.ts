@@ -128,30 +128,36 @@ async function fetchUsersDirectly(): Promise<UserData[]> {
     
     // Get emails if possible via the admin function
     // This won't work without proper permissions, but we'll still have profile data
-    const { data: authData } = await supabase.auth.admin.listUsers();
-    const emailsMap: Record<string, string> = {};
+    let emailsMap: Record<string, string> = {};
     
-    // Define an explicit interface to help TypeScript understand the structure
-    interface AuthUser {
-      id: string;
-      email: string;
-      [key: string]: any; // for any other properties
-    }
-    
-    // Fix the type issue by using the explicit interface
-    if (authData && 'users' in authData && Array.isArray(authData.users)) {
-      // Cast to array of AuthUser to provide type information
-      const typedUsers = authData.users as AuthUser[];
-      typedUsers.forEach(user => {
-        if (user && typeof user.id === 'string' && typeof user.email === 'string') {
-          emailsMap[user.id] = user.email;
-        }
-      });
+    try {
+      // Explicitly define the expected structure
+      interface AuthUser {
+        id: string;
+        email: string;
+        created_at?: string;
+        [key: string]: any;
+      }
+      
+      const { data: authData } = await supabase.auth.admin.listUsers();
+      
+      if (authData && 'users' in authData && Array.isArray(authData.users)) {
+        // Safely cast to our known structure
+        const typedUsers = authData.users as AuthUser[];
+        typedUsers.forEach(user => {
+          if (user && typeof user.id === 'string' && typeof user.email === 'string') {
+            emailsMap[user.id] = user.email;
+          }
+        });
+      }
+    } catch (error) {
+      console.log('Could not fetch emails, will use placeholders');
     }
     
     // Return profile data with available email information
     console.log(`Found ${profiles.length} profiles in direct database query`);
     return profiles.map(profile => {
+      const role = rolesMap[profile.id] || (profile.is_admin ? 'admin' : 'user');
       return {
         id: profile.id,
         email: emailsMap[profile.id] || 'Email hidden', 
@@ -160,7 +166,7 @@ async function fetchUsersDirectly(): Promise<UserData[]> {
         mfa_required: profile.mfa_required || false,
         created_at: profile.created_at || new Date().toISOString(),
         is_admin: profile.is_admin || false,
-        role: rolesMap[profile.id] || 'user'
+        role: role as UserRole
       };
     });
   } catch (error) {
