@@ -87,24 +87,6 @@ serve(async (req) => {
     if (user.email === 'admin@home.local') {
       isAdmin = true;
       console.log(`User is admin@home.local, granting access`);
-      
-      // Ensure this user has admin rights in database
-      await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          full_name: 'Administrator',
-          is_admin: true,
-          mfa_required: false
-        });
-        
-      // Also ensure superadmin role
-      await supabase
-        .from('user_roles')
-        .upsert({
-          user_id: user.id,
-          role: 'superadmin'
-        });
     }
     
     if (!isAdmin) {
@@ -167,11 +149,7 @@ serve(async (req) => {
         
         if (action === 'revoke_mfa') {
           // Here we would remove MFA factors if using Supabase MFA directly
-          // This is a placeholder for actual MFA revocation code
           console.log(`Revoking MFA for user ${userId}`);
-          
-          // We can implement the actual MFA factor deletion here
-          // when Supabase adds support for admin MFA operations
           
           return new Response(JSON.stringify({ success: true }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
