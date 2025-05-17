@@ -22,6 +22,7 @@ export function useRoleSubscription() {
           .maybeSingle();
           
         if (!error && data) {
+          console.log(`[Role Subscription] Fetched role from database: ${data.role} for user ${user.id} (${user.email || 'unknown'})`);
           setRole(data.role as UserRole);
           
           // Cache role information
@@ -57,6 +58,8 @@ export function useRoleSubscription() {
                 updated_at: new Date().toISOString() 
               }, { onConflict: 'user_id' });
           }
+        } else if (user.email === 'test@home.local') {
+          console.log(`[Role Subscription] Special handling for test@home.local, current role: ${data?.role}`);
         }
       } catch (err) {
         console.error('[PERMISSIONS] Error fetching role:', err);
@@ -77,17 +80,19 @@ export function useRoleSubscription() {
           table: 'user_roles',
           filter: `user_id=eq.${user.id}`
         }, (payload) => {
+          console.log(`[Role Subscription] Received role change event:`, payload);
           if (payload.new && typeof payload.new === 'object' && 'role' in payload.new) {
+            console.log(`[Role Subscription] Setting new role: ${payload.new.role}`);
             setRole(payload.new.role as UserRole);
           }
         })
         .subscribe();
     }
     
-    // Refresh permissions every 30 seconds - increased from 10 seconds
+    // Refresh permissions every 15 seconds - reduced from 30 seconds for more responsive updates
     const intervalId = setInterval(() => {
       fetchCurrentRole();
-    }, 30000);
+    }, 15000);
       
     return () => {
       clearInterval(intervalId);

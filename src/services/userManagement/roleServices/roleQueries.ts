@@ -4,7 +4,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import type { UserRole } from '@/types/admin';
+import type { UserRole } from '@/contexts/auth/types';
 import { getCachedRole, setCachedRole } from './roleCache';
 
 /**
@@ -34,6 +34,8 @@ export async function fetchUserRole(userId: string): Promise<UserRole> {
   const validRoles: UserRole[] = ['user', 'admin', 'superadmin', 'observer'];
   const role = data?.role as UserRole;
   
+  console.log(`[Role Queries] Fetched role from database: ${role || 'null'} for user ${userId}`);
+  
   // If the role from database is not in our valid roles list,
   // log a warning and default to 'user'
   if (role && !validRoles.includes(role)) {
@@ -42,7 +44,8 @@ export async function fetchUserRole(userId: string): Promise<UserRole> {
     return 'user';
   }
   
-  const finalRole = (role as UserRole) || 'user';
+  const finalRole = role || 'user';
+  console.log(`[Role Queries] Final role determined: ${finalRole}`);
   
   // Update cache with fetched role
   setCachedRole(userId, finalRole);

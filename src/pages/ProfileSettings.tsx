@@ -1,4 +1,3 @@
-
 import AppLayout from "@/components/layout/AppLayout";
 import { PersonalInfoCard } from "@/components/profile/PersonalInfoCard";
 import { SecuritySettingsCard } from "@/components/profile/SecuritySettingsCard";
@@ -7,8 +6,10 @@ import { Loader2 } from "lucide-react";
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { UserRole } from '@/types/admin';
+import { UserRole } from '@/contexts/auth/types';
 import { usePermissions } from '@/hooks/usePermissions';
+import { RoleDiagnosticTool } from "@/components/admin/RoleDiagnosticTool";
+import { Button } from "@/components/ui/button";
 
 const ProfileSettings = () => {
   const { user, profile, isLoading: authLoading } = useAuth();
@@ -56,15 +57,45 @@ const ProfileSettings = () => {
           if (roleData && !roleError) {
             console.log("[PROFILE] Fetched user role from database:", roleData.role);
             setRole(roleData.role as UserRole);
+          } else if (roleError) {
+            console.error("[PROFILE] Failed to fetch user role:", roleError);
+          } else {
+            console.log("[PROFILE] No role record found, defaulting to user");
+            setRole('user');
           }
         } catch (error) {
           console.error("[PROFILE] Failed to fetch user role:", error);
         }
       };
 
+      // Initial fetch
       fetchUserRole();
+      
+      // Set up realtime subscription for role changes
+      const channel = supabase
+        .channel('profile-role-changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'user_roles',
+          filter: `user_id=eq.${user.id}`
+        }, (payload) => {
+          console.log('[PROFILE] Role change detected:', payload);
+          if (payload.new && 'role' in payload.new) {
+            setRole(payload.new.role as UserRole);
+          }
+        })
+        .subscribe();
+
+      // Refresh role every 10 seconds
+      const intervalId = setInterval(fetchUserRole, 10000);
+
+      return () => {
+        clearInterval(intervalId);
+        supabase.removeChannel(channel);
+      };
     }
-  }, [user]);
+  }, [user?.id]);
   
   // Special handling for test accounts to ensure they have proper roles
   useEffect(() => {
@@ -120,7 +151,19 @@ const ProfileSettings = () => {
       
       updateOperatorRole();
     }
+    
+    // Special handling for test@home.local account
+    if (user?.email === 'test@home.local') {
+      console.log("[PROFILE] test@home.local detected, current role:", role);
+    }
   }, [user, role]);
+
+  // Add a debug mode state
+  const [showDebugTools, setShowDebugTools] = useState(false);
+
+  const toggleDebugTools = () => {
+    setShowDebugTools(prev => !prev);
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -246,11 +289,21 @@ const ProfileSettings = () => {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Profile Settings</h1>
-          <p className="text-muted-foreground">
-            Manage your account settings and preferences
-          </p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Profile Settings</h1>
+            <p className="text-muted-foreground">
+              Manage your account settings and preferences
+            </p>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={toggleDebugTools}
+            className="text-xs"
+          >
+            {showDebugTools ? 'Hide Debug Tools' : 'Show Debug Tools'}
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -270,6 +323,14 @@ const ProfileSettings = () => {
             handlePasswordUpdate={handlePasswordUpdate}
           />
         </div>
+        
+        {/* Debug section */}
+        {showDebugTools && (
+          <div className="mt-8">
+            <h2 className="text-xl font-bold mb-4">Debug Information</h2>
+            <RoleDiagnosticTool />
+          </div>
+        )}
       </div>
     </AppLayout>
   );

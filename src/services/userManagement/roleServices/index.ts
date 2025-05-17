@@ -5,7 +5,7 @@
 
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import type { UserRole } from '@/types/admin';
+import type { UserRole } from '@/contexts/auth/types';
 import { fetchUserRole, checkRoleExists, updateExistingRole, insertNewRole, checkUserHasRole } from './roleQueries';
 import { getCachedRole, setCachedRole, invalidateRoleCache } from './roleCache';
 import { notifyRoleChange, triggerRealtimeNotification } from './roleNotification';
@@ -123,6 +123,26 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
       await triggerRealtimeNotification(userId);
     } catch (notifyError) {
       console.error('[Role Service] Error triggering role change notification:', notifyError);
+    }
+    
+    // Immediately force role reload for the current user if being modified
+    if (userId === currentUserId) {
+      try {
+        console.log('[Role Service] Forcing role reload for current user');
+        const { data: freshRole } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId)
+          .maybeSingle();
+          
+        if (freshRole && freshRole.role) {
+          setCachedRole(userId, freshRole.role as UserRole);
+          // Force session refresh to update roles
+          await supabase.auth.refreshSession();
+        }
+      } catch (reloadError) {
+        console.error('[Role Service] Error forcing role reload:', reloadError);
+      }
     }
     
     return;
