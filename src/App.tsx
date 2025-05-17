@@ -1,10 +1,11 @@
+
 import {
   BrowserRouter,
   Routes,
   Route,
 } from "react-router-dom";
 import { Toaster } from "sonner";
-import { ThemeProvider } from "@/components/ui/theme-provider"
+import { ThemeProvider } from "@/components/theme/theme-provider"
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import Index from "@/pages/Index";
@@ -21,7 +22,8 @@ import UserManagement from "@/pages/admin/UserManagement";
 import CreateUser from "@/pages/admin/CreateUser";
 import NotFound from "@/pages/NotFound";
 
-import { AuthProvider, ProtectedRoute } from "@/components/auth";
+import { AuthProvider } from "@/contexts/auth";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
