@@ -14,19 +14,20 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
 
   console.log(`[PERMISSION-UTILS] Checking permission: ${permission} for role: ${userRole}`);
 
-  // CRITICAL FIX: Special handling for operator role
+  // Special handling for operator role with very explicit permission granting
   if (userRole === 'operator') {
-    // Explicitly list ALL permissions that operators should have
-    if (
-      permission === 'view-footage:assigned' || 
-      permission === 'view-footage:all' ||
-      permission === 'view-cameras:assigned' ||
-      permission === 'manage-profile-settings' ||
-      permission === 'manage-mfa-enrollment' ||
-      permission === 'view-profile' ||
-      permission === 'view-dashboard' ||
-      permission === 'manage-cameras:assigned'
-    ) {
+    const operatorPermissions = [
+      'view-footage:assigned',
+      'view-footage:all',
+      'view-cameras:assigned',
+      'manage-profile-settings',
+      'manage-mfa-enrollment',
+      'view-profile',
+      'view-dashboard',
+      'manage-cameras:assigned'
+    ];
+    
+    if (operatorPermissions.includes(permission)) {
       console.log(`[PERMISSION-UTILS] OPERATOR ROLE - Directly granting permission: ${permission}`);
       return true;
     }
@@ -49,7 +50,6 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
     
     // Footage permissions - explicitly check for operator role and above
     case 'view-footage:assigned':
-      // CRITICAL FIX: Always return true for operators and above
       return roleHierarchy[userRole] >= roleHierarchy['operator']; 
     case 'view-footage:all':
       return roleHierarchy[userRole] >= roleHierarchy['operator'];

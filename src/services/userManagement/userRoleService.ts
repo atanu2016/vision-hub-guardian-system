@@ -27,6 +27,7 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
     const oldRole = currentRoleData?.role || 'user';
     console.log(`[Role Service] Current role: ${oldRole}, New role: ${newRole}`);
 
+    // Check if user role already exists
     const { data: existingRole } = await supabase
       .from('user_roles')
       .select('id')
@@ -51,6 +52,18 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
         console.error('[Role Service] Error updating role:', updateError);
       } else {
         console.log(`[Role Service] Role successfully updated to ${newRole}`);
+        
+        // Add special operator checks
+        if (newRole === 'operator') {
+          console.log('[Role Service] Operator role assigned - forcing auth refresh');
+          // Let app know a role update happened
+          const { error: signalError } = await supabase
+            .rpc('notify_role_change', { user_id: userId });
+          
+          if (signalError) {
+            console.warn('[Role Service] Error signaling role change:', signalError);
+          }
+        }
       }
     } else {
       // Insert new role
@@ -67,6 +80,18 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
         console.error('[Role Service] Error inserting role:', insertError);
       } else {
         console.log(`[Role Service] Role successfully created as ${newRole}`);
+        
+        // Add special operator checks
+        if (newRole === 'operator') {
+          console.log('[Role Service] Operator role assigned - forcing auth refresh');
+          // Let app know a role update happened
+          const { error: signalError } = await supabase
+            .rpc('notify_role_change', { user_id: userId });
+          
+          if (signalError) {
+            console.warn('[Role Service] Error signaling role change:', signalError);
+          }
+        }
       }
     }
 

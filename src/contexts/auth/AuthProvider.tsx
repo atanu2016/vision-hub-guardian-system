@@ -22,7 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Set up the auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
+      async (event, currentSession) => {
         console.log("[AUTH] Auth state changed:", event, currentSession?.user?.email);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
@@ -36,23 +36,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Fetch user profile when signed in
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && currentSession?.user) {
-          // Use setTimeout to avoid potential recursive auth state changes
-          setTimeout(() => {
+          try {
             console.log("[AUTH] Fetching profile for user:", currentSession.user?.id);
-            fetchUserProfile(currentSession.user.id, currentSession.user)
-              .then(profileData => {
-                console.log("[AUTH] Profile data fetched:", profileData);
-                if (profileData) setProfile(profileData);
-              });
-              
+            const profileData = await fetchUserProfile(currentSession.user.id, currentSession.user);
+            console.log("[AUTH] Profile data fetched:", profileData);
+            if (profileData) setProfile(profileData);
+            
             console.log("[AUTH] Fetching role for user:", currentSession.user?.id);  
-            fetchUserRole(currentSession.user.id, currentSession.user)
-              .then(roleData => {
-                console.log("[AUTH] Role data fetched:", roleData);
-                setRole(roleData);
-                console.log("[AUTH] Role set to:", roleData);
-              });
-          }, 0);
+            const roleData = await fetchUserRole(currentSession.user.id, currentSession.user);
+            console.log("[AUTH] Role data fetched:", roleData);
+            setRole(roleData);
+            console.log("[AUTH] Role set to:", roleData);
+          } catch (error) {
+            console.error("[AUTH] Error fetching user data:", error);
+          }
         }
       }
     );
@@ -87,9 +84,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     
     checkSession();
+    
+    // Set up subscription for role changes
+    let roleSubscription: any;
+    
+    if (user?.id) {
+      roleSubscription = supabase
+        .channel('auth-role-changes')
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'user_roles',
+          filter: `user_id=eq.${user.id}`
+        }, async (payload) => {
+          console.log('[AUTH] Role change detected:', payload);
+          if (payload.new && payload.new.role) {
+            console.log(`[AUTH] Updating role to: ${payload.new.role}`);
+            setRole(payload.new.role as UserRole);
+          } else {
+            // Re-fetch role if the payload doesn't contain it
+            const roleData = await fetchUserRole(user.id, user);
+            console.log("[AUTH] Re-fetched role data:", roleData);
+            setRole(roleData);
+          }
+        })
+        .subscribe();
+    }
 
     return () => {
       subscription.unsubscribe();
+      if (roleSubscription) roleSubscription.unsubscribe();
     };
   }, []);
 

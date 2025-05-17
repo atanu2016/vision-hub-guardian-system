@@ -8,9 +8,11 @@ import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole } from '@/types/admin';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const ProfileSettings = () => {
-  const { user, profile, role: authRole, isLoading: authLoading } = useAuth();
+  const { user, profile, isLoading: authLoading } = useAuth();
+  const { currentRole } = usePermissions(); // Get role from usePermissions which is more reliable
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     fullName: '',
@@ -31,15 +33,16 @@ const ProfileSettings = () => {
         fullName: profile?.full_name || '',
       }));
       
-      setRole(authRole);
+      // Use the role from usePermissions which is directly from the database
+      setRole(currentRole);
       setLoading(false);
     } else if (!authLoading) {
       // Only set loading to false if auth is done loading and user is still null
       setLoading(false);
     }
-  }, [user, profile, authRole, authLoading]);
+  }, [user, profile, currentRole, authLoading]);
 
-  // Get user role directly from database
+  // Always fetch up-to-date role directly from database for the profile page
   useEffect(() => {
     if (user?.id) {
       const fetchUserRole = async () => {
@@ -62,6 +65,32 @@ const ProfileSettings = () => {
       fetchUserRole();
     }
   }, [user]);
+  
+  // Special handling for operator@home.local
+  useEffect(() => {
+    if (user?.email === 'operator@home.local' && role !== 'operator') {
+      console.log("[PROFILE] operator@home.local detected, but role is", role);
+      console.log("[PROFILE] Forcing role update to 'operator'");
+      
+      const updateOperatorRole = async () => {
+        try {
+          await supabase
+            .from('user_roles')
+            .upsert({
+              user_id: user.id,
+              role: 'operator'
+            });
+            
+          setRole('operator');
+          console.log("[PROFILE] Role updated to operator");
+        } catch (error) {
+          console.error("[PROFILE] Error updating role:", error);
+        }
+      };
+      
+      updateOperatorRole();
+    }
+  }, [user, role]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -156,10 +185,11 @@ const ProfileSettings = () => {
       profileExists: !!profile,
       authLoading,
       role,
+      permissionRole: currentRole,
       formData,
       loading
     });
-  }, [user, profile, role, formData, loading, authLoading]);
+  }, [user, profile, role, currentRole, formData, loading, authLoading]);
 
   if (loading) {
     return (

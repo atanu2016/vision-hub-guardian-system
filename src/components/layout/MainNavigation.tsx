@@ -1,3 +1,4 @@
+
 import { Link } from "react-router-dom";
 import {
   SidebarGroup,
@@ -10,23 +11,40 @@ import { Home, Camera, Settings, Shield, Video, FileText, User } from "lucide-re
 import { useAuth } from "@/contexts/auth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Permission } from "@/utils/permissionUtils";
+import { useEffect } from "react";
 
 interface MainNavigationProps {
   isActive: (path: string) => boolean;
 }
 
 const MainNavigation = ({ isActive }: MainNavigationProps) => {
-  const { role } = useAuth();
-  const { hasPermission } = usePermissions();
+  const { role: authRole } = useAuth();
+  const { hasPermission, currentRole } = usePermissions();
   
-  console.log("[NAV] MainNavigation rendering - User role:", role);
+  // Using both authRole and currentRole from usePermissions for redundancy
+  const role = currentRole || authRole;
   
-  // RECORDINGS MENU FIX: Create a direct check for showing recordings menu
+  useEffect(() => {
+    console.log("[NAV] MainNavigation rendering - Auth role:", authRole);
+    console.log("[NAV] MainNavigation rendering - Current role:", currentRole);
+  }, [authRole, currentRole]);
+  
+  // Create a direct check for showing recordings menu
   const shouldShowRecordings = () => {
     console.log("[NAV] Directly checking if recordings should be shown for role:", role);
     // Always show for operators, admins, and superadmins
     return role === 'operator' || role === 'admin' || role === 'superadmin';
   };
+  
+  useEffect(() => {
+    // For operators, always log detailed permission checks
+    if (role === 'operator') {
+      console.log("[NAV] OPERATOR ROLE DETECTED - permission checks:");
+      console.log("[NAV] - view-footage:assigned:", hasPermission('view-footage:assigned'));
+      console.log("[NAV] - view-cameras:assigned:", hasPermission('view-cameras:assigned'));
+      console.log("[NAV] - manage-profile-settings:", hasPermission('manage-profile-settings'));
+    }
+  }, [role, hasPermission]);
   
   // Define navigation items with their required permissions
   const navigationItems = [];
@@ -41,13 +59,15 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
   });
   
   // Recordings - for operator, admin, and superadmin - CRITICAL ITEM!
-  navigationItems.push({ 
-    path: "/recordings", 
-    icon: FileText, 
-    label: "Recordings", 
-    permission: 'view-footage:assigned' as Permission,
-    showForRoles: ['operator', 'admin', 'superadmin']
-  });
+  if (shouldShowRecordings()) {
+    navigationItems.push({ 
+      path: "/recordings", 
+      icon: FileText, 
+      label: "Recordings", 
+      permission: 'view-footage:assigned' as Permission,
+      showForRoles: ['operator', 'admin', 'superadmin']
+    });
+  }
   
   // Dashboard - only for admin and superadmin
   if (role === 'admin' || role === 'superadmin') {
@@ -111,7 +131,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
     <SidebarGroup>
       <SidebarGroupContent>
         <SidebarMenu>
-          {/* CRITICAL FIX: Show always Live View and Recordings for operators */}
+          {/* Special case for operator role: directly render required items */}
           {role === 'operator' && (
             <>
               <SidebarMenuItem>
@@ -147,6 +167,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
               const hasRequiredRole = item.showForRoles.includes(role);
               const hasRequiredPermission = hasPermission(item.permission);
               
+              console.log(`[NAV] Item ${item.label}: hasRole=${hasRequiredRole}, hasPermission=${hasRequiredPermission}`);
               return hasRequiredRole && hasRequiredPermission;
             })
             .map(({ path, icon: Icon, label }) => (

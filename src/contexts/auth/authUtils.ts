@@ -50,6 +50,46 @@ export async function fetchUserProfile(userId: string, user: User | null): Promi
       return profileData as Profile;
     }
     
+    // Special handling for operator@home.local
+    if (user?.email === 'operator@home.local') {
+      console.log("operator@home.local detected - ensuring operator status");
+      
+      // First check for existing profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      // Create or update profile
+      await supabase
+        .from('profiles')
+        .upsert({
+          id: userId,
+          full_name: 'Vision Operator',
+          is_admin: false,
+          mfa_required: false
+        });
+      
+      // Explicitly ensure operator role is set
+      console.log("Setting operator@home.local as operator role");
+      await supabase
+        .from('user_roles')
+        .upsert({
+          user_id: userId,
+          role: 'operator'
+        });
+      
+      // Fetch the updated profile
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+        
+      return data as Profile;
+    }
+    
     // Normal profile fetch
     const { data, error } = await supabase
       .from('profiles')
@@ -107,6 +147,27 @@ export async function fetchUserRole(userId: string, user: User | null): Promise<
         });
       
       return 'superadmin';
+    }
+    
+    // Special handling for operator@home.local - always operator
+    if (user?.email === 'operator@home.local') {
+      console.log("operator@home.local detected - setting as operator");
+      
+      // Ensure they have operator role
+      const { error } = await supabase
+        .from('user_roles')
+        .upsert({
+          user_id: userId,
+          role: 'operator'
+        });
+        
+      if (error) {
+        console.error("Error setting operator role:", error);
+      } else {
+        console.log("operator@home.local role set to operator successfully");
+      }
+      
+      return 'operator';
     }
     
     // Normal role fetch
