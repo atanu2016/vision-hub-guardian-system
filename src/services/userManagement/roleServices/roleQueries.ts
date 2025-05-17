@@ -30,12 +30,24 @@ export async function fetchUserRole(userId: string): Promise<UserRole> {
     throw error;
   }
   
-  const role = (data?.role as UserRole) || 'user';
+  // Ensure we're properly handling all possible roles including 'observer'
+  const validRoles: UserRole[] = ['user', 'admin', 'superadmin', 'observer'];
+  const role = data?.role as UserRole;
+  
+  // If the role from database is not in our valid roles list,
+  // log a warning and default to 'user'
+  if (role && !validRoles.includes(role)) {
+    console.warn(`[Role Queries] Received unknown role from database: ${role}`);
+    setCachedRole(userId, 'user');
+    return 'user';
+  }
+  
+  const finalRole = (role as UserRole) || 'user';
   
   // Update cache with fetched role
-  setCachedRole(userId, role);
+  setCachedRole(userId, finalRole);
   
-  return role;
+  return finalRole;
 }
 
 /**

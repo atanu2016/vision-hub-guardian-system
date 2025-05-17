@@ -142,7 +142,7 @@ serve(async (req) => {
       });
     }
     else if (action === 'fix' && userId && role) {
-      // Ensure role is valid
+      // Ensure role is valid - make sure 'observer' is included here
       const validRoles = ['user', 'admin', 'superadmin', 'observer']; 
       if (!validRoles.includes(role)) {
         return new Response(JSON.stringify({ error: 'Invalid role specified' }), {
@@ -150,6 +150,9 @@ serve(async (req) => {
           status: 400
         });
       }
+      
+      // Log the role update attempt
+      console.log(`Attempting to update role for user ${userId} to ${role}`);
       
       // Update or insert the role
       const { error: updateError } = await supabaseAdmin
@@ -163,12 +166,16 @@ serve(async (req) => {
         });
         
       if (updateError) {
+        console.error(`Failed to update role: ${updateError.message}`);
         throw new Error(`Failed to update role: ${updateError.message}`);
       }
+      
+      console.log(`Successfully updated role for user ${userId} to ${role}`);
       
       // Notify about role change
       try {
         await supabaseAdmin.rpc('notify_role_change', { user_id: userId });
+        console.log(`Notified about role change for user ${userId}`);
       } catch (notifyError) {
         console.warn('Could not notify about role change:', notifyError);
       }

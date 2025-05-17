@@ -3,7 +3,7 @@
 ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 
 -- Update the enum for user_role if needed
-ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'monitoringOfficer';
+ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'observer';
 
 -- Drop existing policies if they exist
 DROP POLICY IF EXISTS "Users can view their own role" ON public.user_roles;

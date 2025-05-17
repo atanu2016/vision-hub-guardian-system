@@ -46,6 +46,14 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
       }
     }
 
+    // Validate the role is a valid UserRole type
+    const validRoles: UserRole[] = ['user', 'admin', 'superadmin', 'observer'];
+    if (!validRoles.includes(newRole)) {
+      console.error(`[Role Service] Invalid role specified: ${newRole}`);
+      toast.error(`Invalid role: ${newRole}`);
+      throw new Error(`Invalid role specified: ${newRole}`);
+    }
+
     // Try using direct update/insert first
     try {
       // Check if user role already exists
