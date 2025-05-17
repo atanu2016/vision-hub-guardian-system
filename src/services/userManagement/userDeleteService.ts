@@ -15,26 +15,15 @@ export async function deleteUser(userId: string): Promise<void> {
       throw new Error('Cannot delete your own account');
     }
 
-    // Delete user's profile first (this will automatically trigger cascading deletes)
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .delete()
-      .eq('id', userId);
-      
-    if (profileError) {
-      console.error('Error deleting user profile:', profileError);
-      throw new Error('Failed to delete user profile');
-    }
-
-    // Then use edge function to delete user from auth database
+    // Call the edge function to delete the user completely
     const { error } = await supabase.functions.invoke('get-all-users', {
       method: 'DELETE',
-      body: { userId: userId }
+      body: { userId }
     });
     
     if (error) {
       console.error('Error calling delete user function:', error);
-      throw error;
+      throw new Error(error.message || 'Failed to delete user');
     }
     
     toast.success('User deleted successfully');

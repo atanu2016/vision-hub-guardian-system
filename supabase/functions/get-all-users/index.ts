@@ -113,13 +113,43 @@ serve(async (req) => {
           });
         }
         
+        console.log(`Attempting to delete user: ${userId}`);
+        
+        // First delete profile directly with service role client to bypass RLS
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', userId);
+          
+        if (profileError) {
+          console.error("Error deleting user profile:", profileError);
+          // Continue anyway, as we'll try to delete the auth user
+        } else {
+          console.log(`Successfully deleted profile for user: ${userId}`);
+        }
+        
+        // Delete any user roles
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', userId);
+          
+        if (roleError) {
+          console.error("Error deleting user roles:", roleError);
+          // Continue anyway
+        } else {
+          console.log(`Successfully deleted roles for user: ${userId}`);
+        }
+        
         // Delete the user with admin API
         const { error } = await supabase.auth.admin.deleteUser(userId);
         
         if (error) {
-          console.error("Error deleting user:", error);
+          console.error("Error deleting auth user:", error);
           throw error;
         }
+        
+        console.log(`Successfully deleted auth user: ${userId}`);
         
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -148,8 +178,23 @@ serve(async (req) => {
         }
         
         if (action === 'revoke_mfa') {
-          // Here we would remove MFA factors if using Supabase MFA directly
           console.log(`Revoking MFA for user ${userId}`);
+          
+          // Update profile to clear MFA enrollment
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              mfa_enrolled: false,
+              mfa_secret: null
+            })
+            .eq('id', userId);
+            
+          if (updateError) {
+            console.error("Error updating profile MFA status:", updateError);
+            throw updateError;
+          }
+          
+          console.log(`Successfully revoked MFA for user: ${userId}`);
           
           return new Response(JSON.stringify({ success: true }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -172,7 +217,7 @@ serve(async (req) => {
 
     // Default GET method to fetch all users
     if (req.method === 'GET' || req.method === 'POST') {
-      // Use the built-in function to get users safely
+      // Use the service role client to bypass RLS
       const { data: users, error: usersError } = await supabase
         .from('profiles')
         .select('id, full_name, mfa_enrolled, mfa_required, created_at, is_admin');
@@ -197,11 +242,10 @@ serve(async (req) => {
         return acc;
       }, {} as Record<string, string>);
 
-      // Get user emails from auth.users if permissions allow
+      // Get user emails from auth.users using admin API
       let emails: Record<string, string> = {};
       
       try {
-        // Attempt to get user emails using admin API
         const { data: authUsers } = await supabase.auth.admin.listUsers();
         if (authUsers && authUsers.users) {
           authUsers.users.forEach((authUser: any) => {

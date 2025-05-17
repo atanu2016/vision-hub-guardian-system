@@ -9,7 +9,7 @@ export async function toggleMfaRequirement(userId: string, required: boolean): P
   try {
     console.log(`Setting MFA requirement to ${required} for user ${userId}`);
     
-    // Update the profile for the specific user
+    // Update the profile for the specific user directly (bypass RLS issues)
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -19,7 +19,7 @@ export async function toggleMfaRequirement(userId: string, required: boolean): P
       
     if (error) {
       console.error('Error toggling MFA requirement:', error);
-      throw error;
+      throw new Error(error.message || 'Failed to update MFA setting');
     }
     
     toast.success(`MFA requirement ${required ? 'enabled' : 'disabled'} for user`);
@@ -37,32 +37,18 @@ export async function revokeMfaEnrollment(userId: string): Promise<void> {
   try {
     console.log(`Revoking MFA enrollment for user ${userId}`);
     
-    // Update profile to clear mfa_enrolled and mfa_secret
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        mfa_enrolled: false,
-        mfa_secret: null
-      })
-      .eq('id', userId);
-      
-    if (error) {
-      console.error('Error revoking MFA enrollment:', error);
-      throw error;
-    }
+    // Call function to remove MFA factors using our edge function
+    const { error } = await supabase.functions.invoke('get-all-users', {
+      method: 'PUT',
+      body: { 
+        userId: userId,
+        action: 'revoke_mfa'
+      }
+    });
     
-    // Call function to remove MFA factors if we're using Supabase MFA directly
-    try {
-      await supabase.functions.invoke('get-all-users', {
-        method: 'PUT',
-        body: { 
-          userId: userId,
-          action: 'revoke_mfa'
-        }
-      });
-    } catch (mfaError) {
-      console.error('Error calling MFA revoke function:', mfaError);
-      // Continue anyway since we've already updated the profile
+    if (error) {
+      console.error('Error calling MFA revoke function:', error);
+      throw new Error(error.message || 'Failed to revoke MFA enrollment');
     }
     
     toast.success('MFA enrollment revoked - user will need to re-enroll');
@@ -78,12 +64,12 @@ export async function revokeMfaEnrollment(userId: string): Promise<void> {
  */
 export async function updatePersonalMfaSetting(enabled: boolean): Promise<void> {
   try {
-    const user = supabase.auth.getUser();
-    if (!user) {
+    const user = await supabase.auth.getUser();
+    if (!user || !user.data.user) {
       throw new Error("User not authenticated");
     }
     
-    const { data: userData } = await user;
+    const { data: userData } = user;
     if (!userData?.user?.id) {
       throw new Error("User ID not found");
     }

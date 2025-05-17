@@ -62,7 +62,7 @@ export function MfaToggle({
         <DropdownMenuItem onClick={handleToggle}>
           Make {isRequired ? "Optional" : "Required"}
         </DropdownMenuItem>
-        {isEnrolled && onRevoke && (
+        {onRevoke && (
           <DropdownMenuItem onClick={handleRevoke} className="text-destructive">
             <Key className="h-4 w-4 mr-2" />
             Revoke MFA
