@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.42.0";
 
@@ -168,16 +167,35 @@ serve(async (req) => {
       }
     }
     
-    // Handle PUT request for MFA operations
+    // Handle PUT request for role updates
     if (req.method === 'PUT') {
       try {
         const body = await req.json();
-        const { userId, action, mfaRequired } = body;
+        const { userId, action, newRole } = body;
         
-        if (!userId || !action) {
-          return new Response(JSON.stringify({ error: 'User ID and action are required' }), {
+        // Handle role update
+        if (action === 'update_role' && userId && newRole) {
+          console.log(`Setting role to ${newRole} for user ${userId}`);
+          
+          // Use the admin client to bypass RLS policies
+          const { error: updateError } = await supabaseAdmin
+            .from('user_roles')
+            .upsert({
+              user_id: userId,
+              role: newRole,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'user_id' });
+            
+          if (updateError) {
+            console.error("Error updating user role:", updateError);
+            throw updateError;
+          }
+          
+          console.log(`Successfully set role to ${newRole} for user: ${userId}`);
+          
+          return new Response(JSON.stringify({ success: true }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 400
+            status: 200
           });
         }
         

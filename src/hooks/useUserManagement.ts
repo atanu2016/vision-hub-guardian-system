@@ -61,13 +61,17 @@ export function useUserManagement() {
     }
     
     try {
+      console.log(`[UserManagement] Updating user ${userId} to role ${newRole}`);
       await updateUserRole(userId, newRole, user?.id);
+      
       // Update local state
       setUsers(users.map(u => 
         u.id === userId ? { ...u, role: newRole } : u
       ));
+      
       toast.success(`User role updated to ${newRole}`);
     } catch (error: any) {
+      console.error('[UserManagement] Error updating role:', error);
       toast.error(error?.message || 'Failed to update user role');
     }
   }

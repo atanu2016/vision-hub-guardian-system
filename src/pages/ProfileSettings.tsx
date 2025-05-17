@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { UserRole } from '@/types/admin';
 
 const ProfileSettings = () => {
-  const { user, profile, role: authRole } = useAuth();
+  const { user, profile, role: authRole, isLoading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     fullName: '',
@@ -33,8 +33,11 @@ const ProfileSettings = () => {
       
       setRole(authRole);
       setLoading(false);
+    } else if (!authLoading) {
+      // Only set loading to false if auth is done loading and user is still null
+      setLoading(false);
     }
-  }, [user, profile, authRole]);
+  }, [user, profile, authRole, authLoading]);
 
   // Get user role directly from database
   useEffect(() => {
@@ -45,7 +48,7 @@ const ProfileSettings = () => {
             .from('user_roles')
             .select('role')
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle();
 
           if (roleData && !roleError) {
             console.log("[PROFILE] Fetched user role from database:", roleData.role);
@@ -151,11 +154,12 @@ const ProfileSettings = () => {
     console.log("ProfileSettings component:", {
       userExists: !!user,
       profileExists: !!profile,
+      authLoading,
       role,
       formData,
       loading
     });
-  }, [user, profile, role, formData, loading]);
+  }, [user, profile, role, formData, loading, authLoading]);
 
   if (loading) {
     return (

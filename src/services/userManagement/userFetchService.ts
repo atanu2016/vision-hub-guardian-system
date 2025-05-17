@@ -158,7 +158,7 @@ async function fetchUsersDirectly(): Promise<UserData[]> {
         mfa_required: profile.mfa_required || false,
         created_at: profile.created_at || new Date().toISOString(),
         is_admin: profile.is_admin || false,
-        role: role
+        role: role as UserRole
       };
     });
   } catch (error) {

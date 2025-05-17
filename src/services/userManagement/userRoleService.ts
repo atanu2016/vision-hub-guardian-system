@@ -9,6 +9,8 @@ import { logRoleChange, logUserActivity } from '@/services/activityLoggingServic
  */
 export async function updateUserRole(userId: string, newRole: UserRole, currentUserId?: string): Promise<void> {
   try {
+    console.log(`[Role Service] Updating role for user ${userId} to ${newRole}`);
+    
     // Don't allow changing your own role if you're a superadmin
     if (userId === currentUserId && newRole !== 'superadmin') {
       toast.error("You cannot downgrade your own superadmin role");
@@ -23,6 +25,7 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
       .maybeSingle();
     
     const oldRole = currentRoleData?.role || 'user';
+    console.log(`[Role Service] Current role: ${oldRole}, New role: ${newRole}`);
 
     const { data: existingRole } = await supabase
       .from('user_roles')
@@ -34,19 +37,37 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
     
     if (existingRole) {
       // Update existing role
+      console.log(`[Role Service] Updating existing role record for user ${userId}`);
       const { error: updateError } = await supabase
         .from('user_roles')
-        .update({ role: newRole, updated_at: new Date().toISOString() })
+        .update({ 
+          role: newRole, 
+          updated_at: new Date().toISOString() 
+        })
         .eq('user_id', userId);
         
       error = updateError;
+      if (updateError) {
+        console.error('[Role Service] Error updating role:', updateError);
+      } else {
+        console.log(`[Role Service] Role successfully updated to ${newRole}`);
+      }
     } else {
       // Insert new role
+      console.log(`[Role Service] Creating new role record for user ${userId}`);
       const { error: insertError } = await supabase
         .from('user_roles')
-        .insert({ user_id: userId, role: newRole });
+        .insert({ 
+          user_id: userId, 
+          role: newRole 
+        });
         
       error = insertError;
+      if (insertError) {
+        console.error('[Role Service] Error inserting role:', insertError);
+      } else {
+        console.log(`[Role Service] Role successfully created as ${newRole}`);
+      }
     }
 
     if (error) throw error;

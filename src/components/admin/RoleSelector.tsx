@@ -24,8 +24,11 @@ export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole 
 
   const handleRoleChange = async (value: string) => {
     setIsUpdating(true);
+    console.log(`[RoleSelector] Changing role to: ${value} for user: ${userId}`);
     try {
       await onUpdateRole(userId, value as UserRole);
+    } catch (error) {
+      console.error('[RoleSelector] Error updating role:', error);
     } finally {
       setIsUpdating(false);
     }
