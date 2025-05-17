@@ -49,6 +49,11 @@ export function usePermissions() {
             console.log(`[PERMISSIONS] Direct DB role fetch for ${user.id}: ${data.role}`);
             setRole(data.role as UserRole);
             
+            // Special logging for operator role
+            if (data.role === 'operator') {
+              console.log(`[PERMISSIONS] OPERATOR ROLE detected from database`);
+            }
+            
             // Cache the result
             localStorage.setItem(`user_role_${user.id}`, data.role);
             localStorage.setItem(`user_role_time_${user.id}`, now.toString());
@@ -57,6 +62,11 @@ export function usePermissions() {
             console.log(`[PERMISSIONS] Using auth context role: ${authRole}`);
             setRole(authRole);
             
+            // Special logging for operator role
+            if (authRole === 'operator') {
+              console.log(`[PERMISSIONS] OPERATOR ROLE detected from auth context`);
+            }
+            
             // Cache this result too
             localStorage.setItem(`user_role_${user.id}`, authRole);
             localStorage.setItem(`user_role_time_${user.id}`, now.toString());
@@ -64,6 +74,11 @@ export function usePermissions() {
         } catch (err) {
           console.error('[PERMISSIONS] Error fetching role:', err);
           setRole(authRole);
+          
+          // Special logging for operator role
+          if (authRole === 'operator') {
+            console.log(`[PERMISSIONS] OPERATOR ROLE detected from auth context (after error)`);
+          }
         }
       };
       
@@ -87,7 +102,7 @@ export function usePermissions() {
               console.log(`[PERMISSIONS] Updating role to: ${payload.new.role}`);
               setRole(payload.new.role as UserRole);
               
-              // Update cache
+              // Cache update
               localStorage.setItem(`user_role_${user.id}`, payload.new.role as string);
               localStorage.setItem(`user_role_time_${user.id}`, Date.now().toString());
               
@@ -109,6 +124,14 @@ export function usePermissions() {
   
   // Performance-optimized permission check with caching
   const checkPermission = useCallback((permission: Permission): boolean => {
+    // Immediately return true for crucial operator permissions without caching
+    if (role === 'operator' && 
+        (permission === 'view-footage:assigned' || 
+         permission === 'view-cameras:assigned')) {
+      console.log(`[PERMISSIONS] Operator fast path permission: ${permission} = true`);
+      return true;
+    }
+    
     const cacheKey = `${role}:${permission}`;
     const now = Date.now();
     const cached = permissionCacheRef.current[cacheKey];

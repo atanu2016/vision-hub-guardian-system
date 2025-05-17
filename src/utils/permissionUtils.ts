@@ -50,9 +50,10 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
     
     // Footage permissions - explicitly check for operator role and above
     case 'view-footage:assigned':
-      return roleHierarchy[userRole] >= roleHierarchy['operator']; 
+      // Explicitly include operator role here
+      return userRole === 'operator' || roleHierarchy[userRole] >= roleHierarchy['operator']; 
     case 'view-footage:all':
-      return roleHierarchy[userRole] >= roleHierarchy['operator'];
+      return userRole === 'operator' || roleHierarchy[userRole] >= roleHierarchy['operator'];
     
     // User management permissions
     case 'manage-users:lower':

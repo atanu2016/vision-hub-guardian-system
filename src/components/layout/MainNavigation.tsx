@@ -27,13 +27,20 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
   useEffect(() => {
     console.log("[NAV] MainNavigation rendering - Auth role:", authRole);
     console.log("[NAV] MainNavigation rendering - Current role:", currentRole);
-  }, [authRole, currentRole]);
+    
+    // Add specific logging for operator role
+    if (role === 'operator') {
+      console.log("[NAV] OPERATOR ROLE DETECTED in MainNavigation");
+    }
+  }, [authRole, currentRole, role]);
   
-  // Create a direct check for showing recordings menu
+  // Create a direct check for showing recordings menu - simplified logic
   const shouldShowRecordings = () => {
-    console.log("[NAV] Directly checking if recordings should be shown for role:", role);
-    // Always show for operators, admins, and superadmins
-    return role === 'operator' || role === 'admin' || role === 'superadmin';
+    console.log("[NAV] Checking if recordings should be shown for role:", role);
+    // Explicitly show for operators, admins, and superadmins
+    const showForRole = role === 'operator' || role === 'admin' || role === 'superadmin';
+    console.log("[NAV] shouldShowRecordings result:", showForRole);
+    return showForRole;
   };
   
   useEffect(() => {
@@ -42,7 +49,6 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
       console.log("[NAV] OPERATOR ROLE DETECTED - permission checks:");
       console.log("[NAV] - view-footage:assigned:", hasPermission('view-footage:assigned'));
       console.log("[NAV] - view-cameras:assigned:", hasPermission('view-cameras:assigned'));
-      console.log("[NAV] - manage-profile-settings:", hasPermission('manage-profile-settings'));
     }
   }, [role, hasPermission]);
   
@@ -131,7 +137,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
     <SidebarGroup>
       <SidebarGroupContent>
         <SidebarMenu>
-          {/* Special case for operator role: directly render required items */}
+          {/* Special case for operator role: directly render required items without checks */}
           {role === 'operator' && (
             <>
               <SidebarMenuItem>
