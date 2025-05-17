@@ -1,11 +1,19 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from "@/integrations/supabase/client";
-import DatabaseMigration from './DatabaseMigration';
-import DatabaseStatus from './DatabaseStatus';
-import DatabaseConfig from './DatabaseConfig';
+
+// Lazy load components to improve initial loading time
+const DatabaseStatus = lazy(() => import('./DatabaseStatus'));
+const DatabaseConfig = lazy(() => import('./DatabaseConfig'));
+const DatabaseMigration = lazy(() => import('./DatabaseMigration'));
+
+// Simple loading component for Suspense fallback
+const TabLoader = () => (
+  <div className="flex justify-center items-center py-12">
+    <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-primary rounded-full"></div>
+  </div>
+);
 
 export default function DatabaseSettings() {
   const [activeTab, setActiveTab] = useState('status');
@@ -27,15 +35,47 @@ export default function DatabaseSettings() {
     'webhooks', 'advanced_settings', 'system_logs', 'system_stats', 
     'profiles', 'database_config', 'smtp_config', 'camera_recording_status', 'user_roles'] as const;
 
+  // Use a cache key to avoid repeated database calls
+  const [lastRefresh, setLastRefresh] = useState(Date.now());
+  const cacheTimeout = 30000; // 30 seconds
+
   useEffect(() => {
     checkDatabaseStatus();
+    
+    // Set up periodic refresh to keep status updated
+    const refreshInterval = setInterval(() => {
+      // Only refresh if the component is visible/active
+      if (document.visibilityState === 'visible') {
+        setLastRefresh(Date.now());
+      }
+    }, cacheTimeout);
+    
+    return () => clearInterval(refreshInterval);
   }, []);
 
+  // Triggered by lastRefresh changes
+  useEffect(() => {
+    checkDatabaseStatus();
+  }, [lastRefresh]);
+
   const checkDatabaseStatus = async () => {
+    // Check if we have cached status
+    const cachedStatus = localStorage.getItem('db_status');
+    const cachedTime = localStorage.getItem('db_status_time');
+    const now = Date.now();
+    
+    if (cachedStatus && cachedTime && (now - parseInt(cachedTime, 10) < cacheTimeout)) {
+      console.log('[DB Settings] Using cached database status');
+      setDatabaseStatus(JSON.parse(cachedStatus));
+      setIsLoading(false);
+      return;
+    }
+    
+    console.log('[DB Settings] Fetching fresh database status');
     setIsLoading(true);
 
     try {
-      // Check database type from config
+      // Check database type from config - optimize with single query
       const { data: dbConfigData } = await supabase
         .from('database_config')
         .select('*')
@@ -43,7 +83,7 @@ export default function DatabaseSettings() {
         
       const dbType = dbConfigData?.db_type || 'supabase';
       
-      // Use Promise.all to check if each table exists
+      // Use Promise.all to check if each table exists in parallel
       const tableChecks = await Promise.all(
         tables.map(async table => {
           try {
@@ -66,12 +106,18 @@ export default function DatabaseSettings() {
       // Check if any tables exist
       const anyTableExists = tableChecks.some(exists => exists);
 
-      setDatabaseStatus({
+      const statusData = {
         connected: true,
         type: dbType,
         tablesExist: anyTableExists,
         tablesStatus
-      });
+      };
+      
+      setDatabaseStatus(statusData);
+      
+      // Cache the result
+      localStorage.setItem('db_status', JSON.stringify(statusData));
+      localStorage.setItem('db_status_time', now.toString());
       
     } catch (error) {
       console.error('Error checking database status:', error);
@@ -87,6 +133,13 @@ export default function DatabaseSettings() {
     }
   };
 
+  // Handler to force refresh when needed
+  const handleForceRefresh = () => {
+    localStorage.removeItem('db_status');
+    localStorage.removeItem('db_status_time');
+    setLastRefresh(Date.now());
+  };
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -96,22 +149,24 @@ export default function DatabaseSettings() {
           <TabsTrigger value="migration">Migration</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="status">
-          <DatabaseStatus 
-            databaseStatus={databaseStatus}
-            tables={tables}
-            isLoading={isLoading}
-            onRefresh={checkDatabaseStatus}
-          />
-        </TabsContent>
-        
-        <TabsContent value="config">
-          <DatabaseConfig databaseType={databaseStatus.type} />
-        </TabsContent>
-        
-        <TabsContent value="migration">
-          <DatabaseMigration />
-        </TabsContent>
+        <Suspense fallback={<TabLoader />}>
+          <TabsContent value="status">
+            <DatabaseStatus 
+              databaseStatus={databaseStatus}
+              tables={tables}
+              isLoading={isLoading}
+              onRefresh={handleForceRefresh}
+            />
+          </TabsContent>
+          
+          <TabsContent value="config">
+            <DatabaseConfig databaseType={databaseStatus.type} />
+          </TabsContent>
+          
+          <TabsContent value="migration">
+            <DatabaseMigration />
+          </TabsContent>
+        </Suspense>
       </Tabs>
     </div>
   );

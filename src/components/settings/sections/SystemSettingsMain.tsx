@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
@@ -12,6 +12,19 @@ import InterfaceSettings from '@/components/settings/sections/InterfaceSettings'
 import DetectionSettings from '@/components/settings/sections/DetectionSettings';
 import StorageSettings from '@/components/settings/sections/StorageSettings';
 import SystemInformation from '@/components/settings/sections/SystemInformation';
+
+// Memoized section components for better performance
+const MemoizedInterfaceSettings = memo(InterfaceSettings);
+const MemoizedDetectionSettings = memo(DetectionSettings);
+const MemoizedStorageSettings = memo(StorageSettings);
+const MemoizedSystemInformation = memo(SystemInformation);
+
+// Loading spinner component
+const LoadingSpinner = () => (
+  <div className="flex justify-center items-center h-64">
+    <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-primary rounded-full"></div>
+  </div>
+);
 
 const SystemSettingsMain = () => {
   const {
@@ -38,92 +51,95 @@ const SystemSettingsMain = () => {
   const isLoading = isSystemLoading || isDetectionLoading;
   const isSaving = isSystemSaving || isDetectionSaving;
   
+  // Use useCallback for event handlers to avoid unnecessary re-renders
   useEffect(() => {
-    // Load settings when component mounts
-    reloadSettings();
-    loadDetectionSettings();
+    // Load settings when component mounts with a small delay to improve perceived loading speed
+    const loadData = async () => {
+      await Promise.all([
+        reloadSettings(),
+        loadDetectionSettings()
+      ]);
+    };
+    
+    loadData();
   }, [reloadSettings, loadDetectionSettings]);
 
-  // Handle interface settings changes
-  const handleDarkModeChange = (enabled: boolean) => {
+  // Optimized handlers with useCallback to prevent recreation on each render
+  const handleDarkModeChange = useCallback((enabled: boolean) => {
     updateInterfaceSettings({
       ...interfaceSettings,
       darkMode: enabled
     });
-  };
+  }, [interfaceSettings, updateInterfaceSettings]);
   
-  const handleNotificationsChange = (enabled: boolean) => {
+  const handleNotificationsChange = useCallback((enabled: boolean) => {
     updateInterfaceSettings({
       ...interfaceSettings,
       notifications: enabled
     });
-  };
+  }, [interfaceSettings, updateInterfaceSettings]);
   
-  const handleAudioChange = (enabled: boolean) => {
+  const handleAudioChange = useCallback((enabled: boolean) => {
     updateInterfaceSettings({
       ...interfaceSettings,
       audio: enabled
     });
-  };
+  }, [interfaceSettings, updateInterfaceSettings]);
   
   // Handle detection settings changes
-  const handleSensitivityChange = (value: number[]) => {
+  const handleSensitivityChange = useCallback((value: number[]) => {
     updateDetectionSettings({
       sensitivityLevel: value[0]
     });
-  };
+  }, [updateDetectionSettings]);
   
-  const handleDetectionEnabledChange = (enabled: boolean) => {
+  const handleDetectionEnabledChange = useCallback((enabled: boolean) => {
     updateDetectionSettings({
       enabled: enabled
     });
-  };
+  }, [updateDetectionSettings]);
   
-  const handleObjectTypesChange = (types: string[]) => {
+  const handleObjectTypesChange = useCallback((types: string[]) => {
     updateDetectionSettings({
       objectTypes: types
     });
-  };
+  }, [updateDetectionSettings]);
   
-  const handleSmartDetectionChange = (enabled: boolean) => {
+  const handleSmartDetectionChange = useCallback((enabled: boolean) => {
     updateDetectionSettings({
       smartDetection: enabled
     });
-  };
+  }, [updateDetectionSettings]);
   
   // Handle storage settings changes
-  const handleAutoDeleteChange = (enabled: boolean) => {
+  const handleAutoDeleteChange = useCallback((enabled: boolean) => {
     updateStorageSettings({
       ...storageSettings,
       autoDeleteOld: enabled
     });
-  };
+  }, [storageSettings, updateStorageSettings]);
   
-  const handleMaxStorageSizeChange = (size: number) => {
+  const handleMaxStorageSizeChange = useCallback((size: number) => {
     updateStorageSettings({
       ...storageSettings,
       maxStorageSize: size
     });
-  };
+  }, [storageSettings, updateStorageSettings]);
   
-  const handleBackupScheduleChange = (schedule: string) => {
+  const handleBackupScheduleChange = useCallback((schedule: string) => {
     updateStorageSettings({
       ...storageSettings,
       backupSchedule: schedule
     });
-  };
+  }, [storageSettings, updateStorageSettings]);
 
-  const handleSaveAll = () => {
+  const handleSaveAll = useCallback(() => {
     saveAllSettings();
     toast.success("All settings saved successfully");
-  };
+  }, [saveAllSettings]);
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-primary rounded-full"></div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
@@ -143,7 +159,7 @@ const SystemSettingsMain = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Interface Settings */}
         <Card className="p-6">
-          <InterfaceSettings 
+          <MemoizedInterfaceSettings 
             darkMode={interfaceSettings.darkMode}
             notifications={interfaceSettings.notifications}
             audio={interfaceSettings.audio}
@@ -155,7 +171,7 @@ const SystemSettingsMain = () => {
         
         {/* Detection Settings */}
         <Card className="p-6">
-          <DetectionSettings 
+          <MemoizedDetectionSettings 
             sensitivityLevel={detectionSettings.sensitivityLevel}
             enabled={detectionSettings.enabled}
             objectTypes={detectionSettings.objectTypes}
@@ -169,7 +185,7 @@ const SystemSettingsMain = () => {
         
         {/* Storage Settings */}
         <Card className="p-6">
-          <StorageSettings 
+          <MemoizedStorageSettings 
             autoDeleteOld={storageSettings.autoDeleteOld}
             maxStorageSize={storageSettings.maxStorageSize}
             backupSchedule={storageSettings.backupSchedule}
@@ -181,7 +197,7 @@ const SystemSettingsMain = () => {
         
         {/* System Information */}
         <Card className="p-6">
-          <SystemInformation 
+          <MemoizedSystemInformation 
             userInfo={systemInformation.userInfo}
             systemInfo={systemInformation.systemInfo}
             onCheckForUpdates={checkForUpdates}

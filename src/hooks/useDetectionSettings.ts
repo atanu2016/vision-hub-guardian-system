@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { 
   fetchDetectionSettings,
@@ -20,12 +20,25 @@ export const useDetectionSettings = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Fetch detection settings
-  const loadDetectionSettings = useCallback(async () => {
+  // Use refs to track last load time for caching
+  const lastLoaded = useRef<number>(0);
+  const cacheTimeout = 60000; // 1 minute cache
+  
+  // Fetch detection settings with cache optimization
+  const loadDetectionSettings = useCallback(async (forceRefresh = false) => {
+    // Only load if force refresh or cache expired
+    const now = Date.now();
+    if (!forceRefresh && (now - lastLoaded.current < cacheTimeout)) {
+      console.log('[Detection Settings] Using cached data');
+      return;
+    }
+    
     setIsLoading(true);
     try {
+      console.log('[Detection Settings] Fetching fresh data');
       const data = await fetchDetectionSettings();
       setDetectionSettings(data);
+      lastLoaded.current = now;
     } catch (error) {
       console.error("Error loading detection settings:", error);
       toast.error("Failed to load detection settings");
@@ -34,25 +47,47 @@ export const useDetectionSettings = () => {
     }
   }, []);
   
-  // Update detection settings
+  // Debounced settings update function
+  const updateDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Update detection settings with debounce to reduce API calls
   const updateDetectionSettings = useCallback(async (settings: Partial<DetectionSettings>) => {
-    setIsSaving(true);
-    try {
-      // Ensure all required properties are present when updating state
-      const updatedSettings = {
-        ...detectionSettings, // Keep existing values
-        ...settings // Apply new values
-      };
-      
-      await saveDetectionSettings(updatedSettings);
-      setDetectionSettings(updatedSettings);
-      toast.success("Detection settings updated");
-    } catch (error) {
-      console.error("Error saving detection settings:", error);
-      toast.error("Failed to save detection settings");
-    } finally {
-      setIsSaving(false);
+    // Cancel any pending debounced saves
+    if (updateDebounceRef.current) {
+      clearTimeout(updateDebounceRef.current);
     }
+    
+    // Update local state immediately for UI responsiveness
+    setDetectionSettings(prev => ({
+      ...prev,
+      ...settings
+    }));
+    
+    // Debounce the actual API call
+    updateDebounceRef.current = setTimeout(async () => {
+      setIsSaving(true);
+      try {
+        // Apply the merged settings
+        const updatedSettings: DetectionSettings = {
+          ...detectionSettings,
+          ...settings
+        };
+        
+        await saveDetectionSettings(updatedSettings);
+        toast.success("Detection settings updated");
+      } catch (error) {
+        console.error("Error saving detection settings:", error);
+        toast.error("Failed to save detection settings");
+      } finally {
+        setIsSaving(false);
+      }
+    }, 500); // 500ms debounce
+    
+    return () => {
+      if (updateDebounceRef.current) {
+        clearTimeout(updateDebounceRef.current);
+      }
+    };
   }, [detectionSettings]); // Add detectionSettings as a dependency
 
   return {
@@ -60,6 +95,6 @@ export const useDetectionSettings = () => {
     isLoading,
     isSaving,
     loadDetectionSettings,
-    updateDetectionSettings
+    updateDetectionSettings,
   };
 };

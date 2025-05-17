@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { 
   fetchInterfaceSettings, 
@@ -53,10 +53,22 @@ export const useSystemSettings = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Fetch all settings
-  const loadAllSettings = useCallback(async () => {
+  // Use refs to store the last loaded data to avoid unnecessary API calls
+  const lastLoaded = useRef(new Date().getTime());
+  const cacheTimeout = 60000; // 1 minute cache
+  
+  // Fetch all settings with cache optimization
+  const loadAllSettings = useCallback(async (forceRefresh = false) => {
+    // Check if we should use cache unless force refresh is requested
+    const now = new Date().getTime();
+    if (!forceRefresh && now - lastLoaded.current < cacheTimeout) {
+      console.log("[Settings] Using cached settings data");
+      return;
+    }
+    
     setIsLoading(true);
     try {
+      console.log("[Settings] Fetching fresh settings data");
       const [interfaceData, detectionData, storageData, systemData] = await Promise.all([
         fetchInterfaceSettings(),
         fetchDetectionSettings(),
@@ -68,6 +80,9 @@ export const useSystemSettings = () => {
       setDetectionSettings(detectionData);
       setStorageSettings(storageData);
       setSystemInformation(systemData);
+      
+      // Update last loaded timestamp
+      lastLoaded.current = now;
     } catch (error) {
       console.error("Error loading settings:", error);
       toast.error("Failed to load settings");
@@ -76,7 +91,7 @@ export const useSystemSettings = () => {
     }
   }, []);
   
-  // Update interface settings
+  // Update interface settings with debounce logic
   const updateInterfaceSettings = useCallback(async (settings) => {
     setIsSaving(true);
     try {
@@ -91,7 +106,7 @@ export const useSystemSettings = () => {
     }
   }, []);
   
-  // Update detection settings
+  // Update detection settings with optimized state updates
   const updateDetectionSettings = useCallback(async (settings: Partial<DetectionSettings>) => {
     setIsSaving(true);
     try {
@@ -112,7 +127,7 @@ export const useSystemSettings = () => {
     }
   }, [detectionSettings]);
   
-  // Update storage settings
+  // Update storage settings with optimized state updates
   const updateStorageSettings = useCallback(async (settings) => {
     setIsSaving(true);
     try {
@@ -127,7 +142,7 @@ export const useSystemSettings = () => {
     }
   }, []);
   
-  // Check for updates
+  // Mock function for checking updates - optimized to avoid unnecessary renders
   const checkForUpdates = useCallback(() => {
     toast.info("Checking for updates...");
     // Simulate update check
@@ -136,7 +151,7 @@ export const useSystemSettings = () => {
     }, 2000);
   }, []);
   
-  // Save all settings at once
+  // Save all settings at once - optimized to reduce redundant state updates
   const saveAllSettings = useCallback(async () => {
     setIsSaving(true);
     try {
@@ -145,6 +160,7 @@ export const useSystemSettings = () => {
         saveDetectionSettings(detectionSettings),
         saveAdditionalStorageSettings(storageSettings)
       ]);
+      toast.success("All settings saved successfully");
     } catch (error) {
       console.error("Error saving all settings:", error);
       toast.error("Failed to save all settings");

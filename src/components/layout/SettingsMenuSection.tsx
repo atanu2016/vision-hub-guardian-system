@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   SidebarMenuItem,
@@ -22,7 +21,32 @@ interface SettingsMenuSectionProps {
   isActive: (path: string) => boolean;
 }
 
-export const SettingsMenuSection = ({ title, description, items, isActive }: SettingsMenuSectionProps) => {
+// Use memo to prevent unnecessary re-renders of menu items
+const MenuItemComponent = memo(({ item, isActive, onClick }: { 
+  item: MenuItem, 
+  isActive: boolean, 
+  onClick: () => void 
+}) => (
+  <div
+    className={`flex items-start gap-4 rounded-lg border p-3 text-left text-sm transition-all cursor-pointer
+      ${isActive ? 'bg-accent' : 'hover:bg-accent'} 
+      ${item.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+    onClick={onClick}
+  >
+    <div className="flex items-center">
+      {item.icon}
+    </div>
+    <div className="flex-1 space-y-1">
+      <div className="font-medium">{item.title}</div>
+      <div className="text-xs text-muted-foreground">
+        {item.description}
+      </div>
+    </div>
+  </div>
+));
+
+// Memoize the entire section component
+export const SettingsMenuSection = memo(({ title, description, items, isActive }: SettingsMenuSectionProps) => {
   const navigate = useNavigate();
   
   const handleItemClick = (href: string, disabled?: boolean) => {
@@ -39,57 +63,37 @@ export const SettingsMenuSection = ({ title, description, items, isActive }: Set
       </div>
       <div className="grid gap-1">
         {items.map((item, i) => (
-          <div
-            key={i}
-            className={`flex items-start gap-4 rounded-lg border p-3 text-left text-sm transition-all cursor-pointer
-              ${isActive(item.href) ? 'bg-accent' : 'hover:bg-accent'} 
-              ${item.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          <MenuItemComponent 
+            key={item.href} 
+            item={item} 
+            isActive={isActive(item.href)}
             onClick={() => handleItemClick(item.href, item.disabled)}
-          >
-            <div className="flex items-center">
-              {item.icon}
-            </div>
-            <div className="flex-1 space-y-1">
-              <div className="font-medium">{item.title}</div>
-              <div className="text-xs text-muted-foreground">
-                {item.description}
-              </div>
-            </div>
-          </div>
+          />
         ))}
       </div>
     </div>
   );
-};
+});
 
 // Keep the default export for backwards compatibility
 const SidebarSettingsMenu = ({ isActive }: { isActive: (path: string) => boolean }) => {
   const location = useLocation();
-  const [isSettingsExpanded, setIsSettingsExpanded] = useState(
-    location.pathname.startsWith("/settings") || 
-    location.pathname.startsWith("/settings/recordings") || 
-    location.pathname.startsWith("/settings/alerts") || 
-    location.pathname.startsWith("/settings/storage") ||
-    location.pathname.startsWith("/settings/system")
-  );
+  const [isSettingsExpanded, setIsSettingsExpanded] = useState(false);
 
-  // Update expanded state when route changes
+  // More efficient location check
+  const isSettingsPath = location.pathname.startsWith("/settings");
+  
+  // Update expanded state when route changes - with optimization
   useEffect(() => {
-    setIsSettingsExpanded(
-      location.pathname.startsWith("/settings") || 
-      location.pathname.startsWith("/settings/recordings") || 
-      location.pathname.startsWith("/settings/alerts") || 
-      location.pathname.startsWith("/settings/storage") ||
-      location.pathname.startsWith("/settings/system")
-    );
-  }, [location.pathname]);
+    setIsSettingsExpanded(isSettingsPath);
+  }, [isSettingsPath]);
 
   return (
     <>
       <SidebarMenuItem>
         <SidebarMenuButton 
           onClick={() => setIsSettingsExpanded(!isSettingsExpanded)} 
-          isActive={location.pathname.startsWith("/settings")}
+          isActive={isSettingsPath}
         >
           <Settings />
           <span>Settings</span>
