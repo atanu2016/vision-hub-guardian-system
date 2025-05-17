@@ -1,9 +1,11 @@
 
 import { fetchUsers } from './userManagement/userFetchService';
 import { updateUserRole, hasRole } from './userManagement/userRoleService';
-import { 
-  toggleMfaRequirement, 
-  revokeMfaEnrollment, 
+import { checkMigrationAccess, ensureUserIsAdmin } from './userManagement/adminAccessService';
+import { deleteUser } from './userManagement/userDeleteService';
+import {
+  toggleMfaRequirement,
+  revokeMfaEnrollment,
   updatePersonalMfaSetting,
   isMfaRequired,
   isMfaEnrolled,
@@ -11,9 +13,7 @@ import {
   verifyTotpCode,
   generateTotpSecret,
   generateQrCodeUrl
-} from './userManagement/userMfaService';
-import { deleteUser } from './userManagement/userDeleteService';
-import { checkMigrationAccess, ensureUserIsAdmin } from './userManagement/adminAccessService';
+} from './userManagement/mfa';
 
 export {
   fetchUsers,

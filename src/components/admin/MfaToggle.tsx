@@ -15,6 +15,7 @@ interface MfaToggleProps {
   isEnrolled: boolean;
   onToggle: (userId: string, required: boolean) => Promise<void>;
   onRevoke?: (userId: string) => Promise<void>;
+  disabled?: boolean; // Added the missing property
 }
 
 export function MfaToggle({ 
@@ -22,7 +23,8 @@ export function MfaToggle({
   isRequired, 
   isEnrolled,
   onToggle, 
-  onRevoke 
+  onRevoke,
+  disabled = false // Default to false
 }: MfaToggleProps) {
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -56,7 +58,7 @@ export function MfaToggle({
         <Button
           variant={isRequired ? "default" : "outline"}
           size="sm"
-          disabled={isUpdating}
+          disabled={isUpdating || disabled}
           className="w-28"
         >
           {isUpdating ? "Updating..." : isRequired ? "Required" : "Optional"}
