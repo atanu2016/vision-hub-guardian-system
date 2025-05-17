@@ -30,6 +30,20 @@ export async function checkMigrationAccess(userId: string): Promise<boolean> {
       }
     }
     
+    try {
+      // First try the check_admin_status RPC function
+      const { data: isAdmin, error: rpcError } = await supabase
+        .rpc('check_admin_status');
+        
+      if (!rpcError && isAdmin === true) {
+        console.log("User is admin via check_admin_status function");
+        return true;
+      }
+    } catch (rpcError) {
+      console.error("Error checking admin status via RPC:", rpcError);
+      // Continue with fallback checks
+    }
+    
     // Check if the user has admin role directly from user_roles
     const { data: roleData, error: roleError } = await supabase
       .from('user_roles')

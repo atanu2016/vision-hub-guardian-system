@@ -65,7 +65,7 @@ serve(async (req) => {
     console.log(`User ${user.id} (${user.email}) is attempting to access admin function`);
 
     // Check if user has admin privileges - first check user_roles
-    const { data: userRole, error: roleError } = await supabase
+    const { data: userRole, error: roleError1 } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
@@ -74,7 +74,7 @@ serve(async (req) => {
     let isAdmin = false;
     
     // Check if user has admin role from user_roles
-    if (!roleError && userRole && (userRole.role === 'admin' || userRole.role === 'superadmin')) {
+    if (!roleError1 && userRole && (userRole.role === 'admin' || userRole.role === 'superadmin')) {
       isAdmin = true;
       console.log(`User ${user.id} has admin role: ${userRole.role}`);
     } else {
@@ -132,12 +132,12 @@ serve(async (req) => {
     }, {} as Record<string, any>);
 
     // Fetch user roles
-    const { data: userRoles, error: roleError } = await supabase
+    const { data: userRoles, error: rolesError } = await supabase
       .from('user_roles')
       .select('user_id, role');
 
-    if (roleError) {
-      console.error("Error fetching user roles:", roleError);
+    if (rolesError) {
+      console.error("Error fetching user roles:", rolesError);
     }
 
     // Create a map of roles by user ID

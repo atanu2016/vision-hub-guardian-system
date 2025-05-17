@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import type { UserRole, UserData } from '@/types/admin';
+import { toast } from 'sonner';
 
 /**
  * Fetches all users with their roles and profile data
@@ -9,7 +10,7 @@ export async function fetchUsers(): Promise<UserData[]> {
   try {
     console.log('Fetching users from database...');
     
-    // First check if the current user has superadmin access
+    // First check if the current user has auth session
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       throw new Error('Authentication required');
@@ -18,13 +19,12 @@ export async function fetchUsers(): Promise<UserData[]> {
     console.log('Attempting to fetch users via edge function...');
     
     // Call the edge function with proper type checking
-    const { data, error } = await supabase.functions.invoke<unknown>('get-all-users', {
-      method: 'POST'
+    const { data, error } = await supabase.functions.invoke('get-all-users', {
+      method: 'POST',
     });
       
     if (error) {
       console.error('Error fetching users via Edge Function:', error);
-      
       // Fallback: Try to get profiles directly if edge function fails
       return await fetchUsersDirectly();
     }
@@ -32,7 +32,6 @@ export async function fetchUsers(): Promise<UserData[]> {
     // Type checking for the response
     if (!data || !Array.isArray(data)) {
       console.error('Invalid response format from edge function:', data);
-      
       // Fallback to direct database query
       return await fetchUsersDirectly();
     }
@@ -56,7 +55,7 @@ export async function fetchUsers(): Promise<UserData[]> {
       }
 
       const typedUser = user as Record<string, any>;
-
+      
       return {
         id: typedUser.id || '',
         email: typedUser.email || 'Unknown email',
@@ -92,43 +91,70 @@ export async function fetchUsers(): Promise<UserData[]> {
 async function fetchUsersDirectly(): Promise<UserData[]> {
   console.log('Falling back to direct database fetch...');
   
-  // Try to get profiles directly
-  const { data: profiles, error: profilesError } = await supabase
-    .from('profiles')
-    .select('id, full_name, mfa_enrolled, mfa_required, created_at, is_admin');
-  
-  if (profilesError) {
-    console.error('Fallback error fetching profiles:', profilesError);
+  try {
+    // First check if current user is admin via function call
+    const { data: isAdmin, error: adminCheckError } = await supabase
+      .rpc('check_admin_status');
+      
+    if (adminCheckError || !isAdmin) {
+      console.error('User is not an admin or error checking status:', adminCheckError);
+      throw new Error('Permission denied: Admin access required');
+    }
+    
+    // Try to get profiles directly
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, full_name, mfa_enrolled, mfa_required, created_at, is_admin');
+    
+    if (profilesError) {
+      console.error('Fallback error fetching profiles:', profilesError);
+      throw new Error('Failed to load users: Permission denied');
+    }
+    
+    if (!profiles || profiles.length === 0) {
+      console.log('No profiles found in direct database query');
+      return [];
+    }
+    
+    // Get user roles from user_roles table for mapping
+    const { data: userRoles } = await supabase
+      .from('user_roles')
+      .select('user_id, role');
+    
+    const rolesMap = (userRoles || []).reduce((acc, item) => {
+      acc[item.user_id] = item.role as UserRole;
+      return acc;
+    }, {} as Record<string, UserRole>);
+    
+    // Get emails if possible via the admin function
+    // This won't work without proper permissions, but we'll still have profile data
+    const { data: authData } = await supabase.auth.admin.listUsers();
+    const emailsMap: Record<string, string> = {};
+    
+    if (authData?.users) {
+      authData.users.forEach(user => {
+        if (user.email) {
+          emailsMap[user.id] = user.email;
+        }
+      });
+    }
+    
+    // Return profile data with available email information
+    console.log(`Found ${profiles.length} profiles in direct database query`);
+    return profiles.map(profile => {
+      return {
+        id: profile.id,
+        email: emailsMap[profile.id] || 'Email hidden', 
+        full_name: profile.full_name || 'User',
+        mfa_enrolled: profile.mfa_enrolled || false,
+        mfa_required: profile.mfa_required || false,
+        created_at: profile.created_at || new Date().toISOString(),
+        is_admin: profile.is_admin || false,
+        role: rolesMap[profile.id] || 'user'
+      };
+    });
+  } catch (error) {
+    console.error('Error in fetchUsersDirectly:', error);
     throw new Error('Failed to load users: Permission denied');
   }
-  
-  if (!profiles || profiles.length === 0) {
-    console.log('No profiles found in direct database query');
-    return [];
-  }
-  
-  // Get user roles from user_roles table for mapping
-  const { data: userRoles } = await supabase
-    .from('user_roles')
-    .select('user_id, role');
-  
-  const rolesMap = (userRoles || []).reduce((acc, item) => {
-    acc[item.user_id] = item.role as UserRole;
-    return acc;
-  }, {} as Record<string, UserRole>);
-  
-  // Return minimal profile data when we can't access auth.users
-  console.log(`Found ${profiles.length} profiles in direct database query`);
-  return profiles.map(profile => {
-    return {
-      id: profile.id,
-      email: 'Protected', // We can't access emails without service role
-      full_name: profile.full_name || 'User',
-      mfa_enrolled: profile.mfa_enrolled || false,
-      mfa_required: profile.mfa_required || false,
-      created_at: profile.created_at || new Date().toISOString(),
-      is_admin: profile.is_admin || false,
-      role: rolesMap[profile.id] || 'user'
-    };
-  });
 }
