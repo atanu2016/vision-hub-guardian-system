@@ -10,6 +10,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { Camera } from "lucide-react";
 import CameraAssignmentModal from "@/components/admin/CameraAssignmentModal";
 import { Button } from "@/components/ui/button";
+import { UserData } from "@/types/admin";
 
 const UserManagement = () => {
   const { isSuperAdmin } = useAuth();
@@ -42,6 +43,17 @@ const UserManagement = () => {
     setSelectedUserName('');
   };
 
+  const handleCameraAssignmentButtonClick = () => {
+    // If no user is selected, show a message or handle accordingly
+    if (users.length > 0) {
+      // Default to the first user in the list if none selected
+      const firstUser = users[0];
+      setSelectedUserId(firstUser.id);
+      setSelectedUserName(firstUser.email || "Selected User");
+      setShowCameraAssignment(true);
+    }
+  };
+
   return (
     <AppLayout>
       <UserManagementHeader 
@@ -60,6 +72,7 @@ const UserManagement = () => {
         toggleMfaRequirement={handleToggleMfaRequirement}
         revokeMfaEnrollment={handleRevokeMfaEnrollment}
         deleteUser={handleDeleteUser}
+        onAssignCameras={handleCameraAssignmentClick}
       />
 
       {selectedUserId && (
@@ -76,7 +89,7 @@ const UserManagement = () => {
         <div className="flex justify-end mt-4">
           <Button 
             variant="outline" 
-            onClick={() => setShowCameraAssignment(true)}
+            onClick={handleCameraAssignmentButtonClick}
             className="ml-2"
           >
             <Camera className="h-4 w-4 mr-1" />

@@ -21,31 +21,38 @@ const LiveView = () => {
   const { user, role } = useAuth();
 
   useEffect(() => {
-    fetchCameras();
+    if (user) {
+      fetchCameras();
+    }
   }, [user, role]);
 
   const fetchCameras = async () => {
     try {
       setLoading(true);
+      console.log("Fetching cameras for live view. User role:", role);
       
       // If user is not authenticated yet, return
       if (!user) {
+        console.log("No user authenticated, not fetching cameras");
         setCameras([]);
         return;
       }
 
       // Use the role-based access control for cameras
-      let camerasData;
+      let camerasData: Camera[] = [];
       
       // For admin and superadmin, show all cameras
       if (role === 'admin' || role === 'superadmin') {
+        console.log("User is admin/superadmin, fetching all cameras");
         const dbCameras = await fetchCamerasFromDB();
         camerasData = dbCameras;
       } else {
         // For users and operators, show only assigned cameras
+        console.log("User is normal user/operator, fetching assigned cameras");
         camerasData = await getAccessibleCameras(user.id, role);
       }
       
+      console.log(`Fetched ${camerasData.length} cameras for live view`);
       setCameras(camerasData);
     } catch (error) {
       console.error('Error fetching cameras for live view:', error);

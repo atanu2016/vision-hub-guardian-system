@@ -15,6 +15,7 @@ import { Loader2, Camera } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { Camera as CameraType, CameraStatus } from '@/types/camera';
 import { assignCamerasToUser, getUserAssignedCameras } from '@/services/userManagement/cameraAssignmentService';
+import { toast } from 'sonner';
 
 interface CameraAssignmentModalProps {
   isOpen: boolean;
@@ -44,12 +45,19 @@ export default function CameraAssignmentModal({
   const loadData = async () => {
     setIsLoading(true);
     try {
+      console.log("Loading camera assignments for user:", userId);
+      
       // Get all cameras
       const { data: allCameras, error: camerasError } = await supabase
         .from('cameras')
         .select('*');
 
-      if (camerasError) throw camerasError;
+      if (camerasError) {
+        console.error("Error fetching cameras:", camerasError);
+        throw camerasError;
+      }
+
+      console.log("Fetched cameras:", allCameras.length);
 
       // Map database fields to Camera type
       const typedCameras: CameraType[] = allCameras.map(cam => ({
@@ -75,11 +83,13 @@ export default function CameraAssignmentModal({
 
       // Get user's assigned cameras
       const assignedCameraIds = await getUserAssignedCameras(userId);
+      console.log("Assigned camera IDs:", assignedCameraIds);
       
       setCameras(typedCameras);
       setSelectedCameraIds(assignedCameraIds);
     } catch (error) {
       console.error("Error loading camera assignment data:", error);
+      toast.error("Failed to load cameras");
     } finally {
       setIsLoading(false);
     }
@@ -98,10 +108,17 @@ export default function CameraAssignmentModal({
   const handleSaveAssignments = async () => {
     setIsSaving(true);
     try {
+      console.log("Saving camera assignments for user:", userId);
+      console.log("Selected camera IDs:", selectedCameraIds);
+      
       const success = await assignCamerasToUser(userId, selectedCameraIds);
       if (success) {
+        toast.success(`Camera assignments updated for ${userName}`);
         onClose();
       }
+    } catch (error) {
+      console.error("Error saving camera assignments:", error);
+      toast.error("Failed to update camera assignments");
     } finally {
       setIsSaving(false);
     }

@@ -1,22 +1,30 @@
 
 export type UserRole = 'superadmin' | 'admin' | 'operator' | 'user';
 
-export type UserData = {
+export interface UserData {
   id: string;
-  email: string;
-  full_name: string | null;
+  email: string | null;
+  full_name?: string | null;
   role: UserRole;
-  mfa_enrolled: boolean;
+  is_admin?: boolean;
   mfa_required: boolean;
-  created_at: string;
-};
+  mfa_enrolled: boolean;
+  last_sign_in?: string | null;
+}
 
-export type MFASessionData = {
-  factorId: string | null;
-  qrCode: string | null;
-  verified: boolean;
-};
+export interface UserProfile {
+  id: string;
+  full_name?: string;
+  avatar_url?: string;
+  is_admin?: boolean;
+  mfa_required?: boolean;
+  mfa_enrolled?: boolean;
+  mfa_secret?: string;
+}
 
-// Recording settings types
-export type QualityType = 'low' | 'medium' | 'high' | 'ultra';
-export type ScheduleType = 'always' | 'workdays' | 'weekends' | 'custom';
+export interface AuthState {
+  user: any;
+  profile: UserProfile | null;
+  session: any;
+  loading: boolean;
+}
