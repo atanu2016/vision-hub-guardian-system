@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { 
@@ -32,6 +32,10 @@ const Settings = () => {
   const isLogsActive = path === 'logs';
   const isSystemSettingsActive = path === 'system';
 
+  const handleNavigation = (route: string) => {
+    navigate(route);
+  };
+
   return (
     <AppLayout>
       <div className="container mx-auto px-4">
@@ -44,7 +48,7 @@ const Settings = () => {
           <div className="grid grid-cols-12 gap-6">
             {/* Settings sidebar */}
             <div className="col-span-12 md:col-span-4 lg:col-span-3">
-              <div className="space-y-8">
+              <nav className="space-y-8">
                 {/* System Section */}
                 <div className="space-y-4">
                   <h3 className="font-medium text-lg">System</h3>
@@ -54,7 +58,7 @@ const Settings = () => {
                     <div
                       className={`flex items-start gap-4 rounded-lg border p-3 text-left cursor-pointer transition-all
                         ${isSystemSettingsActive ? 'bg-accent' : 'hover:bg-accent/50'}`}
-                      onClick={() => navigate('/settings/system')}
+                      onClick={() => handleNavigation('/settings/system')}
                     >
                       <Sliders className="mt-0.5 h-5 w-5" />
                       <div>
@@ -66,7 +70,7 @@ const Settings = () => {
                     <div
                       className={`flex items-start gap-4 rounded-lg border p-3 text-left cursor-pointer transition-all
                         ${isAdvancedActive ? 'bg-accent' : 'hover:bg-accent/50'}`}
-                      onClick={() => navigate('/settings/advanced')}
+                      onClick={() => handleNavigation('/settings/advanced')}
                     >
                       <Shield className="mt-0.5 h-5 w-5" />
                       <div>
@@ -78,7 +82,7 @@ const Settings = () => {
                     <div
                       className={`flex items-start gap-4 rounded-lg border p-3 text-left cursor-pointer transition-all
                         ${isDatabaseActive ? 'bg-accent' : 'hover:bg-accent/50'}`}
-                      onClick={() => navigate('/settings/database')}
+                      onClick={() => handleNavigation('/settings/database')}
                     >
                       <DatabaseZap className="mt-0.5 h-5 w-5" />
                       <div>
@@ -98,7 +102,7 @@ const Settings = () => {
                     <div
                       className={`flex items-start gap-4 rounded-lg border p-3 text-left cursor-pointer transition-all
                         ${isStorageActive ? 'bg-accent' : 'hover:bg-accent/50'}`}
-                      onClick={() => navigate('/settings/storage')}
+                      onClick={() => handleNavigation('/settings/storage')}
                     >
                       <HardDrive className="mt-0.5 h-5 w-5" />
                       <div>
@@ -110,7 +114,7 @@ const Settings = () => {
                     <div
                       className={`flex items-start gap-4 rounded-lg border p-3 text-left cursor-pointer transition-all
                         ${isRecordingsActive ? 'bg-accent' : 'hover:bg-accent/50'}`}
-                      onClick={() => navigate('/settings/recordings')}
+                      onClick={() => handleNavigation('/settings/recordings')}
                     >
                       <FileSpreadsheet className="mt-0.5 h-5 w-5" />
                       <div>
@@ -130,7 +134,7 @@ const Settings = () => {
                     <div
                       className={`flex items-start gap-4 rounded-lg border p-3 text-left cursor-pointer transition-all
                         ${isAlertsActive ? 'bg-accent' : 'hover:bg-accent/50'}`}
-                      onClick={() => navigate('/settings/alerts')}
+                      onClick={() => handleNavigation('/settings/alerts')}
                     >
                       <Bell className="mt-0.5 h-5 w-5" />
                       <div>
@@ -142,7 +146,7 @@ const Settings = () => {
                     <div
                       className={`flex items-start gap-4 rounded-lg border p-3 text-left cursor-pointer transition-all
                         ${isWebhooksActive ? 'bg-accent' : 'hover:bg-accent/50'}`}
-                      onClick={() => navigate('/settings/webhooks')}
+                      onClick={() => handleNavigation('/settings/webhooks')}
                     >
                       <LinkIcon className="mt-0.5 h-5 w-5" />
                       <div>
@@ -162,7 +166,7 @@ const Settings = () => {
                     <div
                       className={`flex items-start gap-4 rounded-lg border p-3 text-left cursor-pointer transition-all
                         ${isLogsActive ? 'bg-accent' : 'hover:bg-accent/50'}`}
-                      onClick={() => navigate('/settings/logs')}
+                      onClick={() => handleNavigation('/settings/logs')}
                     >
                       <AlertTriangle className="mt-0.5 h-5 w-5" />
                       <div>
@@ -172,7 +176,7 @@ const Settings = () => {
                     </div>
                   </div>
                 </div>
-              </div>
+              </nav>
             </div>
             
             {/* Settings content */}
