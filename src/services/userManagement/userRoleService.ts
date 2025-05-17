@@ -146,17 +146,18 @@ async function notifyRoleChange(userId: string): Promise<void> {
     console.log('[Role Service] Attempting to notify about role change');
     
     // Try to use notify_role_change RPC if it exists
-    const { error: signalError } = await supabase
-      .rpc('notify_role_change', { user_id: userId })
-      .catch((err) => {
-        console.warn('[Role Service] notify_role_change RPC might not exist:', err);
-        return { error: err };
-      });
-      
-    if (signalError) {
-      console.warn('[Role Service] Error signaling role change:', signalError);
-    } else {
-      console.log('[Role Service] Successfully notified about role change');
+    // Fix: Remove the .catch() and use a try-catch block instead
+    try {
+      const { error: signalError } = await supabase
+        .rpc('notify_role_change', { user_id: userId });
+        
+      if (signalError) {
+        console.warn('[Role Service] Error signaling role change:', signalError);
+      } else {
+        console.log('[Role Service] Successfully notified about role change');
+      }
+    } catch (err) {
+      console.warn('[Role Service] notify_role_change RPC might not exist:', err);
     }
   } catch (err) {
     console.error('[Role Service] Error calling notify_role_change:', err);
