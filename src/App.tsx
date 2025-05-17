@@ -32,11 +32,11 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <SidebarProvider>
             <Routes>
-              <Route path="/" element={<Index />} />
+              <Route path="/" element={<ProtectedRoute requiredPermission="view-dashboard"><Index /></ProtectedRoute>} />
               <Route path="/auth" element={<Auth />} />
               
-              {/* Basic views - 'user' role can only access dashboard, live view and profile */}
-              <Route path="/cameras" element={<ProtectedRoute requiredPermission="view-cameras:assigned"><Cameras /></ProtectedRoute>} />
+              {/* Basic views - 'user' role can only access live view and profile */}
+              <Route path="/cameras" element={<ProtectedRoute requiredPermission="view-cameras:all"><Cameras /></ProtectedRoute>} />
               <Route path="/cameras/:id" element={<ProtectedRoute requiredPermission="view-cameras:assigned"><CameraDetail /></ProtectedRoute>} />
               <Route path="/live" element={<ProtectedRoute requiredPermission="view-cameras:assigned"><LiveView /></ProtectedRoute>} />
               <Route path="/recordings" element={<ProtectedRoute requiredPermission="view-footage:assigned"><Recordings /></ProtectedRoute>} />

@@ -18,6 +18,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log("Setting up auth state listener");
+    
     // Set up the auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
@@ -35,12 +37,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && currentSession?.user) {
           // Use setTimeout to avoid potential recursive auth state changes
           setTimeout(() => {
+            console.log("Fetching profile for user:", currentSession.user?.id);
             fetchUserProfile(currentSession.user.id, currentSession.user)
               .then(profileData => {
+                console.log("Profile data fetched:", profileData);
                 if (profileData) setProfile(profileData);
               });
+              
+            console.log("Fetching role for user:", currentSession.user?.id);  
             fetchUserRole(currentSession.user.id, currentSession.user)
-              .then(roleData => setRole(roleData));
+              .then(roleData => {
+                console.log("Role data fetched:", roleData);
+                setRole(roleData);
+              });
           }, 0);
         }
       }
@@ -49,17 +58,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Check for existing session
     const checkSession = async () => {
       try {
+        console.log("Checking for existing session");
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         console.log("Initial session check:", currentSession?.user?.email);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
+          console.log("Session exists, fetching user data");
           const profileData = await fetchUserProfile(currentSession.user.id, currentSession.user);
+          console.log("Profile data:", profileData);
           if (profileData) setProfile(profileData);
           
           const roleData = await fetchUserRole(currentSession.user.id, currentSession.user);
+          console.log("Role data:", roleData);
           setRole(roleData);
+        } else {
+          console.log("No session found");
         }
         
       } catch (error) {
@@ -110,6 +125,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     resetPassword: handleResetPassword,
     requiresMFA,
   };
+
+  console.log("Auth context updated:", {
+    isLoading,
+    isAdmin,
+    isSuperAdmin,
+    isOperator,
+    role,
+    profileExists: !!profile
+  });
 
   return (
     <AuthContext.Provider value={contextValue}>

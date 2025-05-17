@@ -22,41 +22,58 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
   const location = useLocation();
   
   // Define navigation items with their required permissions
-  const navigationItems = [
-    { 
+  const navigationItems = [];
+  
+  // Dashboard - only for admin and superadmin
+  if (role === 'admin' || role === 'superadmin') {
+    navigationItems.push({ 
       path: "/", 
       icon: Home, 
       label: "Dashboard", 
       permission: 'view-dashboard' as Permission 
-    },
-    { 
-      path: "/live", 
-      icon: Video, 
-      label: "Live View", 
-      permission: 'view-cameras:assigned' as Permission 
-    },
-    { 
+    });
+  }
+  
+  // Live View - available to all user roles
+  navigationItems.push({ 
+    path: "/live", 
+    icon: Video, 
+    label: "Live View", 
+    permission: 'view-cameras:assigned' as Permission 
+  });
+  
+  // Recordings - only for operator, admin, and superadmin
+  if (role === 'operator' || role === 'admin' || role === 'superadmin') {
+    navigationItems.push({ 
       path: "/recordings", 
       icon: FileText, 
       label: "Recordings", 
       permission: 'view-footage:assigned' as Permission 
-    },
-    { 
+    });
+  }
+  
+  // Cameras - only for admin and superadmin
+  if (role === 'admin' || role === 'superadmin') {
+    navigationItems.push({ 
       path: "/cameras", 
       icon: Camera, 
       label: "Cameras", 
       permission: 'view-cameras:all' as Permission 
-    },
-    { 
+    });
+  }
+  
+  // Settings - only for admin and superadmin
+  if (role === 'admin' || role === 'superadmin') {
+    navigationItems.push({ 
       path: "/settings", 
       icon: Settings, 
       label: "Settings", 
       permission: 'configure-camera-settings' as Permission 
-    },
-  ];
+    });
+  }
   
-  // Only show admin route if user has appropriate permissions
-  if (hasPermission('manage-users:lower')) {
+  // Admin - only for admin and superadmin
+  if (role === 'admin' || role === 'superadmin') {
     navigationItems.push({ 
       path: "/admin", 
       icon: Shield, 

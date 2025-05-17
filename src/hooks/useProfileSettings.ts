@@ -28,10 +28,10 @@ export function useProfileSettings() {
   
   // Update form data when user and profile are loaded
   useEffect(() => {
-    if (user && profile) {
+    if (user) {
       setFormData(prev => ({
         ...prev,
-        fullName: profile.full_name || "",
+        fullName: profile?.full_name || "",
         email: user.email || ""
       }));
     }

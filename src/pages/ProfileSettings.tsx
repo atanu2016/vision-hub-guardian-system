@@ -3,6 +3,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import { PersonalInfoCard } from "@/components/profile/PersonalInfoCard";
 import { SecuritySettingsCard } from "@/components/profile/SecuritySettingsCard";
 import { useProfileSettings } from "@/hooks/useProfileSettings";
+import { useEffect } from "react";
 
 const ProfileSettings = () => {
   const {
@@ -18,11 +19,22 @@ const ProfileSettings = () => {
     getInitials
   } = useProfileSettings();
 
-  if (!user || !profile) {
+  useEffect(() => {
+    // Add logging for debugging
+    console.log("ProfileSettings component:", {
+      userExists: !!user,
+      profileExists: !!profile,
+      role,
+      formData
+    });
+  }, [user, profile, role, formData]);
+
+  if (!user) {
+    console.log("ProfileSettings: No user found");
     return (
       <AppLayout>
         <div className="flex justify-center items-center h-64">
-          <p>Loading profile information...</p>
+          <p>Please log in to view your profile settings.</p>
         </div>
       </AppLayout>
     );
