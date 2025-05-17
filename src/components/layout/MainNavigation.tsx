@@ -29,31 +29,35 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
     console.log("[NAV] MainNavigation rendering - Current role:", currentRole);
     console.log("[NAV] MainNavigation rendering - Final role used:", role);
     
-    // Log when operator role is detected
+    // Log when special roles are detected
     if (role === 'operator') {
       console.log("[NAV] OPERATOR ROLE DETECTED in MainNavigation - Recordings should be visible");
+    }
+    
+    if (role === 'monitoringOfficer') {
+      console.log("[NAV] MONITORING OFFICER ROLE DETECTED in MainNavigation - Recordings should be visible");
     }
   }, [authRole, currentRole, role]);
 
   // Always check permissions with multiple approaches for safety
   const hasFeetageAssignedPermission = hasPermission('view-footage:assigned');
   const hasFeetageAllPermission = hasPermission('view-footage:all');
-  const isRoleOperatorOrHigher = role === 'operator' || role === 'admin' || role === 'superadmin';
+  const isRoleWithRecordingsAccess = role === 'operator' || role === 'admin' || role === 'superadmin' || role === 'monitoringOfficer';
   
-  // Force recordings access for operators - critical for application functionality
+  // Force recordings access for operators and monitoring officers - critical for application functionality
   const shouldShowRecordings = () => {
-    // This is a critical check that ensures operators always have access to recordings
-    if (role === 'operator') {
-      console.log("[NAV] OPERATOR ROLE - Force enabling recordings access");
+    // This is a critical check that ensures operators and monitoring officers always have access to recordings
+    if (role === 'operator' || role === 'monitoringOfficer') {
+      console.log(`[NAV] ${role.toUpperCase()} ROLE - Force enabling recordings access`);
       return true;
     }
     
     // For other roles, use standard permission checks
-    const hasAccess = hasFeetageAssignedPermission || hasFeetageAllPermission || isRoleOperatorOrHigher;
+    const hasAccess = hasFeetageAssignedPermission || hasFeetageAllPermission || isRoleWithRecordingsAccess;
     console.log("[NAV] Recordings access check:", { 
       hasFeetageAssignedPermission, 
       hasFeetageAllPermission, 
-      isRoleOperatorOrHigher,
+      isRoleWithRecordingsAccess,
       finalDecision: hasAccess
     });
     return hasAccess;
@@ -73,7 +77,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
             </SidebarMenuButton>
           </SidebarMenuItem>
 
-          {/* CRITICAL: Recordings - Always show for operators */}
+          {/* CRITICAL: Recordings - Always show for operators and monitoring officers */}
           {shouldShowRecordings() && (
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={isActive("/recordings")} className="hover:bg-vision-dark-800">

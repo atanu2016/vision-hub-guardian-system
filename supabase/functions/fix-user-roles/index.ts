@@ -92,6 +92,15 @@ serve(async (req) => {
       // Fix the user role
       const newRole = role || 'user';
       
+      // Validate the role is one of the accepted values
+      const validRoles = ['user', 'operator', 'admin', 'superadmin', 'monitoringOfficer'];
+      if (!validRoles.includes(newRole)) {
+        return new Response(JSON.stringify({ error: 'Invalid role value. Must be one of: ' + validRoles.join(', ') }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400
+        });
+      }
+      
       // Insert or update the role
       const { error: upsertError } = await supabaseAdmin
         .from('user_roles')

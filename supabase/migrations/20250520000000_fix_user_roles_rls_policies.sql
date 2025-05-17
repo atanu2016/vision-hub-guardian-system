@@ -2,6 +2,9 @@
 -- First, ensure we have proper RLS on the user_roles table
 ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 
+-- Update the enum for user_role if needed
+ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'monitoringOfficer';
+
 -- Drop existing policies if they exist
 DROP POLICY IF EXISTS "Users can view their own role" ON public.user_roles;
 DROP POLICY IF EXISTS "Admins can view all roles" ON public.user_roles;

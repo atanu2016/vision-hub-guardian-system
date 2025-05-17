@@ -1,7 +1,9 @@
+
 import { UserRole } from "@/types/admin";
 
 export const roleHierarchy: Record<UserRole, number> = {
   'user': 0,
+  'monitoringOfficer': 1, // Same level as operator for permissions
   'operator': 1,
   'admin': 2,
   'superadmin': 3
@@ -34,6 +36,24 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
     }
   }
 
+  // MONITORING OFFICER ROLE - NEW ROLE
+  // This ensures monitoring officers have access to live view, recordings and profile
+  if (userRole === 'monitoringOfficer') {
+    const guaranteedMonitoringPermissions: Permission[] = [
+      'view-footage:assigned',
+      'view-footage:all',
+      'view-cameras:assigned',
+      'manage-profile-settings',
+      'manage-mfa-enrollment',
+      'view-profile'
+    ];
+    
+    if (guaranteedMonitoringPermissions.includes(permission)) {
+      console.log(`[PERMISSION-UTILS] MONITORING OFFICER ROLE - Directly granting permission: ${permission}`);
+      return true;
+    }
+  }
+
   switch (permission) {
     // User level permissions - available to all roles
     case 'view-dashboard':
@@ -49,11 +69,11 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
     case 'view-cameras:all':
       return roleHierarchy[userRole] >= roleHierarchy['admin'];
     
-    // Footage permissions - CRITICAL: Always grant to operators
+    // Footage permissions - CRITICAL: Always grant to operators and monitoring officers
     case 'view-footage:assigned':
-      return userRole === 'operator' || roleHierarchy[userRole] >= roleHierarchy['operator'];
+      return userRole === 'operator' || userRole === 'monitoringOfficer' || roleHierarchy[userRole] >= roleHierarchy['operator'];
     case 'view-footage:all':
-      return userRole === 'operator' || roleHierarchy[userRole] >= roleHierarchy['operator'];
+      return userRole === 'operator' || userRole === 'monitoringOfficer' || roleHierarchy[userRole] >= roleHierarchy['operator'];
     
     // User management permissions
     case 'manage-users:lower':
@@ -105,9 +125,9 @@ export function canManageRole(currentUserRole: UserRole, targetRole: UserRole): 
     return true;
   }
 
-  // Admins can manage operators and users, but not other admins or superadmins
+  // Admins can manage operators, monitoring officers and users, but not other admins or superadmins
   if (currentUserRole === 'admin') {
-    return targetRole === 'operator' || targetRole === 'user';
+    return targetRole === 'operator' || targetRole === 'monitoringOfficer' || targetRole === 'user';
   }
 
   // Operators and users cannot manage roles
