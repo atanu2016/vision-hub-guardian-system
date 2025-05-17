@@ -45,12 +45,16 @@ export default function DatabaseSettings() {
       
       // Use Promise.all to check if each table exists
       const tableChecks = await Promise.all(
-        tables.map(table => 
-          supabase.from(table as any) // Type assertion for table name
-            .select('id', { count: 'exact', head: true })
-            .then(result => result.count !== null)
-            .catch(() => false)
-        )
+        tables.map(async table => {
+          try {
+            const result = await supabase
+              .from(table)
+              .select('id', { count: 'exact', head: true });
+            return result.count !== null;
+          } catch (error) {
+            return false;
+          }
+        })
       );
       
       // Create a status object for each table
