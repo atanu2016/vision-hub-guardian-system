@@ -1,3 +1,4 @@
+
 import { useState, useEffect, Suspense, lazy } from 'react';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -133,11 +134,13 @@ export default function DatabaseSettings() {
     }
   };
 
-  // Handler to force refresh when needed
-  const handleForceRefresh = () => {
+  // Handler to force refresh when needed - modified to return a Promise
+  const handleForceRefresh = async (): Promise<void> => {
     localStorage.removeItem('db_status');
     localStorage.removeItem('db_status_time');
     setLastRefresh(Date.now());
+    // Return a resolved promise to match the expected type
+    return Promise.resolve();
   };
 
   return (

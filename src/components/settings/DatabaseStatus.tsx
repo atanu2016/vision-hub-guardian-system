@@ -16,7 +16,7 @@ interface DatabaseStatusProps {
   };
   tables: readonly string[];
   isLoading: boolean;
-  onRefresh: () => Promise<void>;
+  onRefresh: () => Promise<void>; // This prop requires a function returning Promise<void>
 }
 
 export default function DatabaseStatus({ databaseStatus, tables, isLoading, onRefresh }: DatabaseStatusProps) {
