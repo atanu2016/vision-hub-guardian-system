@@ -1,8 +1,13 @@
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth";
+import {
+  updatePersonalMfaSetting,
+  generateTotpSecret,
+  generateQrCodeUrl,
+  verifyTotpCode
+} from "@/services/userService";
 
 export function useMFA() {
   const { user } = useAuth();
@@ -50,13 +55,10 @@ export function useMFA() {
     setIsEnrolling(true);
     try {
       // Generate a new secret
-      const mfaSecret = generateSecretKey();
+      const mfaSecret = generateTotpSecret();
       
-      // Create QR code data for Authy or other authenticator apps
-      const otpAuthUrl = `otpauth://totp/VisionHub:${user.email}?secret=${mfaSecret}&issuer=VisionHub`;
-      
-      // Generate QR code as data URL
-      const qrCodeUrl = await generateQRCodeImage(otpAuthUrl);
+      // Generate QR code
+      const qrCodeUrl = await generateQrCodeUrl(user.email, mfaSecret);
       
       setQrCode(qrCodeUrl);
       setSecret(mfaSecret);
@@ -73,32 +75,15 @@ export function useMFA() {
     
     setIsVerifying(true);
     try {
-      // In a real implementation, you would verify the code against the secret
-      // For this implementation, we'll just pretend it works with a simple check
-      const isValid = verificationCode.length === 6;
+      // Verify the TOTP code
+      const isValid = await verifyTotpCode(secret, verificationCode);
       
       if (isValid) {
-        // Save the MFA secret and enrolled status to the database for THIS specific user
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            mfa_enrolled: true,
-            mfa_secret: secret
-          })
-          .eq('id', user.id);
-          
-        if (error) throw error;
+        // Save the MFA secret and enrolled status to the database
+        await updatePersonalMfaSetting(true);
         
         setMfaEnabled(true);
         toast.success("MFA successfully enabled");
-        
-        // Add system log
-        await supabase.from('system_logs').insert({
-          level: 'info',
-          source: 'security',
-          message: 'MFA enabled for user',
-          details: `MFA enabled for user ${user.email}`
-        });
       } else {
         toast.error("Invalid verification code. Please try again.");
       }
@@ -116,54 +101,19 @@ export function useMFA() {
     
     setIsVerifying(true);
     try {
-      // Update THIS specific user's profile
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          mfa_enrolled: false,
-          mfa_secret: null
-        })
-        .eq('id', user.id);
-        
-      if (error) throw error;
+      await updatePersonalMfaSetting(false);
       
       setMfaEnabled(false);
       setSecret(null);
       setQrCode(null);
       
       toast.success("MFA has been disabled");
-      
-      // Add system log
-      await supabase.from('system_logs').insert({
-        level: 'warning',
-        source: 'security',
-        message: 'MFA disabled for user',
-        details: `MFA disabled for user ${user.email}`
-      });
     } catch (error) {
       console.error('Failed to disable MFA:', error);
       toast.error("Failed to disable MFA");
     } finally {
       setIsVerifying(false);
     }
-  };
-
-  // Helper functions
-  const generateSecretKey = () => {
-    // In a real implementation, use a cryptographically secure method
-    // This is just a simple example that generates a base32 string
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-    let result = '';
-    for (let i = 0; i < 16; i++) {
-      result += chars[Math.floor(Math.random() * chars.length)];
-    }
-    return result;
-  };
-
-  const generateQRCodeImage = async (data: string): Promise<string> => {
-    // In a real implementation, use a proper QR code library
-    // For this example, we'll return a placeholder image URL
-    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data)}`;
   };
 
   return {
