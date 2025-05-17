@@ -1,3 +1,4 @@
+
 import { UserRole } from "@/types/admin";
 
 export const roleHierarchy: Record<UserRole, number> = {
@@ -13,10 +14,18 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
 
   console.log(`[PERMISSION-UTILS] Checking permission: ${permission} for role: ${userRole}`);
 
-  // SPECIAL CASE: Directly handle view-footage:assigned for operators
-  if (permission === 'view-footage:assigned') {
-    if (userRole === 'operator' || userRole === 'admin' || userRole === 'superadmin') {
-      console.log(`[PERMISSION-UTILS] FORCE GRANTING view-footage:assigned to ${userRole}`);
+  // Operator role special permissions
+  if (userRole === 'operator') {
+    // Special case for operators - ensure they have these critical permissions
+    if (
+      permission === 'view-footage:assigned' || 
+      permission === 'view-footage:all' ||
+      permission === 'view-cameras:assigned' ||
+      permission === 'manage-profile-settings' ||
+      permission === 'manage-mfa-enrollment' ||
+      permission === 'view-profile'
+    ) {
+      console.log(`[PERMISSION-UTILS] Granting ${permission} to operator role directly`);
       return true;
     }
   }
@@ -38,8 +47,6 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
     
     // Footage permissions - explicitly check for operator role and above
     case 'view-footage:assigned':
-      // This should never be reached due to the special case above, but keeping for safety
-      console.log(`[PERMISSION-UTILS] FALLBACK CHECK - view-footage:assigned for ${userRole}`);
       return roleHierarchy[userRole] >= roleHierarchy['operator']; 
     case 'view-footage:all':
       return roleHierarchy[userRole] >= roleHierarchy['operator'];

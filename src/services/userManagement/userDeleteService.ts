@@ -9,13 +9,15 @@ import { UserRole } from '@/types/admin';
  */
 export async function deleteUser(userId: string): Promise<void> {
   try {
+    console.log(`[DELETE-USER] Starting deletion process for user: ${userId}`);
+    
     // Get the current user's role for logging
     const { data: sessionData } = await supabase.auth.getSession();
     const actorEmail = sessionData?.session?.user?.email;
     let actorRole: UserRole | undefined;
     
     if (sessionData?.session?.user) {
-      // Query the user_roles table instead of profiles
+      // Query the user_roles table
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
@@ -23,7 +25,7 @@ export async function deleteUser(userId: string): Promise<void> {
         .single();
       
       if (roleError || !roleData) {
-        console.error('Error fetching actor role:', roleError);
+        console.error('[DELETE-USER] Error fetching actor role:', roleError);
         actorRole = 'user';
       } else {
         actorRole = roleData.role as UserRole;
@@ -46,15 +48,52 @@ export async function deleteUser(userId: string): Promise<void> {
       
     const userRole = userRoleData?.role || 'unknown';
 
-    // Delete the user using admin API
-    const { error } = await supabase.functions.invoke('admin-delete-user', {
+    console.log(`[DELETE-USER] Attempting to delete user: ${userId}, role: ${userRole}`);
+
+    // Call our edge function to delete the user
+    const { data, error } = await supabase.functions.invoke('admin-delete-user', {
       body: { user_id: userId }
     });
 
+    // If there's an error with the edge function, try direct database cleanup
     if (error) {
-      console.error('Error deleting user:', error);
-      throw new Error('Failed to delete user');
+      console.error('[DELETE-USER] Edge function error:', error);
+      
+      // Clean up database records even if edge function fails
+      // Delete user_roles
+      const { error: rolesError } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (rolesError) {
+        console.error('[DELETE-USER] Error deleting user roles:', rolesError);
+      }
+      
+      // Delete user camera assignments
+      const { error: cameraError } = await supabase
+        .from('user_camera_access')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (cameraError) {
+        console.error('[DELETE-USER] Error deleting camera access:', cameraError);
+      }
+      
+      // Delete profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId);
+        
+      if (profileError) {
+        console.error('[DELETE-USER] Error deleting profile:', profileError);
+      }
+      
+      throw new Error('Failed to delete user authentication record. Database records cleaned up.');
     }
+
+    console.log(`[DELETE-USER] Successfully deleted user: ${userId}`);
 
     // Log the user deletion with enhanced details
     await logUserActivity(
@@ -67,7 +106,7 @@ export async function deleteUser(userId: string): Promise<void> {
 
     toast.success('User deleted successfully');
   } catch (error: any) {
-    console.error('Error deleting user:', error);
+    console.error('[DELETE-USER] Error:', error);
     toast.error(error.message || 'Failed to delete user');
     throw error;
   }
