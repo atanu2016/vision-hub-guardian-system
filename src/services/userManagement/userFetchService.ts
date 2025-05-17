@@ -133,10 +133,13 @@ async function fetchUsersDirectly(): Promise<UserData[]> {
     
     if (authError) {
       console.error('Error listing users:', authError);
-    } else if (authData && 'users' in authData && Array.isArray(authData.users)) {
-      console.log(`Found ${authData.users.length} users in auth table`);
+    } else if (authData && authData.users) {
+      // Fix: Properly type and verify the auth users data structure
+      const users = Array.isArray(authData.users) ? authData.users : [];
+      console.log(`Found ${users.length} users in auth table`);
+      
       // Map user emails by ID
-      authData.users.forEach(user => {
+      users.forEach((user: any) => {
         if (user && typeof user.id === 'string' && typeof user.email === 'string') {
           emailsMap[user.id] = user.email;
         }
