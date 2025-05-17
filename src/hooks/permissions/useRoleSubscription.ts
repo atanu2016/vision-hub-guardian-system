@@ -1,0 +1,116 @@
+
+import { useState, useEffect, useRef } from "react";
+import { useAuth } from "@/contexts/auth";
+import { supabase } from "@/integrations/supabase/client";
+import { UserRole } from "@/types/admin";
+
+export function useRoleSubscription() {
+  const { role: authRole, user } = useAuth();
+  const [role, setRole] = useState<UserRole>(authRole);
+  const subscriptionRef = useRef<any>(null);
+  
+  // Always fetch the most current role directly from the database with optimization
+  useEffect(() => {
+    if (!user?.id) return;
+    
+    const fetchCurrentRole = async () => {
+      try {
+        console.log('[PERMISSIONS] Fetching current role for user:', user.id);
+        
+        // Fetch fresh role directly from database - critical for correct permissions
+        const { data, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .maybeSingle();
+          
+        if (!error && data) {
+          console.log(`[PERMISSIONS] Direct DB role fetch for ${user.id}: ${data.role}`);
+          setRole(data.role as UserRole);
+          
+          // Special handling for operator role
+          if (data.role === 'operator') {
+            console.log(`[PERMISSIONS] ▶️ OPERATOR ROLE detected from database - ensuring proper access`);
+            localStorage.setItem('operator_role_confirmed', 'true');
+          } else {
+            localStorage.removeItem('operator_role_confirmed');
+          }
+          
+          // Cache the result
+          localStorage.setItem(`user_role_${user.id}`, data.role);
+          localStorage.setItem(`user_role_time_${user.id}`, Date.now().toString());
+        } else {
+          // Fallback to auth context
+          console.log(`[PERMISSIONS] Using auth context role: ${authRole}`);
+          setRole(authRole);
+          
+          // Special handling for operator role from auth context
+          if (authRole === 'operator') {
+            console.log(`[PERMISSIONS] ▶️ OPERATOR ROLE detected from auth context - ensuring proper access`);
+            localStorage.setItem('operator_role_confirmed', 'true');
+          } else {
+            localStorage.removeItem('operator_role_confirmed');
+          }
+        }
+      } catch (err) {
+        console.error('[PERMISSIONS] Error fetching role:', err);
+        setRole(authRole);
+        
+        // Special handling for operator role from auth context after error
+        if (authRole === 'operator') {
+          console.log(`[PERMISSIONS] ▶️ OPERATOR ROLE detected from auth context (after error) - ensuring proper access`);
+          localStorage.setItem('operator_role_confirmed', 'true');
+        }
+      }
+    };
+    
+    // Initial fetch
+    fetchCurrentRole();
+    
+    // Also refetch every 10 seconds for operator role to ensure permissions stay current
+    const intervalId = setInterval(() => {
+      if (role === 'operator' || authRole === 'operator') {
+        console.log('[PERMISSIONS] Refreshing operator permissions');
+        fetchCurrentRole();
+      }
+    }, 10000);
+    
+    // Set up subscription for role changes
+    if (!subscriptionRef.current) {
+      console.log('[PERMISSIONS] Setting up role change subscription');
+      subscriptionRef.current = supabase
+        .channel('role-changes')
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'user_roles',
+          filter: `user_id=eq.${user.id}`
+        }, (payload) => {
+          console.log('[PERMISSIONS] Role change detected:', payload);
+          if (payload.new && typeof payload.new === 'object' && 'role' in payload.new) {
+            console.log(`[PERMISSIONS] Updating role to: ${payload.new.role}`);
+            setRole(payload.new.role as UserRole);
+            
+            // Special handling for operator role changes
+            if (payload.new.role === 'operator') {
+              console.log(`[PERMISSIONS] ▶️ OPERATOR ROLE change detected - ensuring proper access`);
+              localStorage.setItem('operator_role_confirmed', 'true');
+            } else {
+              localStorage.removeItem('operator_role_confirmed');
+            }
+          }
+        })
+        .subscribe();
+    }
+      
+    return () => {
+      clearInterval(intervalId);
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe();
+        subscriptionRef.current = null;
+      }
+    };
+  }, [user?.id, authRole, role]);
+  
+  return { role, authRole };
+}

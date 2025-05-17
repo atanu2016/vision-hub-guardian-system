@@ -1,4 +1,3 @@
-
 import { UserRole } from "@/types/admin";
 
 export const roleHierarchy: Record<UserRole, number> = {
@@ -18,7 +17,7 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
   // This ensures operators always have access to recordings regardless of other logic
   if (userRole === 'operator') {
     // Explicit list of guaranteed operator permissions - CRITICAL for application functionality
-    const guaranteedOperatorPermissions = [
+    const guaranteedOperatorPermissions: Permission[] = [
       'view-footage:assigned',
       'view-footage:all',
       'view-cameras:assigned',
