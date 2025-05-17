@@ -6,7 +6,7 @@ import { Shield, Database, LayoutDashboard, UserPlus } from 'lucide-react';
 import UserManagement from './UserManagement';
 import DatabaseMigration from '@/components/settings/DatabaseMigration';
 import { useAuth } from '@/contexts/auth';
-import { Navigate, useNavigate, Link } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/components/layout/AppLayout';
 

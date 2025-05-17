@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { 
   fetchInterfaceSettings, 
@@ -34,14 +34,14 @@ export const useSystemSettings = () => {
   // System information
   const [systemInformation, setSystemInformation] = useState({
     userInfo: {
-      username: 'Admin',
-      role: 'admin',
-      email: 'admin@example.com'
+      username: 'User',
+      role: 'user',
+      email: 'admin@home.local'
     },
     systemInfo: {
       version: '1.0.0',
       license: 'Active',
-      lastUpdated: 'Today at 9:41 AM'
+      lastUpdated: new Date().toLocaleString()
     }
   });
   
@@ -72,17 +72,13 @@ export const useSystemSettings = () => {
     }
   }, []);
   
-  // Load settings on mount
-  useEffect(() => {
-    loadAllSettings();
-  }, [loadAllSettings]);
-  
   // Update interface settings
   const updateInterfaceSettings = useCallback(async (settings) => {
     setIsSaving(true);
     try {
       await saveInterfaceSettings(settings);
       setInterfaceSettings(settings);
+      toast.success("Interface settings updated");
     } catch (error) {
       console.error("Error saving interface settings:", error);
       toast.error("Failed to save interface settings");
@@ -97,6 +93,7 @@ export const useSystemSettings = () => {
     try {
       await saveDetectionSettings(settings);
       setDetectionSettings(settings);
+      toast.success("Detection settings updated");
     } catch (error) {
       console.error("Error saving detection settings:", error);
       toast.error("Failed to save detection settings");
@@ -111,6 +108,7 @@ export const useSystemSettings = () => {
     try {
       await saveAdditionalStorageSettings(settings);
       setStorageSettings(settings);
+      toast.success("Storage settings updated");
     } catch (error) {
       console.error("Error saving storage settings:", error);
       toast.error("Failed to save storage settings");
@@ -137,7 +135,6 @@ export const useSystemSettings = () => {
         saveDetectionSettings(detectionSettings),
         saveAdditionalStorageSettings(storageSettings)
       ]);
-      toast.success("All settings saved successfully");
     } catch (error) {
       console.error("Error saving all settings:", error);
       toast.error("Failed to save all settings");
