@@ -51,10 +51,32 @@ export default function CameraAssignmentModal({
 
       if (camerasError) throw camerasError;
 
+      // Map database fields to Camera type
+      const typedCameras: CameraType[] = allCameras.map(cam => ({
+        id: cam.id,
+        name: cam.name,
+        location: cam.location,
+        ipAddress: cam.ipaddress,
+        port: cam.port,
+        username: cam.username,
+        password: cam.password,
+        rtmpUrl: cam.rtmpurl,
+        connectionType: cam.connectiontype,
+        onvifPath: cam.onvifpath,
+        manufacturer: cam.manufacturer,
+        model: cam.model,
+        status: cam.status,
+        lastSeen: cam.lastseen,
+        motionDetection: cam.motiondetection,
+        recording: cam.recording,
+        thumbnail: cam.thumbnail,
+        group: cam.group
+      }));
+
       // Get user's assigned cameras
       const assignedCameraIds = await getUserAssignedCameras(userId);
       
-      setCameras(allCameras as CameraType[]);
+      setCameras(typedCameras);
       setSelectedCameraIds(assignedCameraIds);
     } catch (error) {
       console.error("Error loading camera assignment data:", error);

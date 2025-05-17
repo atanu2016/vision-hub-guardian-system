@@ -17,10 +17,10 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
     case 'view-dashboard':
     case 'view-profile':
     case 'manage-mfa-enrollment':
-    case 'manage-profile-settings':  // Added explicit permission for profile settings
+    case 'manage-profile-settings':
       return roleHierarchy[userRole] >= roleHierarchy['user'];
 
-    // Cameras view permissions
+    // Cameras view permissions - all users can view assigned cameras
     case 'view-cameras:assigned':
       return roleHierarchy[userRole] >= roleHierarchy['user'];
     case 'view-cameras:all':
@@ -96,7 +96,7 @@ export type Permission =
   | 'view-dashboard'
   | 'view-profile'
   | 'manage-mfa-enrollment'
-  | 'manage-profile-settings'  // Added explicit permission for profile settings
+  | 'manage-profile-settings'
   
   // Camera viewing permissions
   | 'view-cameras:assigned'
@@ -110,7 +110,7 @@ export type Permission =
   | 'manage-users:lower'
   | 'manage-users:all'
   | 'assign-roles'
-  | 'assign-cameras'  // New permission for assigning cameras to users
+  | 'assign-cameras'
   
   // Camera management
   | 'manage-cameras:assigned'

@@ -39,7 +39,8 @@ const LiveView = () => {
       
       // For admin and superadmin, show all cameras
       if (role === 'admin' || role === 'superadmin') {
-        camerasData = await fetchCamerasFromDB();
+        const dbCameras = await fetchCamerasFromDB();
+        camerasData = dbCameras;
       } else {
         // For users and operators, show only assigned cameras
         camerasData = await getAccessibleCameras(user.id, role);

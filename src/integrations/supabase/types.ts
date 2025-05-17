@@ -440,6 +440,35 @@ export type Database = {
         }
         Relationships: []
       }
+      user_camera_access: {
+        Row: {
+          camera_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          camera_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          camera_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_camera_access_camera_id_fkey"
+            columns: ["camera_id"]
+            isOneToOne: false
+            referencedRelation: "cameras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string

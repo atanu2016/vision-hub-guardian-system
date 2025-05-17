@@ -1,7 +1,7 @@
 
-import UserTable from "@/components/admin/UserTable";
-import UserManagementHeader from "@/components/admin/UserManagementHeader";
-import ErrorAlert from "@/components/admin/ErrorAlert";
+import { UserTable } from "@/components/admin/UserTable";
+import { UserManagementHeader } from "@/components/admin/UserManagementHeader";
+import { ErrorAlert } from "@/components/admin/ErrorAlert";
 import { useState } from "react";
 import { useUserManagement } from "@/hooks/useUserManagement";
 import AppLayout from "@/components/layout/AppLayout";
@@ -15,7 +15,7 @@ import CameraAssignmentModal from "@/components/admin/CameraAssignmentModal";
 const UserManagement = () => {
   const { isSuperAdmin } = useAuth();
   const { hasPermission } = usePermissions();
-  const { users, isLoading, error, refreshUsers } = useUserManagement();
+  const { users, loading, error, loadUsers } = useUserManagement();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUserName, setSelectedUserName] = useState<string>('');
   const [showCameraAssignment, setShowCameraAssignment] = useState(false);
@@ -48,8 +48,8 @@ const UserManagement = () => {
 
       <UserTable 
         users={users} 
-        isLoading={isLoading} 
-        onRefresh={refreshUsers}
+        isLoading={loading} 
+        onRefresh={loadUsers}
         onCameraAssignmentClick={(userId, userName) => {
           if (hasPermission('assign-cameras')) {
             handleCameraAssignmentClick(userId, userName);

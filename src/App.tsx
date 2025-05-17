@@ -38,7 +38,7 @@ function App() {
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               
-              {/* Basic views - require minimal permissions */}
+              {/* Basic views - 'user' role can only access dashboard, live view and profile */}
               <Route path="/cameras" element={<ProtectedRoute requiredPermission="view-cameras:assigned"><Cameras /></ProtectedRoute>} />
               <Route path="/cameras/:id" element={<ProtectedRoute requiredPermission="view-cameras:assigned"><CameraDetail /></ProtectedRoute>} />
               <Route path="/live" element={<ProtectedRoute requiredPermission="view-cameras:assigned"><LiveView /></ProtectedRoute>} />

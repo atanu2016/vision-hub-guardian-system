@@ -102,7 +102,28 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
         .select('*');
         
       if (error) throw error;
-      return data as Camera[];
+      
+      // Transform database fields to match Camera type
+      return data.map(cam => ({
+        id: cam.id,
+        name: cam.name,
+        location: cam.location,
+        ipAddress: cam.ipaddress,
+        port: cam.port,
+        username: cam.username,
+        password: cam.password,
+        rtmpUrl: cam.rtmpurl,
+        connectionType: cam.connectiontype,
+        onvifPath: cam.onvifpath,
+        manufacturer: cam.manufacturer,
+        model: cam.model,
+        status: cam.status,
+        lastSeen: cam.lastseen,
+        motionDetection: cam.motiondetection,
+        recording: cam.recording,
+        thumbnail: cam.thumbnail,
+        group: cam.group
+      }));
     }
     
     // For users and operators, return only assigned cameras
@@ -119,7 +140,27 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
       
     if (error) throw error;
     
-    return data as Camera[];
+    // Transform database fields to match Camera type
+    return data.map(cam => ({
+      id: cam.id,
+      name: cam.name,
+      location: cam.location,
+      ipAddress: cam.ipaddress,
+      port: cam.port,
+      username: cam.username,
+      password: cam.password,
+      rtmpUrl: cam.rtmpurl,
+      connectionType: cam.connectiontype,
+      onvifPath: cam.onvifpath,
+      manufacturer: cam.manufacturer,
+      model: cam.model,
+      status: cam.status,
+      lastSeen: cam.lastseen,
+      motionDetection: cam.motiondetection,
+      recording: cam.recording,
+      thumbnail: cam.thumbnail,
+      group: cam.group
+    }));
   } catch (error) {
     console.error('Error fetching accessible cameras:', error);
     return [];
