@@ -9,10 +9,10 @@ export async function deleteUser(userId: string): Promise<void> {
   try {
     console.log("Deleting user:", userId);
     
-    // First check if we have admin permissions
-    const { data: isAdmin } = await supabase.rpc('check_admin_status');
-    if (!isAdmin) {
-      throw new Error('Permission denied: Admin access required');
+    // Get the current user session to ensure we don't delete our own account
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.id === userId) {
+      throw new Error('Cannot delete your own account');
     }
 
     // Delete user's profile first (this will automatically trigger cascading deletes)
@@ -32,7 +32,10 @@ export async function deleteUser(userId: string): Promise<void> {
       body: { userId: userId }
     });
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error calling delete user function:', error);
+      throw error;
+    }
     
     toast.success('User deleted successfully');
   } catch (error: any) {

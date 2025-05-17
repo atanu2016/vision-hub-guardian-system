@@ -9,12 +9,6 @@ export async function toggleMfaRequirement(userId: string, required: boolean): P
   try {
     console.log(`Setting MFA requirement to ${required} for user ${userId}`);
     
-    // Check admin status first
-    const { data: isAdmin } = await supabase.rpc('check_admin_status');
-    if (!isAdmin) {
-      throw new Error('Permission denied: Admin access required');
-    }
-    
     // Update the profile for the specific user
     const { error } = await supabase
       .from('profiles')
@@ -42,12 +36,6 @@ export async function toggleMfaRequirement(userId: string, required: boolean): P
 export async function revokeMfaEnrollment(userId: string): Promise<void> {
   try {
     console.log(`Revoking MFA enrollment for user ${userId}`);
-    
-    // Check admin status first
-    const { data: isAdmin } = await supabase.rpc('check_admin_status');
-    if (!isAdmin) {
-      throw new Error('Permission denied: Admin access required');
-    }
     
     // Update profile to clear mfa_enrolled and mfa_secret
     const { error } = await supabase
