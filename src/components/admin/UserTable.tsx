@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { UserMinus } from 'lucide-react';
 import { useState } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useAuth } from '@/contexts/auth';
+import { canManageRole } from '@/utils/permissionUtils';
 
 interface UserTableProps {
   users: UserData[];
@@ -28,6 +30,7 @@ export function UserTable({
   loading 
 }: UserTableProps) {
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const { role: currentUserRole } = useAuth();
 
   const handleDeleteClick = (userId: string) => {
     setDeletingUserId(userId);
@@ -62,65 +65,71 @@ export function UserTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {users.map((user) => (
-            <TableRow key={user.id}>
-              <TableCell>{user.full_name || 'N/A'}</TableCell>
-              <TableCell>{user.email}</TableCell>
-              <TableCell>
-                <RoleSelector 
-                  userId={user.id} 
-                  currentRole={user.role} 
-                  currentUserId={currentUserId}
-                  onUpdateRole={updateUserRole} 
-                />
-              </TableCell>
-              <TableCell>
-                <span className={user.mfa_enrolled ? "text-green-500" : "text-amber-500"}>
-                  {user.mfa_enrolled ? "Enrolled" : "Not Enrolled"}
-                </span>
-              </TableCell>
-              <TableCell>
-                <MfaToggle 
-                  userId={user.id} 
-                  isRequired={user.mfa_required}
-                  isEnrolled={user.mfa_enrolled}
-                  onToggle={toggleMfaRequirement}
-                  onRevoke={revokeMfaEnrollment}
-                />
-              </TableCell>
-              <TableCell className="text-right">
-                {deleteUser && user.id !== currentUserId && (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button 
-                        variant="destructive" 
-                        size="sm"
-                        onClick={() => handleDeleteClick(user.id)}
-                      >
-                        <UserMinus className="h-4 w-4 mr-1" />
-                        Delete
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will permanently delete the user 
-                          account and remove their data from our servers.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                          Delete User
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                )}
-              </TableCell>
-            </TableRow>
-          ))}
+          {users.map((user) => {
+            // Check if current user can manage this user's role
+            const canManageThisUser = canManageRole(currentUserRole, user.role);
+            
+            return (
+              <TableRow key={user.id}>
+                <TableCell>{user.full_name || 'N/A'}</TableCell>
+                <TableCell>{user.email}</TableCell>
+                <TableCell>
+                  <RoleSelector 
+                    userId={user.id} 
+                    currentRole={user.role} 
+                    currentUserId={currentUserId}
+                    onUpdateRole={updateUserRole} 
+                  />
+                </TableCell>
+                <TableCell>
+                  <span className={user.mfa_enrolled ? "text-green-500" : "text-amber-500"}>
+                    {user.mfa_enrolled ? "Enrolled" : "Not Enrolled"}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <MfaToggle 
+                    userId={user.id} 
+                    isRequired={user.mfa_required}
+                    isEnrolled={user.mfa_enrolled}
+                    onToggle={toggleMfaRequirement}
+                    onRevoke={revokeMfaEnrollment}
+                    disabled={!canManageThisUser}
+                  />
+                </TableCell>
+                <TableCell className="text-right">
+                  {deleteUser && user.id !== currentUserId && canManageThisUser && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          onClick={() => handleDeleteClick(user.id)}
+                        >
+                          <UserMinus className="h-4 w-4 mr-1" />
+                          Delete
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the user 
+                            account and remove their data from our servers.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                            Delete User
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

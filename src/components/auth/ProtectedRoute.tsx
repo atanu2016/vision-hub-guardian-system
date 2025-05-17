@@ -2,14 +2,24 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { Loader2 } from 'lucide-react';
+import { usePermissions } from '@/hooks/usePermissions';
+import { Permission } from '@/utils/permissionUtils';
 
 type ProtectedRouteProps = {
   children: React.ReactNode;
-  adminRequired?: boolean;  // Make sure this property exists in the type
+  adminRequired?: boolean;
+  superadminRequired?: boolean;
+  requiredPermission?: Permission;
 };
 
-const ProtectedRoute = ({ children, adminRequired = false }: ProtectedRouteProps) => {
-  const { user, isLoading, isAdmin } = useAuth();
+const ProtectedRoute = ({ 
+  children, 
+  adminRequired = false,
+  superadminRequired = false,
+  requiredPermission
+}: ProtectedRouteProps) => {
+  const { user, isLoading, isAdmin, role } = useAuth();
+  const { hasPermission } = usePermissions();
   const location = useLocation();
 
   // Prevent rendering until auth state is determined
@@ -27,13 +37,25 @@ const ProtectedRoute = ({ children, adminRequired = false }: ProtectedRouteProps
     return <Navigate to="/auth" state={{ from: location.pathname }} replace />;
   }
 
+  // If superadmin access is required but user is not a superadmin, redirect to home
+  if (superadminRequired && role !== 'superadmin') {
+    console.log("Protected route: Superadmin access required but user is not a superadmin, redirecting to /");
+    return <Navigate to="/" replace />;
+  }
+
   // If admin access is required but user is not an admin, redirect to home
   if (adminRequired && !isAdmin) {
     console.log("Protected route: Admin access required but user is not admin, redirecting to /");
     return <Navigate to="/" replace />;
   }
 
-  // User is authenticated (and is admin if required), allow access to the route
+  // If specific permission is required, check it
+  if (requiredPermission && !hasPermission(requiredPermission)) {
+    console.log(`Protected route: Permission '${requiredPermission}' required but not granted, redirecting to /`);
+    return <Navigate to="/" replace />;
+  }
+
+  // User is authenticated (and has required role/permission if specified), allow access to the route
   console.log("Protected route: Access granted");
   return <>{children}</>;
 };

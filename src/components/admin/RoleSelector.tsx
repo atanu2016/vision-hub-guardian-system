@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { Shield, ShieldCheck, ShieldX, User } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { UserRole } from '@/types/admin';
+import { useAuth } from '@/contexts/auth';
+import { canManageRole } from '@/utils/permissionUtils';
 
 interface RoleSelectorProps {
   userId: string;
@@ -13,6 +15,7 @@ interface RoleSelectorProps {
 
 export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole }: RoleSelectorProps) {
   const [isUpdating, setIsUpdating] = useState(false);
+  const { role: currentUserRole } = useAuth();
 
   const handleRoleChange = async (value: string) => {
     setIsUpdating(true);
@@ -37,7 +40,14 @@ export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole 
   }
 
   // Don't allow changing your own role except for superadmin
-  const disabled = userId === currentUserId && currentRole !== 'superadmin';
+  const isSelf = userId === currentUserId;
+  const canManageUser = canManageRole(currentUserRole, currentRole);
+
+  // Disable if:
+  // 1. User is trying to change their own role (except superadmin)
+  // 2. User doesn't have permission to manage this role
+  // 3. Currently updating
+  const disabled = (isSelf && currentRole !== 'superadmin') || !canManageUser || isUpdating;
 
   return (
     <div className="flex items-center gap-2">
@@ -45,14 +55,14 @@ export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole 
       <Select
         defaultValue={currentRole}
         onValueChange={handleRoleChange}
-        disabled={isUpdating || disabled}
+        disabled={disabled}
       >
         <SelectTrigger className="w-32">
           <SelectValue placeholder="Role" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="superadmin">Superadmin</SelectItem>
-          <SelectItem value="admin">Admin</SelectItem>
+          <SelectItem value="superadmin" disabled={currentUserRole !== 'superadmin'}>Superadmin</SelectItem>
+          <SelectItem value="admin" disabled={currentUserRole !== 'superadmin'}>Admin</SelectItem>
           <SelectItem value="operator">Operator</SelectItem>
           <SelectItem value="user">User</SelectItem>
         </SelectContent>

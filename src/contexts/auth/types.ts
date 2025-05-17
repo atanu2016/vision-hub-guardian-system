@@ -21,10 +21,10 @@ export interface AuthState {
 
 export interface AuthContextType extends AuthState {
   isAdmin: boolean;
+  isSuperAdmin: boolean;
+  isOperator: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   requiresMFA: boolean;
-  isSuperAdmin: boolean;
-  isOperator: boolean;
 }

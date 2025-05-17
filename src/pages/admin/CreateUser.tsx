@@ -7,23 +7,26 @@ import { ArrowLeft } from 'lucide-react';
 import { CreateUserForm } from '@/components/admin/users/CreateUserForm';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
+import { usePermissions } from '@/hooks/usePermissions';
 
 export default function CreateUser() {
   const navigate = useNavigate();
-  const { isSuperAdmin } = useAuth();
+  const { role } = useAuth();
+  const { hasPermission } = usePermissions();
+  const canManageAllUsers = hasPermission('manage-users:all');
   
   const handleNavigateBack = () => {
     navigate('/admin');
   };
   
   useEffect(() => {
-    if (!isSuperAdmin) {
+    if (!canManageAllUsers) {
       toast.error('Only superadmin users can create new users');
       navigate('/admin');
     }
-  }, [isSuperAdmin, navigate]);
+  }, [canManageAllUsers, navigate]);
   
-  if (!isSuperAdmin) {
+  if (!canManageAllUsers) {
     return null;
   }
 

@@ -13,16 +13,22 @@ import type { UserData, UserRole } from '@/types/admin';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { usePermissions } from '@/hooks/usePermissions';
 
 export default function UserManagement() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { isSuperAdmin, user, isAdmin } = useAuth();
+  const { user, isAdmin, role } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
 
+  const canManageAllUsers = hasPermission('manage-users:all');
+  const canManageSomeUsers = hasPermission('manage-users:lower');
+  const canAssignRoles = hasPermission('assign-roles');
+
   useEffect(() => {
-    // Redirect if not an admin
+    // Redirect if not an admin or operator
     if (!isAdmin && !loading) {
       toast.error('Only administrators can access user management');
       navigate('/');
@@ -50,6 +56,12 @@ export default function UserManagement() {
   }
 
   async function handleUpdateUserRole(userId: string, newRole: UserRole) {
+    // Check permission to assign this role
+    if (!canAssignRoles) {
+      toast.error("You don't have permission to assign roles");
+      return;
+    }
+    
     try {
       await updateUserRole(userId, newRole, user?.id);
       // Update local state
@@ -63,6 +75,12 @@ export default function UserManagement() {
   }
 
   async function handleToggleMfaRequirement(userId: string, required: boolean) {
+    // Only allow admins and superadmins to modify MFA requirements
+    if (!canManageAllUsers && !canManageSomeUsers) {
+      toast.error("You don't have permission to modify MFA requirements");
+      return;
+    }
+    
     try {
       await toggleMfaRequirement(userId, required);
       // Update local state
@@ -76,6 +94,12 @@ export default function UserManagement() {
   }
   
   async function handleRevokeMfaEnrollment(userId: string) {
+    // Only allow admins and superadmins to revoke MFA enrollment
+    if (!canManageAllUsers && !canManageSomeUsers) {
+      toast.error("You don't have permission to revoke MFA enrollment");
+      return;
+    }
+    
     try {
       await revokeMfaEnrollment(userId);
       // Update local state
@@ -89,6 +113,19 @@ export default function UserManagement() {
   }
   
   async function handleDeleteUser(userId: string) {
+    // Check if the current user has permission to delete this user
+    const userToDelete = users.find(u => u.id === userId);
+    if (!userToDelete) return;
+    
+    const isSuperadmin = userToDelete.role === 'superadmin';
+    const isAdmin = userToDelete.role === 'admin';
+    
+    // Only superadmins can delete superadmins or admins
+    if ((isSuperadmin || isAdmin) && role !== 'superadmin') {
+      toast.error("Only superadmins can delete admin users");
+      return;
+    }
+    
     try {
       await deleteUser(userId);
       // Remove user from local state
@@ -107,7 +144,7 @@ export default function UserManagement() {
     loadUsers();
   };
 
-  if (!isAdmin && !isSuperAdmin) {
+  if (!isAdmin) {
     return (
       <Card>
         <CardHeader>
@@ -142,14 +179,16 @@ export default function UserManagement() {
             <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button 
-            onClick={handleCreateUserClick}
-            size="sm"
-            className="flex items-center gap-2 bg-vision-blue hover:bg-vision-blue-600"
-          >
-            <UserPlus className="h-4 w-4" />
-            Create User
-          </Button>
+          {(role === 'superadmin') && (
+            <Button 
+              onClick={handleCreateUserClick}
+              size="sm"
+              className="flex items-center gap-2 bg-vision-blue hover:bg-vision-blue-600"
+            >
+              <UserPlus className="h-4 w-4" />
+              Create User
+            </Button>
+          )}
         </div>
       </CardHeader>
 

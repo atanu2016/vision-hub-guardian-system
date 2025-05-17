@@ -17,7 +17,7 @@ import Recordings from "@/pages/Recordings";
 import Notifications from "@/pages/Notifications";
 import ProfileSettings from "@/pages/ProfileSettings";
 import Settings from "@/pages/Settings";
-import Admin from "@/pages/admin"; // Fixed: Changed from '@/pages/Admin' to '@/pages/admin'
+import Admin from "@/pages/admin";
 import UserManagement from "@/pages/admin/UserManagement";
 import CreateUser from "@/pages/admin/CreateUser";
 import NotFound from "@/pages/NotFound";
@@ -37,24 +37,32 @@ function App() {
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/cameras" element={<ProtectedRoute><Cameras /></ProtectedRoute>} />
-              <Route path="/cameras/:id" element={<ProtectedRoute><CameraDetail /></ProtectedRoute>} />
-              <Route path="/live" element={<ProtectedRoute><LiveView /></ProtectedRoute>} />
-              <Route path="/recordings" element={<ProtectedRoute><Recordings /></ProtectedRoute>} />
+              
+              {/* Camera permissions */}
+              <Route path="/cameras" element={<ProtectedRoute requiredPermission="view-cameras:assigned"><Cameras /></ProtectedRoute>} />
+              <Route path="/cameras/:id" element={<ProtectedRoute requiredPermission="view-cameras:assigned"><CameraDetail /></ProtectedRoute>} />
+              <Route path="/live" element={<ProtectedRoute requiredPermission="view-cameras:assigned"><LiveView /></ProtectedRoute>} />
+              <Route path="/recordings" element={<ProtectedRoute requiredPermission="view-footage:assigned"><Recordings /></ProtectedRoute>} />
+              
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
+              
+              {/* Settings routes */}
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/storage" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/recordings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/settings/storage" element={<ProtectedRoute requiredPermission="configure-storage"><Settings /></ProtectedRoute>} />
+              <Route path="/settings/recordings" element={<ProtectedRoute requiredPermission="configure-camera-settings"><Settings /></ProtectedRoute>} />
               <Route path="/settings/alerts" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/webhooks" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/advanced" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/database" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/logs" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/system" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/settings/webhooks" element={<ProtectedRoute requiredPermission="configure-global-policies"><Settings /></ProtectedRoute>} />
+              <Route path="/settings/advanced" element={<ProtectedRoute requiredPermission="manage-system"><Settings /></ProtectedRoute>} />
+              <Route path="/settings/database" element={<ProtectedRoute requiredPermission="manage-system"><Settings /></ProtectedRoute>} />
+              <Route path="/settings/logs" element={<ProtectedRoute requiredPermission="access-logs"><Settings /></ProtectedRoute>} />
+              <Route path="/settings/system" element={<ProtectedRoute requiredPermission="manage-system"><Settings /></ProtectedRoute>} />
+              
+              {/* Admin routes */}
               <Route path="/admin" element={<ProtectedRoute adminRequired={true}><Admin /></ProtectedRoute>} />
               <Route path="/admin/users" element={<ProtectedRoute adminRequired={true}><UserManagement /></ProtectedRoute>} />
-              <Route path="/admin/users/create" element={<ProtectedRoute adminRequired={true}><CreateUser /></ProtectedRoute>} />
+              <Route path="/admin/users/create" element={<ProtectedRoute superadminRequired={true}><CreateUser /></ProtectedRoute>} />
+              
               <Route path="*" element={<NotFound />} />
             </Routes>
           </SidebarProvider>
