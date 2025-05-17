@@ -3,12 +3,13 @@ import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { 
   fetchDetectionSettings,
-  saveDetectionSettings
+  saveDetectionSettings,
+  DetectionSettings
 } from '@/services/database/systemSettingsService';
 
 export const useDetectionSettings = () => {
   // Detection settings
-  const [detectionSettings, setDetectionSettings] = useState({
+  const [detectionSettings, setDetectionSettings] = useState<DetectionSettings>({
     sensitivityLevel: 50,
     enabled: true,
     objectTypes: ["person", "vehicle"],
@@ -34,7 +35,7 @@ export const useDetectionSettings = () => {
   }, []);
   
   // Update detection settings
-  const updateDetectionSettings = useCallback(async (settings) => {
+  const updateDetectionSettings = useCallback(async (settings: Partial<DetectionSettings>) => {
     setIsSaving(true);
     try {
       // Ensure all required properties are present when updating state

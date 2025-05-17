@@ -12,6 +12,9 @@ export interface InterfaceSettings {
 
 export interface DetectionSettings {
   sensitivityLevel: number;
+  enabled: boolean;
+  objectTypes: string[];
+  smartDetection: boolean;
 }
 
 export interface StorageSettings {
@@ -94,16 +97,22 @@ export const saveInterfaceSettings = async (settings: InterfaceSettings) => {
 export const fetchDetectionSettings = async () => {
   try {
     // Since motion_sensitivity doesn't exist in advanced_settings, 
-    // we'll just return a default value
+    // we'll just return default values for all required properties
     return {
-      sensitivityLevel: 50
+      sensitivityLevel: 50,
+      enabled: true,
+      objectTypes: ["person", "vehicle"],
+      smartDetection: false
     };
   } catch (error) {
     logDatabaseError(error, "Failed to load detection settings");
     
-    // Return default settings on error
+    // Return default settings on error with all required properties
     return {
-      sensitivityLevel: 50
+      sensitivityLevel: 50,
+      enabled: true,
+      objectTypes: ["person", "vehicle"],
+      smartDetection: false
     };
   }
 };
@@ -113,7 +122,7 @@ export const saveDetectionSettings = async (settings: DetectionSettings) => {
   try {
     // There's no column for this yet, so we'll just return success
     // and log the value we would have stored
-    console.log("Would save motion sensitivity:", settings.sensitivityLevel);
+    console.log("Would save detection settings:", settings);
     
     toast.success("Detection settings saved");
     return true;

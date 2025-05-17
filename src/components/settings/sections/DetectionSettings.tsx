@@ -8,26 +8,37 @@ import {
   AccordionTrigger
 } from "@/components/ui/accordion";
 import { Switch } from "@/components/ui/switch";
-import { useState } from "react";
 import { Toggle } from "@/components/ui/toggle";
+import { DetectionSettings as DetectionSettingsType } from "@/services/database/systemSettingsService";
 
 interface DetectionSettingsProps {
   sensitivityLevel: number;
+  enabled: boolean;
+  objectTypes: string[];
+  smartDetection: boolean;
   onChangeSensitivity: (value: number[]) => void;
+  onChangeEnabled?: (enabled: boolean) => void;
+  onChangeObjectTypes?: (types: string[]) => void;
+  onChangeSmartDetection?: (enabled: boolean) => void;
 }
 
 const DetectionSettings = ({
   sensitivityLevel,
-  onChangeSensitivity
+  enabled = true,
+  objectTypes = ["person", "vehicle"],
+  smartDetection = false,
+  onChangeSensitivity,
+  onChangeEnabled,
+  onChangeObjectTypes,
+  onChangeSmartDetection
 }: DetectionSettingsProps) => {
-  const [detectionEnabled, setDetectionEnabled] = useState(true);
-  const [selectedObjectTypes, setSelectedObjectTypes] = useState<string[]>(["person", "vehicle"]);
-
   const handleToggleObjectType = (type: string) => {
-    if (selectedObjectTypes.includes(type)) {
-      setSelectedObjectTypes(selectedObjectTypes.filter(t => t !== type));
+    if (!onChangeObjectTypes) return;
+    
+    if (objectTypes.includes(type)) {
+      onChangeObjectTypes(objectTypes.filter(t => t !== type));
     } else {
-      setSelectedObjectTypes([...selectedObjectTypes, type]);
+      onChangeObjectTypes([...objectTypes, type]);
     }
   };
 
@@ -37,11 +48,11 @@ const DetectionSettings = ({
         <h2 className="text-xl font-semibold">Detection Settings</h2>
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">
-            {detectionEnabled ? "Enabled" : "Disabled"}
+            {enabled ? "Enabled" : "Disabled"}
           </span>
           <Switch 
-            checked={detectionEnabled} 
-            onCheckedChange={setDetectionEnabled} 
+            checked={enabled} 
+            onCheckedChange={onChangeEnabled || (() => {})}
           />
         </div>
       </div>
@@ -63,7 +74,7 @@ const DetectionSettings = ({
             max={100} 
             step={1}
             onValueChange={onChangeSensitivity}
-            disabled={!detectionEnabled}
+            disabled={!enabled}
           />
           <div className="text-right text-sm">
             {sensitivityLevel}%
@@ -82,37 +93,48 @@ const DetectionSettings = ({
                 <h4 className="text-sm font-medium mb-2">Object Detection</h4>
                 <div className="flex flex-wrap gap-2">
                   <Toggle 
-                    pressed={selectedObjectTypes.includes("person")} 
+                    pressed={objectTypes.includes("person")} 
                     onPressedChange={() => handleToggleObjectType("person")}
                     size="sm"
-                    disabled={!detectionEnabled}
+                    disabled={!enabled}
                   >
                     Person
                   </Toggle>
                   <Toggle 
-                    pressed={selectedObjectTypes.includes("vehicle")} 
+                    pressed={objectTypes.includes("vehicle")} 
                     onPressedChange={() => handleToggleObjectType("vehicle")}
                     size="sm"
-                    disabled={!detectionEnabled}
+                    disabled={!enabled}
                   >
                     Vehicle
                   </Toggle>
                   <Toggle 
-                    pressed={selectedObjectTypes.includes("animal")} 
+                    pressed={objectTypes.includes("animal")} 
                     onPressedChange={() => handleToggleObjectType("animal")}
                     size="sm"
-                    disabled={!detectionEnabled}
+                    disabled={!enabled}
                   >
                     Animal
                   </Toggle>
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-3">
-                <Button variant="outline" disabled={!detectionEnabled}>Configure Zones</Button>
-                <Button variant="outline" disabled={!detectionEnabled}>Detection Rules</Button>
-                <Button variant="outline" disabled={!detectionEnabled}>Face Recognition</Button>
-                <Button variant="outline" disabled={!detectionEnabled}>Smart Alerts</Button>
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Smart Detection</span>
+                  <Switch 
+                    checked={smartDetection} 
+                    onCheckedChange={onChangeSmartDetection || (() => {})}
+                    disabled={!enabled}
+                  />
+                </div>
+              
+                <div className="grid grid-cols-2 gap-3">
+                  <Button variant="outline" disabled={!enabled}>Configure Zones</Button>
+                  <Button variant="outline" disabled={!enabled}>Detection Rules</Button>
+                  <Button variant="outline" disabled={!enabled}>Face Recognition</Button>
+                  <Button variant="outline" disabled={!enabled}>Smart Alerts</Button>
+                </div>
               </div>
             </div>
           </AccordionContent>

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
+import { useDetectionSettings } from '@/hooks/useDetectionSettings';
 
 // Import setting section components
 import InterfaceSettings from '@/components/settings/sections/InterfaceSettings';
@@ -15,23 +16,33 @@ import SystemInformation from '@/components/settings/sections/SystemInformation'
 const SystemSettingsMain = () => {
   const {
     interfaceSettings,
-    detectionSettings,
     storageSettings,
     systemInformation,
-    isLoading,
-    isSaving,
+    isLoading: isSystemLoading,
+    isSaving: isSystemSaving,
     updateInterfaceSettings,
-    updateDetectionSettings,
     updateStorageSettings,
     checkForUpdates,
     saveAllSettings,
     reloadSettings
   } = useSystemSettings();
   
+  const {
+    detectionSettings,
+    isLoading: isDetectionLoading,
+    isSaving: isDetectionSaving,
+    loadDetectionSettings,
+    updateDetectionSettings
+  } = useDetectionSettings();
+  
+  const isLoading = isSystemLoading || isDetectionLoading;
+  const isSaving = isSystemSaving || isDetectionSaving;
+  
   useEffect(() => {
     // Load settings when component mounts
     reloadSettings();
-  }, [reloadSettings]);
+    loadDetectionSettings();
+  }, [reloadSettings, loadDetectionSettings]);
 
   // Handle interface settings changes
   const handleDarkModeChange = (enabled: boolean) => {
@@ -58,8 +69,25 @@ const SystemSettingsMain = () => {
   // Handle detection settings changes
   const handleSensitivityChange = (value: number[]) => {
     updateDetectionSettings({
-      ...detectionSettings,
       sensitivityLevel: value[0]
+    });
+  };
+  
+  const handleDetectionEnabledChange = (enabled: boolean) => {
+    updateDetectionSettings({
+      enabled: enabled
+    });
+  };
+  
+  const handleObjectTypesChange = (types: string[]) => {
+    updateDetectionSettings({
+      objectTypes: types
+    });
+  };
+  
+  const handleSmartDetectionChange = (enabled: boolean) => {
+    updateDetectionSettings({
+      smartDetection: enabled
     });
   };
   
@@ -129,7 +157,13 @@ const SystemSettingsMain = () => {
         <Card className="p-6">
           <DetectionSettings 
             sensitivityLevel={detectionSettings.sensitivityLevel}
+            enabled={detectionSettings.enabled}
+            objectTypes={detectionSettings.objectTypes}
+            smartDetection={detectionSettings.smartDetection}
             onChangeSensitivity={handleSensitivityChange}
+            onChangeEnabled={handleDetectionEnabledChange}
+            onChangeObjectTypes={handleObjectTypesChange}
+            onChangeSmartDetection={handleSmartDetectionChange}
           />
         </Card>
         
