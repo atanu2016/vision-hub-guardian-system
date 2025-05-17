@@ -17,65 +17,37 @@ interface MainNavigationProps {
 const MainNavigation = ({ isActive }: MainNavigationProps) => {
   const { isAdmin } = useAuth();
   
+  const navigationItems = [
+    { path: "/", icon: Home, label: "Dashboard" },
+    { path: "/cameras", icon: Camera, label: "Cameras" },
+    { path: "/live-view", icon: Video, label: "Live View" },
+    { path: "/recordings", icon: Video, label: "Recordings" },
+    { path: "/settings", icon: Settings, label: "Settings" },
+  ];
+  
+  // Only show admin route if user is an admin
+  if (isAdmin) {
+    navigationItems.push({ 
+      path: "/admin", 
+      icon: Shield, 
+      label: "Admin" 
+    });
+  }
+  
   return (
     <SidebarGroup>
       <SidebarGroupContent>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive("/")} className="hover:bg-vision-dark-800">
-              <Link to="/">
-                <Home />
-                <span>Dashboard</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive("/cameras")} className="hover:bg-vision-dark-800">
-              <Link to="/cameras">
-                <Camera />
-                <span>Cameras</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive("/live-view")} className="hover:bg-vision-dark-800">
-              <Link to="/live-view">
-                <Video />
-                <span>Live View</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive("/recordings")} className="hover:bg-vision-dark-800">
-              <Link to="/recordings">
-                <Video />
-                <span>Recordings</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={isActive("/settings")} className="hover:bg-vision-dark-800">
-              <Link to="/settings">
-                <Settings />
-                <span>Settings</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          
-          {isAdmin && (
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={isActive("/admin")} className="hover:bg-vision-dark-800">
-                <Link to="/admin">
-                  <Shield />
-                  <span>Admin</span>
+          {navigationItems.map(({ path, icon: Icon, label }) => (
+            <SidebarMenuItem key={path}>
+              <SidebarMenuButton asChild isActive={isActive(path)} className="hover:bg-vision-dark-800">
+                <Link to={path}>
+                  <Icon />
+                  <span>{label}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-          )}
+          ))}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
