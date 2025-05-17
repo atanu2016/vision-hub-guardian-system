@@ -27,9 +27,11 @@ export function MfaToggle({
   const [isUpdating, setIsUpdating] = useState(false);
 
   const handleToggle = async () => {
-    setIsUpdating(true);
     try {
+      setIsUpdating(true);
       await onToggle(userId, !isRequired);
+    } catch (error) {
+      console.error('Failed to toggle MFA requirement:', error);
     } finally {
       setIsUpdating(false);
     }
@@ -38,9 +40,11 @@ export function MfaToggle({
   const handleRevoke = async () => {
     if (!onRevoke) return;
     
-    setIsUpdating(true);
     try {
+      setIsUpdating(true);
       await onRevoke(userId);
+    } catch (error) {
+      console.error('Failed to revoke MFA enrollment:', error);
     } finally {
       setIsUpdating(false);
     }
@@ -62,7 +66,7 @@ export function MfaToggle({
         <DropdownMenuItem onClick={handleToggle}>
           Make {isRequired ? "Optional" : "Required"}
         </DropdownMenuItem>
-        {onRevoke && (
+        {onRevoke && isEnrolled && (
           <DropdownMenuItem onClick={handleRevoke} className="text-destructive">
             <Key className="h-4 w-4 mr-2" />
             Revoke MFA

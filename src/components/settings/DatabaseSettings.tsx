@@ -25,7 +25,7 @@ export default function DatabaseSettings() {
   // Define table names with a type assertion to help TypeScript
   const tables = ['cameras', 'storage_settings', 'recording_settings', 'alert_settings', 
     'webhooks', 'advanced_settings', 'system_logs', 'system_stats', 
-    'profiles', 'database_config', 'smtp_config', 'camera_recording_status'] as const;
+    'profiles', 'database_config', 'smtp_config', 'camera_recording_status', 'user_roles'] as const;
 
   useEffect(() => {
     checkDatabaseStatus();
@@ -46,13 +46,9 @@ export default function DatabaseSettings() {
       // Use Promise.all to check if each table exists
       const tableChecks = await Promise.all(
         tables.map(table => 
-          // Modified this line to properly handle the Promise with error handling
-          supabase.from(table).select('id', { count: 'exact', head: true })
+          supabase.from(table as string).select('id', { count: 'exact', head: true })
             .then(result => result.count !== null)
-            .then(
-              exists => exists, 
-              () => false // Error handler within then() instead of catch()
-            )
+            .catch(() => false)
         )
       );
       

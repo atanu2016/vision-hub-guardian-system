@@ -39,6 +39,10 @@ serve(async (req) => {
       });
     }
 
+    // Create a service role client to bypass RLS
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Create a normal client to verify the user's token
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Verify the token and check if user is admin
@@ -57,7 +61,7 @@ serve(async (req) => {
     console.log(`User ${user.id} (${user.email}) is attempting to access admin function`);
 
     // Check if user has admin privileges - first check user_roles
-    const { data: userRole, error: roleError1 } = await supabase
+    const { data: userRole, error: roleError1 } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
@@ -71,7 +75,7 @@ serve(async (req) => {
       console.log(`User ${user.id} has admin role: ${userRole.role}`);
     } else {
       // If no role or error, check is_admin flag in profiles
-      const { data: profile, error: profileError } = await supabase
+      const { data: profile, error: profileError } = await supabaseAdmin
         .from('profiles')
         .select('is_admin')
         .eq('id', user.id)
@@ -116,7 +120,7 @@ serve(async (req) => {
         console.log(`Attempting to delete user: ${userId}`);
         
         // First delete profile directly with service role client to bypass RLS
-        const { error: profileError } = await supabase
+        const { error: profileError } = await supabaseAdmin
           .from('profiles')
           .delete()
           .eq('id', userId);
@@ -129,7 +133,7 @@ serve(async (req) => {
         }
         
         // Delete any user roles
-        const { error: roleError } = await supabase
+        const { error: roleError } = await supabaseAdmin
           .from('user_roles')
           .delete()
           .eq('user_id', userId);
@@ -142,7 +146,7 @@ serve(async (req) => {
         }
         
         // Delete the user with admin API
-        const { error } = await supabase.auth.admin.deleteUser(userId);
+        const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
         
         if (error) {
           console.error("Error deleting auth user:", error);
@@ -168,7 +172,7 @@ serve(async (req) => {
     if (req.method === 'PUT') {
       try {
         const body = await req.json();
-        const { userId, action } = body;
+        const { userId, action, mfaRequired } = body;
         
         if (!userId || !action) {
           return new Response(JSON.stringify({ error: 'User ID and action are required' }), {
@@ -177,11 +181,37 @@ serve(async (req) => {
           });
         }
         
+        // Handle MFA requirement toggle
+        if (action === 'toggle_mfa_requirement') {
+          console.log(`Setting MFA requirement to ${mfaRequired} for user ${userId}`);
+          
+          // Use the admin client to bypass RLS policies
+          const { error: updateError } = await supabaseAdmin
+            .from('profiles')
+            .update({
+              mfa_required: mfaRequired
+            })
+            .eq('id', userId);
+            
+          if (updateError) {
+            console.error("Error updating profile MFA requirement:", updateError);
+            throw updateError;
+          }
+          
+          console.log(`Successfully set MFA requirement to ${mfaRequired} for user: ${userId}`);
+          
+          return new Response(JSON.stringify({ success: true }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200
+          });
+        }
+        
+        // Handle MFA revocation
         if (action === 'revoke_mfa') {
           console.log(`Revoking MFA for user ${userId}`);
           
-          // Update profile to clear MFA enrollment
-          const { error: updateError } = await supabase
+          // Update profile to clear MFA enrollment using admin client to bypass RLS
+          const { error: updateError } = await supabaseAdmin
             .from('profiles')
             .update({
               mfa_enrolled: false,
@@ -218,7 +248,7 @@ serve(async (req) => {
     // Default GET method to fetch all users
     if (req.method === 'GET' || req.method === 'POST') {
       // Use the service role client to bypass RLS
-      const { data: users, error: usersError } = await supabase
+      const { data: users, error: usersError } = await supabaseAdmin
         .from('profiles')
         .select('id, full_name, mfa_enrolled, mfa_required, created_at, is_admin');
 
@@ -228,7 +258,7 @@ serve(async (req) => {
       }
 
       // Fetch user roles
-      const { data: userRoles, error: rolesError } = await supabase
+      const { data: userRoles, error: rolesError } = await supabaseAdmin
         .from('user_roles')
         .select('user_id, role');
 
@@ -246,7 +276,7 @@ serve(async (req) => {
       let emails: Record<string, string> = {};
       
       try {
-        const { data: authUsers } = await supabase.auth.admin.listUsers();
+        const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
         if (authUsers && authUsers.users) {
           authUsers.users.forEach((authUser: any) => {
             if (authUser && authUser.id && authUser.email) {

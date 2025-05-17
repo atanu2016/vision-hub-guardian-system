@@ -9,13 +9,16 @@ export async function toggleMfaRequirement(userId: string, required: boolean): P
   try {
     console.log(`Setting MFA requirement to ${required} for user ${userId}`);
     
-    // Update the profile for the specific user directly (bypass RLS issues)
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        mfa_required: required
-      })
-      .eq('id', userId);
+    // Call the admin edge function instead of directly updating the profile
+    // This bypasses RLS issues with the profiles table
+    const { error } = await supabase.functions.invoke('get-all-users', {
+      method: 'PUT',
+      body: { 
+        userId: userId,
+        action: 'toggle_mfa_requirement',
+        mfaRequired: required
+      }
+    });
       
     if (error) {
       console.error('Error toggling MFA requirement:', error);
