@@ -1,74 +1,39 @@
 
-import { useCallback, useEffect } from "react";
-import { Permission, hasPermission, canManageRole } from "@/utils/permissionUtils";
-import { UserRole } from "@/types/admin";
-import { usePermissionCache } from "./usePermissionCache";
-import { useRoleSubscription } from "./useRoleSubscription";
-import { useOperatorPermissions } from "./useOperatorPermissions";
-import { UsePermissionsReturn } from "./types";
+import { useMemo } from 'react';
+import { hasPermission as checkPermission } from '@/utils/permissionUtils';
+import { useRoleSubscription } from './useRoleSubscription';
+import type { Permission } from '@/utils/permissionUtils';
+import { useOperatorPermissions } from './useOperatorPermissions';
+import type { UsePermissionsReturn } from './types';
+import type { UserRole } from '@/types/admin';
 
+/**
+ * Core hook for checking permissions with optimized performance
+ */
 export function usePermissionsCore(): UsePermissionsReturn {
+  // Get current user role from context
   const { role, authRole } = useRoleSubscription();
-  const { getCachedPermission, setCachedPermission, clearCache } = usePermissionCache();
+  
+  // Get optimized operator permissions
   const { isOperatorFastPathEnabled } = useOperatorPermissions(role, authRole);
   
-  // Performance-optimized permission check with caching
-  const checkPermission = useCallback((permission: Permission): boolean => {
-    // Critical fast path for key user permissions
-    if (isOperatorFastPathEnabled(permission)) {
-      return true;
-    }
-    
-    const cacheKey = `${role}:${permission}`;
-    const cachedValue = getCachedPermission(cacheKey);
-    
-    if (cachedValue !== null) {
-      return cachedValue;
-    }
-    
-    // Force more detailed logging for crucial permissions
-    const criticalPermissions: Permission[] = [
-      'view-footage:assigned',
-      'view-cameras:assigned',
-      'view-footage:all'
-    ];
-    
-    if (criticalPermissions.includes(permission)) {
-      console.log(`[PERMISSIONS] Critical permission check: ${permission} - Role: ${role}`);
-      
-      // Special handling for admin users with these critical permissions
-      if (role === 'admin' || role === 'superadmin') {
-        console.log(`[PERMISSIONS] ▶️ Admin permission check - granting ${permission}`);
-        // Cache the result
-        setCachedPermission(cacheKey, true);
+  // Define the permissions checking function
+  const hasPermission = useMemo(() => {
+    return (permission: Permission): boolean => {
+      // First check if we can use the fast path for critical operator permissions
+      if (isOperatorFastPathEnabled(permission)) {
         return true;
       }
-    }
-    
-    const result = hasPermission(role, permission);
-    console.log(`[PERMISSIONS] Permission check: ${permission} for ${role} = ${result}`);
-    
-    // Cache the result
-    setCachedPermission(cacheKey, result);
-    
-    return result;
-  }, [role, authRole, getCachedPermission, setCachedPermission, isOperatorFastPathEnabled]);
-  
-  // Standard role management function
-  const checkCanManageRole = useCallback((targetRole: UserRole): boolean => {
-    return canManageRole(role, targetRole);
-  }, [role]);
-  
-  // Clear cache when component unmounts or dependencies change
-  useEffect(() => {
-    return () => {
-      clearCache();
+      
+      // For all other cases, use the full permission check
+      return checkPermission(role, permission);
     };
-  }, [role, clearCache]);
-  
+  }, [role, isOperatorFastPathEnabled]);
+
   return {
-    hasPermission: checkPermission,
-    canManageRole: checkCanManageRole,
-    currentRole: role
+    hasPermission,
+    role,
+    currentRole: role,
+    authRole
   };
 }

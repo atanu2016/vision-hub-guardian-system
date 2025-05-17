@@ -1,3 +1,4 @@
+
 export type UserRole = 'user' | 'admin' | 'superadmin' | 'observer';
 
 export interface UserData {
