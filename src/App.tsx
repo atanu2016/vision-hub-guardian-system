@@ -16,6 +16,7 @@ import { AuthProvider } from "./contexts/auth";
 import AdminRoutes from "./pages/admin";
 import { Toaster } from "./components/ui/sonner";
 import { useInitializeApp } from "./hooks/useInitializeApp";
+import { SidebarProvider } from "./components/ui/sidebar";
 
 // Individual Settings Pages
 import RecordingsPage from "./pages/settings/RecordingsPage";
@@ -29,7 +30,9 @@ import AdvancedSettings from "./pages/settings/AdvancedSettings";
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <SidebarProvider>
+        <AppContent />
+      </SidebarProvider>
     </AuthProvider>
   );
 }
