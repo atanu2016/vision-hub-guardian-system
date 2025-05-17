@@ -98,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           filter: `user_id=eq.${user.id}`
         }, async (payload) => {
           console.log('[AUTH] Role change detected:', payload);
-          if (payload.new && payload.new.role) {
+          if (payload.new && typeof payload.new === 'object' && 'role' in payload.new) {
             console.log(`[AUTH] Updating role to: ${payload.new.role}`);
             setRole(payload.new.role as UserRole);
           } else {

@@ -46,7 +46,7 @@ export function usePermissions() {
           filter: `user_id=eq.${user.id}`
         }, (payload) => {
           console.log('[PERMISSIONS] Role change detected:', payload);
-          if (payload.new && payload.new.role) {
+          if (payload.new && typeof payload.new === 'object' && 'role' in payload.new) {
             console.log(`[PERMISSIONS] Updating role to: ${payload.new.role}`);
             setRole(payload.new.role as UserRole);
           }

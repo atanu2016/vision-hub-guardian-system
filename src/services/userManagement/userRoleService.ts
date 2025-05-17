@@ -57,11 +57,16 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
         if (newRole === 'operator') {
           console.log('[Role Service] Operator role assigned - forcing auth refresh');
           // Let app know a role update happened
-          const { error: signalError } = await supabase
-            .rpc('notify_role_change', { user_id: userId });
-          
-          if (signalError) {
-            console.warn('[Role Service] Error signaling role change:', signalError);
+          try {
+            // Call the database function directly using RPC
+            const { error: signalError } = await supabase
+              .rpc('notify_role_change', { user_id: userId });
+            
+            if (signalError) {
+              console.warn('[Role Service] Error signaling role change:', signalError);
+            }
+          } catch (err) {
+            console.error('[Role Service] Error calling notify_role_change:', err);
           }
         }
       }
@@ -85,11 +90,16 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
         if (newRole === 'operator') {
           console.log('[Role Service] Operator role assigned - forcing auth refresh');
           // Let app know a role update happened
-          const { error: signalError } = await supabase
-            .rpc('notify_role_change', { user_id: userId });
-          
-          if (signalError) {
-            console.warn('[Role Service] Error signaling role change:', signalError);
+          try {
+            // Call the database function directly using RPC
+            const { error: signalError } = await supabase
+              .rpc('notify_role_change', { user_id: userId });
+            
+            if (signalError) {
+              console.warn('[Role Service] Error signaling role change:', signalError);
+            }
+          } catch (err) {
+            console.error('[Role Service] Error calling notify_role_change:', err);
           }
         }
       }
