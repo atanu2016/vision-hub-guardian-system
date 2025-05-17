@@ -36,6 +36,7 @@ export interface MfaToggleProps {
   mfaEnrolled: boolean;
   onToggleMfaRequirement: (userId: string, required: boolean) => Promise<void>;
   onRevokeMfaEnrollment: (userId: string) => Promise<void>;
+  disabled?: boolean;
 }
 
 // Delete User Button Props

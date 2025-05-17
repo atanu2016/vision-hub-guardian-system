@@ -8,30 +8,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Key } from "lucide-react";
-
-interface MfaToggleProps {
-  userId: string;
-  isRequired: boolean;
-  isEnrolled: boolean;
-  onToggle: (userId: string, required: boolean) => Promise<void>;
-  onRevoke?: (userId: string) => Promise<void>;
-  disabled?: boolean; // Added the missing property
-}
+import { MfaToggleProps } from "@/types/admin";
 
 export function MfaToggle({ 
   userId, 
-  isRequired, 
-  isEnrolled,
-  onToggle, 
-  onRevoke,
-  disabled = false // Default to false
+  mfaRequired, 
+  mfaEnrolled,
+  onToggleMfaRequirement, 
+  onRevokeMfaEnrollment,
+  disabled = false 
 }: MfaToggleProps) {
   const [isUpdating, setIsUpdating] = useState(false);
 
   const handleToggle = async () => {
     try {
       setIsUpdating(true);
-      await onToggle(userId, !isRequired);
+      await onToggleMfaRequirement(userId, !mfaRequired);
     } catch (error) {
       console.error('Failed to toggle MFA requirement:', error);
     } finally {
@@ -40,11 +32,11 @@ export function MfaToggle({
   };
 
   const handleRevoke = async () => {
-    if (!onRevoke) return;
+    if (!onRevokeMfaEnrollment) return;
     
     try {
       setIsUpdating(true);
-      await onRevoke(userId);
+      await onRevokeMfaEnrollment(userId);
     } catch (error) {
       console.error('Failed to revoke MFA enrollment:', error);
     } finally {
@@ -56,19 +48,19 @@ export function MfaToggle({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant={isRequired ? "default" : "outline"}
+          variant={mfaRequired ? "default" : "outline"}
           size="sm"
           disabled={isUpdating || disabled}
           className="w-28"
         >
-          {isUpdating ? "Updating..." : isRequired ? "Required" : "Optional"}
+          {isUpdating ? "Updating..." : mfaRequired ? "Required" : "Optional"}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={handleToggle}>
-          Make {isRequired ? "Optional" : "Required"}
+          Make {mfaRequired ? "Optional" : "Required"}
         </DropdownMenuItem>
-        {onRevoke && isEnrolled && (
+        {onRevokeMfaEnrollment && mfaEnrolled && (
           <DropdownMenuItem onClick={handleRevoke} className="text-destructive">
             <Key className="h-4 w-4 mr-2" />
             Revoke MFA

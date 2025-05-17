@@ -13,13 +13,9 @@ import {
   AlertDialogTitle, 
   AlertDialogTrigger 
 } from '@/components/ui/alert-dialog';
+import { DeleteUserButtonProps } from '@/types/admin';
 
-interface DeleteUserButtonProps {
-  userId: string;
-  onDelete: (userId: string) => Promise<void>;
-}
-
-export function DeleteUserButton({ userId, onDelete }: DeleteUserButtonProps) {
+export function DeleteUserButton({ userId, userEmail, onDelete }: DeleteUserButtonProps) {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleConfirmDelete = async () => {
@@ -48,7 +44,7 @@ export function DeleteUserButton({ userId, onDelete }: DeleteUserButtonProps) {
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
           <AlertDialogDescription>
             This action cannot be undone. This will permanently delete the user 
-            account and remove their data from our servers.
+            account {userEmail ? `(${userEmail})` : ''} and remove their data from our servers.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
