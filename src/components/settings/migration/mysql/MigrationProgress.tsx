@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Progress } from '@/components/ui/progress';
 
 interface MigrationProgressProps {
   isMigrating: boolean;
@@ -23,12 +24,7 @@ const MigrationProgress: React.FC<MigrationProgressProps> = ({
         <span>Migration Progress</span>
         <span>{migrationProgress}%</span>
       </div>
-      <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden dark:bg-gray-700">
-        <div 
-          className="h-full bg-primary transition-all duration-500 ease-out" 
-          style={{ width: `${migrationProgress}%` }}
-        ></div>
-      </div>
+      <Progress value={migrationProgress} className="h-2" />
       
       {details && details.length > 0 && (
         <ScrollArea className="h-40 w-full rounded-md border p-2 font-mono text-xs mt-4">

@@ -50,9 +50,9 @@ export default function DatabaseStatus({ databaseStatus, tables, isLoading, onRe
       
       for (const table of existingTables) {
         try {
-          // Count rows in the table
+          // Count rows in the table - use table as a direct literal value, not a dynamically constructed string
           const { count, error } = await supabase
-            .from(table)
+            .from(table as any) // Type assertion to avoid TypeScript errors
             .select('*', { count: 'exact', head: true });
             
           if (error) throw error;
