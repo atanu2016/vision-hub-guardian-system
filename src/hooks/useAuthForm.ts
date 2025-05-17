@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { toast } from 'sonner';
 import { LoginFormValues } from '@/components/auth/forms/LoginFormSchema';
@@ -12,7 +12,8 @@ export function useAuthForm({ onSuccess }: UseAuthFormProps = {}) {
   const [emailLoginsDisabled, setEmailLoginsDisabled] = useState(false);
   const { signIn } = useAuth();
   
-  const handleLogin = async (values: LoginFormValues) => {
+  // Memoize login handler to prevent unnecessary rerenders
+  const handleLogin = useCallback(async (values: LoginFormValues) => {
     try {
       await signIn(values.email, values.password);
       if (onSuccess) onSuccess();
@@ -23,7 +24,7 @@ export function useAuthForm({ onSuccess }: UseAuthFormProps = {}) {
       }
       throw error;
     }
-  };
+  }, [signIn, onSuccess]);
 
   return {
     emailLoginsDisabled,

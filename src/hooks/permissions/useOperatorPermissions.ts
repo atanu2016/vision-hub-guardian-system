@@ -1,43 +1,43 @@
 
 import { Permission } from "@/utils/permissionUtils";
-import { UserRole } from "@/types/admin";
+import { UserRole } from "@/contexts/auth/types";
 
 /**
  * Hook to handle optimized permission checking for operator and monitoring officer roles
  */
 export function useOperatorPermissions(role: UserRole, authRole: UserRole) {
-  // Fast path for critical operator permissions to ensure they are never denied
+  // Fast path for critical operator permissions with optimized checking
   const isOperatorFastPathEnabled = (permission: Permission) => {
-    // These essential permissions should never fail for operator role
-    const criticalOperatorPermissions: Permission[] = [
-      'view-footage:assigned',
-      'view-footage:all',
-      'view-cameras:assigned'
-    ];
+    // Critical permissions per role
+    const criticalPermissionMap: Record<UserRole, Permission[]> = {
+      'operator': [
+        'view-footage:assigned',
+        'view-footage:all',
+        'view-cameras:assigned'
+      ],
+      'monitoringOfficer': [
+        'view-footage:assigned',
+        'view-footage:all',
+        'view-cameras:assigned',
+        'view-profile'
+      ],
+      'admin': [],
+      'superadmin': [],
+      'user': []
+    };
 
-    // If role is operator and permission is critical, always return true
-    if ((role === 'operator' || authRole === 'operator') && 
-        criticalOperatorPermissions.includes(permission)) {
-      console.log(`[PERMS-FAST] ▶️ OPERATOR FAST PATH triggered for ${permission}`);
+    // Check if this permission is critical for the current role
+    if ((role in criticalPermissionMap) && 
+        criticalPermissionMap[role].includes(permission)) {
+      return true;
+    }
+    
+    // Check auth role as fallback
+    if ((authRole in criticalPermissionMap) && 
+        criticalPermissionMap[authRole].includes(permission)) {
       return true;
     }
 
-    // These essential permissions should never fail for monitoring officer role
-    const criticalMonitoringPermissions: Permission[] = [
-      'view-footage:assigned',
-      'view-footage:all',
-      'view-cameras:assigned',
-      'view-profile'
-    ];
-
-    // If role is monitoringOfficer and permission is critical, always return true
-    if ((role === 'monitoringOfficer' || authRole === 'monitoringOfficer') && 
-        criticalMonitoringPermissions.includes(permission)) {
-      console.log(`[PERMS-FAST] 👁️ MONITORING OFFICER FAST PATH triggered for ${permission}`);
-      return true;
-    }
-
-    // Fast path not applicable
     return false;
   };
 

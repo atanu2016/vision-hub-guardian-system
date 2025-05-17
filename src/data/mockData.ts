@@ -1,28 +1,35 @@
 
-// Import database service functions from the new location
+// Import database service functions
 import {
-  fetchCamerasFromDB as getCameras,
-  fetchSystemStatsFromDB as getSystemStats,
-  saveCameraToDB as saveCamera,
-  deleteCameraFromDB as deleteCamera,
-  fetchStorageSettingsFromDB as getStorageSettings,
-  saveStorageSettingsToDB as saveStorageSettings,
-  checkDatabaseSetup as initializeSystem
+  fetchCamerasFromDB,
+  fetchSystemStatsFromDB,
+  saveCameraToDB,
+  deleteCameraFromDB,
+  fetchStorageSettingsFromDB,
+  saveStorageSettingsToDB,
+  checkDatabaseSetup
 } from "@/services/database";
 
-// Export all database functions directly
-export {
-  getCameras,
-  getSystemStats,
-  saveCamera,
-  deleteCamera,
-  getStorageSettings,
-  saveStorageSettings,
-  initializeSystem
-};
+// Export database functions with more intuitive naming
+export const getCameras = fetchCamerasFromDB;
+export const getSystemStats = fetchSystemStatsFromDB;
+export const saveCamera = saveCameraToDB;
+export const deleteCamera = deleteCameraFromDB;
+export const getStorageSettings = fetchStorageSettingsFromDB;
+export const saveStorageSettings = saveStorageSettingsToDB;
+export const initializeSystem = checkDatabaseSetup;
 
-// Export function for camera groups
+// Camera groups function with memoization to prevent constant recalculation
+let groupsCache: any[] | null = null;
+let groupsCacheExpiry = 0;
+
 export const getCameraGroups = async () => {
+  const now = Date.now();
+  // Use cached result if available and not expired (5 minute TTL)
+  if (groupsCache && groupsCacheExpiry > now) {
+    return groupsCache;
+  }
+  
   const cameras = await getCameras();
   
   // Extract unique camera groups
@@ -41,5 +48,9 @@ export const getCameraGroups = async () => {
     }
   });
   
-  return Array.from(groupsMap.values());
+  // Update cache
+  groupsCache = Array.from(groupsMap.values());
+  groupsCacheExpiry = now + (5 * 60 * 1000); // 5 minutes
+  
+  return groupsCache;
 };

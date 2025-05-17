@@ -1,11 +1,11 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getCameras, getSystemStats } from "@/data/mockData";
 import { useToast } from "@/hooks/use-toast";
 import { Camera as CameraType } from "@/types/camera";
 
 export const useDashboardData = () => {
-  const [stats, setStats] = useState<any>({
+  const [stats, setStats] = useState({
     totalCameras: 0,
     onlineCameras: 0,
     offlineCameras: 0,
@@ -20,40 +20,39 @@ export const useDashboardData = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   
-  // Fetch data from API
-  const fetchData = async () => {
+  // Memoize the fetch function to prevent unnecessary rerenders
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch cameras
-      const camerasData = await getCameras();
-      setCameras(camerasData);
+      // Use Promise.all to fetch data in parallel
+      const [camerasData, statsData] = await Promise.all([
+        getCameras(),
+        getSystemStats()
+      ]);
       
-      // Fetch system stats
-      const statsData = await getSystemStats();
+      setCameras(camerasData);
       setStats(statsData);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({
         title: "Error fetching data",
-        description: "Could not connect to the server. Using cached data instead.",
+        description: "Could not connect to the server. Using cached data.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
   
   useEffect(() => {
     // Get initial data
     fetchData();
     
-    // Set up refresh interval
-    const interval = setInterval(() => {
-      fetchData();
-    }, 30000); // Refresh every 30 seconds
+    // Refresh interval - extended to 60 seconds to reduce server load
+    const interval = setInterval(fetchData, 60000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchData]);
 
   return {
     stats,

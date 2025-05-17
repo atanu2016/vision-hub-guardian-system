@@ -1,5 +1,5 @@
 
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback, memo } from "react";
 import { Camera } from "@/types/camera";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,8 @@ interface CameraStreamPlayerProps {
   className?: string;
 }
 
-const CameraStreamPlayer = ({ camera, autoPlay = true, className = "" }: CameraStreamPlayerProps) => {
+// Using memo to prevent unnecessary rerenders
+const CameraStreamPlayer = memo(({ camera, autoPlay = true, className = "" }: CameraStreamPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [isMuted, setIsMuted] = useState(true);
@@ -31,7 +32,8 @@ const CameraStreamPlayer = ({ camera, autoPlay = true, className = "" }: CameraS
     onLoadingChange: setIsLoading
   });
   
-  const togglePlay = () => {
+  // Memoized callback functions to prevent unnecessary rerenders
+  const togglePlay = useCallback(() => {
     if (!videoRef.current) return;
     
     if (isPlaying) {
@@ -46,22 +48,24 @@ const CameraStreamPlayer = ({ camera, autoPlay = true, className = "" }: CameraS
       });
     }
     
-    setIsPlaying(!isPlaying);
-  };
+    setIsPlaying(prev => !prev);
+  }, [isPlaying, toast]);
   
-  const toggleMute = () => {
+  const toggleMute = useCallback(() => {
     if (!videoRef.current) return;
     videoRef.current.muted = !isMuted;
-    setIsMuted(!isMuted);
-  };
+    setIsMuted(prev => !prev);
+  }, [isMuted]);
 
-  const handleRetryConnection = () => {
+  const handleRetryConnection = useCallback(() => {
     setError(null);
     setIsLoading(true);
+    
     // Force reload the stream
     if (hlsRef.current) {
       hlsRef.current.destroy();
     }
+    
     setTimeout(() => {
       if (videoRef.current) {
         videoRef.current.load();
@@ -70,7 +74,7 @@ const CameraStreamPlayer = ({ camera, autoPlay = true, className = "" }: CameraS
         }
       }
     }, 500);
-  };
+  }, [hlsRef, isPlaying]);
   
   return (
     <div className={cn("relative bg-vision-dark-900 rounded-lg overflow-hidden", className)}>
@@ -98,6 +102,8 @@ const CameraStreamPlayer = ({ camera, autoPlay = true, className = "" }: CameraS
       />
     </div>
   );
-};
+});
+
+CameraStreamPlayer.displayName = "CameraStreamPlayer";
 
 export default CameraStreamPlayer;
