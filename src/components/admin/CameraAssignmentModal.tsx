@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Loader2, Camera } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
-import { Camera as CameraType } from '@/types/camera';
+import { Camera as CameraType, CameraStatus } from '@/types/camera';
 import { assignCamerasToUser, getUserAssignedCameras } from '@/services/userManagement/cameraAssignmentService';
 
 interface CameraAssignmentModalProps {
@@ -61,11 +61,11 @@ export default function CameraAssignmentModal({
         username: cam.username,
         password: cam.password,
         rtmpUrl: cam.rtmpurl,
-        connectionType: cam.connectiontype,
+        connectionType: cam.connectiontype as CameraType['connectionType'],
         onvifPath: cam.onvifpath,
         manufacturer: cam.manufacturer,
         model: cam.model,
-        status: cam.status,
+        status: cam.status as CameraStatus, // Cast to CameraStatus enum
         lastSeen: cam.lastseen,
         motionDetection: cam.motiondetection,
         recording: cam.recording,

@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Camera } from '@/types/camera';
+import { Camera, CameraStatus } from '@/types/camera';
 import { logUserActivity } from '../activityLoggingService';
 
 /**
@@ -113,11 +113,11 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
         username: cam.username,
         password: cam.password,
         rtmpUrl: cam.rtmpurl,
-        connectionType: cam.connectiontype,
+        connectionType: cam.connectiontype as Camera['connectionType'],
         onvifPath: cam.onvifpath,
         manufacturer: cam.manufacturer,
         model: cam.model,
-        status: cam.status,
+        status: cam.status as CameraStatus, // Cast to CameraStatus enum
         lastSeen: cam.lastseen,
         motionDetection: cam.motiondetection,
         recording: cam.recording,
@@ -150,11 +150,11 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
       username: cam.username,
       password: cam.password,
       rtmpUrl: cam.rtmpurl,
-      connectionType: cam.connectiontype,
+      connectionType: cam.connectiontype as Camera['connectionType'],
       onvifPath: cam.onvifpath,
       manufacturer: cam.manufacturer,
       model: cam.model,
-      status: cam.status,
+      status: cam.status as CameraStatus, // Cast to CameraStatus enum
       lastSeen: cam.lastseen,
       motionDetection: cam.motiondetection,
       recording: cam.recording,
