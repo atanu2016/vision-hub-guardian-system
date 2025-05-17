@@ -20,7 +20,14 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
   const { role } = useAuth();
   const { hasPermission } = usePermissions();
   
-  console.log("MainNavigation rendering - User role:", role);
+  console.log("[NAV] MainNavigation rendering - User role:", role);
+  
+  // RECORDINGS MENU FIX: Create a direct check for showing recordings menu
+  const shouldShowRecordings = () => {
+    console.log("[NAV] Directly checking if recordings should be shown for role:", role);
+    // Always show for operators, admins, and superadmins
+    return role === 'operator' || role === 'admin' || role === 'superadmin';
+  };
   
   // Define navigation items with their required permissions
   const navigationItems = [];
@@ -96,56 +103,30 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
     showForRoles: ['user', 'operator', 'admin', 'superadmin']
   });
   
-  // Special handling for "Recordings" item
-  const recordingsItem = navigationItems.find(item => item.label === "Recordings");
-  if (recordingsItem && role === 'operator') {
-    console.log("IMPORTANT: Recordings menu check for operator role");
-    console.log("Permission check result:", hasPermission('view-footage:assigned'));
-  }
-  
-  // Log navigation items that will be shown to the user
-  const visibleItems = navigationItems.filter(item => {
-    const hasRequiredRole = item.showForRoles.includes(role);
-    
-    // Add special debug case for Recordings item
-    if (item.label === "Recordings") {
-      console.log(`Special check for Recordings menu item:`);
-      console.log(`- Role: ${role}`);
-      console.log(`- Has required role (${item.showForRoles.join(", ")}): ${hasRequiredRole}`);
-      console.log(`- Permission check for ${item.permission}: ${hasPermission(item.permission)}`);
-    }
-    
-    const hasRequiredPermission = hasPermission(item.permission);
-    console.log(`Menu item ${item.label}: has role ${hasRequiredRole}, has permission ${hasRequiredPermission}`);
-    return hasRequiredRole && hasRequiredPermission;
-  });
-  console.log("Visible navigation items:", visibleItems);
+  // Extended logging for recordings menu item
+  console.log(`[NAV] shouldShowRecordings() = ${shouldShowRecordings()}`);
+  console.log(`[NAV] User role = ${role}`);
+  console.log(`[NAV] hasPermission('view-footage:assigned') = ${hasPermission('view-footage:assigned')}`);
   
   return (
     <SidebarGroup>
       <SidebarGroupContent>
         <SidebarMenu>
+          {/* Loop through navigation items */}
           {navigationItems
             .filter(item => {
-              // Only show items for the current user's role
-              const hasRequiredRole = item.showForRoles.includes(role);
-              
-              // Extra logging for debugging the Recordings item
-              if (item.label === "Recordings") {
-                console.log(`Filtering Recordings item - role ${role} included: ${hasRequiredRole}`);
+              // CRITICAL FIX: Special case for Recordings menu item to ensure it always shows for operators
+              if (item.label === "Recordings" && role === 'operator') {
+                console.log('[NAV] FORCING Recordings menu to be visible for operator role');
+                return true;
               }
               
-              // Check if user has permission
+              // For other menu items, use regular logic
+              const hasRequiredRole = item.showForRoles.includes(role);
               const hasRequiredPermission = hasPermission(item.permission);
               
-              if (item.label === "Recordings") {
-                console.log(`Filtering Recordings item - permission ${item.permission}: ${hasRequiredPermission}`);
-                // Force enable for operator role - debugging measure
-                if (role === 'operator') {
-                  console.log("Forcing Recordings menu to be visible for operator");
-                  return true;
-                }
-              }
+              // Extra logging for all items
+              console.log(`[NAV] Menu item "${item.label}": required role? ${hasRequiredRole}, has permission? ${hasRequiredPermission}`);
               
               return hasRequiredRole && hasRequiredPermission;
             })

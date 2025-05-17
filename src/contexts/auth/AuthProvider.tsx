@@ -18,12 +18,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log("Setting up auth state listener");
+    console.log("[AUTH] Setting up auth state listener");
     
     // Set up the auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
-        console.log("Auth state changed:", event, currentSession?.user?.email);
+        console.log("[AUTH] Auth state changed:", event, currentSession?.user?.email);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
@@ -31,24 +31,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (event === 'SIGNED_OUT') {
           setProfile(null);
           setRole('user');
+          console.log("[AUTH] User signed out, reset role to 'user'");
         }
 
         // Fetch user profile when signed in
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && currentSession?.user) {
           // Use setTimeout to avoid potential recursive auth state changes
           setTimeout(() => {
-            console.log("Fetching profile for user:", currentSession.user?.id);
+            console.log("[AUTH] Fetching profile for user:", currentSession.user?.id);
             fetchUserProfile(currentSession.user.id, currentSession.user)
               .then(profileData => {
-                console.log("Profile data fetched:", profileData);
+                console.log("[AUTH] Profile data fetched:", profileData);
                 if (profileData) setProfile(profileData);
               });
               
-            console.log("Fetching role for user:", currentSession.user?.id);  
+            console.log("[AUTH] Fetching role for user:", currentSession.user?.id);  
             fetchUserRole(currentSession.user.id, currentSession.user)
               .then(roleData => {
-                console.log("Role data fetched:", roleData);
+                console.log("[AUTH] Role data fetched:", roleData);
                 setRole(roleData);
+                console.log("[AUTH] Role set to:", roleData);
               });
           }, 0);
         }
@@ -58,27 +60,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Check for existing session
     const checkSession = async () => {
       try {
-        console.log("Checking for existing session");
+        console.log("[AUTH] Checking for existing session");
         const { data: { session: currentSession } } = await supabase.auth.getSession();
-        console.log("Initial session check:", currentSession?.user?.email);
+        console.log("[AUTH] Initial session check:", currentSession?.user?.email);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
-          console.log("Session exists, fetching user data");
+          console.log("[AUTH] Session exists, fetching user data");
           const profileData = await fetchUserProfile(currentSession.user.id, currentSession.user);
-          console.log("Profile data:", profileData);
+          console.log("[AUTH] Profile data:", profileData);
           if (profileData) setProfile(profileData);
           
           const roleData = await fetchUserRole(currentSession.user.id, currentSession.user);
-          console.log("Role data:", roleData);
+          console.log("[AUTH] Role data:", roleData, typeof roleData);
           setRole(roleData);
         } else {
-          console.log("No session found");
+          console.log("[AUTH] No session found");
         }
         
       } catch (error) {
-        console.error("Error checking session:", error);
+        console.error("[AUTH] Error checking session:", error);
       } finally {
         setIsLoading(false);
       }
@@ -126,7 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     requiresMFA,
   };
 
-  console.log("Auth context updated:", {
+  console.log("[AUTH] Auth context updated:", {
     isLoading,
     isAdmin,
     isSuperAdmin,
@@ -147,5 +149,6 @@ export const useAuth = () => {
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
+  console.log("[AUTH-HOOK] useAuth called, returning role:", context.role);
   return context;
 };

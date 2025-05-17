@@ -2,30 +2,40 @@
 import { useAuth } from "@/contexts/auth";
 import { Permission, hasPermission, canManageRole } from "@/utils/permissionUtils";
 import { UserRole } from "@/types/admin";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 
 export function usePermissions() {
   const { role } = useAuth();
   
   useEffect(() => {
-    console.log("usePermissions hook - Current role:", role);
+    console.log("[PERMISSIONS] usePermissions hook initialized - Current role:", role);
   }, [role]);
   
-  const checkPermission = (permission: Permission): boolean => {
+  const checkPermission = useCallback((permission: Permission): boolean => {
     // Force more detailed logging for crucial permissions
     if (permission === 'view-footage:assigned') {
-      console.log(`Critical permission check - view-footage:assigned - Role: ${role}`);
-      console.log(`Permission check result: ${hasPermission(role, permission)}`);
+      console.log(`[PERMISSIONS] Critical permission check - view-footage:assigned - Role: ${role}`);
+      
+      // Direct logic check for operators
+      if (role === 'operator') {
+        console.log('[PERMISSIONS] Operator role detected - should have view-footage:assigned permission');
+        return true;
+      }
+      
+      // For other roles, go through normal permission check
+      const result = hasPermission(role, permission);
+      console.log(`[PERMISSIONS] Permission check result: ${result}`);
+      return result;
     }
     
     const result = hasPermission(role, permission);
-    console.log(`Permission check for ${permission} with role ${role}: ${result}`);
+    console.log(`[PERMISSIONS] Permission check for ${permission} with role ${role}: ${result}`);
     return result;
-  };
+  }, [role]);
   
-  const checkCanManageRole = (targetRole: UserRole): boolean => {
+  const checkCanManageRole = useCallback((targetRole: UserRole): boolean => {
     return canManageRole(role, targetRole);
-  };
+  }, [role]);
   
   return {
     hasPermission: checkPermission,
