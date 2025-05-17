@@ -17,6 +17,7 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
     case 'view-dashboard':
     case 'view-profile':
     case 'manage-mfa-enrollment':
+    case 'manage-profile-settings':  // Added explicit permission for profile settings
       return roleHierarchy[userRole] >= roleHierarchy['user'];
 
     // Cameras view permissions
@@ -27,7 +28,7 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
     
     // Footage permissions
     case 'view-footage:assigned':
-      return roleHierarchy[userRole] >= roleHierarchy['operator']; // Changed from 'user' to 'operator'
+      return roleHierarchy[userRole] >= roleHierarchy['operator']; 
     case 'view-footage:all':
       return roleHierarchy[userRole] >= roleHierarchy['operator'];
     
@@ -37,6 +38,10 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
     case 'manage-users:all':
     case 'assign-roles':
       return userRole === 'superadmin';
+    
+    // Camera assignment permissions
+    case 'assign-cameras':
+      return roleHierarchy[userRole] >= roleHierarchy['admin'];
 
     // Camera management
     case 'manage-cameras:assigned':
@@ -91,6 +96,7 @@ export type Permission =
   | 'view-dashboard'
   | 'view-profile'
   | 'manage-mfa-enrollment'
+  | 'manage-profile-settings'  // Added explicit permission for profile settings
   
   // Camera viewing permissions
   | 'view-cameras:assigned'
@@ -104,6 +110,7 @@ export type Permission =
   | 'manage-users:lower'
   | 'manage-users:all'
   | 'assign-roles'
+  | 'assign-cameras'  // New permission for assigning cameras to users
   
   // Camera management
   | 'manage-cameras:assigned'

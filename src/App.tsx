@@ -46,6 +46,7 @@ function App() {
               
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute requiredPermission="view-profile"><ProfileSettings /></ProtectedRoute>} />
+              <Route path="/profile-settings" element={<ProtectedRoute requiredPermission="manage-profile-settings"><ProfileSettings /></ProtectedRoute>} />
               
               {/* Settings routes - most require admin permissions */}
               <Route path="/settings" element={<ProtectedRoute requiredPermission="configure-camera-settings"><Settings /></ProtectedRoute>} />

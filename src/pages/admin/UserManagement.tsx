@@ -1,77 +1,86 @@
 
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { UserTable } from '@/components/admin/UserTable';
-import { UserManagementHeader } from '@/components/admin/UserManagementHeader';
-import { ErrorAlert } from '@/components/admin/ErrorAlert';
-import { useUserManagement } from '@/hooks/useUserManagement';
-import { usePermissions } from '@/hooks/usePermissions';
+import UserTable from "@/components/admin/UserTable";
+import UserManagementHeader from "@/components/admin/UserManagementHeader";
+import ErrorAlert from "@/components/admin/ErrorAlert";
+import { useState } from "react";
+import { useUserManagement } from "@/hooks/useUserManagement";
+import AppLayout from "@/components/layout/AppLayout";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/auth";
+import { usePermissions } from "@/hooks/usePermissions";
+import { Camera } from "lucide-react";
+import CameraAssignmentModal from "@/components/admin/CameraAssignmentModal";
 
-export default function UserManagement() {
-  const {
-    users,
-    loading,
-    error,
-    user,
-    role,
-    loadUsers,
-    handleUpdateUserRole,
-    handleToggleMfaRequirement,
-    handleRevokeMfaEnrollment,
-    handleDeleteUser,
-    handleCreateUserClick
-  } = useUserManagement();
-  
+const UserManagement = () => {
+  const { isSuperAdmin } = useAuth();
   const { hasPermission } = usePermissions();
-  
-  // Check if user has appropriate permissions
-  const canCreateUsers = hasPermission('manage-users:all');
-  const canManageMfa = hasPermission('manage-users:lower');
+  const { users, isLoading, error, refreshUsers } = useUserManagement();
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedUserName, setSelectedUserName] = useState<string>('');
+  const [showCameraAssignment, setShowCameraAssignment] = useState(false);
 
-  // If user doesn't have minimum required permissions, show access denied
-  if (!hasPermission('manage-users:lower')) {
-    return (
-      <Card>
-        <CardHeader>
-          <UserManagementHeader 
-            onRefresh={loadUsers}
-            onCreateUser={handleCreateUserClick}
-            loading={loading}
-            showCreateButton={false}
-          />
-        </CardHeader>
-        <CardContent>
-          <p>You need administrative privileges to access this page.</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  const handleCameraAssignmentClick = (userId: string, userName: string) => {
+    setSelectedUserId(userId);
+    setSelectedUserName(userName);
+    setShowCameraAssignment(true);
+  };
+
+  const handleCameraAssignmentClose = () => {
+    setShowCameraAssignment(false);
+    setSelectedUserId(null);
+    setSelectedUserName('');
+  };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <UserManagementHeader 
-          onRefresh={loadUsers}
-          onCreateUser={handleCreateUserClick}
-          loading={loading}
-          showCreateButton={canCreateUsers}
-        />
-      </CardHeader>
+    <AppLayout>
+      <UserManagementHeader title="User Management" subtitle="Manage system users and their permissions" />
 
-      <CardContent>
-        {error && (
-          <ErrorAlert error={error} onRetry={loadUsers} />
+      {error && <ErrorAlert error={error} />}
+
+      <div className="flex justify-end mb-4">
+        {isSuperAdmin && (
+          <Button asChild>
+            <Link to="/admin/users/create">Add New User</Link>
+          </Button>
         )}
+      </div>
 
-        <UserTable 
-          users={users}
-          currentUserId={user?.id}
-          updateUserRole={handleUpdateUserRole}
-          toggleMfaRequirement={handleToggleMfaRequirement}
-          revokeMfaEnrollment={canManageMfa ? handleRevokeMfaEnrollment : undefined}
-          deleteUser={canManageMfa ? handleDeleteUser : undefined}
-          loading={loading}
+      <UserTable 
+        users={users} 
+        isLoading={isLoading} 
+        onRefresh={refreshUsers}
+        onCameraAssignmentClick={(userId, userName) => {
+          if (hasPermission('assign-cameras')) {
+            handleCameraAssignmentClick(userId, userName);
+          }
+        }}
+        showAssignCamerasButton={hasPermission('assign-cameras')}
+        actionButtons={(userId, userName) => (
+          hasPermission('assign-cameras') && (
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => handleCameraAssignmentClick(userId, userName || 'User')}
+              className="ml-2"
+            >
+              <Camera className="h-4 w-4 mr-1" />
+              Assign Cameras
+            </Button>
+          )
+        )}
+      />
+
+      {selectedUserId && (
+        <CameraAssignmentModal
+          isOpen={showCameraAssignment}
+          userId={selectedUserId}
+          userName={selectedUserName}
+          onClose={handleCameraAssignmentClose}
         />
-      </CardContent>
-    </Card>
+      )}
+    </AppLayout>
   );
-}
+};
+
+export default UserManagement;

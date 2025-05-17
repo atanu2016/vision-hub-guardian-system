@@ -10,22 +10,41 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
+import { useAuth } from "@/contexts/auth";
+import { getAccessibleCameras } from "@/services/userManagement/cameraAssignmentService";
 
 const LiveView = () => {
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [loading, setLoading] = useState(true);
   const [layout, setLayout] = useState<"grid-2" | "grid-4" | "grid-9">("grid-4");
   const [selectedCamera, setSelectedCamera] = useState<Camera | null>(null);
+  const { user, role } = useAuth();
 
   useEffect(() => {
     fetchCameras();
-  }, []);
+  }, [user, role]);
 
   const fetchCameras = async () => {
     try {
       setLoading(true);
-      // Use the database function to fetch cameras
-      const camerasData = await fetchCamerasFromDB();
+      
+      // If user is not authenticated yet, return
+      if (!user) {
+        setCameras([]);
+        return;
+      }
+
+      // Use the role-based access control for cameras
+      let camerasData;
+      
+      // For admin and superadmin, show all cameras
+      if (role === 'admin' || role === 'superadmin') {
+        camerasData = await fetchCamerasFromDB();
+      } else {
+        // For users and operators, show only assigned cameras
+        camerasData = await getAccessibleCameras(user.id, role);
+      }
+      
       setCameras(camerasData);
     } catch (error) {
       console.error('Error fetching cameras for live view:', error);
@@ -106,7 +125,12 @@ const LiveView = () => {
           <div className="flex items-center justify-center h-64 border border-border rounded-lg">
             <div className="text-center">
               <p className="text-lg font-medium mb-2">No cameras available</p>
-              <p className="text-muted-foreground">Add cameras or check your connection to view live feeds</p>
+              <p className="text-muted-foreground">
+                {role === 'user' 
+                  ? "You don't have access to any cameras yet. Please contact an administrator to get access."
+                  : "Add cameras or check your connection to view live feeds"
+                }
+              </p>
             </div>
           </div>
         ) : (
