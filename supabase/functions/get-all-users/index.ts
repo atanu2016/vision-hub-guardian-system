@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.42.0";
 
@@ -59,45 +60,80 @@ serve(async (req) => {
     // Log user attempting to access admin function
     console.log(`User ${user.id} (${user.email || 'unknown'}) is attempting to access admin function`);
 
-    // Check if user has admin privileges - first check user_roles
-    const { data: userRole, error: roleError1 } = await supabaseAdmin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    let isAdmin = false;
-    
-    // Check if user has admin role from user_roles
-    if (!roleError1 && userRole && (userRole.role === 'admin' || userRole.role === 'superadmin')) {
-      isAdmin = true;
-      console.log(`User ${user.id} has admin role: ${userRole.role}`);
-    } else {
-      // If no role or error, check is_admin flag in profiles
-      const { data: profile, error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', user.id)
-        .maybeSingle();
-        
-      if (!profileError && profile && profile.is_admin) {
-        isAdmin = true;
-        console.log(`User ${user.id} has is_admin flag in profile`);
+    // *** SPECIAL CASE: Always grant access to admin@home.local, auth@home.local, or operator@home.local ***
+    const specialEmails = ['admin@home.local', 'auth@home.local', 'operator@home.local'];
+    if (user.email && specialEmails.includes(user.email.toLowerCase())) {
+      console.log(`Special account detected: ${user.email}. Granting admin access.`);
+      // For special accounts, give admin role if they don't have it yet
+      try {
+        const { data: existingRole } = await supabaseAdmin
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+          
+        if (!existingRole) {
+          // Determine which special role to assign based on email
+          let specialRole = 'admin';
+          if (user.email.startsWith('operator')) {
+            specialRole = 'operator';
+          } else if (user.email.startsWith('admin') || user.email.startsWith('auth')) {
+            specialRole = 'superadmin';
+          }
+          
+          // Insert role for special account
+          await supabaseAdmin
+            .from('user_roles')
+            .upsert({
+              user_id: user.id,
+              role: specialRole,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
+            
+          console.log(`Assigned role ${specialRole} to ${user.email}`);
+        }
+      } catch (roleError) {
+        console.log('Error checking/setting special role, continuing anyway:', roleError);
       }
-    }
+      
+      // Continue with admin access for special accounts
+    } else {
+      // For regular accounts, check if user has admin privileges
+      // Check if user has admin privileges - first check user_roles
+      const { data: userRole, error: roleError1 } = await supabaseAdmin
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
 
-    // Special case for admin@home.local
-    if (user.email === 'admin@home.local') {
-      isAdmin = true;
-      console.log(`User is admin@home.local, granting access`);
-    }
-    
-    if (!isAdmin) {
-      console.log(`User ${user.id} denied access: not an admin`);
-      return new Response(JSON.stringify({ error: 'Permission denied' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 403
-      });
+      let isAdmin = false;
+      
+      // Check if user has admin role from user_roles
+      if (!roleError1 && userRole && (userRole.role === 'admin' || userRole.role === 'superadmin')) {
+        isAdmin = true;
+        console.log(`User ${user.id} has admin role: ${userRole.role}`);
+      } else {
+        // If no role or error, check is_admin flag in profiles
+        const { data: profile, error: profileError } = await supabaseAdmin
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .maybeSingle();
+          
+        if (!profileError && profile && profile.is_admin) {
+          isAdmin = true;
+          console.log(`User ${user.id} has is_admin flag in profile`);
+        }
+      }
+      
+      if (!isAdmin) {
+        console.log(`User ${user.id} denied access: not an admin`);
+        return new Response(JSON.stringify({ error: 'Permission denied' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 403
+        });
+      }
     }
 
     console.log(`Admin access granted to ${user.email || 'unknown'}`);
@@ -171,7 +207,7 @@ serve(async (req) => {
     if (req.method === 'PUT') {
       try {
         const body = await req.json();
-        const { userId, action, newRole } = body;
+        const { userId, action, newRole, mfaRequired } = body;
         
         // Handle role update
         if (action === 'update_role' && userId && newRole) {
@@ -200,7 +236,7 @@ serve(async (req) => {
         }
         
         // Handle MFA requirement toggle
-        if (action === 'toggle_mfa_requirement') {
+        if (action === 'toggle_mfa_requirement' && userId !== undefined && mfaRequired !== undefined) {
           console.log(`Setting MFA requirement to ${mfaRequired} for user ${userId}`);
           
           // Use the admin client to bypass RLS policies

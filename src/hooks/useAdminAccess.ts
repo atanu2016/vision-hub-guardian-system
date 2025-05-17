@@ -34,10 +34,13 @@ export function useAdminAccess() {
           return;
         }
         
-        // Special case for admin@home.local
+        // Special case for admin@home.local, auth@home.local
         const userEmail = user.email;
-        if (userEmail === 'admin@home.local') {
-          console.log("Granting access to admin@home.local");
+        if (userEmail && (
+            userEmail.toLowerCase() === 'admin@home.local' || 
+            userEmail.toLowerCase() === 'auth@home.local'
+        )) {
+          console.log("Granting access to special admin email:", userEmail);
           const success = await ensureUserIsAdmin(user.id);
           if (success) {
             toast.success('Admin access granted');
