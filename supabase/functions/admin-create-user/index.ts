@@ -59,7 +59,7 @@ serve(async (req) => {
       email_confirm: true,
       user_metadata: {
         ...user_metadata,
-        role: role // Make sure role is included in user metadata
+        role: role // Include role in user metadata
       }
     });
 
@@ -97,10 +97,20 @@ serve(async (req) => {
 
     console.log("[ADMIN-CREATE-USER] Assigning role:", role, "to user:", userData.user.id);
     
-    // Update user role - Use upsert to ensure it works whether or not the row already exists
+    // Delete any existing role first to ensure clean assignment
+    const { error: deleteRoleError } = await supabase
+      .from('user_roles')
+      .delete()
+      .eq('user_id', userData.user.id);
+      
+    if (deleteRoleError) {
+      console.warn('[ADMIN-CREATE-USER] Could not delete existing roles:', deleteRoleError);
+    }
+    
+    // Update user role - Use insert to ensure it works
     const { error: roleError } = await supabase
       .from('user_roles')
-      .upsert({
+      .insert({
         user_id: userData.user.id,
         role: role
       });
@@ -120,6 +130,8 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       userId: userData.user.id,
+      email: userData.user.email,
+      role: role,
       success: true
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

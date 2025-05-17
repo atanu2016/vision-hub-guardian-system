@@ -122,6 +122,16 @@ export function useCreateUser({ onSuccess, onError }: UseCreateUserOptions = {})
       
       toast.success('User created successfully');
       
+      // Reset form
+      setFormData({
+        email: '',
+        fullName: '',
+        password: '',
+        confirmPassword: '',
+        role: 'user',
+        mfaRequired: true
+      });
+      
       if (onSuccess) onSuccess();
       
     } catch (error: any) {

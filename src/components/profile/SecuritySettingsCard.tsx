@@ -3,19 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import type { ProfileFormData } from "@/hooks/useProfileSettings";
+import { useProfileSettings } from "@/hooks/useProfileSettings";
 
-interface SecuritySettingsCardProps {
-  formData: ProfileFormData;
-  handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handlePasswordUpdate: (e: React.FormEvent) => void;
-}
+export const SecuritySettingsCard = () => {
+  const { formData, handleInputChange, handlePasswordUpdate } = useProfileSettings();
 
-export const SecuritySettingsCard = ({
-  formData,
-  handleInputChange,
-  handlePasswordUpdate
-}: SecuritySettingsCardProps) => {
   return (
     <Card>
       <CardHeader>
