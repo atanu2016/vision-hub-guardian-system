@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,16 +9,32 @@ import { LoginForm } from '@/components/auth/LoginForm';
 import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm';
 import { AuthBranding } from '@/components/auth/AuthBranding';
 import { MFAEnrollmentForm } from '@/components/auth/MFAEnrollmentForm';
+import { toast } from 'sonner';
 
 const Auth = () => {
   const { user, isLoading, requiresMFA } = useAuth();
   const [activeTab, setActiveTab] = useState('login');
+  const [authStarted, setAuthStarted] = useState(false);
   const location = useLocation();
   
-  // Get the return path from location state, or default to '/'
-  const from = location.state?.from || '/';
+  // Get the return path from location state, or default to '/live' as a more sensible default
+  const from = location.state?.from || '/live';
   
   const { backgroundUrl, LogoComponent } = AuthBranding();
+  
+  // Add debugging to track authentication state transitions
+  useEffect(() => {
+    console.log("[Auth Page] Initial render - isLoading:", isLoading, "user:", !!user, "requiresMFA:", requiresMFA);
+    
+    if (!authStarted) {
+      setAuthStarted(true);
+      console.log("[Auth Page] Authentication process started");
+    }
+  }, []);
+  
+  useEffect(() => {
+    console.log("[Auth Page] Auth state changed - isLoading:", isLoading, "user:", !!user, "requiresMFA:", requiresMFA);
+  }, [isLoading, user, requiresMFA]);
 
   useEffect(() => {
     // Check URL params for tab selection
@@ -28,20 +45,21 @@ const Auth = () => {
     }
   }, [location]);
 
-  console.log("Auth page: isLoading =", isLoading, "user =", !!user, "requiresMFA =", requiresMFA);
-
+  // Show a more informative loading state
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-screen items-center justify-center flex-col gap-2 bg-vision-dark-900">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-muted-foreground">Verifying authentication status...</p>
       </div>
     );
   }
   
+  // Fast path for authenticated users
   if (user) {
-    // If MFA is required but not enrolled, redirect to MFA enrollment
+    // If MFA is required but not enrolled, show enrollment form
     if (requiresMFA) {
-      console.log("Auth page: MFA required, showing enrollment form");
+      console.log("[Auth Page] MFA required, showing enrollment form");
       return (
         <div className="flex min-h-screen items-center justify-center bg-vision-dark-900 p-4 sm:p-8" style={backgroundUrl ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
           <div className="w-full max-w-md">
@@ -62,8 +80,8 @@ const Auth = () => {
       );
     }
     
-    // Otherwise, redirect to the page they were trying to access
-    console.log("Auth page: User is logged in, redirecting to", from);
+    console.log("[Auth Page] User is authenticated, redirecting to", from);
+    toast.success(`Welcome back!`);
     return <Navigate to={from} replace />;
   }
 

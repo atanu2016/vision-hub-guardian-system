@@ -6,7 +6,7 @@ import type { UserRole } from '@/contexts/auth/types';
 
 // Low-latency in-memory cache
 const roleCache = new Map<string, { role: UserRole, timestamp: number }>();
-const CACHE_TIMEOUT = 10000; // 10 second cache - optimized for better performance
+const CACHE_TIMEOUT = 60000; // 60 second cache - optimized for better performance
 
 // Separate cache for frequently accessed roles to avoid localStorage overhead
 const frequentAccessCache = new Map<string, { role: UserRole, timestamp: number }>();
@@ -14,12 +14,14 @@ const frequentAccessCache = new Map<string, { role: UserRole, timestamp: number 
 /**
  * Get a cached role with improved performance
  */
-export function getCachedRole(userId: string): UserRole | null {
+export function getCachedRole(userId: string, includeTimestamp = false): UserRole | { role: UserRole, timestamp: number } | null {
+  if (!userId) return null;
+  
   // First check frequent access cache (RAM only, super fast)
   const frequentCachedRole = frequentAccessCache.get(userId);
   
   if (frequentCachedRole && (Date.now() - frequentCachedRole.timestamp < CACHE_TIMEOUT)) {
-    return frequentCachedRole.role;
+    return includeTimestamp ? frequentCachedRole : frequentCachedRole.role;
   }
   
   // Then check regular cache
@@ -28,7 +30,7 @@ export function getCachedRole(userId: string): UserRole | null {
   if (cachedRole && (Date.now() - cachedRole.timestamp < CACHE_TIMEOUT)) {
     // Update frequent access cache
     frequentAccessCache.set(userId, cachedRole);
-    return cachedRole.role;
+    return includeTimestamp ? cachedRole : cachedRole.role;
   }
   
   // As last resort, check local storage (but only if absolutely needed)
@@ -38,11 +40,13 @@ export function getCachedRole(userId: string): UserRole | null {
     
     if (lsRole && lsTime && (Date.now() - parseInt(lsTime, 10) < CACHE_TIMEOUT)) {
       const role = lsRole as UserRole;
+      const entry = { role, timestamp: parseInt(lsTime, 10) };
       setCachedRole(userId, role);
-      return role;
+      return includeTimestamp ? entry : role;
     }
   } catch (e) {
     // Ignore localStorage errors
+    console.error('[ROLE CACHE] Error accessing localStorage:', e);
   }
   
   return null;
@@ -52,6 +56,8 @@ export function getCachedRole(userId: string): UserRole | null {
  * Store a role in the cache with performance optimizations
  */
 export function setCachedRole(userId: string, role: UserRole): void {
+  if (!userId || !role) return;
+  
   const cacheEntry = { 
     role, 
     timestamp: Date.now() 
@@ -68,6 +74,7 @@ export function setCachedRole(userId: string, role: UserRole): void {
       localStorage.setItem(`user_role_time_${userId}`, Date.now().toString());
     } catch (e) {
       // Ignore localStorage errors
+      console.error('[ROLE CACHE] Error setting localStorage:', e);
     }
   }, 0);
 }
@@ -77,6 +84,7 @@ export function setCachedRole(userId: string, role: UserRole): void {
  */
 export function invalidateRoleCache(userId?: string): void {
   if (userId) {
+    console.log(`[ROLE CACHE] Invalidating cache for user: ${userId}`);
     roleCache.delete(userId);
     frequentAccessCache.delete(userId);
     
@@ -90,6 +98,7 @@ export function invalidateRoleCache(userId?: string): void {
       }
     }, 0);
   } else {
+    console.log('[ROLE CACHE] Invalidating all caches');
     roleCache.clear();
     frequentAccessCache.clear();
     
@@ -127,5 +136,14 @@ export function cleanupRoleCache(): void {
 }
 
 // Set up periodic cache cleanup
-setInterval(cleanupRoleCache, 60000); // Clean every minute
+const cleanupInterval = setInterval(cleanupRoleCache, 120000); // Clean every two minutes
 
+// Ensure cleanup interval is cleared when the module is hot-reloaded in development
+if (typeof window !== 'undefined') {
+  // Store the previous interval ID in a window property
+  const prevIntervalId = (window as any).__roleCacheCleanupInterval;
+  if (prevIntervalId) {
+    clearInterval(prevIntervalId);
+  }
+  (window as any).__roleCacheCleanupInterval = cleanupInterval;
+}

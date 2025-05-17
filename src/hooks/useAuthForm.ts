@@ -10,25 +10,53 @@ interface UseAuthFormProps {
 
 export function useAuthForm({ onSuccess }: UseAuthFormProps = {}) {
   const [emailLoginsDisabled, setEmailLoginsDisabled] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { signIn } = useAuth();
   
   // Memoize login handler to prevent unnecessary rerenders
   const handleLogin = useCallback(async (values: LoginFormValues) => {
+    if (isLoading) return;
+    
+    setIsLoading(true);
+    console.log('[AUTH FORM] Attempting login for:', values.email);
+    
     try {
-      await signIn(values.email, values.password);
+      // Add timeout to prevent infinite loading state
+      const loginPromise = signIn(values.email, values.password);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Login timed out. Please try again.')), 20000)
+      );
+      
+      await Promise.race([loginPromise, timeoutPromise]);
+      console.log('[AUTH FORM] Login successful');
+      
       if (onSuccess) onSuccess();
+      toast.success('Login successful!');
     } catch (error: any) {
+      console.error('[AUTH FORM] Login error:', error);
+      
       // Handle specific error cases
       if (error.message?.includes('Email logins are not enabled')) {
         setEmailLoginsDisabled(true);
+        toast.error('Email logins are not enabled');
+      } else if (error.message?.includes('Invalid login credentials')) {
+        toast.error('Invalid email or password');
+      } else if (error.message?.includes('timed out')) {
+        toast.error(error.message);
+      } else {
+        toast.error(error.message || 'An error occurred during login');
       }
+      
       throw error;
+    } finally {
+      setIsLoading(false);
     }
-  }, [signIn, onSuccess]);
+  }, [signIn, onSuccess, isLoading]);
 
   return {
     emailLoginsDisabled,
     setEmailLoginsDisabled,
-    handleLogin
+    handleLogin,
+    isLoading
   };
 }
