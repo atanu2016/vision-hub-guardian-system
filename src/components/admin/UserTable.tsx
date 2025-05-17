@@ -3,12 +3,9 @@ import { UserData, UserRole } from '@/types/admin';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { RoleSelector } from './RoleSelector';
 import { MfaToggle } from './MfaToggle';
-import { Button } from '@/components/ui/button';
-import { UserMinus } from 'lucide-react';
-import { useState } from 'react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useAuth } from '@/contexts/auth';
 import { canManageRole } from '@/utils/permissionUtils';
+import { DeleteUserButton } from './DeleteUserButton';
 
 interface UserTableProps {
   users: UserData[];
@@ -29,19 +26,7 @@ export function UserTable({
   deleteUser,
   loading 
 }: UserTableProps) {
-  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const { role: currentUserRole } = useAuth();
-
-  const handleDeleteClick = (userId: string) => {
-    setDeletingUserId(userId);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (deletingUserId && deleteUser) {
-      await deleteUser(deletingUserId);
-      setDeletingUserId(null);
-    }
-  };
 
   if (loading) {
     return (
@@ -98,33 +83,10 @@ export function UserTable({
                 </TableCell>
                 <TableCell className="text-right">
                   {deleteUser && user.id !== currentUserId && canManageThisUser && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button 
-                          variant="destructive" 
-                          size="sm"
-                          onClick={() => handleDeleteClick(user.id)}
-                        >
-                          <UserMinus className="h-4 w-4 mr-1" />
-                          Delete
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the user 
-                            account and remove their data from our servers.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                            Delete User
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                    <DeleteUserButton 
+                      userId={user.id}
+                      onDelete={deleteUser}
+                    />
                   )}
                 </TableCell>
               </TableRow>
