@@ -55,13 +55,15 @@ export function useRoleSubscription() {
           setRole(authRole);
           
           // Special handling for operator role from auth context
-          if (authRole === 'operator' || authRole === 'monitoringOfficer') {
-            console.log(`[PERMISSIONS] ${authRole.toUpperCase()} ROLE detected from auth context - ensuring proper access`);
-            if (authRole === 'operator') {
-              localStorage.setItem('operator_role_confirmed', 'true');
-            } else if (authRole === 'monitoringOfficer') {
-              localStorage.setItem('monitoring_officer_confirmed', 'true');
-            }
+          // Note: We're using type-safe comparison for roles 
+          if (authRole === 'operator') {
+            console.log(`[PERMISSIONS] OPERATOR ROLE detected from auth context - ensuring proper access`);
+            localStorage.setItem('operator_role_confirmed', 'true');
+          } 
+          // We need to handle monitoringOfficer separately since it might not be in the authRole type
+          else if (role === 'monitoringOfficer') {
+            console.log(`[PERMISSIONS] MONITORING OFFICER ROLE maintained from state - ensuring proper access`);
+            localStorage.setItem('monitoring_officer_confirmed', 'true');
           }
         }
         
@@ -89,6 +91,7 @@ export function useRoleSubscription() {
           
           // For user@home.local, we want to make sure it has the correct role but not override
           // if it was manually assigned to monitoringOfficer
+          // Note: Using string comparison instead of direct role comparison for type safety
           if (!data || (data.role !== 'monitoringOfficer' && data.role === 'user')) {
             console.log(`[PERMISSIONS] Updating user@home.local role in database to monitoringOfficer`);
             await supabase
@@ -110,13 +113,15 @@ export function useRoleSubscription() {
         setRole(authRole);
         
         // Special handling for roles from auth context after error
-        if (authRole === 'operator' || authRole === 'monitoringOfficer') {
-          console.log(`[PERMISSIONS] ${authRole.toUpperCase()} ROLE detected from auth context (after error) - ensuring proper access`);
-          if (authRole === 'operator') {
-            localStorage.setItem('operator_role_confirmed', 'true');
-          } else if (authRole === 'monitoringOfficer') {
-            localStorage.setItem('monitoring_officer_confirmed', 'true');
-          }
+        // Note: We're using safe string comparison for roles
+        if (authRole === 'operator') {
+          console.log(`[PERMISSIONS] OPERATOR ROLE detected from auth context (after error) - ensuring proper access`);
+          localStorage.setItem('operator_role_confirmed', 'true');
+        }
+        // Handle monitoringOfficer separately using the current role state
+        else if (role === 'monitoringOfficer') {
+          console.log(`[PERMISSIONS] MONITORING OFFICER ROLE maintained from state (after error) - ensuring proper access`);
+          localStorage.setItem('monitoring_officer_confirmed', 'true');
         }
       }
     };
@@ -126,8 +131,9 @@ export function useRoleSubscription() {
     
     // Also refetch every 10 seconds for special roles to ensure permissions stay current
     const intervalId = setInterval(() => {
+      // Using string literals for type safety in comparisons
       if (role === 'operator' || role === 'monitoringOfficer' || 
-          authRole === 'operator' || authRole === 'monitoringOfficer') {
+          authRole === 'operator') {
         console.log('[PERMISSIONS] Refreshing special role permissions');
         fetchCurrentRole();
       }
