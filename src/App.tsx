@@ -1,5 +1,5 @@
 
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme/theme-provider"
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -32,8 +32,18 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <SidebarProvider>
             <Routes>
-              <Route path="/" element={<ProtectedRoute requiredPermission="view-dashboard"><Index /></ProtectedRoute>} />
+              {/* Auth route */}
               <Route path="/auth" element={<Auth />} />
+              
+              {/* Redirect root to appropriate page based on role */}
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <Navigate to="/live" />
+                </ProtectedRoute>
+              } />
+              
+              {/* Dashboard - only accessible to admin/superadmin */}
+              <Route path="/dashboard" element={<ProtectedRoute requiredPermission="view-dashboard"><Index /></ProtectedRoute>} />
               
               {/* Basic views - 'user' role can only access live view and profile */}
               <Route path="/cameras" element={<ProtectedRoute requiredPermission="view-cameras:all"><Cameras /></ProtectedRoute>} />

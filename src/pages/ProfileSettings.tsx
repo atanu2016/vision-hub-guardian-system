@@ -3,7 +3,8 @@ import AppLayout from "@/components/layout/AppLayout";
 import { PersonalInfoCard } from "@/components/profile/PersonalInfoCard";
 import { SecuritySettingsCard } from "@/components/profile/SecuritySettingsCard";
 import { useProfileSettings } from "@/hooks/useProfileSettings";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
 
 const ProfileSettings = () => {
   const {
@@ -12,6 +13,7 @@ const ProfileSettings = () => {
     role,
     formData,
     avatarPreview,
+    loading,
     handleInputChange,
     handleAvatarChange,
     handleProfileUpdate,
@@ -19,18 +21,29 @@ const ProfileSettings = () => {
     getInitials
   } = useProfileSettings();
 
+  // Add logging for debugging
   useEffect(() => {
-    // Add logging for debugging
     console.log("ProfileSettings component:", {
       userExists: !!user,
       profileExists: !!profile,
       role,
-      formData
+      formData,
+      loading
     });
-  }, [user, profile, role, formData]);
+  }, [user, profile, role, formData, loading]);
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
+          <p>Loading profile information...</p>
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (!user) {
-    console.log("ProfileSettings: No user found");
     return (
       <AppLayout>
         <div className="flex justify-center items-center h-64">

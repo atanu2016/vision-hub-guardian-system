@@ -14,6 +14,7 @@ export interface ProfileFormData {
 
 export function useProfileSettings() {
   const { user, profile, role } = useAuth();
+  const [loading, setLoading] = useState(true);
 
   const [formData, setFormData] = useState<ProfileFormData>({
     fullName: "",
@@ -28,14 +29,33 @@ export function useProfileSettings() {
   
   // Update form data when user and profile are loaded
   useEffect(() => {
-    if (user) {
-      setFormData(prev => ({
-        ...prev,
-        fullName: profile?.full_name || "",
-        email: user.email || ""
-      }));
-    }
-  }, [user, profile]);
+    const initializeProfile = async () => {
+      setLoading(true);
+      try {
+        if (user) {
+          // Set initial values from auth context
+          setFormData(prev => ({
+            ...prev,
+            fullName: profile?.full_name || "",
+            email: user.email || ""
+          }));
+          
+          console.log("Profile data loaded:", {
+            fullName: profile?.full_name,
+            email: user.email,
+            role
+          });
+        }
+      } catch (error) {
+        console.error("Error initializing profile data:", error);
+        toast.error("Failed to load profile information");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeProfile();
+  }, [user, profile, role]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -146,6 +166,7 @@ export function useProfileSettings() {
     role,
     formData,
     avatarPreview,
+    loading,
     handleInputChange,
     handleAvatarChange,
     handleProfileUpdate,
