@@ -8,7 +8,7 @@ import { UserRole } from "@/contexts/auth/types";
 export function useOperatorPermissions(role: UserRole, authRole: UserRole) {
   // Fast path for critical permissions with optimized checking
   const isOperatorFastPathEnabled = (permission: Permission) => {
-    // Critical permissions per role - now just for regular users
+    // Critical permissions per role
     const criticalPermissionMap: Record<UserRole, Permission[]> = {
       'user': [
         'view-profile'

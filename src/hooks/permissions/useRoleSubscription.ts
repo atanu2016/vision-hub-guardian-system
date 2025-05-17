@@ -27,67 +27,42 @@ export function useRoleSubscription() {
           // Cache role information
           localStorage.setItem(`user_role_${user.id}`, data.role);
           localStorage.setItem(`user_role_time_${user.id}`, Date.now().toString());
-          
-          // Handle special role flags
-          updateRoleFlags(data.role);
         } else if (error) {
           console.error('[PERMISSIONS] Error fetching role:', error);
           setRole(authRole);
-          updateRoleFlags(authRole);
         } else {
           setRole(authRole);
-          updateRoleFlags(authRole);
         }
         
-        // Handle special cases for test accounts
+        // Special handling for test accounts
         if (user.email === 'operator@home.local') {
-          setRole('operator');
-          localStorage.setItem('operator_role_confirmed', 'true');
-          
-          // Update role in database if needed
-          if (!data || data.role !== 'operator') {
+          // Make sure operator@home.local users have user role
+          if (!data || data.role !== 'user') {
             await supabase
               .from('user_roles')
               .upsert({ 
                 user_id: user.id, 
-                role: 'operator',
+                role: 'user',
                 updated_at: new Date().toISOString() 
               }, { onConflict: 'user_id' });
           }
         } else if (user.email === 'user@home.local') {
-          if (!data || (data.role !== 'monitoringOfficer' && data.role === 'user')) {
+          // Make sure user@home.local users have user role
+          if (!data || data.role !== 'user') {
             await supabase
               .from('user_roles')
               .upsert({ 
                 user_id: user.id, 
-                role: 'monitoringOfficer',
+                role: 'user',
                 updated_at: new Date().toISOString() 
               }, { onConflict: 'user_id' });
-            
-            setRole('monitoringOfficer');
-            localStorage.setItem('monitoring_officer_confirmed', 'true');
           }
         }
       } catch (err) {
         console.error('[PERMISSIONS] Error fetching role:', err);
         setRole(authRole);
-        updateRoleFlags(authRole);
       }
     };
-    
-    // Helper function to update role flags
-    function updateRoleFlags(roleValue: string) {
-      // Clear existing flags first
-      localStorage.removeItem('operator_role_confirmed');
-      localStorage.removeItem('monitoring_officer_confirmed');
-      
-      // Set appropriate flag based on role
-      if (roleValue === 'operator') {
-        localStorage.setItem('operator_role_confirmed', 'true');
-      } else if (roleValue === 'monitoringOfficer') {
-        localStorage.setItem('monitoring_officer_confirmed', 'true');
-      }
-    }
     
     // Initial fetch
     fetchCurrentRole();
@@ -104,7 +79,6 @@ export function useRoleSubscription() {
         }, (payload) => {
           if (payload.new && typeof payload.new === 'object' && 'role' in payload.new) {
             setRole(payload.new.role as UserRole);
-            updateRoleFlags(payload.new.role as string);
           }
         })
         .subscribe();
@@ -112,11 +86,7 @@ export function useRoleSubscription() {
     
     // Refresh permissions every 30 seconds - increased from 10 seconds
     const intervalId = setInterval(() => {
-      // Only refresh for special roles
-      const currentRole = localStorage.getItem(`user_role_${user.id}`);
-      if (currentRole === 'operator' || currentRole === 'monitoringOfficer') {
-        fetchCurrentRole();
-      }
+      fetchCurrentRole();
     }, 30000);
       
     return () => {

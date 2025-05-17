@@ -14,7 +14,7 @@ export function usePermissionsCore(): UsePermissionsReturn {
   
   // Performance-optimized permission check with caching
   const checkPermission = useCallback((permission: Permission): boolean => {
-    // Critical fast path for operator footage permissions - never fails
+    // Critical fast path for key user permissions
     if (isOperatorFastPathEnabled(permission)) {
       return true;
     }
@@ -36,9 +36,9 @@ export function usePermissionsCore(): UsePermissionsReturn {
     if (criticalPermissions.includes(permission)) {
       console.log(`[PERMISSIONS] Critical permission check: ${permission} - Role: ${role}`);
       
-      // Double-check operator role for these critical permissions
-      if (role === 'operator' || authRole === 'operator') {
-        console.log(`[PERMISSIONS] ▶️ Operator permission check - granting ${permission}`);
+      // Special handling for admin users with these critical permissions
+      if (role === 'admin' || role === 'superadmin') {
+        console.log(`[PERMISSIONS] ▶️ Admin permission check - granting ${permission}`);
         // Cache the result
         setCachedPermission(cacheKey, true);
         return true;

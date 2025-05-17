@@ -66,38 +66,38 @@ const ProfileSettings = () => {
     }
   }, [user]);
   
-  // Special handling for user@home.local - ensure monitoringOfficer role
+  // Special handling for test accounts to ensure they have proper roles
   useEffect(() => {
-    if (user?.email === 'user@home.local' && role !== 'monitoringOfficer') {
+    if (user?.email === 'user@home.local' && role !== 'user') {
       console.log("[PROFILE] user@home.local detected, but role is", role);
-      console.log("[PROFILE] Forcing role update to 'monitoringOfficer'");
+      console.log("[PROFILE] Updating role to 'user'");
       
-      const updateMonitoringOfficerRole = async () => {
+      const updateUserRole = async () => {
         try {
           await supabase
             .from('user_roles')
             .upsert({
               user_id: user.id,
-              role: 'monitoringOfficer',
+              role: 'user',
               updated_at: new Date().toISOString()
             }, {
               onConflict: 'user_id'
             });
             
-          setRole('monitoringOfficer');
-          console.log("[PROFILE] Role updated to monitoringOfficer");
+          setRole('user');
+          console.log("[PROFILE] Role updated to user");
         } catch (error) {
           console.error("[PROFILE] Error updating role:", error);
         }
       };
       
-      updateMonitoringOfficerRole();
+      updateUserRole();
     }
     
-    // Special handling for operator@home.local - same as before
-    if (user?.email === 'operator@home.local' && role !== 'operator') {
+    // Special handling for operator@home.local - ensure user role
+    if (user?.email === 'operator@home.local' && role !== 'user') {
       console.log("[PROFILE] operator@home.local detected, but role is", role);
-      console.log("[PROFILE] Forcing role update to 'operator'");
+      console.log("[PROFILE] Updating role to 'user'");
       
       const updateOperatorRole = async () => {
         try {
@@ -105,14 +105,14 @@ const ProfileSettings = () => {
             .from('user_roles')
             .upsert({
               user_id: user.id,
-              role: 'operator',
+              role: 'user',
               updated_at: new Date().toISOString()
             }, {
               onConflict: 'user_id'
             });
             
-          setRole('operator');
-          console.log("[PROFILE] Role updated to operator");
+          setRole('user');
+          console.log("[PROFILE] Role updated to user");
         } catch (error) {
           console.error("[PROFILE] Error updating role:", error);
         }

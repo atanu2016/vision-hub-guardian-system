@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Session, User } from '@supabase/supabase-js';
@@ -135,7 +134,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Updated to check both profile.is_admin and role for admin status
   const isAdmin = role === 'admin' || role === 'superadmin' || !!profile?.is_admin;
   const isSuperAdmin = role === 'superadmin' || (!!profile?.is_admin && role === 'admin');
-  const isOperator = role === 'operator' || isAdmin;
 
   const contextValue: AuthContextType = {
     session,
@@ -145,7 +143,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading,
     isAdmin,
     isSuperAdmin,
-    isOperator,
     signIn: handleSignIn,
     signOut: handleSignOut,
     resetPassword: handleResetPassword,
@@ -156,7 +153,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading,
     isAdmin,
     isSuperAdmin,
-    isOperator,
     role,
     profileExists: !!profile
   });
