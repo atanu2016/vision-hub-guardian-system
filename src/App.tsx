@@ -17,7 +17,7 @@ import Recordings from "@/pages/Recordings";
 import Notifications from "@/pages/Notifications";
 import ProfileSettings from "@/pages/ProfileSettings";
 import Settings from "@/pages/Settings";
-import Admin from "@/pages/Admin";
+import Admin from "@/pages/admin"; // Fixed: Changed from '@/pages/Admin' to '@/pages/admin'
 import UserManagement from "@/pages/admin/UserManagement";
 import CreateUser from "@/pages/admin/CreateUser";
 import NotFound from "@/pages/NotFound";
