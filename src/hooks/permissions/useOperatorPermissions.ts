@@ -1,6 +1,6 @@
 
 import { Permission } from "@/utils/permissionUtils";
-import { UserRole } from "@/contexts/auth/types";
+import { UserRole } from "@/types/admin";
 
 /**
  * Hook to handle optimized permission checking for user roles
