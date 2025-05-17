@@ -23,7 +23,7 @@ import CreateUser from "@/pages/admin/CreateUser";
 import NotFound from "@/pages/NotFound";
 
 import { AuthProvider } from "@/contexts/auth";
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { ProtectedRoute } from "@/components/auth";
 
 const queryClient = new QueryClient();
 
