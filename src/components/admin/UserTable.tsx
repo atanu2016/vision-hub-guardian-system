@@ -6,6 +6,7 @@ import { MfaToggle } from './MfaToggle';
 import { useAuth } from '@/contexts/auth';
 import { canManageRole } from '@/utils/permissionUtils';
 import { DeleteUserButton } from './DeleteUserButton';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface UserTableProps {
   users: UserData[];
@@ -27,6 +28,7 @@ export function UserTable({
   loading 
 }: UserTableProps) {
   const { role: currentUserRole } = useAuth();
+  const { hasPermission } = usePermissions();
 
   if (loading) {
     return (
@@ -35,6 +37,11 @@ export function UserTable({
       </div>
     );
   }
+
+  // Check if current user has permissions to manage MFA and delete users
+  const canManageMfa = hasPermission('manage-users:lower');
+  const canDeleteUsers = hasPermission('manage-users:lower');
+  const canAssignRoles = hasPermission('assign-roles');
 
   return (
     <div className="overflow-auto max-h-[60vh]">
@@ -78,11 +85,11 @@ export function UserTable({
                     isEnrolled={user.mfa_enrolled}
                     onToggle={toggleMfaRequirement}
                     onRevoke={revokeMfaEnrollment}
-                    disabled={!canManageThisUser}
+                    disabled={!canManageMfa || !canManageThisUser}
                   />
                 </TableCell>
                 <TableCell className="text-right">
-                  {deleteUser && user.id !== currentUserId && canManageThisUser && (
+                  {deleteUser && user.id !== currentUserId && canManageThisUser && canDeleteUsers && (
                     <DeleteUserButton 
                       userId={user.id}
                       onDelete={deleteUser}

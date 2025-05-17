@@ -21,12 +21,38 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
   const { hasPermission } = usePermissions();
   const location = useLocation();
   
+  // Define navigation items with their required permissions
   const navigationItems = [
-    { path: "/", icon: Home, label: "Dashboard" },
-    { path: "/cameras", icon: Camera, label: "Cameras", permission: 'view-cameras:assigned' as Permission },
-    { path: "/live", icon: Video, label: "Live View", permission: 'view-cameras:assigned' as Permission },
-    { path: "/recordings", icon: Video, label: "Recordings", permission: 'view-footage:assigned' as Permission },
-    { path: "/settings", icon: Settings, label: "Settings" },
+    { 
+      path: "/", 
+      icon: Home, 
+      label: "Dashboard", 
+      permission: 'view-dashboard' as Permission 
+    },
+    { 
+      path: "/cameras", 
+      icon: Camera, 
+      label: "Cameras", 
+      permission: 'view-cameras:assigned' as Permission 
+    },
+    { 
+      path: "/live", 
+      icon: Video, 
+      label: "Live View", 
+      permission: 'view-cameras:assigned' as Permission 
+    },
+    { 
+      path: "/recordings", 
+      icon: Video, 
+      label: "Recordings", 
+      permission: 'view-footage:assigned' as Permission 
+    },
+    { 
+      path: "/settings", 
+      icon: Settings, 
+      label: "Settings", 
+      permission: 'configure-camera-settings' as Permission 
+    },
   ];
   
   // Only show admin route if user has admin privileges

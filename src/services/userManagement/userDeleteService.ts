@@ -1,31 +1,37 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { logUserActivity } from '@/services/activityLoggingService';
 
 /**
- * Deletes a user and all their associated data
+ * Deletes a user from the system
  */
 export async function deleteUser(userId: string): Promise<void> {
   try {
-    console.log("Deleting user:", userId);
-    
-    // Get the current user session to ensure we don't delete our own account
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user?.id === userId) {
-      throw new Error('Cannot delete your own account');
+    // Get the user's email for logging
+    const { data: userData } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', userId)
+      .single();
+
+    // Delete the user using admin API
+    const { error } = await supabase.functions.invoke('admin-delete-user', {
+      body: { user_id: userId }
+    });
+
+    if (error) {
+      console.error('Error deleting user:', error);
+      throw new Error('Failed to delete user');
     }
 
-    // Call the edge function to delete the user completely
-    const { error } = await supabase.functions.invoke('get-all-users', {
-      method: 'DELETE',
-      body: { userId }
-    });
-    
-    if (error) {
-      console.error('Error calling delete user function:', error);
-      throw new Error(error.message || 'Failed to delete user');
-    }
-    
+    // Log the user deletion
+    await logUserActivity(
+      'User deleted',
+      `User ${userData?.full_name || 'unknown'} was deleted`,
+      userId
+    );
+
     toast.success('User deleted successfully');
   } catch (error: any) {
     console.error('Error deleting user:', error);

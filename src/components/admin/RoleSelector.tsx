@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { UserRole } from '@/types/admin';
 import { useAuth } from '@/contexts/auth';
 import { canManageRole } from '@/utils/permissionUtils';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface RoleSelectorProps {
   userId: string;
@@ -16,6 +17,10 @@ interface RoleSelectorProps {
 export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole }: RoleSelectorProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const { role: currentUserRole } = useAuth();
+  const { hasPermission } = usePermissions();
+
+  // Check if user can assign roles (superadmin only)
+  const canAssignRoles = hasPermission('assign-roles');
 
   const handleRoleChange = async (value: string) => {
     setIsUpdating(true);
@@ -47,7 +52,7 @@ export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole 
   // 1. User is trying to change their own role (except superadmin)
   // 2. User doesn't have permission to manage this role
   // 3. Currently updating
-  const disabled = (isSelf && currentRole !== 'superadmin') || !canManageUser || isUpdating;
+  const disabled = (isSelf && currentRole !== 'superadmin') || !canManageUser || isUpdating || !canAssignRoles;
 
   return (
     <div className="flex items-center gap-2">
@@ -63,8 +68,8 @@ export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole 
         <SelectContent>
           <SelectItem value="superadmin" disabled={currentUserRole !== 'superadmin'}>Superadmin</SelectItem>
           <SelectItem value="admin" disabled={currentUserRole !== 'superadmin'}>Admin</SelectItem>
-          <SelectItem value="operator">Operator</SelectItem>
-          <SelectItem value="user">User</SelectItem>
+          <SelectItem value="operator" disabled={!canManageUser}>Operator</SelectItem>
+          <SelectItem value="user" disabled={!canManageUser}>User</SelectItem>
         </SelectContent>
       </Select>
     </div>

@@ -2,6 +2,7 @@
 import { Button } from '@/components/ui/button';
 import { CardDescription, CardTitle } from '@/components/ui/card';
 import { Shield, UserPlus, RefreshCw } from 'lucide-react';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface UserManagementHeaderProps {
   onRefresh: () => void;
@@ -16,6 +17,10 @@ export function UserManagementHeader({
   loading, 
   showCreateButton 
 }: UserManagementHeaderProps) {
+  const { hasPermission } = usePermissions();
+  // Check if user can create users (superadmin only)
+  const canCreateUsers = hasPermission('manage-users:all');
+  
   return (
     <div className="flex flex-row items-center justify-between">
       <div>
@@ -37,7 +42,7 @@ export function UserManagementHeader({
           <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
-        {showCreateButton && (
+        {showCreateButton && canCreateUsers && (
           <Button 
             onClick={onCreateUser}
             size="sm"

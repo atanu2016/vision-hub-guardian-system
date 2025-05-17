@@ -38,7 +38,7 @@ function App() {
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               
-              {/* Camera permissions */}
+              {/* Basic views - require minimal permissions */}
               <Route path="/cameras" element={<ProtectedRoute requiredPermission="view-cameras:assigned"><Cameras /></ProtectedRoute>} />
               <Route path="/cameras/:id" element={<ProtectedRoute requiredPermission="view-cameras:assigned"><CameraDetail /></ProtectedRoute>} />
               <Route path="/live" element={<ProtectedRoute requiredPermission="view-cameras:assigned"><LiveView /></ProtectedRoute>} />
@@ -47,8 +47,8 @@ function App() {
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
               
-              {/* Settings routes */}
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              {/* Settings routes - most require admin permissions */}
+              <Route path="/settings" element={<ProtectedRoute requiredPermission="configure-camera-settings"><Settings /></ProtectedRoute>} />
               <Route path="/settings/storage" element={<ProtectedRoute requiredPermission="configure-storage"><Settings /></ProtectedRoute>} />
               <Route path="/settings/recordings" element={<ProtectedRoute requiredPermission="configure-camera-settings"><Settings /></ProtectedRoute>} />
               <Route path="/settings/alerts" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
@@ -60,7 +60,7 @@ function App() {
               
               {/* Admin routes */}
               <Route path="/admin" element={<ProtectedRoute adminRequired={true}><Admin /></ProtectedRoute>} />
-              <Route path="/admin/users" element={<ProtectedRoute adminRequired={true}><UserManagement /></ProtectedRoute>} />
+              <Route path="/admin/users" element={<ProtectedRoute requiredPermission="manage-users:lower"><UserManagement /></ProtectedRoute>} />
               <Route path="/admin/users/create" element={<ProtectedRoute superadminRequired={true}><CreateUser /></ProtectedRoute>} />
               
               <Route path="*" element={<NotFound />} />

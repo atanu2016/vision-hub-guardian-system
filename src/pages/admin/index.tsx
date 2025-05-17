@@ -9,11 +9,16 @@ import { useAuth } from '@/contexts/auth';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/components/layout/AppLayout';
+import { usePermissions } from '@/hooks/usePermissions';
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('users');
   const { isAdmin, isLoading } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
+  
+  const canCreateUsers = hasPermission('manage-users:all');
+  const canAccessMigration = hasPermission('system-migration');
   
   if (isLoading) {
     return (
@@ -54,13 +59,15 @@ export default function AdminPage() {
               <LayoutDashboard className="mr-2 h-4 w-4" />
               Dashboard
             </Button>
-            <Button 
-              onClick={handleCreateUser}
-              className="bg-vision-blue hover:bg-vision-blue-600"
-            >
-              <UserPlus className="mr-2 h-4 w-4" />
-              Create User
-            </Button>
+            {canCreateUsers && (
+              <Button 
+                onClick={handleCreateUser}
+                className="bg-vision-blue hover:bg-vision-blue-600"
+              >
+                <UserPlus className="mr-2 h-4 w-4" />
+                Create User
+              </Button>
+            )}
           </div>
         </div>
 
@@ -70,19 +77,23 @@ export default function AdminPage() {
               <Shield className="h-4 w-4" />
               <span>User Management</span>
             </TabsTrigger>
-            <TabsTrigger value="migration" className="flex items-center gap-2">
-              <Database className="h-4 w-4" />
-              <span>Migration Tools</span>
-            </TabsTrigger>
+            {canAccessMigration && (
+              <TabsTrigger value="migration" className="flex items-center gap-2">
+                <Database className="h-4 w-4" />
+                <span>Migration Tools</span>
+              </TabsTrigger>
+            )}
           </TabsList>
           
           <TabsContent value="users" className="space-y-4">
             <UserManagement />
           </TabsContent>
           
-          <TabsContent value="migration" className="space-y-4">
-            <DatabaseMigration />
-          </TabsContent>
+          {canAccessMigration && (
+            <TabsContent value="migration" className="space-y-4">
+              <DatabaseMigration />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </AppLayout>

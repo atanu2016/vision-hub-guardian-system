@@ -4,6 +4,7 @@ import { UserTable } from '@/components/admin/UserTable';
 import { UserManagementHeader } from '@/components/admin/UserManagementHeader';
 import { ErrorAlert } from '@/components/admin/ErrorAlert';
 import { useUserManagement } from '@/hooks/useUserManagement';
+import { usePermissions } from '@/hooks/usePermissions';
 
 export default function UserManagement() {
   const {
@@ -19,8 +20,15 @@ export default function UserManagement() {
     handleDeleteUser,
     handleCreateUserClick
   } = useUserManagement();
+  
+  const { hasPermission } = usePermissions();
+  
+  // Check if user has appropriate permissions
+  const canCreateUsers = hasPermission('manage-users:all');
+  const canManageMfa = hasPermission('manage-users:lower');
 
-  if (!role || (role !== 'admin' && role !== 'superadmin')) {
+  // If user doesn't have minimum required permissions, show access denied
+  if (!hasPermission('manage-users:lower')) {
     return (
       <Card>
         <CardHeader>
@@ -32,7 +40,7 @@ export default function UserManagement() {
           />
         </CardHeader>
         <CardContent>
-          <p>You need administrator privileges to access this page.</p>
+          <p>You need administrative privileges to access this page.</p>
         </CardContent>
       </Card>
     );
@@ -45,7 +53,7 @@ export default function UserManagement() {
           onRefresh={loadUsers}
           onCreateUser={handleCreateUserClick}
           loading={loading}
-          showCreateButton={role === 'superadmin'}
+          showCreateButton={canCreateUsers}
         />
       </CardHeader>
 
@@ -59,8 +67,8 @@ export default function UserManagement() {
           currentUserId={user?.id}
           updateUserRole={handleUpdateUserRole}
           toggleMfaRequirement={handleToggleMfaRequirement}
-          revokeMfaEnrollment={handleRevokeMfaEnrollment}
-          deleteUser={handleDeleteUser}
+          revokeMfaEnrollment={canManageMfa ? handleRevokeMfaEnrollment : undefined}
+          deleteUser={canManageMfa ? handleDeleteUser : undefined}
           loading={loading}
         />
       </CardContent>

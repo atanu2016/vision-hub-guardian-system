@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { UserRole } from '@/types/admin';
 import { toast } from 'sonner';
+import { logRoleChange, logUserActivity } from '@/services/activityLoggingService';
 
 /**
  * Updates a user's role in the database
@@ -13,6 +14,15 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
       toast.error("You cannot downgrade your own superadmin role");
       return;
     }
+
+    // Get current role for logging
+    const { data: currentRoleData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    const oldRole = currentRoleData?.role || 'user';
 
     const { data: existingRole } = await supabase
       .from('user_roles')
@@ -40,6 +50,9 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
     }
 
     if (error) throw error;
+    
+    // Log this action
+    await logRoleChange(userId, oldRole as UserRole, newRole);
     
     toast.success(`User role updated to ${newRole}`);
   } catch (error) {

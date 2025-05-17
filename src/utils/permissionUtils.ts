@@ -9,21 +9,63 @@ export const roleHierarchy: Record<UserRole, number> = {
 };
 
 export function hasPermission(userRole: UserRole, permission: Permission): boolean {
+  // If no role, no permissions
+  if (!userRole) return false;
+
   switch (permission) {
+    // User level permissions - available to all roles
+    case 'view-dashboard':
+    case 'view-profile':
+    case 'manage-mfa-enrollment':
+      return roleHierarchy[userRole] >= roleHierarchy['user'];
+
+    // Cameras view permissions
     case 'view-cameras:assigned':
+      return roleHierarchy[userRole] >= roleHierarchy['user'];
+    case 'view-cameras:all':
+      return roleHierarchy[userRole] >= roleHierarchy['operator'];
+    
+    // Footage permissions
     case 'view-footage:assigned':
       return roleHierarchy[userRole] >= roleHierarchy['user'];
+    case 'view-footage:all':
+      return roleHierarchy[userRole] >= roleHierarchy['operator'];
+    
+    // User management permissions
     case 'manage-users:lower':
       return roleHierarchy[userRole] >= roleHierarchy['admin'];
     case 'manage-users:all':
     case 'assign-roles':
       return userRole === 'superadmin';
+
+    // Camera management
+    case 'manage-cameras:assigned':
+      return roleHierarchy[userRole] >= roleHierarchy['operator'];
+    case 'manage-cameras:all':
+      return roleHierarchy[userRole] >= roleHierarchy['admin'];
+    
+    // Storage and configuration
     case 'configure-storage':
     case 'configure-camera-settings':
+      return roleHierarchy[userRole] >= roleHierarchy['admin'];
+    
+    // Policy and system settings
     case 'configure-global-policies':
     case 'manage-system':
+      return roleHierarchy[userRole] >= roleHierarchy['superadmin'];
+    
+    // Logs and audit access
     case 'access-logs':
+    case 'access-audit-trails':
       return roleHierarchy[userRole] >= roleHierarchy['admin'];
+
+    // Advanced admin features
+    case 'system-migration':
+    case 'manage-ssl-certificates':
+    case 'manage-webhooks':
+    case 'system-updates':
+      return userRole === 'superadmin';
+
     default:
       return false;
   }
@@ -35,22 +77,48 @@ export function canManageRole(currentUserRole: UserRole, targetRole: UserRole): 
     return true;
   }
 
-  // Admins can manage operators and users
-  if (currentUserRole === 'admin' && (targetRole === 'operator' || targetRole === 'user')) {
-    return true;
+  // Admins can manage operators and users, but not other admins or superadmins
+  if (currentUserRole === 'admin') {
+    return targetRole === 'operator' || targetRole === 'user';
   }
 
+  // Operators and users cannot manage roles
   return false;
 }
 
 export type Permission = 
-  | 'view-cameras:assigned' 
+  // Basic permissions
+  | 'view-dashboard'
+  | 'view-profile'
+  | 'manage-mfa-enrollment'
+  
+  // Camera viewing permissions
+  | 'view-cameras:assigned'
+  | 'view-cameras:all'
+  
+  // Footage viewing permissions
   | 'view-footage:assigned'
-  | 'manage-users:all'
+  | 'view-footage:all'
+  
+  // User management permissions
   | 'manage-users:lower'
+  | 'manage-users:all'
   | 'assign-roles'
+  
+  // Camera management
+  | 'manage-cameras:assigned'
+  | 'manage-cameras:all'
+  
+  // Configuration permissions
   | 'configure-storage'
   | 'configure-camera-settings'
   | 'configure-global-policies'
+  
+  // System permissions
   | 'manage-system'
-  | 'access-logs';
+  | 'access-logs'
+  | 'access-audit-trails'
+  | 'system-migration'
+  | 'manage-ssl-certificates'
+  | 'manage-webhooks'
+  | 'system-updates';
