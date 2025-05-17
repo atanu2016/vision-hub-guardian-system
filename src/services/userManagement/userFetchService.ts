@@ -131,12 +131,20 @@ async function fetchUsersDirectly(): Promise<UserData[]> {
     const { data: authData } = await supabase.auth.admin.listUsers();
     const emailsMap: Record<string, string> = {};
     
-    // Fix the type issue: properly check and type authData.users
+    // Define an explicit interface to help TypeScript understand the structure
+    interface AuthUser {
+      id: string;
+      email: string;
+      [key: string]: any; // for any other properties
+    }
+    
+    // Fix the type issue by using the explicit interface
     if (authData && 'users' in authData && Array.isArray(authData.users)) {
-      // Now TypeScript knows authData.users is an array
-      authData.users.forEach(user => {
-        if (user && typeof user === 'object' && 'id' in user && 'email' in user && typeof user.email === 'string') {
-          emailsMap[user.id as string] = user.email;
+      // Cast to array of AuthUser to provide type information
+      const typedUsers = authData.users as AuthUser[];
+      typedUsers.forEach(user => {
+        if (user && typeof user.id === 'string' && typeof user.email === 'string') {
+          emailsMap[user.id] = user.email;
         }
       });
     }
