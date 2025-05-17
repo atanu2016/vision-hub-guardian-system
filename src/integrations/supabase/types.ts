@@ -567,6 +567,10 @@ export type Database = {
         Args: { user_id?: string }
         Returns: boolean
       }
+      notify_role_change: {
+        Args: { user_id: string }
+        Returns: undefined
+      }
       set_limit: {
         Args: { "": number }
         Returns: number

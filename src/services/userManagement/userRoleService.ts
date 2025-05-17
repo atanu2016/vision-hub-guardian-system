@@ -58,9 +58,9 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
           console.log('[Role Service] Operator role assigned - forcing auth refresh');
           // Let app know a role update happened
           try {
-            // Call the database function directly using RPC
+            // We have to use a type assertion here since the function is new and not in the types yet
             const { error: signalError } = await supabase
-              .rpc('notify_role_change', { user_id: userId });
+              .rpc('notify_role_change' as any, { user_id: userId });
             
             if (signalError) {
               console.warn('[Role Service] Error signaling role change:', signalError);
@@ -91,9 +91,9 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
           console.log('[Role Service] Operator role assigned - forcing auth refresh');
           // Let app know a role update happened
           try {
-            // Call the database function directly using RPC
+            // We have to use a type assertion here since the function is new and not in the types yet
             const { error: signalError } = await supabase
-              .rpc('notify_role_change', { user_id: userId });
+              .rpc('notify_role_change' as any, { user_id: userId });
             
             if (signalError) {
               console.warn('[Role Service] Error signaling role change:', signalError);
