@@ -8,7 +8,8 @@ import {
   saveDetectionSettings,
   fetchAdditionalStorageSettings,
   saveAdditionalStorageSettings,
-  fetchSystemInformation
+  fetchSystemInformation,
+  DetectionSettings
 } from '@/services/database/systemSettingsService';
 
 export const useSystemSettings = () => {
@@ -20,8 +21,11 @@ export const useSystemSettings = () => {
   });
   
   // Detection settings
-  const [detectionSettings, setDetectionSettings] = useState({
-    sensitivityLevel: 50
+  const [detectionSettings, setDetectionSettings] = useState<DetectionSettings>({
+    sensitivityLevel: 50,
+    enabled: true,
+    objectTypes: ["person", "vehicle"],
+    smartDetection: false
   });
   
   // Storage settings
@@ -88,11 +92,17 @@ export const useSystemSettings = () => {
   }, []);
   
   // Update detection settings
-  const updateDetectionSettings = useCallback(async (settings) => {
+  const updateDetectionSettings = useCallback(async (settings: Partial<DetectionSettings>) => {
     setIsSaving(true);
     try {
-      await saveDetectionSettings(settings);
-      setDetectionSettings(settings);
+      // Create a complete DetectionSettings object by merging with current settings
+      const updatedSettings: DetectionSettings = {
+        ...detectionSettings,
+        ...settings
+      };
+      
+      await saveDetectionSettings(updatedSettings);
+      setDetectionSettings(updatedSettings);
       toast.success("Detection settings updated");
     } catch (error) {
       console.error("Error saving detection settings:", error);
@@ -100,7 +110,7 @@ export const useSystemSettings = () => {
     } finally {
       setIsSaving(false);
     }
-  }, []);
+  }, [detectionSettings]);
   
   // Update storage settings
   const updateStorageSettings = useCallback(async (settings) => {
