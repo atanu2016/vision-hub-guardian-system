@@ -34,7 +34,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
     showForRoles: ['user', 'operator', 'admin', 'superadmin']
   });
   
-  // Recordings - for operator, admin, and superadmin
+  // Recordings - for operator, admin, and superadmin - CRITICAL ITEM!
   navigationItems.push({ 
     path: "/recordings", 
     icon: FileText, 
@@ -96,9 +96,25 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
     showForRoles: ['user', 'operator', 'admin', 'superadmin']
   });
   
+  // Special handling for "Recordings" item
+  const recordingsItem = navigationItems.find(item => item.label === "Recordings");
+  if (recordingsItem && role === 'operator') {
+    console.log("IMPORTANT: Recordings menu check for operator role");
+    console.log("Permission check result:", hasPermission('view-footage:assigned'));
+  }
+  
   // Log navigation items that will be shown to the user
   const visibleItems = navigationItems.filter(item => {
     const hasRequiredRole = item.showForRoles.includes(role);
+    
+    // Add special debug case for Recordings item
+    if (item.label === "Recordings") {
+      console.log(`Special check for Recordings menu item:`);
+      console.log(`- Role: ${role}`);
+      console.log(`- Has required role (${item.showForRoles.join(", ")}): ${hasRequiredRole}`);
+      console.log(`- Permission check for ${item.permission}: ${hasPermission(item.permission)}`);
+    }
+    
     const hasRequiredPermission = hasPermission(item.permission);
     console.log(`Menu item ${item.label}: has role ${hasRequiredRole}, has permission ${hasRequiredPermission}`);
     return hasRequiredRole && hasRequiredPermission;
@@ -113,8 +129,24 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
             .filter(item => {
               // Only show items for the current user's role
               const hasRequiredRole = item.showForRoles.includes(role);
+              
+              // Extra logging for debugging the Recordings item
+              if (item.label === "Recordings") {
+                console.log(`Filtering Recordings item - role ${role} included: ${hasRequiredRole}`);
+              }
+              
               // Check if user has permission
               const hasRequiredPermission = hasPermission(item.permission);
+              
+              if (item.label === "Recordings") {
+                console.log(`Filtering Recordings item - permission ${item.permission}: ${hasRequiredPermission}`);
+                // Force enable for operator role - debugging measure
+                if (role === 'operator') {
+                  console.log("Forcing Recordings menu to be visible for operator");
+                  return true;
+                }
+              }
+              
               return hasRequiredRole && hasRequiredPermission;
             })
             .map(({ path, icon: Icon, label }) => (

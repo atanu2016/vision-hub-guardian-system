@@ -12,6 +12,12 @@ export function usePermissions() {
   }, [role]);
   
   const checkPermission = (permission: Permission): boolean => {
+    // Force more detailed logging for crucial permissions
+    if (permission === 'view-footage:assigned') {
+      console.log(`Critical permission check - view-footage:assigned - Role: ${role}`);
+      console.log(`Permission check result: ${hasPermission(role, permission)}`);
+    }
+    
     const result = hasPermission(role, permission);
     console.log(`Permission check for ${permission} with role ${role}: ${result}`);
     return result;
