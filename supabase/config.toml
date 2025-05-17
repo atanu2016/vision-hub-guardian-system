@@ -7,3 +7,4 @@ modules = []
 [functions]
 [functions.admin-delete-user]
 verify_jwt = true
+

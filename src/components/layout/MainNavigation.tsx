@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import {
   SidebarGroup,
@@ -112,21 +111,41 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
     <SidebarGroup>
       <SidebarGroupContent>
         <SidebarMenu>
-          {/* Loop through navigation items */}
-          {navigationItems
+          {/* CRITICAL FIX: Show always Live View and Recordings for operators */}
+          {role === 'operator' && (
+            <>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive("/live")} className="hover:bg-vision-dark-800">
+                  <Link to="/live">
+                    <Video />
+                    <span>Live View</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive("/recordings")} className="hover:bg-vision-dark-800">
+                  <Link to="/recordings">
+                    <FileText />
+                    <span>Recordings</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive("/profile-settings")} className="hover:bg-vision-dark-800">
+                  <Link to="/profile-settings">
+                    <User />
+                    <span>Profile</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </>
+          )}
+
+          {/* Other roles use the dynamic navigation items */}
+          {role !== 'operator' && navigationItems
             .filter(item => {
-              // CRITICAL FIX: Special case for Recordings menu item to ensure it always shows for operators
-              if (item.label === "Recordings" && role === 'operator') {
-                console.log('[NAV] FORCING Recordings menu to be visible for operator role');
-                return true;
-              }
-              
-              // For other menu items, use regular logic
               const hasRequiredRole = item.showForRoles.includes(role);
               const hasRequiredPermission = hasPermission(item.permission);
-              
-              // Extra logging for all items
-              console.log(`[NAV] Menu item "${item.label}": required role? ${hasRequiredRole}, has permission? ${hasRequiredPermission}`);
               
               return hasRequiredRole && hasRequiredPermission;
             })

@@ -13,12 +13,12 @@ export function usePermissions() {
   
   const checkPermission = useCallback((permission: Permission): boolean => {
     // Force more detailed logging for crucial permissions
-    if (permission === 'view-footage:assigned') {
-      console.log(`[PERMISSIONS] Critical permission check - view-footage:assigned - Role: ${role}`);
+    if (permission === 'view-footage:assigned' || permission === 'view-cameras:assigned') {
+      console.log(`[PERMISSIONS] Critical permission check: ${permission} - Role: ${role}`);
       
       // Direct logic check for operators
       if (role === 'operator') {
-        console.log('[PERMISSIONS] Operator role detected - should have view-footage:assigned permission');
+        console.log(`[PERMISSIONS] Operator role detected - should have ${permission} permission`);
         return true;
       }
       
