@@ -17,7 +17,7 @@ export function usePermissions() {
   const { role: authRole, user } = useAuth();
   const [role, setRole] = useState<UserRole>(authRole);
   const permissionCacheRef = useRef<PermissionCache>({});
-  const cacheTimeout = 30000; // 30 seconds cache timeout
+  const cacheTimeout = 10000; // 10 seconds cache timeout - reduced for faster updates
   const subscriptionRef = useRef<any>(null);
   
   // Always fetch the most current role directly from the database with optimization
@@ -25,20 +25,9 @@ export function usePermissions() {
     if (user?.id) {
       const fetchCurrentRole = async () => {
         try {
-          // Check if we've fetched this role recently
-          const now = Date.now();
-          const cachedRole = localStorage.getItem(`user_role_${user.id}`);
-          const cachedTimestamp = localStorage.getItem(`user_role_time_${user.id}`);
+          console.log('[PERMISSIONS] Fetching current role for user:', user.id);
           
-          if (cachedRole && cachedTimestamp && 
-              (now - parseInt(cachedTimestamp, 10) < cacheTimeout)) {
-            console.log(`[PERMISSIONS] Using cached role: ${cachedRole}`);
-            setRole(cachedRole as UserRole);
-            return;
-          }
-          
-          // Fetch fresh role if not cached or cache expired
-          console.log('[PERMISSIONS] Fetching role from database');
+          // Fetch fresh role directly from database - critical for correct permissions
           const { data, error } = await supabase
             .from('user_roles')
             .select('role')
@@ -49,46 +38,56 @@ export function usePermissions() {
             console.log(`[PERMISSIONS] Direct DB role fetch for ${user.id}: ${data.role}`);
             setRole(data.role as UserRole);
             
-            // Special logging for operator role
+            // Special handling for operator role
             if (data.role === 'operator') {
-              console.log(`[PERMISSIONS] OPERATOR ROLE detected from database`);
+              console.log(`[PERMISSIONS] ▶️ OPERATOR ROLE detected from database - ensuring proper access`);
+              localStorage.setItem('operator_role_confirmed', 'true');
+            } else {
+              localStorage.removeItem('operator_role_confirmed');
             }
             
             // Cache the result
             localStorage.setItem(`user_role_${user.id}`, data.role);
-            localStorage.setItem(`user_role_time_${user.id}`, now.toString());
+            localStorage.setItem(`user_role_time_${user.id}`, Date.now().toString());
           } else {
             // Fallback to auth context
             console.log(`[PERMISSIONS] Using auth context role: ${authRole}`);
             setRole(authRole);
             
-            // Special logging for operator role
+            // Special handling for operator role from auth context
             if (authRole === 'operator') {
-              console.log(`[PERMISSIONS] OPERATOR ROLE detected from auth context`);
+              console.log(`[PERMISSIONS] ▶️ OPERATOR ROLE detected from auth context - ensuring proper access`);
+              localStorage.setItem('operator_role_confirmed', 'true');
+            } else {
+              localStorage.removeItem('operator_role_confirmed');
             }
-            
-            // Cache this result too
-            localStorage.setItem(`user_role_${user.id}`, authRole);
-            localStorage.setItem(`user_role_time_${user.id}`, now.toString());
           }
         } catch (err) {
           console.error('[PERMISSIONS] Error fetching role:', err);
           setRole(authRole);
           
-          // Special logging for operator role
+          // Special handling for operator role from auth context after error
           if (authRole === 'operator') {
-            console.log(`[PERMISSIONS] OPERATOR ROLE detected from auth context (after error)`);
+            console.log(`[PERMISSIONS] ▶️ OPERATOR ROLE detected from auth context (after error) - ensuring proper access`);
+            localStorage.setItem('operator_role_confirmed', 'true');
           }
         }
       };
       
+      // Initial fetch
       fetchCurrentRole();
       
-      // Set up subscription for role changes - reuse existing subscription if possible
-      if (subscriptionRef.current) {
-        console.log('[PERMISSIONS] Reusing existing subscription');
-      } else {
-        console.log('[PERMISSIONS] Setting up new subscription');
+      // Also refetch every 10 seconds for operator role to ensure permissions stay current
+      const intervalId = setInterval(() => {
+        if (role === 'operator' || authRole === 'operator') {
+          console.log('[PERMISSIONS] Refreshing operator permissions');
+          fetchCurrentRole();
+        }
+      }, 10000);
+      
+      // Set up subscription for role changes
+      if (!subscriptionRef.current) {
+        console.log('[PERMISSIONS] Setting up role change subscription');
         subscriptionRef.current = supabase
           .channel('role-changes')
           .on('postgres_changes', { 
@@ -102,9 +101,13 @@ export function usePermissions() {
               console.log(`[PERMISSIONS] Updating role to: ${payload.new.role}`);
               setRole(payload.new.role as UserRole);
               
-              // Cache update
-              localStorage.setItem(`user_role_${user.id}`, payload.new.role as string);
-              localStorage.setItem(`user_role_time_${user.id}`, Date.now().toString());
+              // Special handling for operator role changes
+              if (payload.new.role === 'operator') {
+                console.log(`[PERMISSIONS] ▶️ OPERATOR ROLE change detected - ensuring proper access`);
+                localStorage.setItem('operator_role_confirmed', 'true');
+              } else {
+                localStorage.removeItem('operator_role_confirmed');
+              }
               
               // Clear permission cache on role change
               permissionCacheRef.current = {};
@@ -114,6 +117,7 @@ export function usePermissions() {
       }
         
       return () => {
+        clearInterval(intervalId);
         if (subscriptionRef.current) {
           subscriptionRef.current.unsubscribe();
           subscriptionRef.current = null;
@@ -124,12 +128,22 @@ export function usePermissions() {
   
   // Performance-optimized permission check with caching
   const checkPermission = useCallback((permission: Permission): boolean => {
-    // Immediately return true for crucial operator permissions without caching
-    if (role === 'operator' && 
-        (permission === 'view-footage:assigned' || 
-         permission === 'view-cameras:assigned')) {
-      console.log(`[PERMISSIONS] Operator fast path permission: ${permission} = true`);
-      return true;
+    // Critical fast path for operator footage permissions - never fails
+    if (role === 'operator') {
+      if (permission === 'view-footage:assigned' || permission === 'view-cameras:assigned' || 
+          permission === 'view-footage:all') {
+        console.log(`[PERMISSIONS] ▶️ OPERATOR FAST PATH: Granting '${permission}'`);
+        return true;
+      }
+      
+      // Also check local storage as a backup confirmation
+      if (localStorage.getItem('operator_role_confirmed') === 'true') {
+        if (permission === 'view-footage:assigned' || permission === 'view-cameras:assigned' || 
+            permission === 'view-footage:all') {
+          console.log(`[PERMISSIONS] ▶️ OPERATOR BACKUP CONFIRMATION: Granting '${permission}'`);
+          return true;
+        }
+      }
     }
     
     const cacheKey = `${role}:${permission}`;
@@ -141,36 +155,24 @@ export function usePermissions() {
     }
     
     // Force more detailed logging for crucial permissions
-    if (permission === 'view-footage:assigned' || permission === 'view-cameras:assigned') {
+    if (permission === 'view-footage:assigned' || permission === 'view-cameras:assigned' || 
+        permission === 'view-footage:all') {
       console.log(`[PERMISSIONS] Critical permission check: ${permission} - Role: ${role}`);
       
-      // Direct logic check for operators
-      if (role === 'operator') {
-        console.log(`[PERMISSIONS] Operator role detected - should have ${permission} permission`);
-        
+      // Double-check operator role for these critical permissions
+      if (role === 'operator' || authRole === 'operator') {
+        console.log(`[PERMISSIONS] ▶️ Operator permission check - granting ${permission}`);
         // Cache the result
         permissionCacheRef.current[cacheKey] = {
           timestamp: now,
           result: true
         };
-        
         return true;
       }
-      
-      // For other roles, go through normal permission check
-      const result = hasPermission(role, permission);
-      console.log(`[PERMISSIONS] Permission check result: ${result}`);
-      
-      // Cache the result
-      permissionCacheRef.current[cacheKey] = {
-        timestamp: now,
-        result
-      };
-      
-      return result;
     }
     
     const result = hasPermission(role, permission);
+    console.log(`[PERMISSIONS] Permission check: ${permission} for ${role} = ${result}`);
     
     // Cache the result
     permissionCacheRef.current[cacheKey] = {
@@ -179,25 +181,11 @@ export function usePermissions() {
     };
     
     return result;
-  }, [role]);
+  }, [role, authRole]);
   
+  // Standard role management function
   const checkCanManageRole = useCallback((targetRole: UserRole): boolean => {
-    const cacheKey = `manage:${role}:${targetRole}`;
-    const now = Date.now();
-    const cached = permissionCacheRef.current[cacheKey];
-    
-    if (cached && (now - cached.timestamp < cacheTimeout)) {
-      return cached.result;
-    }
-    
     const result = canManageRole(role, targetRole);
-    
-    // Cache the result
-    permissionCacheRef.current[cacheKey] = {
-      timestamp: now,
-      result
-    };
-    
     return result;
   }, [role]);
   

@@ -1,3 +1,4 @@
+
 import { UserRole } from "@/types/admin";
 
 export const roleHierarchy: Record<UserRole, number> = {
@@ -13,11 +14,11 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
 
   console.log(`[PERMISSION-UTILS] Checking permission: ${permission} for role: ${userRole}`);
 
-  // CRITICAL FIX: Direct permission grants for operator role
+  // OPERATOR ROLE - CRITICAL ACCESS GUARANTEE
   // This ensures operators always have access to recordings regardless of other logic
   if (userRole === 'operator') {
-    // Expanded operator permissions with recordings explicitly included
-    const operatorPermissions = [
+    // Explicit list of guaranteed operator permissions - CRITICAL for application functionality
+    const guaranteedOperatorPermissions = [
       'view-footage:assigned',
       'view-footage:all',
       'view-cameras:assigned',
@@ -28,15 +29,8 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
       'manage-cameras:assigned'
     ];
     
-    if (operatorPermissions.includes(permission)) {
+    if (guaranteedOperatorPermissions.includes(permission)) {
       console.log(`[PERMISSION-UTILS] OPERATOR ROLE - Directly granting permission: ${permission}`);
-      return true;
-    }
-    
-    // Explicit hardcoded check specifically for recordings-related permissions for operators
-    // This is a fail-safe to ensure operators can always access recordings
-    if (permission === 'view-footage:assigned' || permission === 'view-footage:all') {
-      console.log(`[PERMISSION-UTILS] OPERATOR ROLE - Force allowing critical permission: ${permission}`);
       return true;
     }
   }
@@ -56,10 +50,9 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
     case 'view-cameras:all':
       return roleHierarchy[userRole] >= roleHierarchy['admin'];
     
-    // Footage permissions - explicitly check for operator role and above
+    // Footage permissions - CRITICAL: Always grant to operators
     case 'view-footage:assigned':
-      // Explicitly include operator role here
-      return userRole === 'operator' || roleHierarchy[userRole] >= roleHierarchy['operator']; 
+      return userRole === 'operator' || roleHierarchy[userRole] >= roleHierarchy['operator'];
     case 'view-footage:all':
       return userRole === 'operator' || roleHierarchy[userRole] >= roleHierarchy['operator'];
     
@@ -88,7 +81,7 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
     // Policy and system settings
     case 'configure-global-policies':
     case 'manage-system':
-      return roleHierarchy[userRole] >= roleHierarchy['superadmin'];
+      return userRole === 'superadmin';
     
     // Logs and audit access
     case 'access-logs':
@@ -105,17 +98,6 @@ export function hasPermission(userRole: UserRole, permission: Permission): boole
     default:
       return false;
   }
-
-  // Add a final fallback for recordings permissions for operators
-  // This ensures that if we somehow missed granting these permissions above,
-  // operators will still have access to recordings
-  if (userRole === 'operator' && 
-      (permission === 'view-footage:assigned' || permission === 'view-footage:all')) {
-    console.log(`[PERMISSION-UTILS] OPERATOR FALLBACK - Ensuring recordings access: ${permission}`);
-    return true;
-  }
-
-  return false;
 }
 
 export function canManageRole(currentUserRole: UserRole, targetRole: UserRole): boolean {

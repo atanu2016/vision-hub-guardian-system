@@ -50,8 +50,12 @@ function App() {
               <Route path="/cameras/:id" element={<ProtectedRoute requiredPermission="view-cameras:assigned"><CameraDetail /></ProtectedRoute>} />
               <Route path="/live" element={<ProtectedRoute requiredPermission="view-cameras:assigned"><LiveView /></ProtectedRoute>} />
               
-              {/* CRITICAL FIX: Ensure recordings is explicitly accessible to operators with minimal permission check */}
-              <Route path="/recordings" element={<ProtectedRoute requiredPermission="view-footage:assigned"><Recordings /></ProtectedRoute>} />
+              {/* CRITICAL: Recordings - minimum permission requirement for operators */}
+              <Route path="/recordings" element={
+                <ProtectedRoute requiredPermission="view-footage:assigned">
+                  <Recordings />
+                </ProtectedRoute>
+              } />
               
               <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute requiredPermission="view-profile"><ProfileSettings /></ProtectedRoute>} />
