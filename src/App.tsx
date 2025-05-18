@@ -4,7 +4,7 @@ import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme/theme-provider"
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { useAuth } from "@/contexts/auth"; // Add this import for useAuth
+import { useAuth } from "@/contexts/auth"; 
 
 import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
@@ -51,40 +51,118 @@ function App() {
                 </ProtectedRoute>
               } />
               
-              {/* Dashboard - accessible to anyone while testing */}
-              <Route path="/dashboard" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+              {/* Dashboard - accessible only with view-dashboard permission */}
+              <Route path="/dashboard" element={
+                <ProtectedRoute requiredPermission="view-dashboard">
+                  <Index />
+                </ProtectedRoute>
+              } />
               
               {/* Basic views */}
-              <Route path="/cameras" element={<ProtectedRoute><Cameras /></ProtectedRoute>} />
-              <Route path="/cameras/:id" element={<ProtectedRoute><CameraDetail /></ProtectedRoute>} />
-              <Route path="/live" element={<ProtectedRoute><LiveView /></ProtectedRoute>} />
+              <Route path="/cameras" element={
+                <ProtectedRoute requiredPermission="view-cameras:all">
+                  <Cameras />
+                </ProtectedRoute>
+              } />
+              <Route path="/cameras/:id" element={
+                <ProtectedRoute requiredPermission="view-cameras:all">
+                  <CameraDetail />
+                </ProtectedRoute>
+              } />
+              <Route path="/live" element={
+                <ProtectedRoute requiredPermission="view-cameras:assigned">
+                  <LiveView />
+                </ProtectedRoute>
+              } />
               
-              {/* CRITICAL: Recordings - minimum permission requirement for observers */}
+              {/* Recordings - require view-footage permission */}
               <Route path="/recordings" element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredPermission="view-footage:assigned">
                   <Recordings />
                 </ProtectedRoute>
               } />
               
-              <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-              <Route path="/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
-              <Route path="/profile-settings" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
+              <Route path="/notifications" element={
+                <ProtectedRoute requiredPermission="view-cameras:assigned">
+                  <Notifications />
+                </ProtectedRoute>
+              } />
+              
+              {/* Profile - available to all authenticated users */}
+              <Route path="/profile" element={
+                <ProtectedRoute requiredPermission="view-profile">
+                  <ProfileSettings />
+                </ProtectedRoute>
+              } />
+              <Route path="/profile-settings" element={
+                <ProtectedRoute requiredPermission="view-profile">
+                  <ProfileSettings />
+                </ProtectedRoute>
+              } />
               
               {/* Settings routes - most require admin permissions */}
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/storage" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/recordings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/alerts" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/webhooks" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/advanced" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/database" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/logs" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              <Route path="/settings/system" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/settings" element={
+                <ProtectedRoute requiredPermission="configure-global-policies">
+                  <Settings />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings/storage" element={
+                <ProtectedRoute requiredPermission="configure-storage">
+                  <Settings />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings/recordings" element={
+                <ProtectedRoute requiredPermission="configure-global-policies">
+                  <Settings />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings/alerts" element={
+                <ProtectedRoute requiredPermission="configure-global-policies">
+                  <Settings />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings/webhooks" element={
+                <ProtectedRoute requiredPermission="configure-global-policies">
+                  <Settings />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings/advanced" element={
+                <ProtectedRoute requiredPermission="manage-system">
+                  <Settings />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings/database" element={
+                <ProtectedRoute requiredPermission="manage-system">
+                  <Settings />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings/logs" element={
+                <ProtectedRoute requiredPermission="access-logs">
+                  <Settings />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings/system" element={
+                <ProtectedRoute requiredPermission="manage-system">
+                  <Settings />
+                </ProtectedRoute>
+              } />
               
               {/* Admin routes */}
-              <Route path="/admin" element={<ProtectedRoute adminRequired={true}><Admin /></ProtectedRoute>} />
-              <Route path="/admin/users" element={<ProtectedRoute adminRequired={true}><UserManagement /></ProtectedRoute>} />
-              <Route path="/admin/users/create" element={<ProtectedRoute superadminRequired={true}><CreateUser /></ProtectedRoute>} />
+              <Route path="/admin" element={
+                <ProtectedRoute requiredPermission="manage-users:lower">
+                  <Admin />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/users" element={
+                <ProtectedRoute requiredPermission="manage-users:lower">
+                  <UserManagement />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/users/create" element={
+                <ProtectedRoute requiredPermission="manage-users:all">
+                  <CreateUser />
+                </ProtectedRoute>
+              } />
               
               <Route path="*" element={<NotFound />} />
             </Routes>
@@ -98,7 +176,12 @@ function App() {
 // Role-based redirect component
 const RoleBasedRedirect = () => {
   const { isAdmin } = useAuth();
-  return isAdmin ? <Navigate to="/dashboard" replace /> : <Navigate to="/live" replace />;
+  const { hasPermission } = usePermissions();
+  
+  // Send users to dashboard if they have permission, otherwise to live view
+  return hasPermission('view-dashboard') ? 
+    <Navigate to="/dashboard" replace /> : 
+    <Navigate to="/live" replace />;
 };
 
 export default App;

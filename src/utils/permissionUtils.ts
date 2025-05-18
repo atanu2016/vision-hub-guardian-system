@@ -1,3 +1,4 @@
+
 export type Permission = 
   | 'view-dashboard'
   | 'view-cameras:all'
@@ -32,36 +33,42 @@ const roleHierarchy: Record<UserRole, number> = {
 
 // Permission mapping - which roles have which permissions
 const permissionMap: Record<Permission, UserRole[]> = {
-  'view-dashboard': ['admin', 'superadmin', 'user', 'operator', 'observer'],
-  'view-cameras:all': ['admin', 'superadmin'],
-  'view-cameras:assigned': ['user', 'operator', 'observer', 'admin', 'superadmin'],
-  'view-footage:all': ['admin', 'superadmin'],
-  'view-footage:assigned': ['user', 'operator', 'observer', 'admin', 'superadmin'],
-  'manage-users:all': ['superadmin'],
-  'manage-users:lower': ['admin', 'superadmin'],
-  'manage-cameras:all': ['admin', 'superadmin'],
-  'manage-cameras:assigned': ['operator', 'admin', 'superadmin'],
-  'configure-camera-settings': ['operator', 'admin', 'superadmin'],
-  'configure-storage': ['admin', 'superadmin'],
-  'configure-global-policies': ['admin', 'superadmin'],
+  // Basic user permissions
   'view-profile': ['user', 'operator', 'observer', 'admin', 'superadmin'],
   'manage-profile-settings': ['user', 'operator', 'observer', 'admin', 'superadmin'],
-  'manage-system': ['superadmin'],
+  
+  // Live view permissions - all roles
+  'view-cameras:assigned': ['user', 'operator', 'observer', 'admin', 'superadmin'],
+  
+  // Observer and above permissions
+  'view-footage:assigned': ['observer', 'operator', 'admin', 'superadmin'],
+  'view-dashboard': ['operator', 'admin', 'superadmin'],
+  
+  // Operator and above permissions
+  'manage-cameras:assigned': ['operator', 'admin', 'superadmin'],
+  'configure-camera-settings': ['operator', 'admin', 'superadmin'],
+  
+  // Admin and above permissions
+  'view-cameras:all': ['admin', 'superadmin'],
+  'view-footage:all': ['admin', 'superadmin'],
+  'manage-users:lower': ['admin', 'superadmin'],
+  'manage-cameras:all': ['admin', 'superadmin'],
+  'configure-storage': ['admin', 'superadmin'],
+  'configure-global-policies': ['admin', 'superadmin'],
   'access-logs': ['admin', 'superadmin'],
-  'system-migration': ['superadmin'],
   'assign-roles': ['admin', 'superadmin'],
-  'assign-cameras': ['admin', 'superadmin']
+  'assign-cameras': ['admin', 'superadmin'],
+  
+  // Superadmin only permissions
+  'manage-users:all': ['superadmin'],
+  'manage-system': ['superadmin'],
+  'system-migration': ['superadmin']
 };
 
 /**
  * Check if the given role has the specified permission
  */
 export function hasPermission(role: UserRole, permission: Permission): boolean {
-  // Check for special test account - allow all for testing
-  if (role === 'user') {
-    return true;
-  }
-  
   return permissionMap[permission]?.includes(role) || false;
 }
 

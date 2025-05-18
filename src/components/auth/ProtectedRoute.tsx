@@ -78,20 +78,20 @@ const ProtectedRoute = ({
     
     // If a specific permission is required and the user doesn't have it, redirect
     if (requiredPermission && !hasRequiredPermission) {
-      console.log(`Protected route: Permission '${requiredPermission}' required but not granted, redirecting to /`);
-      return <Navigate to="/" replace />;
+      console.log(`Protected route: Permission '${requiredPermission}' required but not granted, redirecting to /live`);
+      return <Navigate to="/live" replace />;
     }
     
     // If superadmin access is required but user is not a superadmin, redirect to home
     if (superadminRequired && role !== 'superadmin') {
-      console.log("Protected route: Superadmin access required but user is not a superadmin, redirecting to /");
-      return <Navigate to="/" replace />;
+      console.log("Protected route: Superadmin access required but user is not a superadmin, redirecting to /live");
+      return <Navigate to="/live" replace />;
     }
     
     // If admin access is required but user is not an admin, redirect to home
     if (adminRequired && !isAdmin) {
-      console.log("Protected route: Admin access required but user is not admin, redirecting to /");
-      return <Navigate to="/" replace />;
+      console.log("Protected route: Admin access required but user is not admin, redirecting to /live");
+      return <Navigate to="/live" replace />;
     }
     
     // User is authenticated and has required role/permission if specified

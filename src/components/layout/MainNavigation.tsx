@@ -36,7 +36,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
             </SidebarMenuButton>
           </SidebarMenuItem>
 
-          {/* Recordings - For admins and observers */}
+          {/* Recordings - Only available to observer and above */}
           {hasPermission('view-footage:assigned') && (
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={isActive("/recordings")} className="hover:bg-vision-dark-800">
@@ -48,8 +48,8 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
             </SidebarMenuItem>
           )}
 
-          {/* Dashboard - only for admin and superadmin */}
-          {(role === 'admin' || role === 'superadmin') && (
+          {/* Dashboard - only for operator and above */}
+          {hasPermission('view-dashboard') && (
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={isActive("/")} className="hover:bg-vision-dark-800">
                 <Link to="/">
@@ -61,7 +61,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
           )}
 
           {/* Cameras - only for admin and superadmin */}
-          {(role === 'admin' || role === 'superadmin') && (
+          {hasPermission('view-cameras:all') && (
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={isActive("/cameras")} className="hover:bg-vision-dark-800">
                 <Link to="/cameras">
@@ -73,7 +73,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
           )}
 
           {/* Settings - only for admin and superadmin */}
-          {(role === 'admin' || role === 'superadmin') && (
+          {hasPermission('configure-global-policies') && (
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={isActive("/settings")} className="hover:bg-vision-dark-800">
                 <Link to="/settings">
@@ -85,7 +85,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
           )}
 
           {/* Admin - only for admin and superadmin */}
-          {(role === 'admin' || role === 'superadmin') && (
+          {hasPermission('manage-users:lower') && (
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={isActive("/admin")} className="hover:bg-vision-dark-800">
                 <Link to="/admin">
