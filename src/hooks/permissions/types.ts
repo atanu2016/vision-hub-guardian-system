@@ -10,3 +10,11 @@ export interface UsePermissionsReturn {
   authRole: UserRole;
   error?: string | null;
 }
+
+// Add the missing PermissionCache type
+export interface PermissionCache {
+  [key: string]: {
+    timestamp: number;
+    result: boolean;
+  };
+}
