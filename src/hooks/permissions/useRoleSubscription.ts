@@ -1,195 +1,54 @@
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/auth";
-import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "@/contexts/auth/types";
-import { invalidateRoleCache, getCachedRole, setCachedRole } from "@/services/userManagement/roleServices/roleCache";
+import { setCachedRole } from "@/services/userManagement/roleServices/roleCache";
+import { useRoleDatabase } from "./useRoleDatabase";
+import { useRoleFetching } from "./useRoleFetching";
+import { useRolePolling } from "./useRolePolling";
 
+/**
+ * Main hook for role subscription with optimizations
+ */
 export function useRoleSubscription() {
   const { role: authRole, user } = useAuth();
   const [role, setRole] = useState<UserRole>(authRole);
-  const [error, setError] = useState<string | null>(null);
-  const subscriptionRef = useRef<any>(null);
-  const fetchTimerRef = useRef<number | null>(null);
-  const lastFetchRef = useRef<number>(0);
-  
-  // Use memo to avoid unnecessary state updates
   const userId = useMemo(() => user?.id, [user?.id]);
   
-  // Clear fetch timer on unmount
-  useEffect(() => {
-    return () => {
-      if (fetchTimerRef.current) {
-        clearInterval(fetchTimerRef.current);
+  // Handle role updates from database or fetching
+  const handleRoleUpdate = useCallback((newRole: UserRole) => {
+    if (newRole !== role) {
+      console.log('[ROLE SUBSCRIPTION] Updating role:', newRole);
+      setRole(newRole);
+      if (userId) {
+        setCachedRole(userId, newRole);
       }
-    };
-  }, []);
+    }
+  }, [role, userId]);
   
-  useEffect(() => {
+  // Set up role fetching mechanism
+  const { 
+    fetchCurrentRole, 
+    error,
+    isFetching 
+  } = useRoleFetching(userId, authRole);
+  
+  // Wrapper function for the polling mechanism
+  const fetchRoleWrapper = useCallback(async () => {
     if (!userId) return;
-    
-    console.log(`[ROLE SUBSCRIPTION] Setting up subscription for user: ${userId}`);
-    
-    // Throttle database fetches - minimum 5 seconds between fetches
-    const MIN_FETCH_INTERVAL = 5000;
-    let fetchInProgress = false;
-    
-    const fetchCurrentRole = async () => {
-      // Throttle fetches
-      const now = Date.now();
-      if (fetchInProgress || (now - lastFetchRef.current < MIN_FETCH_INTERVAL)) {
-        return;
-      }
-      
-      fetchInProgress = true;
-      lastFetchRef.current = now;
-      
-      try {
-        console.log('[ROLE SUBSCRIPTION] Fetching current role');
-        setError(null);
-        
-        // Use cached role first for immediate response
-        const cachedRoleResult = getCachedRole(userId);
-        if (cachedRoleResult !== null) {
-          // Handle different return types from getCachedRole
-          const cachedRole = typeof cachedRoleResult === 'object' && 'role' in cachedRoleResult 
-            ? cachedRoleResult.role as UserRole
-            : cachedRoleResult;
-            
-          console.log('[ROLE SUBSCRIPTION] Using cached role:', cachedRole);
-          setRole(cachedRole);
-        }
-        
-        // Only fetch from database if cache is older than 30 seconds
-        const cachedWithTimestamp = getCachedRole(userId, true);
-        const cacheTimestamp = cachedWithTimestamp && typeof cachedWithTimestamp === 'object' && 'timestamp' in cachedWithTimestamp 
-          ? cachedWithTimestamp.timestamp 
-          : 0;
-          
-        const cacheAge = now - cacheTimestamp;
-        
-        if (cacheAge < 30000 && cachedRoleResult !== null) {
-          console.log('[ROLE SUBSCRIPTION] Cache is fresh, skipping database query');
-          return;
-        }
-        
-        // Try direct query without RLS
-        try {
-          // Use security definer function for RLS bypass
-          const { data: functionResult, error: functionError } = await supabase
-            .rpc('get_user_role', { _user_id: userId });
-            
-          if (!functionError && functionResult) {
-            console.log('[ROLE SUBSCRIPTION] Got role from function:', functionResult);
-            const fetchedRole = functionResult as UserRole;
-            
-            if (fetchedRole !== role) {
-              setRole(fetchedRole);
-              setCachedRole(userId, fetchedRole);
-            }
-            return;
-          }
-        } catch (functionErr) {
-          console.warn('[ROLE SUBSCRIPTION] Function error:', functionErr);
-          // Fall through to regular query
-        }
-        
-        // Optimize the database query
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', userId)
-          .maybeSingle();
-          
-        if (!error && data) {
-          const fetchedRole = data.role as UserRole;
-          console.log('[ROLE SUBSCRIPTION] Fetched role from database:', fetchedRole);
-          
-          // Only update if role has changed to avoid render cycles
-          if (fetchedRole !== role) {
-            setRole(fetchedRole);
-            setCachedRole(userId, fetchedRole);
-          }
-        } else if (error) {
-          console.error('[ROLE SUBSCRIPTION] Error fetching role:', error);
-          setError(error.message);
-          
-          // Use cached value or fall back to auth role
-          if (cachedRoleResult !== null) {
-            const fallbackRole = typeof cachedRoleResult === 'object' && 'role' in cachedRoleResult 
-              ? cachedRoleResult.role as UserRole
-              : cachedRoleResult;
-              
-            console.log('[ROLE SUBSCRIPTION] Using fallback role:', fallbackRole);
-            setRole(fallbackRole);
-          } else {
-            // When all else fails, use the auth role from context
-            console.log('[ROLE SUBSCRIPTION] Falling back to authRole:', authRole);
-            setRole(authRole);
-          }
-        }
-      } catch (err) {
-        console.error('[ROLE SUBSCRIPTION] Error in role fetch:', err);
-        // Use authRole as ultimate fallback
-        setRole(authRole);
-      } finally {
-        fetchInProgress = false;
-      }
-    };
-    
-    // Initial fetch with slight delay to avoid race conditions
-    setTimeout(fetchCurrentRole, 200);
-    
-    // Set up subscription for role changes - optimized channel config
-    if (!subscriptionRef.current) {
-      const channelId = `role-${userId}-${Date.now()}`;
-      
-      console.log('[ROLE SUBSCRIPTION] Creating channel:', channelId);
-      
-      subscriptionRef.current = supabase
-        .channel(channelId)
-        .on('postgres_changes', { 
-          event: 'UPDATE', 
-          schema: 'public', 
-          table: 'user_roles',
-          filter: `user_id=eq.${userId}`
-        }, (payload) => {
-          console.log('[ROLE SUBSCRIPTION] Received role update:', payload);
-          if (payload.new && typeof payload.new === 'object' && 'role' in payload.new) {
-            const newRole = payload.new.role as UserRole;
-            console.log('[ROLE SUBSCRIPTION] Setting new role:', newRole);
-            setRole(newRole);
-            setCachedRole(userId, newRole);
-          }
-        })
-        .subscribe((status) => {
-          console.log(`[ROLE SUBSCRIPTION] Subscription status: ${status}`);
-        });
-        
-      console.log('[ROLE SUBSCRIPTION] Subscription created');
+    try {
+      const fetchedRole = await fetchCurrentRole();
+      handleRoleUpdate(fetchedRole);
+    } catch (err) {
+      console.error('[ROLE SUBSCRIPTION] Error in fetchRoleWrapper:', err);
     }
-    
-    // Use less frequent polling (30 seconds) to reduce database load but keep roles fresh
-    if (fetchTimerRef.current) {
-      clearInterval(fetchTimerRef.current);
-    }
-    
-    fetchTimerRef.current = window.setInterval(fetchCurrentRole, 30000) as unknown as number;
-      
-    return () => {
-      console.log('[ROLE SUBSCRIPTION] Cleaning up');
-      if (fetchTimerRef.current) {
-        clearInterval(fetchTimerRef.current);
-        fetchTimerRef.current = null;
-      }
-      
-      if (subscriptionRef.current) {
-        console.log('[ROLE SUBSCRIPTION] Unsubscribing from channel');
-        subscriptionRef.current.unsubscribe();
-        subscriptionRef.current = null;
-      }
-    };
-  }, [userId, authRole, role]);
+  }, [userId, fetchCurrentRole, handleRoleUpdate]);
+  
+  // Set up database subscription
+  const { isSubscribed } = useRoleDatabase(userId, handleRoleUpdate);
+  
+  // Set up polling mechanism
+  const { isPolling } = useRolePolling(userId, fetchRoleWrapper);
   
   // Update local role when authRole changes
   useEffect(() => {
@@ -199,5 +58,19 @@ export function useRoleSubscription() {
     }
   }, [authRole, userId, role]);
   
-  return { role, authRole, error };
+  // Initial role fetch
+  useEffect(() => {
+    if (userId) {
+      fetchRoleWrapper();
+    }
+  }, [userId, fetchRoleWrapper]);
+  
+  return { 
+    role, 
+    authRole, 
+    error,
+    isLoading: isFetching && !role,
+    isPolling,
+    isSubscribed
+  };
 }
