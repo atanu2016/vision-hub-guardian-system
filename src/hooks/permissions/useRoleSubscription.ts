@@ -11,9 +11,13 @@ import { useRolePolling } from "./useRolePolling";
  * Main hook for role subscription with optimizations
  */
 export function useRoleSubscription() {
-  const { role: authRole, user } = useAuth();
+  // Get auth context
+  const auth = useAuth();
+  const authRole = auth?.role || 'user';
+  const userId = useMemo(() => auth?.user?.id, [auth?.user?.id]);
+  
+  // Local state for role
   const [role, setRole] = useState<UserRole>(authRole);
-  const userId = useMemo(() => user?.id, [user?.id]);
   
   // Handle role updates from database or fetching
   const handleRoleUpdate = useCallback((newRole: UserRole) => {
