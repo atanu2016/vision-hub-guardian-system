@@ -32,7 +32,7 @@ export function useSessionManager(
       (event, currentSession) => {
         if (!mountedRef.current) return;
         
-        console.log("[AUTH] Auth state changed:", event, currentSession?.user?.email);
+        console.log("[AUTH] Auth state changed:", event, "Session:", currentSession?.user?.email);
         
         try {
           // Update basic session state immediately
@@ -61,18 +61,25 @@ export function useSessionManager(
                 // Clear any previous login errors on successful sign-in
                 if (event === 'SIGNED_IN') {
                   lastErrorRef.current = null;
-                  toast.success("Logged in successfully");
                 }
               } catch (error) {
                 console.error("[AUTH] Error fetching user data:", error);
-                toast.error("Error fetching user data. Please try again.");
               } finally {
                 fetchingProfileRef.current = false;
+                
+                // Ensure loading is set to false after profile fetch
+                if (mountedRef.current) {
+                  setIsLoading(false);
+                }
               }
             }, 0);
+          } else {
+            // If we're not fetching a profile, update loading state
+            setIsLoading(false);
           }
         } catch (error) {
           handleAuthError(error, "Error processing authentication change");
+          setIsLoading(false);
         } finally {
           // Always update the initialized state once we've handled the auth state change
           if (mountedRef.current && !authInitializedRef.current) {

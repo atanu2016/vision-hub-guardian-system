@@ -32,20 +32,26 @@ export async function signIn(email: string, password: string): Promise<boolean> 
 export async function signOut(navigate: NavigateFunction): Promise<void> {
   try {
     console.log("[AUTH ACTION] Signing out user");
-    const { error } = await supabase.auth.signOut();
+    
+    // Clear any stored state first
+    localStorage.removeItem("supabase.auth.token");
+    sessionStorage.removeItem("supabase.auth.token");
+    
+    // Then sign out from Supabase
+    const { error } = await supabase.auth.signOut({ scope: 'global' });
     
     if (error) {
       console.error("[AUTH ACTION] Sign out error:", error.message);
       throw error;
     }
     
-    // Clear any stored state
-    localStorage.removeItem("supabase.auth.token");
-    sessionStorage.removeItem("supabase.auth.token");
-    
     // Navigate after successful sign out
     toast.success('Successfully signed out');
-    navigate('/auth');
+    
+    // Add a small delay before navigation to let the state update
+    setTimeout(() => {
+      navigate('/auth');
+    }, 300);
   } catch (error: any) {
     console.error("[AUTH ACTION] Sign out exception:", error.message);
     toast.error(error.message || 'Error signing out');

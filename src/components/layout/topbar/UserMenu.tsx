@@ -17,6 +17,7 @@ import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { toast } from "sonner";
 
 const UserMenu = () => {
   const { user, profile, signOut, isAdmin } = useAuth();
@@ -30,6 +31,19 @@ const UserMenu = () => {
       .join('')
       .toUpperCase()
       .substring(0, 2);
+  };
+
+  const handleSignOut = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    try {
+      console.log("User menu: initiating sign out");
+      toast.loading("Signing out...");
+      await signOut(navigate);
+    } catch (error) {
+      console.error("Sign out error:", error);
+      toast.error("Failed to sign out. Please try again.");
+    }
   };
 
   if (!user) {
@@ -78,7 +92,10 @@ const UserMenu = () => {
         <div className="p-2 md:hidden">
           <ThemeToggle />
         </div>
-        <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive">
+        <DropdownMenuItem 
+          onClick={handleSignOut} 
+          className="text-destructive focus:text-destructive"
+        >
           <LogOut className="mr-2 h-4 w-4" />
           Log out
         </DropdownMenuItem>

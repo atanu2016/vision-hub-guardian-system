@@ -9,14 +9,12 @@ import { LoginForm } from '@/components/auth/LoginForm';
 import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm';
 import { AuthBranding } from '@/components/auth/AuthBranding';
 import { MFAEnrollmentForm } from '@/components/auth/MFAEnrollmentForm';
-import { toast } from 'sonner';
 
 const Auth = () => {
   const { user, isLoading, requiresMFA, isAdmin, authInitialized } = useAuth();
   const [activeTab, setActiveTab] = useState('login');
   const [authStarted, setAuthStarted] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
-  const [redirectPath, setRedirectPath] = useState<string | null>(null);
   const location = useLocation();
   
   // Get the return path from location state, or default based on role
@@ -44,17 +42,21 @@ const Auth = () => {
       console.log("[Auth Page] Authentication process started");
     }
   }, [isLoading, user, requiresMFA, isAdmin, authInitialized, authStarted]);
-  
+
+  // Handle redirection when user is authenticated
   useEffect(() => {
-    // Only redirect when fully initialized and not loading
+    // Only redirect when fully initialized, not loading, and user is authenticated
     if (user && !isLoading && authInitialized && !redirecting) {
       console.log("[Auth Page] User authenticated, preparing redirect");
       setRedirecting(true);
       
-      // Calculate where to redirect based on role
-      const path = from === '/auth' ? (isAdmin ? '/dashboard' : '/live') : from;
-      console.log("[Auth Page] Will redirect to:", path);
-      setRedirectPath(path);
+      // Use a timeout to ensure state is fully processed before navigation
+      setTimeout(() => {
+        // Calculate where to redirect based on role
+        const path = from === '/auth' ? (isAdmin ? '/dashboard' : '/live') : from;
+        console.log("[Auth Page] Redirecting to:", path);
+        window.location.href = path; // Use direct location change to force clean navigation
+      }, 500);
     }
   }, [isLoading, user, requiresMFA, isAdmin, from, redirecting, authInitialized]);
 
@@ -75,12 +77,6 @@ const Auth = () => {
         <p className="text-muted-foreground">Verifying authentication status...</p>
       </div>
     );
-  }
-  
-  // Perform redirect if path is set
-  if (redirectPath) {
-    console.log("[Auth Page] Executing redirect to:", redirectPath);
-    return <Navigate to={redirectPath} replace />;
   }
   
   // Fast path for authenticated users needing MFA
@@ -105,6 +101,13 @@ const Auth = () => {
       </div>
     );
   }
+  
+  // If user is already authenticated and we're not in a sign-in flow, redirect
+  if (user && authInitialized && !isLoading && !redirecting) {
+    const redirectPath = from === '/auth' ? (isAdmin ? '/dashboard' : '/live') : from;
+    console.log("[Auth Page] Direct redirect to:", redirectPath);
+    return <Navigate to={redirectPath} replace />;
+  }
 
   const containerStyle = backgroundUrl 
     ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } 
@@ -112,9 +115,6 @@ const Auth = () => {
 
   const handleLoginSuccess = () => {
     console.log("[Auth Page] Login success callback triggered");
-    if (user) {
-      console.log("[Auth Page] User already authenticated, will redirect shortly");
-    }
   };
 
   return (
