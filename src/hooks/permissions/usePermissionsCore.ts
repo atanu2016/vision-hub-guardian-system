@@ -33,7 +33,8 @@ export function usePermissionsCore(): UsePermissionsReturn {
     }
     
     // If not in cache, compute the permission
-    const result = checkPermission(role, permission);
+    // Ensure role is cast to UserRole
+    const result = checkPermission(role as UserRole, permission);
     
     // Cache the result for future fast lookups
     permissionResultCache.set(cacheKey, result);
@@ -43,16 +44,16 @@ export function usePermissionsCore(): UsePermissionsReturn {
 
   // Fast role management function
   const canManageRoleFunc = useCallback((targetRole: UserRole): boolean => {
-    return canManageRole(role, targetRole);
+    return canManageRole(role as UserRole, targetRole);
   }, [role]);
 
   // Return memoized values to prevent unnecessary re-renders
   return useMemo(() => ({
     hasPermission,
     canManageRole: canManageRoleFunc,
-    role,
-    currentRole: role,
-    authRole,
+    role: role as UserRole,
+    currentRole: role as UserRole,
+    authRole: authRole as UserRole,
     error
   }), [hasPermission, canManageRoleFunc, role, authRole, error]);
 }

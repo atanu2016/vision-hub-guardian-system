@@ -17,11 +17,13 @@ export interface AuthState {
   profile: Profile | null;
   role: UserRole;
   isLoading: boolean;
+  authInitialized?: boolean; // Add this property
 }
 
 export interface AuthContextType extends AuthState {
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  authInitialized: boolean; // Add this property explicitly
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;

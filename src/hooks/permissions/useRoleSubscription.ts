@@ -19,8 +19,8 @@ export function useRoleSubscription() {
     console.warn("[ROLE SUBSCRIPTION] Auth context not available yet, using defaults");
     // Return default values during initialization
     return { 
-      role: 'user', 
-      authRole: 'user', 
+      role: 'user' as UserRole, 
+      authRole: 'user' as UserRole, 
       error: "Auth context unavailable",
       isLoading: true,
       isPolling: false,
@@ -29,7 +29,7 @@ export function useRoleSubscription() {
   }
 
   // Extract auth values with fallbacks
-  const authRole = auth?.role || 'user';
+  const authRole = (auth?.role || 'user') as UserRole;
   const userId = useMemo(() => auth?.user?.id, [auth?.user?.id]);
   
   // Local state for role
@@ -65,7 +65,7 @@ export function useRoleSubscription() {
     if (!userId) return;
     try {
       const fetchedRole = await fetchCurrentRole();
-      handleRoleUpdate(fetchedRole);
+      handleRoleUpdate(fetchedRole as UserRole);
     } catch (err) {
       console.error('[ROLE SUBSCRIPTION] Error in fetchRoleWrapper:', err);
     }

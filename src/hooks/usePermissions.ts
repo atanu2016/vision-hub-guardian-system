@@ -14,7 +14,8 @@ export function usePermissions(): UsePermissionsReturn {
       hasPermission: () => true, // Be permissive during initialization errors
       canManageRole: () => false,
       role: "user",
-      isLoading: true,
+      currentRole: "user", 
+      authRole: "user",
       error: error instanceof Error ? error.message : String(error)
     };
   }
