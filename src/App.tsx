@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme/theme-provider"
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/auth"; 
+import { usePermissions } from "@/hooks/usePermissions"; // Add this import
 
 import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
@@ -176,7 +177,7 @@ function App() {
 // Role-based redirect component
 const RoleBasedRedirect = () => {
   const { isAdmin } = useAuth();
-  const { hasPermission } = usePermissions();
+  const { hasPermission } = usePermissions(); // This line was causing the error
   
   // Send users to dashboard if they have permission, otherwise to live view
   return hasPermission('view-dashboard') ? 
