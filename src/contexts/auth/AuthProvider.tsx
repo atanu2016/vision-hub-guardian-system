@@ -88,6 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut: handleSignOut,
     resetPassword: handleResetPassword,
     requiresMFA,
+    authInitialized, // Add the authInitialized property here
   };
 
   console.log("[AUTH] Auth context updated:", {
