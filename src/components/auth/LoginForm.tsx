@@ -22,7 +22,8 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const {
     emailLoginsDisabled,
     setEmailLoginsDisabled,
-    handleLogin
+    handleLogin,
+    isLoading
   } = useAuthForm({ onSuccess });
 
   useEffect(() => {
@@ -57,5 +58,6 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
     : <StandardLoginForm 
         onSubmit={onLoginSubmit} 
         showCreateAdminButton={false} // We disable this button completely
+        isLoading={isLoading}
       />;
 };

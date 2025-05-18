@@ -12,12 +12,14 @@ interface StandardLoginFormProps {
   onSubmit: (values: LoginFormValues) => Promise<void>;
   onCreateAdminClick?: () => void;
   showCreateAdminButton?: boolean;
+  isLoading?: boolean;
 }
 
 export const StandardLoginForm = ({ 
   onSubmit, 
   onCreateAdminClick,
-  showCreateAdminButton = false 
+  showCreateAdminButton = false,
+  isLoading: externalIsLoading = false
 }: StandardLoginFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -37,6 +39,8 @@ export const StandardLoginForm = ({
     }
   };
 
+  const isLoading = isSubmitting || externalIsLoading;
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -47,7 +51,7 @@ export const StandardLoginForm = ({
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="mail@example.com" {...field} />
+                <Input placeholder="mail@example.com" {...field} disabled={isLoading} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -60,14 +64,14 @@ export const StandardLoginForm = ({
             <FormItem>
               <FormLabel>Password</FormLabel>
               <FormControl>
-                <Input type="password" placeholder="********" {...field} />
+                <Input type="password" placeholder="********" {...field} disabled={isLoading} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? (
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Logging in...
@@ -82,6 +86,7 @@ export const StandardLoginForm = ({
             type="button" 
             className="w-full" 
             onClick={onCreateAdminClick}
+            disabled={isLoading}
           >
             Create Admin Account
           </Button>
