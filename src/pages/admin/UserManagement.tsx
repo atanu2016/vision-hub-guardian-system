@@ -23,7 +23,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import LoadingSpinner from "@/components/settings/sections/LoadingSpinner";
-import { resetPassword } from "@/contexts/auth/authActions";
+import { adminResetUserPassword, resetPassword } from "@/contexts/auth/authActions";
 
 const UserManagement = () => {
   const { isSuperAdmin } = useAuth();
@@ -51,6 +51,11 @@ const UserManagement = () => {
   const [passwordResetLoading, setPasswordResetLoading] = useState(false);
   const [showEmailResetDialog, setShowEmailResetDialog] = useState(false);
   const [selectedUserEmail, setSelectedUserEmail] = useState('');
+  
+  // New state for admin direct password reset
+  const [showAdminPasswordResetDialog, setShowAdminPasswordResetDialog] = useState(false);
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [adminPasswordResetLoading, setAdminPasswordResetLoading] = useState(false);
 
   const handleCameraAssignmentClick = (userId: string, userName: string) => {
     setSelectedUserId(userId);
@@ -77,16 +82,21 @@ const UserManagement = () => {
   };
 
   const handleResetPassword = async (userId: string, userEmail: string) => {
-    // Check if we have a valid email address
-    if (!userEmail || userEmail.indexOf('@') === -1) {
-      toast.error('Cannot reset password: No valid email address for this user');
-      return;
-    }
+    // Store the selected user's email and ID
+    setSelectedUserId(userId);
     
-    // Store the selected user's email and open the dialog
-    setSelectedUserEmail(userEmail);
-    setPasswordResetEmail(userEmail);
-    setShowEmailResetDialog(true);
+    // Check if we have a valid email address for sending reset email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (userEmail && emailRegex.test(userEmail)) {
+      // If valid email, use email reset flow
+      setSelectedUserEmail(userEmail);
+      setPasswordResetEmail(userEmail);
+      setShowEmailResetDialog(true);
+    } else {
+      // If no valid email, use admin direct password reset
+      setShowAdminPasswordResetDialog(true);
+      setNewUserPassword('');
+    }
   };
 
   const handleSendPasswordResetEmail = async () => {
@@ -112,6 +122,30 @@ const UserManagement = () => {
     } catch (error) {
       setPasswordResetLoading(false);
       // Error toast is handled in the resetPassword function
+    }
+  };
+  
+  const handleAdminPasswordReset = async () => {
+    if (!selectedUserId) {
+      toast.error("No user selected");
+      return;
+    }
+    
+    if (!newUserPassword || newUserPassword.length < 6) {
+      toast.error("Password must be at least 6 characters long");
+      return;
+    }
+    
+    setAdminPasswordResetLoading(true);
+    try {
+      await adminResetUserPassword(selectedUserId, newUserPassword);
+      setShowAdminPasswordResetDialog(false);
+      setNewUserPassword('');
+      toast.success("User password has been reset successfully");
+    } catch (error) {
+      // Error is handled in adminResetUserPassword function
+    } finally {
+      setAdminPasswordResetLoading(false);
     }
   };
 
@@ -237,6 +271,54 @@ const UserManagement = () => {
                 </>
               ) : (
                 'Send Reset Email'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Admin Direct Password Reset Dialog */}
+      <Dialog open={showAdminPasswordResetDialog} onOpenChange={setShowAdminPasswordResetDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Admin: Set New Password</DialogTitle>
+            <DialogDescription>
+              As an admin, you can directly set a new password for this user.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">New Password</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                placeholder="Enter new password"
+                value={newUserPassword}
+                onChange={(e) => setNewUserPassword(e.target.value)}
+                autoComplete="new-password"
+              />
+              <p className="text-xs text-muted-foreground">Password must be at least 6 characters long.</p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAdminPasswordResetDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAdminPasswordReset} 
+              disabled={adminPasswordResetLoading || !newUserPassword || newUserPassword.length < 6}
+            >
+              {adminPasswordResetLoading ? (
+                <>
+                  <div className="mr-2">
+                    <LoadingSpinner />
+                  </div>
+                  Resetting...
+                </>
+              ) : (
+                'Set New Password'
               )}
             </Button>
           </DialogFooter>

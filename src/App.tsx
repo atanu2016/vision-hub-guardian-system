@@ -5,7 +5,7 @@ import { ThemeProvider } from "@/components/theme/theme-provider"
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/auth"; 
-import { usePermissions } from "@/hooks/usePermissions"; // Add this import
+import { usePermissions } from "@/hooks/usePermissions"; 
 
 import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
@@ -176,10 +176,20 @@ function App() {
 
 // Role-based redirect component
 const RoleBasedRedirect = () => {
-  const { isAdmin } = useAuth();
-  const { hasPermission } = usePermissions(); // This line was causing the error
+  const { isAdmin, isSuperAdmin, role } = useAuth();
+  const { hasPermission } = usePermissions();
   
-  // Send users to dashboard if they have permission, otherwise to live view
+  console.log("RoleBasedRedirect - User role:", role);
+  console.log("RoleBasedRedirect - isAdmin:", isAdmin);
+  console.log("RoleBasedRedirect - isSuperAdmin:", isSuperAdmin);
+  
+  // Directly check admin/superadmin status first, since that's our primary condition
+  if (isAdmin || isSuperAdmin || role === 'admin' || role === 'superadmin') {
+    console.log("RoleBasedRedirect - Redirecting admin/superadmin to dashboard");
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  // For regular users, check permission and send to appropriate view
   return hasPermission('view-dashboard') ? 
     <Navigate to="/dashboard" replace /> : 
     <Navigate to="/live" replace />;

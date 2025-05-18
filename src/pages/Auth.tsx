@@ -11,7 +11,7 @@ import { AuthBranding } from '@/components/auth/AuthBranding';
 import { MFAEnrollmentForm } from '@/components/auth/MFAEnrollmentForm';
 
 const Auth = () => {
-  const { user, isLoading, requiresMFA, isAdmin, authInitialized } = useAuth();
+  const { user, isLoading, requiresMFA, isAdmin, isSuperAdmin, authInitialized } = useAuth();
   const [activeTab, setActiveTab] = useState('login');
   const [authStarted, setAuthStarted] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
@@ -20,8 +20,14 @@ const Auth = () => {
   
   // Get the return path from location state, or default based on role
   const getDefaultPath = () => {
-    // For testing purposes, always go to /dashboard regardless of role
-    return '/dashboard';
+    // Check admin status and return appropriate path
+    if (isAdmin || isSuperAdmin) {
+      console.log("[Auth Page] User is admin, default path is /dashboard");
+      return '/dashboard';
+    }
+    
+    console.log("[Auth Page] User is not admin, default path is /live");
+    return '/live';
   };
   
   const from = location.state?.from || getDefaultPath();
@@ -35,6 +41,7 @@ const Auth = () => {
       user: !!user, 
       requiresMFA, 
       isAdmin, 
+      isSuperAdmin,
       initialized: authInitialized 
     });
     
@@ -42,7 +49,7 @@ const Auth = () => {
       setAuthStarted(true);
       console.log("[Auth Page] Authentication process started");
     }
-  }, [isLoading, user, requiresMFA, isAdmin, authInitialized, authStarted]);
+  }, [isLoading, user, requiresMFA, isAdmin, isSuperAdmin, authInitialized, authStarted]);
 
   // Handle redirection when user is authenticated
   useEffect(() => {
@@ -52,17 +59,23 @@ const Auth = () => {
       setRedirecting(true);
       
       // Calculate where to redirect based on role
-      const path = from === '/auth' ? '/dashboard' : from;
-      console.log("[Auth Page] Redirecting to:", path);
+      let path;
+      if (isAdmin || isSuperAdmin) {
+        path = '/dashboard';
+        console.log("[Auth Page] Admin user, redirecting to dashboard");
+      } else {
+        path = from === '/auth' ? '/live' : from;
+        console.log("[Auth Page] Regular user, redirecting to:", path);
+      }
       
       // Use navigate for React Router based navigation with a longer timeout
       // to allow state to fully update
       setTimeout(() => {
-        console.log("[Auth Page] Executing redirect now");
+        console.log("[Auth Page] Executing redirect now to:", path);
         navigate(path, { replace: true });
       }, 1000);
     }
-  }, [isLoading, user, from, redirecting, authInitialized, navigate, requiresMFA, isAdmin]);
+  }, [isLoading, user, from, redirecting, authInitialized, navigate, requiresMFA, isAdmin, isSuperAdmin]);
 
   useEffect(() => {
     // Check URL params for tab selection
@@ -108,8 +121,14 @@ const Auth = () => {
   
   // If user is already authenticated and we're not in a sign-in flow, redirect
   if (user && authInitialized && !isLoading && !redirecting) {
-    const redirectPath = from === '/auth' ? '/dashboard' : from;
-    console.log("[Auth Page] Direct redirect to:", redirectPath);
+    let redirectPath;
+    if (isAdmin || isSuperAdmin) {
+      redirectPath = '/dashboard';
+      console.log("[Auth Page] Direct redirect to dashboard for admin");
+    } else {
+      redirectPath = from === '/auth' ? '/live' : from;
+      console.log("[Auth Page] Direct redirect to:", redirectPath);
+    }
     return <Navigate to={redirectPath} replace />;
   }
 
