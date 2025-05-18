@@ -52,11 +52,9 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
 
     // Use multiple approaches for reliability
     let succeeded = false;
-    let errorMessages = [];
     
     // Approach 1: Direct update with user_roles table
     try {
-      console.log('[Role Service] Trying direct update approach');
       // First check if role exists
       const roleExists = await checkRoleExists(userId);
       
@@ -76,9 +74,8 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
       // Try to notify about role change
       await notifyRoleChange(userId);
       
-    } catch (error: any) {
+    } catch (error) {
       console.error('[Role Service] Error with direct approach:', error);
-      errorMessages.push(error?.message || 'Direct update failed');
       // Continue to next approach
     }
     
@@ -98,15 +95,13 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
           
         if (error) {
           console.error('[Role Service] Upsert failed:', error);
-          errorMessages.push(error.message);
         } else {
           console.log('[Role Service] Upsert succeeded');
           setCachedRole(userId, newRole);
           succeeded = true;
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error('[Role Service] Error with upsert approach:', error);
-        errorMessages.push(error?.message || 'Upsert operation failed');
         // Continue to next approach
       }
     }
@@ -120,17 +115,16 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
         setCachedRole(userId, newRole);
         console.log(`[Role Service] Edge function approach succeeded`);
         succeeded = true;
-      } catch (error: any) {
+      } catch (error) {
         console.error('[Role Service] Edge function approach failed:', error);
-        errorMessages.push(error?.message || 'Edge function approach failed');
+        // Continue to next approach
       }
     }
     
-    // If all approaches failed, throw error with concatenated messages
+    // If all approaches failed, throw error
     if (!succeeded) {
-      const errorMessage = `Failed to update user role: ${errorMessages.join(', ')}`;
-      console.error('[Role Service] All role update methods failed:', errorMessage);
-      throw new Error(errorMessage);
+      console.error('[Role Service] All role update methods failed');
+      throw new Error('Failed to update user role after multiple attempts');
     }
     
     toast.success(`User role updated to ${newRole}`);

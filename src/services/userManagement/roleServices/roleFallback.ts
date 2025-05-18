@@ -1,82 +1,46 @@
 
 /**
- * Fallback mechanisms for role updates when direct database access fails
+ * Fallback methods for updating user roles using Edge Functions
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import type { UserRole } from '@/contexts/auth/types';
+import type { UserRole } from '@/types/admin';
 
 /**
- * Update a user's role using the edge function as a fallback
+ * Updates a user's role via the edge function fallback mechanism
  */
-export async function updateRoleViaEdgeFunction(userId: string, newRole: UserRole): Promise<boolean> {
-  try {
-    console.log('[Role Fallback] Attempting to update role via edge function');
-    
-    // Get authentication token
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      throw new Error('No session available for edge function authentication');
-    }
-
-    // Make the edge function call
-    const { data, error } = await supabase.functions.invoke('fix-user-roles', {
-      body: JSON.stringify({
-        action: 'fix',
-        userId,
-        role: newRole
-      }),
-      headers: {
-        Authorization: `Bearer ${session.access_token}`
-      }
-    });
-
-    if (error || (data && data.error)) {
-      console.error('[Role Fallback] Edge function error:', error || data.error);
-      throw new Error(error?.message || data?.error || 'Unknown edge function error');
-    }
-
-    if (!data || !data.success) {
-      throw new Error('Edge function returned unsuccessful response');
-    }
-
-    console.log('[Role Fallback] Role updated successfully via edge function');
-    return true;
-  } catch (error: any) {
-    console.error('[Role Fallback] Error in updateRoleViaEdgeFunction:', error);
-    throw error;
+export async function updateRoleViaEdgeFunction(userId: string, role: UserRole): Promise<void> {
+  console.log(`[Role Fallback] Updating role via edge function: ${userId} to ${role}`);
+  
+  // Validate the role as a safeguard
+  const validRoles: UserRole[] = ['user', 'admin', 'superadmin', 'observer'];  
+  if (!validRoles.includes(role)) {
+    throw new Error(`Invalid role: ${role}`);
   }
-}
-
-/**
- * Diagnose user role issues using edge function
- */
-export async function diagnoseRoleIssues(): Promise<any> {
+  
   try {
-    // Get authentication token
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      throw new Error('No session available for edge function authentication');
-    }
-
-    // Make the edge function call
     const { data, error } = await supabase.functions.invoke('fix-user-roles', {
-      body: JSON.stringify({
-        action: 'diagnose'
-      }),
-      headers: {
-        Authorization: `Bearer ${session.access_token}`
+      body: { 
+        action: 'fix',
+        userId, 
+        role 
       }
     });
-
+    
     if (error) {
-      console.error('[Role Fallback] Diagnostic edge function error:', error);
+      console.error('[Role Fallback] Edge function error:', error);
       throw error;
     }
-
-    return data;
-  } catch (error: any) {
-    console.error('[Role Fallback] Error in diagnoseRoleIssues:', error);
+    
+    if (!data.success) {
+      console.error('[Role Fallback] Edge function reported failure:', data);
+      throw new Error(data.error || 'Edge function failed to update role');
+    }
+    
+    console.log('[Role Fallback] Edge function role update successful');
+    return;
+  } catch (error) {
+    console.error('[Role Fallback] Error invoking fix-user-roles edge function:', error);
     throw error;
   }
 }

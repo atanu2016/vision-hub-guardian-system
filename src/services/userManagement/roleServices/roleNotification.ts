@@ -1,60 +1,47 @@
 
 /**
- * Role notification utilities for real-time updates
+ * Notification services for role changes
  */
 
 import { supabase } from '@/integrations/supabase/client';
 
 /**
- * Notify about a role change
+ * Helper function to notify about role changes via RPC if available
  */
-export async function notifyRoleChange(userId: string): Promise<boolean> {
+export async function notifyRoleChange(userId: string): Promise<void> {
   try {
-    console.log('[Role Notification] Triggering role change notification for user:', userId);
+    console.log('[Role Notification] Attempting to notify about role change');
     
-    // Try to use the notify function if it exists
+    // Try to use notify_role_change RPC if it exists
     try {
-      const { error } = await supabase.rpc('notify_role_change', { user_id: userId });
-      
-      if (error) {
-        console.error('[Role Notification] Error calling notification function:', error);
-        return false;
+      const { error: signalError } = await supabase
+        .rpc('notify_role_change', { user_id: userId });
+        
+      if (signalError) {
+        console.warn('[Role Notification] Error signaling role change:', signalError);
+      } else {
+        console.log('[Role Notification] Successfully notified about role change');
       }
-      
-      console.log('[Role Notification] Successfully triggered notification');
-      return true;
-    } catch (error) {
-      console.error('[Role Notification] Notify function error:', error);
-      return false;
+    } catch (err) {
+      console.warn('[Role Notification] notify_role_change RPC might not exist:', err);
     }
-  } catch (error) {
-    console.error('[Role Notification] Error in notifyRoleChange:', error);
-    return false;
+  } catch (err) {
+    console.error('[Role Notification] Error calling notify_role_change:', err);
   }
 }
 
 /**
- * Trigger a realtime notification by updating a record
+ * Trigger role change notifications via realtime update
  */
-export async function triggerRealtimeNotification(userId: string): Promise<boolean> {
+export async function triggerRealtimeNotification(userId: string): Promise<void> {
   try {
-    console.log('[Role Notification] Triggering realtime notification through record update');
-    
-    // Update the updated_at field to trigger realtime
-    const { error } = await supabase
+    await supabase
       .from('user_roles')
       .update({ updated_at: new Date().toISOString() })
       .eq('user_id', userId);
       
-    if (error) {
-      console.error('[Role Notification] Error updating record for notification:', error);
-      return false;
-    }
-    
-    console.log('[Role Notification] Successfully triggered realtime notification');
-    return true;
-  } catch (error) {
-    console.error('[Role Notification] Error in triggerRealtimeNotification:', error);
-    return false;
+    console.log('[Role Notification] Triggered realtime notification for role change');
+  } catch (notifyError) {
+    console.error('[Role Notification] Error triggering role change notification:', notifyError);
   }
 }

@@ -13,14 +13,8 @@ export async function signIn(email: string, password: string): Promise<void> {
       throw error;
     }
     
-    // Immediately refresh session to ensure we have the latest data
-    await supabase.auth.refreshSession();
-    
     console.log("[AUTH ACTION] Sign in successful for:", email);
     toast.success('Successfully signed in');
-    
-    // Set a small timeout to ensure state updates before redirects
-    await new Promise(resolve => setTimeout(resolve, 100));
   } catch (error: any) {
     console.error("[AUTH ACTION] Sign in exception:", error.message);
     toast.error(error.message || 'Error signing in');

@@ -1,62 +1,153 @@
 
 /**
- * Cache utilities for user roles
+ * Optimized role caching functionality
  */
-
 import type { UserRole } from '@/contexts/auth/types';
 
-// In-memory cache for roles with timestamps
-const roleCache = new Map<string, { role: UserRole, timestamp: number }>();
+// Define the types clearly to avoid confusion
+type RoleCacheEntry = { role: UserRole, timestamp: number };
+type CacheReturn = UserRole | RoleCacheEntry | null;
 
-// Cache timeout (15 minutes)
-const CACHE_TIMEOUT = 15 * 60 * 1000;
+// Low-latency in-memory cache
+const roleCache = new Map<string, RoleCacheEntry>();
+const CACHE_TIMEOUT = 60000; // 60 second cache - optimized for better performance
+
+// Separate cache for frequently accessed roles to avoid localStorage overhead
+const frequentAccessCache = new Map<string, RoleCacheEntry>();
 
 /**
- * Get a cached role
+ * Get a cached role with improved performance
  */
-export function getCachedRole(userId: string, includeTimestamp = false): UserRole | { role: UserRole, timestamp: number } | null {
-  const cachedData = roleCache.get(userId);
+export function getCachedRole(userId: string, includeTimestamp = false): CacheReturn {
+  if (!userId) return null;
   
-  if (!cachedData) {
-    return null;
+  // First check frequent access cache (RAM only, super fast)
+  const frequentCachedRole = frequentAccessCache.get(userId);
+  
+  if (frequentCachedRole && (Date.now() - frequentCachedRole.timestamp < CACHE_TIMEOUT)) {
+    return includeTimestamp ? frequentCachedRole : frequentCachedRole.role;
   }
   
-  // Check if cache is stale
-  if (Date.now() - cachedData.timestamp > CACHE_TIMEOUT) {
-    roleCache.delete(userId);
-    return null;
+  // Then check regular cache
+  const cachedRole = roleCache.get(userId);
+  
+  if (cachedRole && (Date.now() - cachedRole.timestamp < CACHE_TIMEOUT)) {
+    // Update frequent access cache
+    frequentAccessCache.set(userId, cachedRole);
+    return includeTimestamp ? cachedRole : cachedRole.role;
   }
   
-  return includeTimestamp ? cachedData : cachedData.role;
+  // As last resort, check local storage (but only if absolutely needed)
+  try {
+    const lsRole = localStorage.getItem(`user_role_${userId}`);
+    const lsTime = localStorage.getItem(`user_role_time_${userId}`);
+    
+    if (lsRole && lsTime && (Date.now() - parseInt(lsTime, 10) < CACHE_TIMEOUT)) {
+      const role = lsRole as UserRole;
+      const entry: RoleCacheEntry = { role, timestamp: parseInt(lsTime, 10) };
+      setCachedRole(userId, role);
+      return includeTimestamp ? entry : role;
+    }
+  } catch (e) {
+    // Ignore localStorage errors
+    console.error('[ROLE CACHE] Error accessing localStorage:', e);
+  }
+  
+  return null;
 }
 
 /**
- * Cache a role
+ * Store a role in the cache with performance optimizations
  */
 export function setCachedRole(userId: string, role: UserRole): void {
-  roleCache.set(userId, {
-    role,
-    timestamp: Date.now()
-  });
+  if (!userId || !role) return;
+  
+  const cacheEntry: RoleCacheEntry = { 
+    role, 
+    timestamp: Date.now() 
+  };
+  
+  // Update both caches
+  roleCache.set(userId, cacheEntry);
+  frequentAccessCache.set(userId, cacheEntry);
+  
+  // Update localStorage asynchronously to prevent UI blocking
+  setTimeout(() => {
+    try {
+      localStorage.setItem(`user_role_${userId}`, role);
+      localStorage.setItem(`user_role_time_${userId}`, Date.now().toString());
+    } catch (e) {
+      // Ignore localStorage errors
+      console.error('[ROLE CACHE] Error setting localStorage:', e);
+    }
+  }, 0);
 }
 
 /**
- * Invalidate the role cache
+ * Invalidate the role cache efficiently
  */
 export function invalidateRoleCache(userId?: string): void {
   if (userId) {
+    console.log(`[ROLE CACHE] Invalidating cache for user: ${userId}`);
     roleCache.delete(userId);
+    frequentAccessCache.delete(userId);
+    
+    // Clean localStorage asynchronously
+    setTimeout(() => {
+      try {
+        localStorage.removeItem(`user_role_${userId}`);
+        localStorage.removeItem(`user_role_time_${userId}`);
+      } catch (e) {
+        // Ignore localStorage errors
+      }
+    }, 0);
   } else {
+    console.log('[ROLE CACHE] Invalidating all caches');
     roleCache.clear();
+    frequentAccessCache.clear();
+    
+    // Clean localStorage asynchronously
+    setTimeout(() => {
+      try {
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('user_role_')) {
+            localStorage.removeItem(key);
+          }
+        });
+      } catch (e) {
+        // Ignore localStorage errors
+      }
+    }, 0);
+  }
+}
+
+// Add memory management function to prevent memory leaks
+export function cleanupRoleCache(): void {
+  const now = Date.now();
+  
+  // Clean up expired entries from both caches
+  for (const [userId, entry] of roleCache.entries()) {
+    if (now - entry.timestamp > CACHE_TIMEOUT * 3) {
+      roleCache.delete(userId);
+    }
+  }
+  
+  for (const [userId, entry] of frequentAccessCache.entries()) {
+    if (now - entry.timestamp > CACHE_TIMEOUT * 3) {
+      frequentAccessCache.delete(userId);
+    }
   }
 }
 
 // Set up periodic cache cleanup
-setInterval(() => {
-  const now = Date.now();
-  for (const [userId, data] of roleCache.entries()) {
-    if (now - data.timestamp > CACHE_TIMEOUT) {
-      roleCache.delete(userId);
-    }
+const cleanupInterval = setInterval(cleanupRoleCache, 120000); // Clean every two minutes
+
+// Ensure cleanup interval is cleared when the module is hot-reloaded in development
+if (typeof window !== 'undefined') {
+  // Store the previous interval ID in a window property
+  const prevIntervalId = (window as any).__roleCacheCleanupInterval;
+  if (prevIntervalId) {
+    clearInterval(prevIntervalId);
   }
-}, 5 * 60 * 1000); // Clean every 5 minutes
+  (window as any).__roleCacheCleanupInterval = cleanupInterval;
+}

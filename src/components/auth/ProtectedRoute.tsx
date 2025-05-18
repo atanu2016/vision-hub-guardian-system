@@ -19,8 +19,9 @@ const ProtectedRoute = ({
   requiredPermission
 }: ProtectedRouteProps) => {
   const { user, isLoading, isAdmin, role } = useAuth();
+  const { hasPermission, error: permissionError } = usePermissions();
   const location = useLocation();
-  
+
   // Prevent rendering until auth state is determined
   if (isLoading) {
     return (
@@ -36,21 +37,10 @@ const ProtectedRoute = ({
     return <Navigate to="/auth" state={{ from: location.pathname }} replace />;
   }
 
-  // Permission check is now separate to ensure we don't have circular dependencies
-  // Only check permissions if a specific permission is required
-  if (requiredPermission) {
-    // Use a safer approach to handle permissions that delays the check
-    // This prevents circular dependencies during initialization
-    try {
-      const { hasPermission } = usePermissions();
-      if (!hasPermission(requiredPermission)) {
-        console.log(`Protected route: Permission '${requiredPermission}' required but not granted, redirecting to /`);
-        return <Navigate to="/" replace />;
-      }
-    } catch (error) {
-      console.warn("Protected route: Permission system error, allowing access:", error);
-      // If there's an error checking permissions, we're more permissive
-    }
+  // If there's a permission system error, we need to be more permissive
+  if (permissionError) {
+    console.warn("Protected route: Permission system error, allowing access:", permissionError);
+    return <>{children}</>;
   }
 
   // If superadmin access is required but user is not a superadmin, redirect to home
@@ -62,6 +52,12 @@ const ProtectedRoute = ({
   // If admin access is required but user is not an admin, redirect to home
   if (adminRequired && !isAdmin) {
     console.log("Protected route: Admin access required but user is not admin, redirecting to /");
+    return <Navigate to="/" replace />;
+  }
+
+  // If specific permission is required, check it
+  if (requiredPermission && !hasPermission(requiredPermission)) {
+    console.log(`Protected route: Permission '${requiredPermission}' required but not granted, redirecting to /`);
     return <Navigate to="/" replace />;
   }
 

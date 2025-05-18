@@ -18,7 +18,6 @@ interface RoleSelectorProps {
 export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole }: RoleSelectorProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>(currentRole);
-  const [error, setError] = useState<string | null>(null);
   const { role: currentUserRole } = useAuth();
   const { hasPermission } = usePermissions();
 
@@ -35,22 +34,12 @@ export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole 
     if (value === selectedRole) return; // No change
     
     setIsUpdating(true);
-    setError(null);
-    
     try {
       const newRole = value as UserRole;
+      setSelectedRole(newRole);
       console.log(`[RoleSelector] Changing role to: ${newRole} for user: ${userId}`);
       
-      // Temporarily update UI optimistically
-      setSelectedRole(newRole);
-      
-      // Allow a bit more time for the database operation
-      const updatePromise = onUpdateRole(userId, newRole);
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Role update timed out. Please try again.')), 10000)
-      );
-      
-      await Promise.race([updatePromise, timeoutPromise]);
+      await onUpdateRole(userId, newRole);
       
       // Show feedback with fixed role
       toast.success(`Role updated to ${newRole}`, {
@@ -64,10 +53,8 @@ export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole 
       
     } catch (error: any) {
       console.error('[RoleSelector] Error updating role:', error);
-      setError(error.message || 'Failed to update role');
-      
-      toast.error('Failed to update role', {
-        description: error.message || "There was an error updating the user's role."
+      toast.error(error.message || 'Failed to update role', {
+        description: "You may try using the Role Manager tool if you continue to have issues."
       });
       
       // Revert selection on error
@@ -126,12 +113,6 @@ export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole 
           <SelectItem value="user" disabled={!canManageUser}>User</SelectItem>
         </SelectContent>
       </Select>
-      
-      {error && (
-        <div className="text-red-500 text-xs mt-1 absolute -bottom-5 left-0 right-0">
-          {error}
-        </div>
-      )}
     </div>
   );
 }

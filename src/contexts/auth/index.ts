@@ -1,5 +1,4 @@
 
-// Re-export everything the module needs to expose
 export * from './AuthProvider';
 export * from './types';
 export * from './authUtils';

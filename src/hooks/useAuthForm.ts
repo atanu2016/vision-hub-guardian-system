@@ -33,14 +33,8 @@ export function useAuthForm({ onSuccess }: UseAuthFormProps = {}) {
       // Clear any previous errors
       toast.dismiss();
       
-      // Delay the onSuccess callback slightly to ensure authentication state is fully processed
-      if (onSuccess) {
-        setTimeout(() => {
-          onSuccess();
-        }, 200);
-      }
-      
-      // Toast is now handled by the Auth component to avoid duplicate messages
+      if (onSuccess) onSuccess();
+      toast.success('Login successful!');
     } catch (error: any) {
       console.error('[AUTH FORM] Login error:', error);
       toast.dismiss(); // Clear any previous toasts
@@ -59,10 +53,7 @@ export function useAuthForm({ onSuccess }: UseAuthFormProps = {}) {
       
       throw error;
     } finally {
-      // Use a small timeout to prevent state updates during potential redirects
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 100);
+      setIsLoading(false);
     }
   }, [signIn, onSuccess, isLoading]);
 
