@@ -79,7 +79,7 @@ export async function resetPassword(email: string): Promise<void> {
     console.log("[AUTH ACTION] Resetting password for:", email);
     
     // Add a redirect URL that includes the full origin
-    const redirectUrl = `${window.location.origin}/auth?reset=true`;
+    const redirectUrl = `${window.location.origin}/auth?tab=login`;
     console.log("[AUTH ACTION] Using redirect URL:", redirectUrl);
     
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -99,7 +99,7 @@ export async function resetPassword(email: string): Promise<void> {
   }
 }
 
-// New function for admin to reset user's password directly
+// Function for admin to reset user's password directly
 export async function adminResetUserPassword(userId: string, newPassword: string): Promise<void> {
   try {
     // Validate password strength
@@ -111,13 +111,20 @@ export async function adminResetUserPassword(userId: string, newPassword: string
     console.log("[AUTH ACTION] Admin resetting password for user:", userId);
     
     // Use Supabase Edge Function for admin password reset
-    const { error } = await supabase.functions.invoke('admin-reset-password', {
+    const { data, error } = await supabase.functions.invoke('admin-reset-password', {
       body: { userId, newPassword }
     });
     
     if (error) {
       console.error("[AUTH ACTION] Admin password reset error:", error.message);
+      toast.error(error.message || 'Error resetting user password');
       throw error;
+    }
+    
+    if (data && data.error) {
+      console.error("[AUTH ACTION] Admin password reset API error:", data.error);
+      toast.error(data.error || 'Error resetting user password');
+      throw new Error(data.error);
     }
     
     toast.success('User password has been reset successfully');

@@ -52,7 +52,7 @@ const UserManagement = () => {
   const [showEmailResetDialog, setShowEmailResetDialog] = useState(false);
   const [selectedUserEmail, setSelectedUserEmail] = useState('');
   
-  // New state for admin direct password reset
+  // State for admin direct password reset
   const [showAdminPasswordResetDialog, setShowAdminPasswordResetDialog] = useState(false);
   const [newUserPassword, setNewUserPassword] = useState('');
   const [adminPasswordResetLoading, setAdminPasswordResetLoading] = useState(false);
@@ -139,13 +139,13 @@ const UserManagement = () => {
     setAdminPasswordResetLoading(true);
     try {
       await adminResetUserPassword(selectedUserId, newUserPassword);
+      setAdminPasswordResetLoading(false);
       setShowAdminPasswordResetDialog(false);
       setNewUserPassword('');
       toast.success("User password has been reset successfully");
     } catch (error) {
-      // Error is handled in adminResetUserPassword function
-    } finally {
       setAdminPasswordResetLoading(false);
+      // Error is handled in adminResetUserPassword function
     }
   };
 
