@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useCallback, memo } from "react";
 import { Camera } from "@/types/camera";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,31 +10,35 @@ interface LiveFeedProps {
   camera: Camera;
 }
 
-const LiveFeed = ({ camera }: LiveFeedProps) => {
+const LiveFeed = memo(({ camera }: LiveFeedProps) => {
   const [isMuted, setIsMuted] = useState(true);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [connectionLost, setConnectionLost] = useState(false);
 
   // This would be connected to actual stream errors in production
-  const handleStreamError = (error: string) => {
+  const handleStreamError = useCallback((error: string) => {
     if (error.includes("unavailable") || error.includes("offline")) {
       setConnectionLost(true);
     }
-  };
+  }, []);
 
-  const handleReconnect = () => {
+  const handleReconnect = useCallback(() => {
     setConnectionLost(false);
     // In production, add actual reconnection logic here
-  };
+  }, []);
 
-  const toggleFullScreen = () => {
+  const toggleFullScreen = useCallback(() => {
     setIsFullScreen(!isFullScreen);
     // In production, implement actual fullscreen logic
-  };
+  }, [isFullScreen]);
 
-  const toggleMute = () => {
+  const toggleMute = useCallback(() => {
     setIsMuted(!isMuted);
-  };
+  }, [isMuted]);
+
+  if (!camera || !camera.id) {
+    return null;
+  }
 
   return (
     <Card className={`overflow-hidden ${isFullScreen ? 'fixed inset-0 z-50' : 'h-full'}`}>
@@ -86,6 +90,8 @@ const LiveFeed = ({ camera }: LiveFeedProps) => {
       </CardFooter>
     </Card>
   );
-};
+});
+
+LiveFeed.displayName = "LiveFeed";
 
 export default LiveFeed;

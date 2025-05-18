@@ -17,15 +17,19 @@ export function useSessionManager(
   const mountedRef = useRef(true);
   const lastErrorRef = useRef<string | null>(null);
   const fetchingProfileRef = useRef(false);
+  const authListenerSetRef = useRef(false);
 
   // Setup the auth listener and handle session state
   useEffect(() => {
+    if (authListenerSetRef.current) return;
+    
     console.log("[AUTH] Setting up auth state listener");
     setIsLoading(true);
+    authListenerSetRef.current = true;
     
     // Set up the auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
+      (event, currentSession) => {
         if (!mountedRef.current) return;
         
         console.log("[AUTH] Auth state changed:", event, currentSession?.user?.email);
@@ -42,7 +46,9 @@ export function useSessionManager(
           }
 
           // Fetch user profile when signed in - use a flag to prevent multiple simultaneous fetches
-          if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && currentSession?.user && !fetchingProfileRef.current) {
+          if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && 
+               currentSession?.user && 
+               !fetchingProfileRef.current) {
             fetchingProfileRef.current = true;
             
             // Use setTimeout to prevent potential deadlocks with auth state changes
@@ -63,7 +69,7 @@ export function useSessionManager(
               } finally {
                 fetchingProfileRef.current = false;
               }
-            }, 100); // Small delay to ensure auth state is processed first
+            }, 0);
           }
         } catch (error) {
           handleAuthError(error, "Error processing authentication change");
@@ -86,7 +92,6 @@ export function useSessionManager(
         
         if (error) {
           console.error("[AUTH] Session check error:", error);
-          toast.error("Session check failed. Please try again.");
           throw error;
         }
         
@@ -103,7 +108,6 @@ export function useSessionManager(
             await fetchUserData(currentSession.user.id, currentSession.user);
           } catch (fetchError) {
             console.error("[AUTH] Error fetching initial user data:", fetchError);
-            toast.error("Error loading your profile. Please try again.");
           }
         } else {
           console.log("[AUTH] No session found");

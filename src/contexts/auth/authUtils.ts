@@ -7,42 +7,20 @@ export async function fetchUserProfile(userId: string, user: User | null): Promi
   try {
     console.log("Fetching profile for user:", userId);
     
-    // Special handling for admin@home.local - direct SQL to bypass RLS issues
-    if (user?.email === 'admin@home.local') {
-      console.log("admin@home.local detected - using direct SQL for profile");
+    // Special handling for admin@home.local and superadmin@home.local
+    if (user?.email === 'admin@home.local' || user?.email === 'superadmin@home.local') {
+      console.log("Special admin account detected - using direct profile creation");
       
-      try {
-        // Use direct SQL query to bypass RLS
-        const { data, error } = await supabase.rpc('is_admin');
-        
-        if (error) {
-          console.error("Error checking admin status via RPC:", error);
-        } else {
-          console.log("Admin status check via RPC:", data);
-        }
-        
-        // Create a default admin profile
-        const adminProfile: Profile = {
-          id: userId,
-          full_name: 'Administrator',
-          is_admin: true,
-          mfa_enrolled: false,
-          mfa_required: false
-        };
-        
-        return adminProfile;
-      } catch (err) {
-        console.error("Error in admin profile handling:", err);
-        
-        // Fallback admin profile
-        return {
-          id: userId,
-          full_name: 'Administrator',
-          is_admin: true,
-          mfa_enrolled: false,
-          mfa_required: false
-        };
-      }
+      // Create a default admin profile
+      const adminProfile: Profile = {
+        id: userId,
+        full_name: user?.email === 'superadmin@home.local' ? 'Super Administrator' : 'Administrator',
+        is_admin: true,
+        mfa_enrolled: false,
+        mfa_required: false
+      };
+      
+      return adminProfile;
     }
     
     // Normal profile fetch with error handling and fallback
@@ -60,7 +38,7 @@ export async function fetchUserProfile(userId: string, user: User | null): Promi
         return {
           id: userId,
           full_name: user?.email?.split('@')[0] || 'User',
-          is_admin: user?.email === 'admin@home.local',
+          is_admin: false,
           mfa_enrolled: false,
           mfa_required: false
         };
@@ -73,7 +51,7 @@ export async function fetchUserProfile(userId: string, user: User | null): Promi
         const defaultProfile = {
           id: userId,
           full_name: user?.email?.split('@')[0] || 'New User',
-          is_admin: user?.email === 'admin@home.local',
+          is_admin: false,
           mfa_enrolled: false,
           mfa_required: false
         };
@@ -89,7 +67,7 @@ export async function fetchUserProfile(userId: string, user: User | null): Promi
       return {
         id: userId,
         full_name: user?.email?.split('@')[0] || 'User',
-        is_admin: user?.email === 'admin@home.local',
+        is_admin: false,
         mfa_enrolled: false,
         mfa_required: false
       };
@@ -104,10 +82,23 @@ export async function fetchUserRole(userId: string, user: User | null): Promise<
   try {
     console.log("Fetching role for user:", userId);
     
-    // Special handling for admin@home.local - always superadmin
-    if (user?.email === 'admin@home.local') {
-      console.log("admin@home.local detected - setting as superadmin");
+    // Special handling for admin accounts
+    if (user?.email === 'admin@home.local' || user?.email === 'superadmin@home.local') {
+      console.log("admin@home.local or superadmin@home.local detected - setting as superadmin");
       return 'superadmin';
+    }
+    
+    // Try our custom function first to avoid RLS issues
+    try {
+      console.log("Attempting to use get_user_role function");
+      const { data: roleData, error: roleError } = await supabase.rpc('get_user_role');
+      
+      if (!roleError && roleData) {
+        console.log("Role retrieved via function:", roleData);
+        return roleData as UserRole;
+      }
+    } catch (fnError) {
+      console.warn("Error using get_user_role function:", fnError);
     }
     
     // Try direct role query with fallback

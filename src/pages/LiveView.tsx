@@ -21,6 +21,10 @@ const LiveView = () => {
   useEffect(() => {
     if (user) {
       fetchCameras();
+    } else {
+      // Clear cameras if no user is authenticated
+      setCameras([]);
+      setLoading(false);
     }
   }, [user, role]);
 
@@ -34,6 +38,7 @@ const LiveView = () => {
       if (!user) {
         console.log("No user authenticated, not fetching cameras");
         setCameras([]);
+        setLoading(false);
         return;
       }
 
@@ -51,9 +56,9 @@ const LiveView = () => {
         try {
           camerasData = await getAccessibleCameras(user.id, role);
         } catch (err) {
-          console.error("Error fetching assigned cameras, showing all cameras as fallback", err);
-          // Fall back to showing all cameras if assignment check fails
-          camerasData = await fetchCamerasFromDB();
+          console.error("Error fetching assigned cameras, showing empty view", err);
+          // Don't fall back to showing all cameras for security reasons
+          camerasData = [];
         }
       }
       
@@ -69,26 +74,6 @@ const LiveView = () => {
     }
   };
 
-  if (error) {
-    return (
-      <AppLayout fullWidth>
-        <div className="space-y-4">
-          <LiveViewHeader layout={layout} setLayout={setLayout} onRefresh={fetchCameras} />
-          <div className="p-4 border border-red-300 bg-red-50 dark:bg-red-900/20 rounded-lg">
-            <h3 className="text-lg font-medium text-red-800 dark:text-red-300">Error loading cameras</h3>
-            <p className="mt-1 text-sm text-red-700 dark:text-red-400">{error}</p>
-            <button 
-              onClick={fetchCameras}
-              className="mt-3 px-3 py-1 bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 text-sm rounded hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
-            >
-              Try Again
-            </button>
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
-
   return (
     <AppLayout fullWidth>
       <div className="space-y-4">
@@ -100,8 +85,19 @@ const LiveView = () => {
 
         {loading ? (
           <LiveViewSkeleton />
+        ) : error ? (
+          <div className="p-4 border border-red-300 bg-red-50 dark:bg-red-900/20 rounded-lg">
+            <h3 className="text-lg font-medium text-red-800 dark:text-red-300">Error loading cameras</h3>
+            <p className="mt-1 text-sm text-red-700 dark:text-red-400">{error}</p>
+            <button 
+              onClick={fetchCameras}
+              className="mt-3 px-3 py-1 bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 text-sm rounded hover:bg-red-200 dark:hover:bg-red-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
         ) : cameras.length === 0 ? (
-          <EmptyLiveView role={role} />
+          <EmptyLiveView role={role || 'user'} />
         ) : (
           <LiveViewGrid cameras={cameras} layout={layout} />
         )}
