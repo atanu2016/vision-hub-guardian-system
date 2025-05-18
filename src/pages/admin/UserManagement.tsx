@@ -77,6 +77,12 @@ const UserManagement = () => {
   };
 
   const handleResetPassword = async (userId: string, userEmail: string) => {
+    // Check if we have a valid email address
+    if (!userEmail || userEmail.indexOf('@') === -1) {
+      toast.error('Cannot reset password: No valid email address for this user');
+      return;
+    }
+    
     // Store the selected user's email and open the dialog
     setSelectedUserEmail(userEmail);
     setPasswordResetEmail(userEmail);
@@ -91,6 +97,14 @@ const UserManagement = () => {
 
     setPasswordResetLoading(true);
     try {
+      // Ensure we're sending to a real email address, not a UUID
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(passwordResetEmail)) {
+        toast.error("Please enter a valid email address (e.g. user@example.com)");
+        setPasswordResetLoading(false);
+        return;
+      }
+      
       await resetPassword(passwordResetEmail);
       setPasswordResetLoading(false);
       setShowEmailResetDialog(false);
