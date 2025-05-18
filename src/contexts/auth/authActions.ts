@@ -32,28 +32,36 @@ export async function signOut(): Promise<void> {
   try {
     console.log("[AUTH ACTION] Signing out user");
     
+    // Show a loading message
+    toast.loading('Signing out...');
+    
     // Clear Supabase stored session first
     const { error } = await supabase.auth.signOut();
     
     if (error) {
       console.error("[AUTH ACTION] Sign out error:", error.message);
+      toast.dismiss();
+      toast.error(error.message || 'Failed to sign out');
       throw error;
     }
     
-    // Clear any stored tokens from browsers local/session storage
+    // Clear any stored tokens from browser's local/session storage
     localStorage.removeItem("supabase.auth.token");
     sessionStorage.removeItem("supabase.auth.token");
     
-    // Show success message and redirect
+    // Show success message before redirect
+    toast.dismiss();
     toast.success('Successfully signed out');
     
-    // Use a proper timeout to allow state to update and toast to display
+    // Force hard navigation to auth page with a small delay
+    // This ensures the auth state is fully cleared
     setTimeout(() => {
       console.log("[AUTH ACTION] Redirecting to auth page after successful logout");
       window.location.href = '/auth';
-    }, 500);
+    }, 800);
   } catch (error: any) {
     console.error("[AUTH ACTION] Sign out exception:", error.message);
+    toast.dismiss();
     toast.error(error.message || 'Error signing out');
     throw error;
   }

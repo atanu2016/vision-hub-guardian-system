@@ -18,8 +18,8 @@ const SidebarFooter = () => {
     try {
       setIsLoggingOut(true);
       console.log("Sidebar footer: initiating sign out");
-      toast.loading("Signing out...");
       await signOut();
+      // Note: We don't reset isLoggingOut here because the page will be redirected
     } catch (error) {
       console.error("Sign out error:", error);
       toast.error("Failed to sign out. Please try again.");

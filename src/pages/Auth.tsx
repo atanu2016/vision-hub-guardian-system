@@ -55,8 +55,11 @@ const Auth = () => {
       const path = from === '/auth' ? (isAdmin ? '/dashboard' : '/live') : from;
       console.log("[Auth Page] Redirecting to:", path);
       
-      // Use navigate for React Router based navigation
-      navigate(path, { replace: true });
+      // Use navigate for React Router based navigation with a small timeout
+      // to allow state to fully update
+      setTimeout(() => {
+        navigate(path, { replace: true });
+      }, 500);
     }
   }, [isLoading, user, requiresMFA, isAdmin, from, redirecting, authInitialized, navigate]);
 
