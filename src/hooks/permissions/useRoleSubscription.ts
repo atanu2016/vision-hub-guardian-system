@@ -8,6 +8,7 @@ import { invalidateRoleCache, getCachedRole, setCachedRole } from "@/services/us
 export function useRoleSubscription() {
   const { role: authRole, user } = useAuth();
   const [role, setRole] = useState<UserRole>(authRole);
+  const [error, setError] = useState<string | null>(null);
   const subscriptionRef = useRef<any>(null);
   const fetchTimerRef = useRef<number | null>(null);
   const lastFetchRef = useRef<number>(0);
@@ -45,13 +46,14 @@ export function useRoleSubscription() {
       
       try {
         console.log('[ROLE SUBSCRIPTION] Fetching current role');
+        setError(null);
         
         // Use cached role first for immediate response
         const cachedRoleResult = getCachedRole(userId);
         if (cachedRoleResult !== null) {
           // Handle different return types from getCachedRole
           const cachedRole = typeof cachedRoleResult === 'object' && 'role' in cachedRoleResult 
-            ? cachedRoleResult.role 
+            ? cachedRoleResult.role as UserRole
             : cachedRoleResult;
             
           console.log('[ROLE SUBSCRIPTION] Using cached role:', cachedRole);
@@ -69,6 +71,27 @@ export function useRoleSubscription() {
         if (cacheAge < 30000 && cachedRoleResult !== null) {
           console.log('[ROLE SUBSCRIPTION] Cache is fresh, skipping database query');
           return;
+        }
+        
+        // Try direct query without RLS
+        try {
+          // Use security definer function for RLS bypass
+          const { data: functionResult, error: functionError } = await supabase
+            .rpc('get_user_role', { _user_id: userId });
+            
+          if (!functionError && functionResult) {
+            console.log('[ROLE SUBSCRIPTION] Got role from function:', functionResult);
+            const fetchedRole = functionResult as UserRole;
+            
+            if (fetchedRole !== role) {
+              setRole(fetchedRole);
+              setCachedRole(userId, fetchedRole);
+            }
+            return;
+          }
+        } catch (functionErr) {
+          console.warn('[ROLE SUBSCRIPTION] Function error:', functionErr);
+          // Fall through to regular query
         }
         
         // Optimize the database query
@@ -89,20 +112,26 @@ export function useRoleSubscription() {
           }
         } else if (error) {
           console.error('[ROLE SUBSCRIPTION] Error fetching role:', error);
+          setError(error.message);
+          
           // Use cached value or fall back to auth role
           if (cachedRoleResult !== null) {
             const fallbackRole = typeof cachedRoleResult === 'object' && 'role' in cachedRoleResult 
-              ? cachedRoleResult.role 
+              ? cachedRoleResult.role as UserRole
               : cachedRoleResult;
               
             console.log('[ROLE SUBSCRIPTION] Using fallback role:', fallbackRole);
             setRole(fallbackRole);
           } else {
+            // When all else fails, use the auth role from context
+            console.log('[ROLE SUBSCRIPTION] Falling back to authRole:', authRole);
             setRole(authRole);
           }
         }
       } catch (err) {
         console.error('[ROLE SUBSCRIPTION] Error in role fetch:', err);
+        // Use authRole as ultimate fallback
+        setRole(authRole);
       } finally {
         fetchInProgress = false;
       }
@@ -170,5 +199,5 @@ export function useRoleSubscription() {
     }
   }, [authRole, userId, role]);
   
-  return { role, authRole };
+  return { role, authRole, error };
 }

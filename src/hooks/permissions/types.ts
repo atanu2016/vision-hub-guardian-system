@@ -1,18 +1,12 @@
 
-import { UserRole } from "@/types/admin";
+import { UserRole } from "@/contexts/auth/types";
 import { Permission } from "@/utils/permissionUtils";
-
-export interface PermissionCache {
-  [key: string]: {
-    timestamp: number;
-    result: boolean;
-  }
-}
 
 export interface UsePermissionsReturn {
   hasPermission: (permission: Permission) => boolean;
-  canManageRole?: (targetRole: UserRole) => boolean;
+  canManageRole: (role: UserRole) => boolean;
+  role: UserRole;
   currentRole: UserRole;
-  role: UserRole; // Added missing role property
-  authRole: UserRole; // Make sure authRole is also included
+  authRole: UserRole;
+  error?: string | null;
 }

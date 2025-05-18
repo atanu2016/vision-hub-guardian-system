@@ -4,17 +4,21 @@
  */
 import type { UserRole } from '@/contexts/auth/types';
 
+// Define the types clearly to avoid confusion
+type RoleCacheEntry = { role: UserRole, timestamp: number };
+type CacheReturn = UserRole | RoleCacheEntry | null;
+
 // Low-latency in-memory cache
-const roleCache = new Map<string, { role: UserRole, timestamp: number }>();
+const roleCache = new Map<string, RoleCacheEntry>();
 const CACHE_TIMEOUT = 60000; // 60 second cache - optimized for better performance
 
 // Separate cache for frequently accessed roles to avoid localStorage overhead
-const frequentAccessCache = new Map<string, { role: UserRole, timestamp: number }>();
+const frequentAccessCache = new Map<string, RoleCacheEntry>();
 
 /**
  * Get a cached role with improved performance
  */
-export function getCachedRole(userId: string, includeTimestamp = false): UserRole | { role: UserRole, timestamp: number } | null {
+export function getCachedRole(userId: string, includeTimestamp = false): CacheReturn {
   if (!userId) return null;
   
   // First check frequent access cache (RAM only, super fast)
@@ -40,7 +44,7 @@ export function getCachedRole(userId: string, includeTimestamp = false): UserRol
     
     if (lsRole && lsTime && (Date.now() - parseInt(lsTime, 10) < CACHE_TIMEOUT)) {
       const role = lsRole as UserRole;
-      const entry = { role, timestamp: parseInt(lsTime, 10) };
+      const entry: RoleCacheEntry = { role, timestamp: parseInt(lsTime, 10) };
       setCachedRole(userId, role);
       return includeTimestamp ? entry : role;
     }
@@ -58,7 +62,7 @@ export function getCachedRole(userId: string, includeTimestamp = false): UserRol
 export function setCachedRole(userId: string, role: UserRole): void {
   if (!userId || !role) return;
   
-  const cacheEntry = { 
+  const cacheEntry: RoleCacheEntry = { 
     role, 
     timestamp: Date.now() 
   };

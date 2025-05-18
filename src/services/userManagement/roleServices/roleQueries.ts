@@ -30,6 +30,25 @@ export async function fetchUserRole(userId: string): Promise<UserRole> {
     return cachedQuery.data;
   }
   
+  // Try to use security definer function for RLS bypass
+  try {
+    const { data: functionResult, error: functionError } = await supabase
+      .rpc('get_user_role', { _user_id: userId });
+      
+    if (!functionError && functionResult) {
+      const role = functionResult as UserRole;
+      setCachedRole(userId, role);
+      queryCache.set(cacheKey, {
+        data: role,
+        timestamp: Date.now()
+      });
+      return role;
+    }
+  } catch (err) {
+    console.warn('[Role Queries] Function query failed, falling back to direct query:', err);
+    // Continue to direct query as fallback
+  }
+  
   // Perform optimized database query
   const { data, error } = await supabase
     .from('user_roles')
@@ -38,7 +57,9 @@ export async function fetchUserRole(userId: string): Promise<UserRole> {
     .maybeSingle();
     
   if (error) {
-    throw error;
+    console.error('[Role Queries] Error fetching role:', error);
+    // If we encounter a recursion error or other DB issue, return 'user' as a safe default
+    return 'user';
   }
   
   // Validate and process result
@@ -124,7 +145,25 @@ export async function checkUserHasRole(userId: string, role: UserRole): Promise<
     // Use cached role if available
     const cachedRole = getCachedRole(userId);
     if (cachedRole) {
-      return cachedRole === role;
+      const actualRole = typeof cachedRole === 'object' && 'role' in cachedRole ? 
+        cachedRole.role : cachedRole;
+      return actualRole === role;
+    }
+    
+    // Try to use security definer function if available
+    try {
+      const { data: functionResult, error: functionError } = await supabase
+        .rpc('has_role', { 
+          _user_id: userId,
+          _role: role
+        });
+        
+      if (!functionError && functionResult !== null) {
+        return functionResult as boolean;
+      }
+    } catch (err) {
+      console.warn('[Role Queries] Function has_role failed, falling back:', err);
+      // Continue to direct query as fallback
     }
     
     // Use optimized query with count for better performance

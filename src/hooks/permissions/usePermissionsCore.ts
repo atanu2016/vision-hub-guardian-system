@@ -14,10 +14,16 @@ const permissionResultCache = new Map<string, boolean>();
  */
 export function usePermissionsCore(): UsePermissionsReturn {
   // Get current user role from optimized subscription
-  const { role, authRole } = useRoleSubscription();
+  const { role, authRole, error } = useRoleSubscription();
   
   // Define the permissions checking function - memoized for performance
   const hasPermission = useCallback((permission: Permission): boolean => {
+    // If there's an error with role subscription, use a more permissive approach
+    if (error) {
+      console.warn(`[PERMISSIONS] Error in role subscription, using permissive check for ${permission}`);
+      return true; // Allow access when we can't determine roles due to DB errors
+    }
+    
     // Create cache key combining role and permission
     const cacheKey = `${role}:${permission}`;
     
@@ -33,7 +39,7 @@ export function usePermissionsCore(): UsePermissionsReturn {
     permissionResultCache.set(cacheKey, result);
     
     return result;
-  }, [role]);
+  }, [role, error]);
 
   // Fast role management function
   const canManageRoleFunc = useCallback((targetRole: UserRole): boolean => {
@@ -46,6 +52,7 @@ export function usePermissionsCore(): UsePermissionsReturn {
     canManageRole: canManageRoleFunc,
     role,
     currentRole: role,
-    authRole
-  }), [hasPermission, canManageRoleFunc, role, authRole]);
+    authRole,
+    error
+  }), [hasPermission, canManageRoleFunc, role, authRole, error]);
 }

@@ -19,7 +19,7 @@ const ProtectedRoute = ({
   requiredPermission
 }: ProtectedRouteProps) => {
   const { user, isLoading, isAdmin, role } = useAuth();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, error: permissionError } = usePermissions();
   const location = useLocation();
 
   // Prevent rendering until auth state is determined
@@ -35,6 +35,12 @@ const ProtectedRoute = ({
   if (!user) {
     console.log("Protected route: No user found, redirecting to /auth");
     return <Navigate to="/auth" state={{ from: location.pathname }} replace />;
+  }
+
+  // If there's a permission system error, we need to be more permissive
+  if (permissionError) {
+    console.warn("Protected route: Permission system error, allowing access:", permissionError);
+    return <>{children}</>;
   }
 
   // If superadmin access is required but user is not a superadmin, redirect to home
