@@ -11,8 +11,24 @@ import { useRolePolling } from "./useRolePolling";
  * Main hook for role subscription with optimizations
  */
 export function useRoleSubscription() {
-  // Get auth context
-  const auth = useAuth();
+  // Get auth context with error handling for initialization
+  let auth;
+  try {
+    auth = useAuth();
+  } catch (error) {
+    console.warn("[ROLE SUBSCRIPTION] Auth context not available yet, using defaults");
+    // Return default values during initialization
+    return { 
+      role: 'user', 
+      authRole: 'user', 
+      error: "Auth context unavailable",
+      isLoading: true,
+      isPolling: false,
+      isSubscribed: false
+    };
+  }
+
+  // Extract auth values with fallbacks
   const authRole = auth?.role || 'user';
   const userId = useMemo(() => auth?.user?.id, [auth?.user?.id]);
   
@@ -30,14 +46,21 @@ export function useRoleSubscription() {
     }
   }, [role, userId]);
   
-  // Set up role fetching mechanism
+  // Set up role fetching mechanism with error handling
+  let fetchRoleData = { fetchCurrentRole: async () => authRole, error: null, isFetching: false };
+  try {
+    fetchRoleData = useRoleFetching(userId, authRole);
+  } catch (error) {
+    console.warn("[ROLE SUBSCRIPTION] Error setting up role fetching:", error);
+  }
+  
   const { 
     fetchCurrentRole, 
     error,
     isFetching 
-  } = useRoleFetching(userId, authRole);
+  } = fetchRoleData;
   
-  // Wrapper function for the polling mechanism
+  // Wrapper function for the polling mechanism with error handling
   const fetchRoleWrapper = useCallback(async () => {
     if (!userId) return;
     try {
@@ -48,11 +71,21 @@ export function useRoleSubscription() {
     }
   }, [userId, fetchCurrentRole, handleRoleUpdate]);
   
-  // Set up database subscription
-  const { isSubscribed } = useRoleDatabase(userId, handleRoleUpdate);
+  // Set up database subscription with error handling
+  let dbSubscription = { isSubscribed: false };
+  try {
+    dbSubscription = useRoleDatabase(userId, handleRoleUpdate);
+  } catch (error) {
+    console.warn("[ROLE SUBSCRIPTION] Error setting up database subscription:", error);
+  }
   
-  // Set up polling mechanism
-  const { isPolling } = useRolePolling(userId, fetchRoleWrapper);
+  // Set up polling mechanism with error handling
+  let pollingData = { isPolling: false };
+  try {
+    pollingData = useRolePolling(userId, fetchRoleWrapper);
+  } catch (error) {
+    console.warn("[ROLE SUBSCRIPTION] Error setting up polling:", error);
+  }
   
   // Update local role when authRole changes
   useEffect(() => {
@@ -74,7 +107,7 @@ export function useRoleSubscription() {
     authRole, 
     error,
     isLoading: isFetching && !role,
-    isPolling,
-    isSubscribed
+    isPolling: pollingData.isPolling,
+    isSubscribed: dbSubscription.isSubscribed
   };
 }

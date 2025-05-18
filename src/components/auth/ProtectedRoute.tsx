@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/auth';
 import { Loader2 } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Permission } from '@/utils/permissionUtils';
+import { useState, useEffect } from 'react';
 
 type ProtectedRouteProps = {
   children: React.ReactNode;
@@ -20,6 +21,8 @@ const ProtectedRoute = ({
 }: ProtectedRouteProps) => {
   const { user, isLoading, isAdmin, role } = useAuth();
   const location = useLocation();
+  const [permissionChecked, setPermissionChecked] = useState(false);
+  const [hasRequiredPermission, setHasRequiredPermission] = useState(true);
   
   // Prevent rendering until auth state is determined
   if (isLoading) {
@@ -36,21 +39,38 @@ const ProtectedRoute = ({
     return <Navigate to="/auth" state={{ from: location.pathname }} replace />;
   }
 
-  // Permission check is now separate to ensure we don't have circular dependencies
-  // Only check permissions if a specific permission is required
-  if (requiredPermission) {
-    // Use a safer approach to handle permissions that delays the check
-    // This prevents circular dependencies during initialization
-    try {
-      const { hasPermission } = usePermissions();
-      if (!hasPermission(requiredPermission)) {
-        console.log(`Protected route: Permission '${requiredPermission}' required but not granted, redirecting to /`);
-        return <Navigate to="/" replace />;
+  // Use a safer approach with useEffect to check permissions after the component mounts
+  // This prevents circular dependencies during initialization
+  useEffect(() => {
+    if (requiredPermission) {
+      try {
+        const { hasPermission } = usePermissions();
+        setHasRequiredPermission(hasPermission(requiredPermission));
+      } catch (error) {
+        console.warn("Protected route: Permission system error, allowing access:", error);
+        // If there's an error checking permissions, we're more permissive
+        setHasRequiredPermission(true);
       }
-    } catch (error) {
-      console.warn("Protected route: Permission system error, allowing access:", error);
-      // If there's an error checking permissions, we're more permissive
+      setPermissionChecked(true);
+    } else {
+      setPermissionChecked(true);
     }
+  }, [requiredPermission, user?.id]);
+  
+  // Wait for permission check to complete if a permission is required
+  if (requiredPermission && !permissionChecked) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <span className="ml-2">Checking permissions...</span>
+      </div>
+    );
+  }
+  
+  // If a specific permission is required and the user doesn't have it, redirect
+  if (requiredPermission && !hasRequiredPermission) {
+    console.log(`Protected route: Permission '${requiredPermission}' required but not granted, redirecting to /`);
+    return <Navigate to="/" replace />;
   }
 
   // If superadmin access is required but user is not a superadmin, redirect to home
@@ -65,7 +85,7 @@ const ProtectedRoute = ({
     return <Navigate to="/" replace />;
   }
 
-  // User is authenticated (and has required role/permission if specified), allow access to the route
+  // User is authenticated and has required role/permission if specified
   console.log("Protected route: Access granted");
   return <>{children}</>;
 };

@@ -11,6 +11,7 @@ interface UseAuthFormProps {
 export function useAuthForm({ onSuccess }: UseAuthFormProps = {}) {
   const [emailLoginsDisabled, setEmailLoginsDisabled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [loginAttemptCount, setLoginAttemptCount] = useState(0);
   const { signIn } = useAuth();
   
   // Memoize login handler to prevent unnecessary rerenders
@@ -19,6 +20,7 @@ export function useAuthForm({ onSuccess }: UseAuthFormProps = {}) {
     
     setIsLoading(true);
     console.log('[AUTH FORM] Attempting login for:', values.email);
+    setLoginAttemptCount(prev => prev + 1);
     
     try {
       // Add timeout to prevent infinite loading state
@@ -37,10 +39,8 @@ export function useAuthForm({ onSuccess }: UseAuthFormProps = {}) {
       if (onSuccess) {
         setTimeout(() => {
           onSuccess();
-        }, 200);
+        }, 500); // Increased delay for better state management
       }
-      
-      // Toast is now handled by the Auth component to avoid duplicate messages
     } catch (error: any) {
       console.error('[AUTH FORM] Login error:', error);
       toast.dismiss(); // Clear any previous toasts
@@ -62,7 +62,7 @@ export function useAuthForm({ onSuccess }: UseAuthFormProps = {}) {
       // Use a small timeout to prevent state updates during potential redirects
       setTimeout(() => {
         setIsLoading(false);
-      }, 100);
+      }, 300);
     }
   }, [signIn, onSuccess, isLoading]);
 
@@ -70,6 +70,7 @@ export function useAuthForm({ onSuccess }: UseAuthFormProps = {}) {
     emailLoginsDisabled,
     setEmailLoginsDisabled,
     handleLogin,
-    isLoading
+    isLoading,
+    loginAttemptCount
   };
 }

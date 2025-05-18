@@ -12,10 +12,11 @@ import { MFAEnrollmentForm } from '@/components/auth/MFAEnrollmentForm';
 import { toast } from 'sonner';
 
 const Auth = () => {
-  const { user, isLoading, requiresMFA, isAdmin } = useAuth();
+  const { user, isLoading, requiresMFA, isAdmin, authInitialized } = useAuth();
   const [activeTab, setActiveTab] = useState('login');
   const [authStarted, setAuthStarted] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
+  const [redirectPath, setRedirectPath] = useState<string | null>(null);
   const location = useLocation();
   
   // Get the return path from location state, or default to dashboard for admins, live view for others
@@ -30,7 +31,7 @@ const Auth = () => {
   
   // Add debugging to track authentication state transitions
   useEffect(() => {
-    console.log("[Auth Page] Initial render - isLoading:", isLoading, "user:", !!user, "requiresMFA:", requiresMFA, "isAdmin:", isAdmin);
+    console.log("[Auth Page] Initial render - isLoading:", isLoading, "user:", !!user, "requiresMFA:", requiresMFA, "isAdmin:", isAdmin, "initialized:", authInitialized);
     
     if (!authStarted) {
       setAuthStarted(true);
@@ -42,18 +43,22 @@ const Auth = () => {
     console.log("[Auth Page] Auth state changed - isLoading:", isLoading, "user:", !!user, "requiresMFA:", requiresMFA, "isAdmin:", isAdmin);
     
     // Handle successful authentication with a short delay to ensure state is fully updated
-    if (user && !isLoading && !redirecting) {
+    if (user && !isLoading && authInitialized && !redirecting) {
       setRedirecting(true);
       
-      // Add a small delay before redirect to ensure all auth data is processed
-      const redirectTimeout = setTimeout(() => {
-        console.log("[Auth Page] Redirecting authenticated user to:", isAdmin ? "/dashboard" : from);
-        // The actual redirect happens in the render below
-      }, 100);
+      // Calculate where to redirect
+      const path = isAdmin ? "/dashboard" : from;
+      setRedirectPath(path);
       
-      return () => clearTimeout(redirectTimeout);
+      // Add a small delay before redirect to ensure all auth data is processed
+      console.log("[Auth Page] Will redirect to:", path, "after delay");
+      
+      setTimeout(() => {
+        console.log("[Auth Page] Executing delayed redirect to:", path);
+        toast.success(`Welcome back!`);
+      }, 500);
     }
-  }, [isLoading, user, requiresMFA, isAdmin, from, redirecting]);
+  }, [isLoading, user, requiresMFA, isAdmin, from, redirecting, authInitialized]);
 
   useEffect(() => {
     // Check URL params for tab selection
@@ -74,35 +79,33 @@ const Auth = () => {
     );
   }
   
-  // Fast path for authenticated users
-  if (user) {
-    // If MFA is required but not enrolled, show enrollment form
-    if (requiresMFA) {
-      console.log("[Auth Page] MFA required, showing enrollment form");
-      return (
-        <div className="flex min-h-screen items-center justify-center bg-vision-dark-900 p-4 sm:p-8" style={backgroundUrl ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
-          <div className="w-full max-w-md">
-            <div className="mb-8 flex justify-center">
-              <LogoComponent />
-            </div>
-            <Card className="border-vision-blue-800/30 bg-vision-dark-800/80 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-xl text-center">MFA Enrollment Required</CardTitle>
-                <CardDescription className="text-center">Please set up multi-factor authentication to proceed</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <MFAEnrollmentForm redirectUrl={from} />
-              </CardContent>
-            </Card>
+  // Perform redirect if path is set
+  if (redirectPath) {
+    console.log("[Auth Page] Redirecting to:", redirectPath);
+    return <Navigate to={redirectPath} replace />;
+  }
+  
+  // Fast path for authenticated users needing MFA
+  if (user && requiresMFA) {
+    console.log("[Auth Page] MFA required, showing enrollment form");
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-vision-dark-900 p-4 sm:p-8" style={backgroundUrl ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}>
+        <div className="w-full max-w-md">
+          <div className="mb-8 flex justify-center">
+            <LogoComponent />
           </div>
+          <Card className="border-vision-blue-800/30 bg-vision-dark-800/80 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="text-xl text-center">MFA Enrollment Required</CardTitle>
+              <CardDescription className="text-center">Please set up multi-factor authentication to proceed</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MFAEnrollmentForm redirectUrl={from} />
+            </CardContent>
+          </Card>
         </div>
-      );
-    }
-    
-    console.log("[Auth Page] User is authenticated, redirecting to", isAdmin ? "/dashboard" : from, "isAdmin:", isAdmin);
-    toast.success(`Welcome back!`);
-    
-    return <Navigate to={isAdmin ? "/dashboard" : from} replace />;
+      </div>
+    );
   }
 
   const containerStyle = backgroundUrl 
