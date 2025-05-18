@@ -12,7 +12,7 @@ export function useAuthForm({ onSuccess }: UseAuthFormProps = {}) {
   const [emailLoginsDisabled, setEmailLoginsDisabled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loginAttemptCount, setLoginAttemptCount] = useState(0);
-  const { signIn } = useAuth();
+  const { signIn, isAdmin } = useAuth();
   
   // Memoize login handler to prevent unnecessary rerenders
   const handleLogin = useCallback(async (values: LoginFormValues) => {

@@ -19,7 +19,7 @@ const Auth = () => {
   const [redirectPath, setRedirectPath] = useState<string | null>(null);
   const location = useLocation();
   
-  // Get the return path from location state, or default to dashboard for admins, live view for others
+  // Get the return path from location state, or default based on role
   const getDefaultPath = () => {
     if (isAdmin) return '/dashboard';
     return '/live';
@@ -50,8 +50,8 @@ const Auth = () => {
     if (user && !isLoading && authInitialized && !redirecting) {
       setRedirecting(true);
       
-      // Calculate where to redirect
-      const path = isAdmin ? "/dashboard" : from;
+      // Calculate where to redirect based on role
+      const path = isAdmin ? "/dashboard" : "/live";
       setRedirectPath(path);
       
       // Add a small delay before redirect to ensure all auth data is processed

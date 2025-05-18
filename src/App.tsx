@@ -39,7 +39,7 @@ function App() {
               {/* Redirect root to dashboard for admin users, live view for others */}
               <Route path="/" element={
                 <ProtectedRoute>
-                  <AdminRedirect />
+                  <RoleBasedRedirect />
                 </ProtectedRoute>
               } />
               
@@ -87,8 +87,8 @@ function App() {
   );
 }
 
-// New component to redirect based on role
-const AdminRedirect = () => {
+// Role-based redirect component
+const RoleBasedRedirect = () => {
   const { isAdmin } = useAuth();
   return isAdmin ? <Navigate to="/dashboard" replace /> : <Navigate to="/live" replace />;
 };

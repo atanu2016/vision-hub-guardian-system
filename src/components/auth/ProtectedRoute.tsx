@@ -45,8 +45,10 @@ const ProtectedRoute = ({
   useEffect(() => {
     if (requiredPermission) {
       // Import the hook dynamically to prevent circular dependencies
-      import('@/hooks/usePermissions').then(({ usePermissions }) => {
+      const importPermissions = async () => {
         try {
+          const { usePermissions } = await import('@/hooks/usePermissions');
+          // Create a new instance within the effect
           const { hasPermission } = usePermissions();
           setHasRequiredPermission(hasPermission(requiredPermission));
         } catch (error) {
@@ -55,7 +57,9 @@ const ProtectedRoute = ({
         } finally {
           setPermissionChecked(true);
         }
-      });
+      };
+      
+      importPermissions();
     } else {
       setPermissionChecked(true);
     }
