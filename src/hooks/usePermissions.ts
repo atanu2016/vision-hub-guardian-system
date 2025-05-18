@@ -1,14 +1,12 @@
 
-import { usePermissionsCore } from "./permissions/usePermissionsCore";
-import type { UsePermissionsReturn } from "./permissions/types";
-import { hasPermission, canManageRole } from "@/utils/permissionUtils";
 import { useAuth } from "@/contexts/auth";
+import { hasPermission, canManageRole } from "@/utils/permissionUtils";
 import { UserRole } from "@/contexts/auth/types";
 import { Permission } from "@/utils/permissionUtils";
 import { useState, useEffect } from "react";
 
 // This wrapper function helps prevent circular dependencies and React hooks errors
-export function usePermissions(): UsePermissionsReturn {
+export function usePermissions() {
   const { role: authRole } = useAuth();
   const [permissionCache] = useState<Map<string, boolean>>(new Map());
   
@@ -42,5 +40,5 @@ export function usePermissions(): UsePermissionsReturn {
   };
 }
 
-export type { UsePermissionsReturn };
+export type { UsePermissionsReturn } from "./permissions/types";
 export { canManageRole } from "@/utils/permissionUtils";
