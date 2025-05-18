@@ -29,19 +29,23 @@ const Auth = () => {
   
   const { backgroundUrl, LogoComponent } = AuthBranding();
   
-  // Add debugging to track authentication state transitions
+  // Track authentication state transitions
   useEffect(() => {
-    console.log("[Auth Page] Initial render - isLoading:", isLoading, "user:", !!user, "requiresMFA:", requiresMFA, "isAdmin:", isAdmin, "initialized:", authInitialized);
+    console.log("[Auth Page] Auth state:", { 
+      isLoading, 
+      user: !!user, 
+      requiresMFA, 
+      isAdmin, 
+      initialized: authInitialized 
+    });
     
     if (!authStarted) {
       setAuthStarted(true);
       console.log("[Auth Page] Authentication process started");
     }
-  }, []);
+  }, [isLoading, user, requiresMFA, isAdmin, authInitialized]);
   
   useEffect(() => {
-    console.log("[Auth Page] Auth state changed - isLoading:", isLoading, "user:", !!user, "requiresMFA:", requiresMFA, "isAdmin:", isAdmin, "authInitialized:", authInitialized);
-    
     // Only redirect when fully initialized and not loading
     if (user && !isLoading && authInitialized && !redirecting) {
       setRedirecting(true);
@@ -51,7 +55,7 @@ const Auth = () => {
       setRedirectPath(path);
       
       // Add a small delay before redirect to ensure all auth data is processed
-      console.log("[Auth Page] Will redirect to:", path, "after delay");
+      console.log("[Auth Page] Will redirect to:", path);
       
       setTimeout(() => {
         console.log("[Auth Page] Executing delayed redirect to:", path);

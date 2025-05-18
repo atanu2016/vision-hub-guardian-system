@@ -1,4 +1,3 @@
-
 /**
  * Optimized database queries for user roles
  */
@@ -30,7 +29,7 @@ export async function fetchUserRole(userId: string): Promise<UserRole> {
     return cachedQuery.data;
   }
   
-  // Try to use security definer function for RLS bypass - best approach to avoid recursion
+  // Try to use security definer function first - best approach to avoid recursion
   try {
     console.log("[Role Queries] Attempting to use get_user_role function");
     const { data: functionResult, error: functionError } = await supabase

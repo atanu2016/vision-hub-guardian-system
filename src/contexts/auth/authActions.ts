@@ -13,9 +13,6 @@ export async function signIn(email: string, password: string): Promise<void> {
       throw error;
     }
     
-    // Immediately refresh session to ensure we have the latest data
-    await supabase.auth.refreshSession();
-    
     console.log("[AUTH ACTION] Sign in successful for:", email);
     toast.success('Successfully signed in');
     

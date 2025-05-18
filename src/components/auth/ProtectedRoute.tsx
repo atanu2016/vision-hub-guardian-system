@@ -2,7 +2,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { Loader2 } from 'lucide-react';
-import { usePermissions } from '@/hooks/usePermissions';
 import { Permission } from '@/utils/permissionUtils';
 import { useState, useEffect } from 'react';
 
@@ -24,10 +23,9 @@ const ProtectedRoute = ({
   const [permissionChecked, setPermissionChecked] = useState(false);
   const [hasRequiredPermission, setHasRequiredPermission] = useState(true);
   
-  // Check if the app is still initializing
+  // Prevent rendering until auth state is determined
   const isInitializing = authLoading || !authInitialized;
   
-  // Prevent rendering until auth state is determined
   if (isInitializing) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -43,22 +41,21 @@ const ProtectedRoute = ({
     return <Navigate to="/auth" state={{ from: location.pathname }} replace />;
   }
 
-  // Use a safer approach with useEffect to check permissions after the component mounts
-  // This prevents circular dependencies during initialization
+  // Check permissions in a useEffect to avoid conditional hook calls
   useEffect(() => {
     if (requiredPermission) {
-      try {
-        const { hasPermission, isLoading } = usePermissions();
-        if (!isLoading) {
+      // Import the hook dynamically to prevent circular dependencies
+      import('@/hooks/usePermissions').then(({ usePermissions }) => {
+        try {
+          const { hasPermission } = usePermissions();
           setHasRequiredPermission(hasPermission(requiredPermission));
+        } catch (error) {
+          console.warn("Permission check error, allowing access:", error);
+          setHasRequiredPermission(true); // Be permissive on errors
+        } finally {
           setPermissionChecked(true);
         }
-      } catch (error) {
-        console.warn("Protected route: Permission system error, allowing access:", error);
-        // If there's an error checking permissions, we're more permissive
-        setHasRequiredPermission(true);
-        setPermissionChecked(true);
-      }
+      });
     } else {
       setPermissionChecked(true);
     }
