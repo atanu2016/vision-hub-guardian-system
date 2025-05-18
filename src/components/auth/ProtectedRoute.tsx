@@ -2,7 +2,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth';
 import { Loader2 } from 'lucide-react';
-import { Permission } from '@/utils/permissionUtils';
+import { Permission, hasPermission } from '@/utils/permissionUtils';
 import { useState, useEffect } from 'react';
 
 type ProtectedRouteProps = {
@@ -41,29 +41,18 @@ const ProtectedRoute = ({
     return <Navigate to="/auth" state={{ from: location.pathname }} replace />;
   }
 
-  // Check permissions in a useEffect to avoid conditional hook calls
+  // Check permissions directly if needed
   useEffect(() => {
     if (requiredPermission) {
-      // Import the hook dynamically to prevent circular dependencies
-      const importPermissions = async () => {
-        try {
-          const { usePermissions } = await import('@/hooks/usePermissions');
-          // Create a new instance within the effect
-          const { hasPermission } = usePermissions();
-          setHasRequiredPermission(hasPermission(requiredPermission));
-        } catch (error) {
-          console.warn("Permission check error, allowing access:", error);
-          setHasRequiredPermission(true); // Be permissive on errors
-        } finally {
-          setPermissionChecked(true);
-        }
-      };
-      
-      importPermissions();
+      // Direct permission check without circular dependencies
+      const result = hasPermission(role, requiredPermission);
+      setHasRequiredPermission(result);
+      setPermissionChecked(true);
+      console.log(`Permission check for ${requiredPermission}: ${result}`);
     } else {
       setPermissionChecked(true);
     }
-  }, [requiredPermission, user?.id]);
+  }, [requiredPermission, role]);
   
   // Wait for permission check to complete if a permission is required
   if (requiredPermission && !permissionChecked) {

@@ -51,7 +51,7 @@ const Auth = () => {
       setRedirecting(true);
       
       // Calculate where to redirect based on role
-      const path = isAdmin ? "/dashboard" : "/live";
+      const path = from === '/auth' ? (isAdmin ? '/dashboard' : '/live') : from;
       setRedirectPath(path);
       
       // Add a small delay before redirect to ensure all auth data is processed

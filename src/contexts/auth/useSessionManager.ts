@@ -47,6 +47,12 @@ export function useSessionManager(
           }
         } catch (error) {
           handleAuthError(error, "Error processing authentication change");
+        } finally {
+          // Always update the initialized state once we've handled the auth state change
+          if (mounted && !authInitialized) {
+            setAuthInitialized(true);
+            setIsLoading(false);
+          }
         }
       }
     );

@@ -23,7 +23,15 @@ import NotFound from "@/pages/NotFound";
 import { AuthProvider } from "@/contexts/auth";
 import { ProtectedRoute } from "@/components/auth";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 30000
+    }
+  }
+});
 
 function App() {
   return (
@@ -68,7 +76,7 @@ function App() {
               <Route path="/settings/recordings" element={<ProtectedRoute requiredPermission="configure-camera-settings"><Settings /></ProtectedRoute>} />
               <Route path="/settings/alerts" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/settings/webhooks" element={<ProtectedRoute requiredPermission="configure-global-policies"><Settings /></ProtectedRoute>} />
-              <Route path="/settings/advanced" element={<ProtectedRoute requiredPermission="manage-system"><Settings /></ProtectedRoute>} />
+              <Route path="/settings/advanced" element={<ProtectedRoute requiredPermission="configure-global-policies"><Settings /></ProtectedRoute>} />
               <Route path="/settings/database" element={<ProtectedRoute requiredPermission="manage-system"><Settings /></ProtectedRoute>} />
               <Route path="/settings/logs" element={<ProtectedRoute requiredPermission="access-logs"><Settings /></ProtectedRoute>} />
               <Route path="/settings/system" element={<ProtectedRoute requiredPermission="manage-system"><Settings /></ProtectedRoute>} />
