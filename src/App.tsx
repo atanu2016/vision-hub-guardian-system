@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme/theme-provider"
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { useAuth } from "@/contexts/auth"; // Add this import for useAuth
 
 import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
