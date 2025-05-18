@@ -30,10 +30,14 @@ export function useAuthForm({ onSuccess }: UseAuthFormProps = {}) {
       await Promise.race([loginPromise, timeoutPromise]);
       console.log('[AUTH FORM] Login successful');
       
+      // Clear any previous errors
+      toast.dismiss();
+      
       if (onSuccess) onSuccess();
       toast.success('Login successful!');
     } catch (error: any) {
       console.error('[AUTH FORM] Login error:', error);
+      toast.dismiss(); // Clear any previous toasts
       
       // Handle specific error cases
       if (error.message?.includes('Email logins are not enabled')) {

@@ -35,10 +35,10 @@ function App() {
               {/* Auth route */}
               <Route path="/auth" element={<Auth />} />
               
-              {/* Redirect root to appropriate page */}
+              {/* Redirect root to dashboard for admin users, live view for others */}
               <Route path="/" element={
                 <ProtectedRoute>
-                  <Navigate to="/live" />
+                  <AdminRedirect />
                 </ProtectedRoute>
               } />
               
@@ -85,5 +85,11 @@ function App() {
     </ThemeProvider>
   );
 }
+
+// New component to redirect based on role
+const AdminRedirect = () => {
+  const { isAdmin } = useAuth();
+  return isAdmin ? <Navigate to="/dashboard" replace /> : <Navigate to="/live" replace />;
+};
 
 export default App;

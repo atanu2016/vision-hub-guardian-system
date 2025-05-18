@@ -12,19 +12,24 @@ import { MFAEnrollmentForm } from '@/components/auth/MFAEnrollmentForm';
 import { toast } from 'sonner';
 
 const Auth = () => {
-  const { user, isLoading, requiresMFA } = useAuth();
+  const { user, isLoading, requiresMFA, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState('login');
   const [authStarted, setAuthStarted] = useState(false);
   const location = useLocation();
   
-  // Get the return path from location state, or default to '/live' as a more sensible default
-  const from = location.state?.from || '/live';
+  // Get the return path from location state, or default to dashboard for admins, live view for others
+  const getDefaultPath = () => {
+    if (isAdmin) return '/dashboard';
+    return '/live';
+  };
+  
+  const from = location.state?.from || getDefaultPath();
   
   const { backgroundUrl, LogoComponent } = AuthBranding();
   
   // Add debugging to track authentication state transitions
   useEffect(() => {
-    console.log("[Auth Page] Initial render - isLoading:", isLoading, "user:", !!user, "requiresMFA:", requiresMFA);
+    console.log("[Auth Page] Initial render - isLoading:", isLoading, "user:", !!user, "requiresMFA:", requiresMFA, "isAdmin:", isAdmin);
     
     if (!authStarted) {
       setAuthStarted(true);
@@ -33,8 +38,8 @@ const Auth = () => {
   }, []);
   
   useEffect(() => {
-    console.log("[Auth Page] Auth state changed - isLoading:", isLoading, "user:", !!user, "requiresMFA:", requiresMFA);
-  }, [isLoading, user, requiresMFA]);
+    console.log("[Auth Page] Auth state changed - isLoading:", isLoading, "user:", !!user, "requiresMFA:", requiresMFA, "isAdmin:", isAdmin);
+  }, [isLoading, user, requiresMFA, isAdmin]);
 
   useEffect(() => {
     // Check URL params for tab selection
@@ -80,9 +85,10 @@ const Auth = () => {
       );
     }
     
-    console.log("[Auth Page] User is authenticated, redirecting to", from);
+    console.log("[Auth Page] User is authenticated, redirecting to", from, "isAdmin:", isAdmin);
     toast.success(`Welcome back!`);
-    return <Navigate to={from} replace />;
+    
+    return <Navigate to={isAdmin ? "/dashboard" : from} replace />;
   }
 
   const containerStyle = backgroundUrl 
