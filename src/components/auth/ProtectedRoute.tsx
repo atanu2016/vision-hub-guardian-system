@@ -26,24 +26,30 @@ const ProtectedRoute = ({
   // Prevent rendering until auth state is determined
   const isInitializing = authLoading || !authInitialized;
 
-  // Always call useEffect regardless of conditions
+  // Use a single useEffect for permission checking
   useEffect(() => {
     // Only run the permission check logic if there's a permission required
-    // and we're not initializing anymore
+    // and we're not initializing anymore and we have a user
     if (requiredPermission && !isInitializing && user) {
-      // Direct permission check without circular dependencies
-      const result = hasPermission(role, requiredPermission);
-      setHasRequiredPermission(result);
-      setPermissionChecked(true);
-      console.log(`Permission check for ${requiredPermission}: ${result}`);
+      try {
+        // Check permission
+        const result = hasPermission(role, requiredPermission);
+        console.log(`Permission check for ${requiredPermission}: ${result}`);
+        setHasRequiredPermission(result);
+      } catch (error) {
+        console.error("Error checking permission:", error);
+        setHasRequiredPermission(false);
+      } finally {
+        setPermissionChecked(true);
+      }
     } else if (!requiredPermission || !user) {
       // If no permission is required or no user, mark as checked
       setPermissionChecked(true);
     }
   }, [requiredPermission, role, isInitializing, user]);
   
-  // Use useMemo for derived state instead of conditional early returns
-  const renderContent = useMemo(() => {
+  // Use useMemo for content rendering logic to ensure consistent hook execution
+  return useMemo(() => {
     // Show loading during initialization
     if (isInitializing) {
       return (
@@ -93,8 +99,6 @@ const ProtectedRoute = ({
     return children;
   }, [children, user, requiredPermission, permissionChecked, hasRequiredPermission, 
       superadminRequired, adminRequired, isAdmin, role, isInitializing, location.pathname]);
-
-  return renderContent;
 };
 
 export default ProtectedRoute;

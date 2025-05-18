@@ -3,7 +3,6 @@ import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { handleAuthError } from './useAuthState';
-import { toast } from 'sonner';
 
 export function useSessionManager(
   setUser: (user: User | null) => void,
@@ -79,7 +78,7 @@ export function useSessionManager(
             setIsLoading(false);
           }
         } catch (error) {
-          handleAuthError(error, "Error processing authentication change");
+          console.error("[AUTH] Error processing auth state change:", error);
           setIsLoading(false);
         } finally {
           // Always update the initialized state once we've handled the auth state change
@@ -127,7 +126,7 @@ export function useSessionManager(
           setIsLoading(false);
         }
       } catch (error) {
-        handleAuthError(error, "Error checking session");
+        console.error("[AUTH] Error checking session:", error);
         if (mountedRef.current) {
           setIsLoading(false);
         }

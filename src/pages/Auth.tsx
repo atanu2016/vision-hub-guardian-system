@@ -20,8 +20,8 @@ const Auth = () => {
   
   // Get the return path from location state, or default based on role
   const getDefaultPath = () => {
-    if (isAdmin) return '/dashboard';
-    return '/live';
+    // For testing purposes, always go to /dashboard regardless of role
+    return '/dashboard';
   };
   
   const from = location.state?.from || getDefaultPath();
@@ -52,16 +52,17 @@ const Auth = () => {
       setRedirecting(true);
       
       // Calculate where to redirect based on role
-      const path = from === '/auth' ? (isAdmin ? '/dashboard' : '/live') : from;
+      const path = from === '/auth' ? '/dashboard' : from;
       console.log("[Auth Page] Redirecting to:", path);
       
-      // Use navigate for React Router based navigation with a small timeout
+      // Use navigate for React Router based navigation with a longer timeout
       // to allow state to fully update
       setTimeout(() => {
+        console.log("[Auth Page] Executing redirect now");
         navigate(path, { replace: true });
-      }, 500);
+      }, 1000);
     }
-  }, [isLoading, user, requiresMFA, isAdmin, from, redirecting, authInitialized, navigate]);
+  }, [isLoading, user, from, redirecting, authInitialized, navigate, requiresMFA, isAdmin]);
 
   useEffect(() => {
     // Check URL params for tab selection
@@ -107,7 +108,7 @@ const Auth = () => {
   
   // If user is already authenticated and we're not in a sign-in flow, redirect
   if (user && authInitialized && !isLoading && !redirecting) {
-    const redirectPath = from === '/auth' ? (isAdmin ? '/dashboard' : '/live') : from;
+    const redirectPath = from === '/auth' ? '/dashboard' : from;
     console.log("[Auth Page] Direct redirect to:", redirectPath);
     return <Navigate to={redirectPath} replace />;
   }
