@@ -8,7 +8,7 @@ export interface UsePermissionsReturn {
   role: UserRole;
   currentRole: UserRole;
   authRole: UserRole;
-  isLoading?: boolean; // Add this property to the interface
+  isLoading?: boolean;  // Add this property to the interface
   error?: string | null;
 }
 

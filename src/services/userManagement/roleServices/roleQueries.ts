@@ -30,13 +30,15 @@ export async function fetchUserRole(userId: string): Promise<UserRole> {
     return cachedQuery.data;
   }
   
-  // Try to use security definer function for RLS bypass
+  // Try to use security definer function for RLS bypass - best approach to avoid recursion
   try {
+    console.log("[Role Queries] Attempting to use get_user_role function");
     const { data: functionResult, error: functionError } = await supabase
       .rpc('get_user_role', { _user_id: userId });
       
     if (!functionError && functionResult) {
       const role = functionResult as UserRole;
+      console.log("[Role Queries] Role from function:", role);
       setCachedRole(userId, role);
       queryCache.set(cacheKey, {
         data: role,
@@ -44,97 +46,126 @@ export async function fetchUserRole(userId: string): Promise<UserRole> {
       });
       return role;
     }
+    
+    if (functionError) {
+      console.warn("[Role Queries] Function error:", functionError);
+    }
   } catch (err) {
     console.warn('[Role Queries] Function query failed, falling back to direct query:', err);
     // Continue to direct query as fallback
   }
   
+  console.log("[Role Queries] Falling back to direct query");
   // Perform optimized database query
-  const { data, error } = await supabase
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', userId)
-    .maybeSingle();
+  try {
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .maybeSingle();
+      
+    if (error) {
+      console.error('[Role Queries] Error fetching role:', error);
+      // If we encounter a recursion error or other DB issue, return 'user' as a safe default
+      return 'user';
+    }
     
-  if (error) {
-    console.error('[Role Queries] Error fetching role:', error);
-    // If we encounter a recursion error or other DB issue, return 'user' as a safe default
-    return 'user';
+    // Validate and process result
+    const validRoles: UserRole[] = ['user', 'admin', 'superadmin', 'observer'];
+    const role = data?.role as UserRole;
+    
+    // Default to 'user' if role is invalid or not found
+    const finalRole = (role && validRoles.includes(role)) ? role : 'user';
+    
+    // Update both caches
+    setCachedRole(userId, finalRole);
+    queryCache.set(cacheKey, {
+      data: finalRole,
+      timestamp: Date.now()
+    });
+    
+    console.log("[Role Queries] Role from direct query:", finalRole);
+    return finalRole;
+  } catch (error) {
+    console.error('[Role Queries] Exception fetching role:', error);
+    return 'user'; // Default for safety
   }
-  
-  // Validate and process result
-  const validRoles: UserRole[] = ['user', 'admin', 'superadmin', 'observer'];
-  const role = data?.role as UserRole;
-  
-  // Default to 'user' if role is invalid or not found
-  const finalRole = (role && validRoles.includes(role)) ? role : 'user';
-  
-  // Update both caches
-  setCachedRole(userId, finalRole);
-  queryCache.set(cacheKey, {
-    data: finalRole,
-    timestamp: Date.now()
-  });
-  
-  return finalRole;
 }
 
 /**
  * Optimized check if a role exists
  */
 export async function checkRoleExists(userId: string): Promise<boolean> {
-  // Use optimized query with count for better performance
-  const { count, error } = await supabase
-    .from('user_roles')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId);
+  try {
+    // Use optimized query with count for better performance
+    const { count, error } = await supabase
+      .from('user_roles')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+      
+    if (error) {
+      console.error('[Role Queries] Error checking role existence:', error);
+      return false;
+    }
     
-  if (error) {
-    throw error;
+    return (count || 0) > 0;
+  } catch (error) {
+    console.error('[Role Queries] Exception checking role existence:', error);
+    return false;
   }
-  
-  return (count || 0) > 0;
 }
 
 /**
  * Update existing role with optimized query
  */
 export async function updateExistingRole(userId: string, newRole: UserRole): Promise<void> {
-  const { error } = await supabase
-    .from('user_roles')
-    .update({ 
-      role: newRole, 
-      updated_at: new Date().toISOString() 
-    })
-    .eq('user_id', userId);
+  try {
+    const { error } = await supabase
+      .from('user_roles')
+      .update({ 
+        role: newRole, 
+        updated_at: new Date().toISOString() 
+      })
+      .eq('user_id', userId);
+      
+    if (error) {
+      console.error('[Role Queries] Error updating role:', error);
+      throw error;
+    }
     
-  if (error) {
+    // Clear related caches
+    queryCache.delete(`role:${userId}`);
+  } catch (error) {
+    console.error('[Role Queries] Exception updating role:', error);
     throw error;
   }
-  
-  // Clear related caches
-  queryCache.delete(`role:${userId}`);
 }
 
 /**
  * Insert new role with optimized query
  */
 export async function insertNewRole(userId: string, newRole: UserRole): Promise<void> {
-  const { error } = await supabase
-    .from('user_roles')
-    .insert({ 
-      user_id: userId, 
-      role: newRole,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    });
+  try {
+    const { error } = await supabase
+      .from('user_roles')
+      .insert({ 
+        user_id: userId, 
+        role: newRole,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+      
+    if (error) {
+      console.error('[Role Queries] Error inserting role:', error);
+      throw error;
+    }
     
-  if (error) {
+    // Clear related caches
+    queryCache.delete(`role:${userId}`);
+  } catch (error) {
+    console.error('[Role Queries] Exception inserting role:', error);
     throw error;
   }
-  
-  // Clear related caches
-  queryCache.delete(`role:${userId}`);
 }
 
 /**
@@ -174,12 +205,13 @@ export async function checkUserHasRole(userId: string, role: UserRole): Promise<
       .eq('role', role);
       
     if (error) {
-      throw error;
+      console.error('[Role Queries] Error checking user role:', error);
+      return false;
     }
     
     return (count || 0) > 0;
   } catch (error) {
-    console.error('[Role Queries] Error checking user role:', error);
+    console.error('[Role Queries] Exception checking user role:', error);
     return false;
   }
 }

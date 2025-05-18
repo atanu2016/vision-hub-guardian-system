@@ -16,6 +16,7 @@ export function usePermissions(): UsePermissionsReturn {
       role: "user",
       currentRole: "user", 
       authRole: "user",
+      isLoading: false,
       error: error instanceof Error ? error.message : String(error)
     };
   }

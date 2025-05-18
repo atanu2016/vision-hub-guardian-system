@@ -34,6 +34,7 @@ export function useRoleSubscription() {
   
   // Local state for role
   const [role, setRole] = useState<UserRole>(authRole);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   
   // Handle role updates from database or fetching
   const handleRoleUpdate = useCallback((newRole: UserRole) => {
@@ -44,6 +45,7 @@ export function useRoleSubscription() {
         setCachedRole(userId, newRole);
       }
     }
+    setIsLoading(false);
   }, [role, userId]);
   
   // Set up role fetching mechanism with error handling
@@ -62,12 +64,17 @@ export function useRoleSubscription() {
   
   // Wrapper function for the polling mechanism with error handling
   const fetchRoleWrapper = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) {
+      setIsLoading(false);
+      return;
+    }
     try {
+      setIsLoading(true);
       const fetchedRole = await fetchCurrentRole();
       handleRoleUpdate(fetchedRole as UserRole);
     } catch (err) {
       console.error('[ROLE SUBSCRIPTION] Error in fetchRoleWrapper:', err);
+      setIsLoading(false);
     }
   }, [userId, fetchCurrentRole, handleRoleUpdate]);
   
@@ -92,6 +99,7 @@ export function useRoleSubscription() {
     if (authRole !== role && !userId) {
       console.log('[ROLE SUBSCRIPTION] Updating role from authRole:', authRole);
       setRole(authRole);
+      setIsLoading(false);
     }
   }, [authRole, userId, role]);
   
@@ -99,6 +107,8 @@ export function useRoleSubscription() {
   useEffect(() => {
     if (userId) {
       fetchRoleWrapper();
+    } else {
+      setIsLoading(false);
     }
   }, [userId, fetchRoleWrapper]);
   
@@ -106,7 +116,7 @@ export function useRoleSubscription() {
     role, 
     authRole, 
     error,
-    isLoading: isFetching && !role,
+    isLoading: isLoading || (isFetching && !role),
     isPolling: pollingData.isPolling,
     isSubscribed: dbSubscription.isSubscribed
   };

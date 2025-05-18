@@ -19,16 +19,20 @@ const ProtectedRoute = ({
   superadminRequired = false,
   requiredPermission
 }: ProtectedRouteProps) => {
-  const { user, isLoading, isAdmin, role } = useAuth();
+  const { user, isLoading: authLoading, isAdmin, role, authInitialized } = useAuth();
   const location = useLocation();
   const [permissionChecked, setPermissionChecked] = useState(false);
   const [hasRequiredPermission, setHasRequiredPermission] = useState(true);
   
+  // Check if the app is still initializing
+  const isInitializing = authLoading || !authInitialized;
+  
   // Prevent rendering until auth state is determined
-  if (isLoading) {
+  if (isInitializing) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading authentication...</span>
       </div>
     );
   }
@@ -44,14 +48,17 @@ const ProtectedRoute = ({
   useEffect(() => {
     if (requiredPermission) {
       try {
-        const { hasPermission } = usePermissions();
-        setHasRequiredPermission(hasPermission(requiredPermission));
+        const { hasPermission, isLoading } = usePermissions();
+        if (!isLoading) {
+          setHasRequiredPermission(hasPermission(requiredPermission));
+          setPermissionChecked(true);
+        }
       } catch (error) {
         console.warn("Protected route: Permission system error, allowing access:", error);
         // If there's an error checking permissions, we're more permissive
         setHasRequiredPermission(true);
+        setPermissionChecked(true);
       }
-      setPermissionChecked(true);
     } else {
       setPermissionChecked(true);
     }

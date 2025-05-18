@@ -14,7 +14,7 @@ const permissionResultCache = new Map<string, boolean>();
  */
 export function usePermissionsCore(): UsePermissionsReturn {
   // Get current user role from optimized subscription
-  const { role, authRole, error } = useRoleSubscription();
+  const { role, authRole, error, isLoading } = useRoleSubscription();
   
   // Define the permissions checking function - memoized for performance
   const hasPermission = useCallback((permission: Permission): boolean => {
@@ -54,6 +54,7 @@ export function usePermissionsCore(): UsePermissionsReturn {
     role: role as UserRole,
     currentRole: role as UserRole,
     authRole: authRole as UserRole,
+    isLoading,
     error
-  }), [hasPermission, canManageRoleFunc, role, authRole, error]);
+  }), [hasPermission, canManageRoleFunc, role, authRole, error, isLoading]);
 }

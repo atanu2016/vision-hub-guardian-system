@@ -40,9 +40,9 @@ const Auth = () => {
   }, []);
   
   useEffect(() => {
-    console.log("[Auth Page] Auth state changed - isLoading:", isLoading, "user:", !!user, "requiresMFA:", requiresMFA, "isAdmin:", isAdmin);
+    console.log("[Auth Page] Auth state changed - isLoading:", isLoading, "user:", !!user, "requiresMFA:", requiresMFA, "isAdmin:", isAdmin, "authInitialized:", authInitialized);
     
-    // Handle successful authentication with a short delay to ensure state is fully updated
+    // Only redirect when fully initialized and not loading
     if (user && !isLoading && authInitialized && !redirecting) {
       setRedirecting(true);
       
