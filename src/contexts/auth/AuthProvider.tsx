@@ -51,8 +51,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log("[AUTH] Reset profile and role to defaults");
   }, [setProfile, setRole]);
 
-  // Handle sign-in function
-  const handleSignIn = async (email: string, password: string) => {
+  // Handle sign-in function - now returns Promise<boolean> to match the type
+  const handleSignIn = async (email: string, password: string): Promise<boolean> => {
     console.log("[AUTH] Signing in user:", email);
     return signIn(email, password);
   };

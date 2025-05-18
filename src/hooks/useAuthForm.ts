@@ -25,6 +25,7 @@ export function useAuthForm({ onSuccess }: UseAuthFormProps = {}) {
       // Clear any previous errors
       toast.dismiss();
       
+      // Now signIn returns a boolean, so we can properly check it
       const result = await signIn(values.email, values.password);
       console.log('[AUTH FORM] Login result:', result ? 'success' : 'failed');
       
