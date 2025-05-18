@@ -29,6 +29,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   } = useAuthForm({ 
     onSuccess: () => {
       console.log('Login successful, triggering onSuccess');
+      toast.success('Login successful!');
       if (onSuccess) {
         setTimeout(() => onSuccess(), 300);
       }

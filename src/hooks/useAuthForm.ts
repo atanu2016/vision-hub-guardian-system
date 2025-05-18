@@ -15,7 +15,7 @@ export function useAuthForm({ onSuccess }: UseAuthFormProps = {}) {
   const { signIn } = useAuth();
   
   const handleLogin = useCallback(async (values: LoginFormValues) => {
-    if (isLoading) return;
+    if (isLoading) return false;
     
     setIsLoading(true);
     console.log('[AUTH FORM] Attempting login for:', values.email);

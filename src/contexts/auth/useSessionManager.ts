@@ -16,6 +16,7 @@ export function useSessionManager(
   const authInitializedRef = useRef(false);
   const mountedRef = useRef(true);
   const lastErrorRef = useRef<string | null>(null);
+  const fetchingProfileRef = useRef(false);
 
   // Setup the auth listener and handle session state
   useEffect(() => {
@@ -24,7 +25,7 @@ export function useSessionManager(
     
     // Set up the auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
+      async (event, currentSession) => {
         if (!mountedRef.current) return;
         
         console.log("[AUTH] Auth state changed:", event, currentSession?.user?.email);
@@ -40,11 +41,14 @@ export function useSessionManager(
             return;
           }
 
-          // Fetch user profile when signed in
-          if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && currentSession?.user) {
+          // Fetch user profile when signed in - use a flag to prevent multiple simultaneous fetches
+          if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && currentSession?.user && !fetchingProfileRef.current) {
+            fetchingProfileRef.current = true;
+            
             // Use setTimeout to prevent potential deadlocks with auth state changes
             setTimeout(async () => {
               if (!mountedRef.current) return;
+              
               try {
                 await fetchUserData(currentSession.user!.id, currentSession.user!);
                 
@@ -56,6 +60,8 @@ export function useSessionManager(
               } catch (error) {
                 console.error("[AUTH] Error fetching user data:", error);
                 toast.error("Error fetching user data. Please try again.");
+              } finally {
+                fetchingProfileRef.current = false;
               }
             }, 100); // Small delay to ensure auth state is processed first
           }
