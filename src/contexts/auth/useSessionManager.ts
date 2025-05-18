@@ -1,5 +1,5 @@
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { handleAuthError } from './useAuthState';
@@ -11,6 +11,9 @@ export function useSessionManager(
   setAuthInitialized: (initialized: boolean) => void,
   fetchUserData: (userId: string, user: User) => Promise<any>
 ) {
+  // Track initialization state locally using a ref
+  const authInitializedRef = useRef(false);
+
   // Setup the auth listener and handle session state
   useEffect(() => {
     console.log("[AUTH] Setting up auth state listener");
@@ -49,7 +52,8 @@ export function useSessionManager(
           handleAuthError(error, "Error processing authentication change");
         } finally {
           // Always update the initialized state once we've handled the auth state change
-          if (mounted && !authInitialized) {
+          if (mounted && !authInitializedRef.current) {
+            authInitializedRef.current = true;
             setAuthInitialized(true);
             setIsLoading(false);
           }
@@ -84,6 +88,7 @@ export function useSessionManager(
         if (mounted) {
           setIsLoading(false);
           setAuthInitialized(true);
+          authInitializedRef.current = true;
         }
       }
     };
