@@ -13,18 +13,17 @@ export function useSessionManager(
 ) {
   // Track initialization state locally using a ref
   const authInitializedRef = useRef(false);
+  const mountedRef = useRef(true);
 
   // Setup the auth listener and handle session state
   useEffect(() => {
     console.log("[AUTH] Setting up auth state listener");
     setIsLoading(true);
     
-    let mounted = true;
-    
     // Set up the auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
-        if (!mounted) return;
+        if (!mountedRef.current) return;
         
         console.log("[AUTH] Auth state changed:", event, currentSession?.user?.email);
         
@@ -35,7 +34,6 @@ export function useSessionManager(
           
           // Reset profile when signing out
           if (event === 'SIGNED_OUT') {
-            // Profile and role reset will be handled by the parent component
             console.log("[AUTH] User signed out");
             return;
           }
@@ -44,15 +42,19 @@ export function useSessionManager(
           if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && currentSession?.user) {
             // Use setTimeout to prevent potential deadlocks with auth state changes
             setTimeout(async () => {
-              if (!mounted) return;
-              await fetchUserData(currentSession.user!.id, currentSession.user!);
+              if (!mountedRef.current) return;
+              try {
+                await fetchUserData(currentSession.user!.id, currentSession.user!);
+              } catch (error) {
+                console.error("[AUTH] Error fetching user data:", error);
+              }
             }, 0);
           }
         } catch (error) {
           handleAuthError(error, "Error processing authentication change");
         } finally {
           // Always update the initialized state once we've handled the auth state change
-          if (mounted && !authInitializedRef.current) {
+          if (mountedRef.current && !authInitializedRef.current) {
             authInitializedRef.current = true;
             setAuthInitialized(true);
             setIsLoading(false);
@@ -69,7 +71,7 @@ export function useSessionManager(
         
         if (error) throw error;
         
-        if (!mounted) return;
+        if (!mountedRef.current) return;
         
         console.log("[AUTH] Initial session check:", currentSession?.user?.email);
         setSession(currentSession);
@@ -77,7 +79,11 @@ export function useSessionManager(
         
         if (currentSession?.user) {
           console.log("[AUTH] Session exists, fetching user data");
-          await fetchUserData(currentSession.user.id, currentSession.user);
+          try {
+            await fetchUserData(currentSession.user.id, currentSession.user);
+          } catch (fetchError) {
+            console.error("[AUTH] Error fetching initial user data:", fetchError);
+          }
         } else {
           console.log("[AUTH] No session found");
         }
@@ -85,7 +91,7 @@ export function useSessionManager(
       } catch (error) {
         handleAuthError(error, "Error checking session");
       } finally {
-        if (mounted) {
+        if (mountedRef.current) {
           setIsLoading(false);
           setAuthInitialized(true);
           authInitializedRef.current = true;
@@ -96,7 +102,7 @@ export function useSessionManager(
     checkSession();
 
     return () => {
-      mounted = false;
+      mountedRef.current = false;
       subscription.unsubscribe();
       console.log("[AUTH] Auth listener cleaned up");
     };

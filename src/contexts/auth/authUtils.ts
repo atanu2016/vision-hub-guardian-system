@@ -50,40 +50,25 @@ export async function fetchUserProfile(userId: string, user: User | null): Promi
       return profileData as Profile;
     }
     
-    // Normal profile fetch
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, full_name, is_admin, mfa_enrolled, mfa_required')
-      .eq('id', userId)
-      .single();
+    // Normal profile fetch with error handling
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, is_admin, mfa_enrolled, mfa_required')
+        .eq('id', userId)
+        .single();
 
-    if (error) {
-      console.error('Error fetching user profile:', error);
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return null;
+      }
+      
+      console.log("Profile fetched:", data);
+      return data as Profile;
+    } catch (fetchError) {
+      console.error('Error in profile fetch:', fetchError);
       return null;
     }
-    
-    console.log("Profile fetched:", data);
-    
-    // If this is the first user (likely an admin), set admin status if not already set
-    if (data && !data.is_admin) {
-      const { count } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
-        
-      if (count === 1) {
-        // This is the first and only user, make them admin
-        console.log("First user detected, setting as admin");
-        await supabase
-          .from('profiles')
-          .update({ is_admin: true })
-          .eq('id', userId);
-          
-        // Update data to reflect admin status
-        return {...data, is_admin: true} as Profile;
-      }
-    }
-    
-    return data as Profile;
   } catch (error) {
     console.error('Error fetching user profile:', error);
     return null;
@@ -109,7 +94,7 @@ export async function fetchUserRole(userId: string, user: User | null): Promise<
       return 'superadmin';
     }
     
-    // Try to get role using the new function we created
+    // Try using get_user_role function first
     try {
       const { data: functionResult, error: functionError } = await supabase
         .rpc('get_user_role', { _user_id: userId });
@@ -123,44 +108,21 @@ export async function fetchUserRole(userId: string, user: User | null): Promise<
       // Fall through to regular query
     }
     
-    // Normal role fetch
+    // Normal role fetch as fallback
     const { data, error } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', userId)
       .maybeSingle();
 
-    if (error) {
-      console.error('Error fetching user role:', error);
-      return 'user'; // Default to regular user on error
-    }
-    
-    console.log("Role data:", data);
-    
-    if (data) {
+    if (!error && data) {
+      console.log("Role fetched directly:", data.role);
       return data.role as UserRole;
-    } else {
-      // If this is the first user and no role exists, create a superadmin role
-      const { count } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
-        
-      if (count === 1) {
-        // This is the first and only user, make them superadmin
-        console.log("First user detected, setting as superadmin");
-        await supabase
-          .from('user_roles')
-          .upsert({ 
-            user_id: userId, 
-            role: 'superadmin' 
-          });
-          
-        return 'superadmin';
-      } else {
-        // Default to 'user' if no role is assigned
-        return 'user';
-      }
     }
+    
+    console.log("No role found, defaulting to 'user'");
+    return 'user'; // Default to regular user
+    
   } catch (error) {
     console.error('Error fetching user role:', error);
     return 'user'; // Default to regular user on error

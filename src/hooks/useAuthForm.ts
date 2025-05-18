@@ -12,9 +12,8 @@ export function useAuthForm({ onSuccess }: UseAuthFormProps = {}) {
   const [emailLoginsDisabled, setEmailLoginsDisabled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loginAttemptCount, setLoginAttemptCount] = useState(0);
-  const { signIn, isAdmin } = useAuth();
+  const { signIn } = useAuth();
   
-  // Memoize login handler to prevent unnecessary rerenders
   const handleLogin = useCallback(async (values: LoginFormValues) => {
     if (isLoading) return;
     
@@ -23,27 +22,20 @@ export function useAuthForm({ onSuccess }: UseAuthFormProps = {}) {
     setLoginAttemptCount(prev => prev + 1);
     
     try {
-      // Add timeout to prevent infinite loading state
-      const loginPromise = signIn(values.email, values.password);
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Login timed out. Please try again.')), 20000)
-      );
-      
-      await Promise.race([loginPromise, timeoutPromise]);
-      console.log('[AUTH FORM] Login successful');
-      
       // Clear any previous errors
       toast.dismiss();
+      
+      await signIn(values.email, values.password);
+      console.log('[AUTH FORM] Login successful');
       
       // Delay the onSuccess callback slightly to ensure authentication state is fully processed
       if (onSuccess) {
         setTimeout(() => {
           onSuccess();
-        }, 500); // Increased delay for better state management
+        }, 500);
       }
     } catch (error: any) {
       console.error('[AUTH FORM] Login error:', error);
-      toast.dismiss(); // Clear any previous toasts
       
       // Handle specific error cases
       if (error.message?.includes('Email logins are not enabled')) {
@@ -51,8 +43,6 @@ export function useAuthForm({ onSuccess }: UseAuthFormProps = {}) {
         toast.error('Email logins are not enabled');
       } else if (error.message?.includes('Invalid login credentials')) {
         toast.error('Invalid email or password');
-      } else if (error.message?.includes('timed out')) {
-        toast.error(error.message);
       } else {
         toast.error(error.message || 'An error occurred during login');
       }

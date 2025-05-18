@@ -7,6 +7,7 @@ import { LoginFormValues } from './forms/LoginFormSchema';
 import { EmailLoginsDisabledAlert } from './forms/AuthErrorAlert';
 import { StandardLoginForm } from './forms/StandardLoginForm';
 import { CreateAdminForm } from './forms/CreateAdminForm';
+import { toast } from 'sonner';
 
 type LoginFormProps = {
   onSuccess?: () => void;
@@ -33,6 +34,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
 
   const onLoginSubmit = async (values: LoginFormValues) => {
     try {
+      console.log('Login form submitting with:', values.email);
       await handleLogin(values);
     } catch (error) {
       // Error is handled in useAuthForm
@@ -57,7 +59,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
     ? <CreateAdminForm onBackToLogin={() => setShowCreateAdmin(false)} />
     : <StandardLoginForm 
         onSubmit={onLoginSubmit} 
-        showCreateAdminButton={false} // We disable this button completely
+        showCreateAdminButton={false}
         isLoading={isLoading}
       />;
 };

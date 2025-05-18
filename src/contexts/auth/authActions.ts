@@ -14,13 +14,12 @@ export async function signIn(email: string, password: string): Promise<void> {
     }
     
     console.log("[AUTH ACTION] Sign in successful for:", email);
-    toast.success('Successfully signed in');
     
     // Set a small timeout to ensure state updates before redirects
     await new Promise(resolve => setTimeout(resolve, 100));
+    return;
   } catch (error: any) {
     console.error("[AUTH ACTION] Sign in exception:", error.message);
-    toast.error(error.message || 'Error signing in');
     throw error;
   }
 }
