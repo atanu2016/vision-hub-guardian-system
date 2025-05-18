@@ -50,46 +50,6 @@ export async function fetchUserProfile(userId: string, user: User | null): Promi
       return profileData as Profile;
     }
     
-    // Special handling for operator@home.local
-    if (user?.email === 'operator@home.local') {
-      console.log("operator@home.local detected - ensuring proper status");
-      
-      // First check for existing profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      
-      // Create or update profile
-      await supabase
-        .from('profiles')
-        .upsert({
-          id: userId,
-          full_name: 'Vision Operator',
-          is_admin: false,
-          mfa_required: false
-        });
-      
-      // Ensure user role is set as user
-      console.log("Setting operator@home.local with appropriate role");
-      await supabase
-        .from('user_roles')
-        .upsert({
-          user_id: userId,
-          role: 'user'
-        });
-      
-      // Fetch the updated profile
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-        
-      return data as Profile;
-    }
-    
     // Normal profile fetch
     const { data, error } = await supabase
       .from('profiles')
@@ -149,25 +109,18 @@ export async function fetchUserRole(userId: string, user: User | null): Promise<
       return 'superadmin';
     }
     
-    // Special handling for operator@home.local - set as user
-    if (user?.email === 'operator@home.local') {
-      console.log("operator@home.local detected - setting as user");
-      
-      // Ensure they have user role
-      const { error } = await supabase
-        .from('user_roles')
-        .upsert({
-          user_id: userId,
-          role: 'user'
-        });
+    // Try to get role using the new function we created
+    try {
+      const { data: functionResult, error: functionError } = await supabase
+        .rpc('get_user_role', { _user_id: userId });
         
-      if (error) {
-        console.error("Error setting user role:", error);
-      } else {
-        console.log("operator@home.local role set successfully");
+      if (!functionError && functionResult) {
+        console.log("Role from function:", functionResult);
+        return functionResult as UserRole;
       }
-      
-      return 'user';
+    } catch (functionErr) {
+      console.warn("Function error:", functionErr);
+      // Fall through to regular query
     }
     
     // Normal role fetch
