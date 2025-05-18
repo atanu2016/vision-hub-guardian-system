@@ -12,7 +12,7 @@ export function useSessionManager(
   setAuthInitialized: (initialized: boolean) => void,
   fetchUserData: (userId: string, user: User) => Promise<any>
 ) {
-  // Track initialization state locally using a ref
+  // Track initialization state locally using refs
   const authInitializedRef = useRef(false);
   const mountedRef = useRef(true);
   const lastErrorRef = useRef<string | null>(null);
@@ -41,7 +41,8 @@ export function useSessionManager(
           
           // Reset profile when signing out
           if (event === 'SIGNED_OUT') {
-            console.log("[AUTH] User signed out");
+            console.log("[AUTH] User signed out, state updated");
+            setIsLoading(false); // Update loading state on signout
             return;
           }
 
@@ -73,7 +74,7 @@ export function useSessionManager(
                 }
               }
             }, 0);
-          } else {
+          } else if (!fetchingProfileRef.current) {
             // If we're not fetching a profile, update loading state
             setIsLoading(false);
           }
@@ -115,21 +116,30 @@ export function useSessionManager(
             await fetchUserData(currentSession.user.id, currentSession.user);
           } catch (fetchError) {
             console.error("[AUTH] Error fetching initial user data:", fetchError);
+          } finally {
+            // Always update loading state when done
+            if (mountedRef.current) {
+              setIsLoading(false);
+            }
           }
         } else {
           console.log("[AUTH] No session found");
+          setIsLoading(false);
         }
       } catch (error) {
         handleAuthError(error, "Error checking session");
-      } finally {
         if (mountedRef.current) {
           setIsLoading(false);
+        }
+      } finally {
+        if (mountedRef.current) {
           setAuthInitialized(true);
           authInitializedRef.current = true;
         }
       }
     };
     
+    // Execute the session check
     checkSession();
 
     return () => {

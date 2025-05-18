@@ -1,6 +1,5 @@
 
 import { useContext, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Profile, UserRole, AuthContextType } from './types';
 import { resetPassword, signIn, signOut } from './authActions';
 import AuthContext from './AuthContext';

@@ -1,7 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from 'sonner';
-import { NavigateFunction } from 'react-router-dom';
 
 export async function signIn(email: string, password: string): Promise<boolean> {
   try {
@@ -33,28 +32,30 @@ export async function signOut(): Promise<void> {
   try {
     console.log("[AUTH ACTION] Signing out user");
     
-    // Clear any stored state first
-    localStorage.removeItem("supabase.auth.token");
-    sessionStorage.removeItem("supabase.auth.token");
-    
-    // Then sign out from Supabase
-    const { error } = await supabase.auth.signOut({ scope: 'global' });
+    // Clear Supabase stored session first
+    const { error } = await supabase.auth.signOut();
     
     if (error) {
       console.error("[AUTH ACTION] Sign out error:", error.message);
       throw error;
     }
     
-    // Success message
+    // Clear any stored tokens from browsers local/session storage
+    localStorage.removeItem("supabase.auth.token");
+    sessionStorage.removeItem("supabase.auth.token");
+    
+    // Show success message and redirect
     toast.success('Successfully signed out');
     
-    // Add a small delay before navigation to let the state update
+    // Use a proper timeout to allow state to update and toast to display
     setTimeout(() => {
+      console.log("[AUTH ACTION] Redirecting to auth page after successful logout");
       window.location.href = '/auth';
-    }, 300);
+    }, 500);
   } catch (error: any) {
     console.error("[AUTH ACTION] Sign out exception:", error.message);
     toast.error(error.message || 'Error signing out');
+    throw error;
   }
 }
 

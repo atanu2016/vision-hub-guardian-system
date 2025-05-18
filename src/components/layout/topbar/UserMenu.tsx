@@ -12,16 +12,17 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
+import { useState } from "react";
 
 const UserMenu = () => {
   const { user, profile, signOut, isAdmin } = useAuth();
-  const navigate = useNavigate();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const getInitials = (name?: string | null) => {
     if (!name) return 'U';
@@ -36,14 +37,17 @@ const UserMenu = () => {
   const handleSignOut = async (e: React.MouseEvent) => {
     e.preventDefault();
     
+    if (isLoggingOut) return;
+    
     try {
+      setIsLoggingOut(true);
       console.log("User menu: initiating sign out");
       toast.loading("Signing out...");
-      // Remove the navigate parameter
       await signOut();
     } catch (error) {
       console.error("Sign out error:", error);
       toast.error("Failed to sign out. Please try again.");
+      setIsLoggingOut(false);
     }
   };
 
@@ -95,10 +99,11 @@ const UserMenu = () => {
         </div>
         <DropdownMenuItem 
           onClick={handleSignOut} 
-          className="text-destructive focus:text-destructive"
+          disabled={isLoggingOut}
+          className="text-destructive focus:text-destructive disabled:opacity-50"
         >
           <LogOut className="mr-2 h-4 w-4" />
-          Log out
+          {isLoggingOut ? "Signing out..." : "Log out"}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

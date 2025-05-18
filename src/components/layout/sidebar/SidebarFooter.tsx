@@ -3,24 +3,27 @@ import { SidebarFooter as FooterComponent } from "@/components/ui/sidebar";
 import { LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/auth";
 import { useSidebar } from "@/components/ui/sidebar";
-import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useState } from "react";
 
 const SidebarFooter = () => {
   const { signOut } = useAuth();
   const { state } = useSidebar();
-  const navigate = useNavigate();
   const isCollapsed = state === "collapsed";
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleSignOut = async () => {
+    if (isLoggingOut) return;
+    
     try {
+      setIsLoggingOut(true);
       console.log("Sidebar footer: initiating sign out");
       toast.loading("Signing out...");
-      // Pass navigate to signOut without explicit parameter
       await signOut();
     } catch (error) {
       console.error("Sign out error:", error);
       toast.error("Failed to sign out. Please try again.");
+      setIsLoggingOut(false);
     }
   };
 
@@ -29,11 +32,12 @@ const SidebarFooter = () => {
       <div className="rounded-md bg-vision-dark-900 p-2">
         <button 
           onClick={handleSignOut}
-          className="flex items-center gap-2 w-full px-2 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-vision-dark-800 rounded transition duration-200"
+          disabled={isLoggingOut}
+          className="flex items-center gap-2 w-full px-2 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-vision-dark-800 rounded transition duration-200 disabled:opacity-50"
           title="Sign Out"
         >
           <LogOut size={18} />
-          {!isCollapsed && <span>Sign Out</span>}
+          {!isCollapsed && <span>{isLoggingOut ? "Signing out..." : "Sign Out"}</span>}
         </button>
       </div>
     </FooterComponent>

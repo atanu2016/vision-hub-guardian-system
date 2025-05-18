@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/auth';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2 } from 'lucide-react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm';
 import { AuthBranding } from '@/components/auth/AuthBranding';
@@ -16,6 +16,7 @@ const Auth = () => {
   const [authStarted, setAuthStarted] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   
   // Get the return path from location state, or default based on role
   const getDefaultPath = () => {
@@ -50,15 +51,14 @@ const Auth = () => {
       console.log("[Auth Page] User authenticated, preparing redirect");
       setRedirecting(true);
       
-      // Use a timeout to ensure state is fully processed before navigation
-      setTimeout(() => {
-        // Calculate where to redirect based on role
-        const path = from === '/auth' ? (isAdmin ? '/dashboard' : '/live') : from;
-        console.log("[Auth Page] Redirecting to:", path);
-        window.location.href = path; // Use direct location change to force clean navigation
-      }, 500);
+      // Calculate where to redirect based on role
+      const path = from === '/auth' ? (isAdmin ? '/dashboard' : '/live') : from;
+      console.log("[Auth Page] Redirecting to:", path);
+      
+      // Use navigate for React Router based navigation
+      navigate(path, { replace: true });
     }
-  }, [isLoading, user, requiresMFA, isAdmin, from, redirecting, authInitialized]);
+  }, [isLoading, user, requiresMFA, isAdmin, from, redirecting, authInitialized, navigate]);
 
   useEffect(() => {
     // Check URL params for tab selection
