@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { fetchCamerasFromDB } from "@/services/database/camera/fetchCameras";
 import { Camera } from "@/types/camera";
@@ -18,17 +18,7 @@ const LiveView = () => {
   const [layout, setLayout] = useState<"grid-2" | "grid-4" | "grid-9">("grid-4");
   const { user, role } = useAuth();
 
-  useEffect(() => {
-    if (user) {
-      fetchCameras();
-    } else {
-      // Clear cameras if no user is authenticated
-      setCameras([]);
-      setLoading(false);
-    }
-  }, [user, role]);
-
-  const fetchCameras = async () => {
+  const fetchCameras = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -72,7 +62,17 @@ const LiveView = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, role]); // Ensure stable dependencies
+
+  useEffect(() => {
+    if (user) {
+      fetchCameras();
+    } else {
+      // Clear cameras if no user is authenticated
+      setCameras([]);
+      setLoading(false);
+    }
+  }, [user, role, fetchCameras]);
 
   return (
     <AppLayout fullWidth>

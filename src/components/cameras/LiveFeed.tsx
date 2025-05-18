@@ -28,13 +28,13 @@ const LiveFeed = memo(({ camera }: LiveFeedProps) => {
   }, []);
 
   const toggleFullScreen = useCallback(() => {
-    setIsFullScreen(!isFullScreen);
+    setIsFullScreen(prev => !prev);
     // In production, implement actual fullscreen logic
-  }, [isFullScreen]);
+  }, []);
 
   const toggleMute = useCallback(() => {
-    setIsMuted(!isMuted);
-  }, [isMuted]);
+    setIsMuted(prev => !prev);
+  }, []);
 
   if (!camera || !camera.id) {
     return null;
