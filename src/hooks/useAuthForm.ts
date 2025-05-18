@@ -25,15 +25,22 @@ export function useAuthForm({ onSuccess }: UseAuthFormProps = {}) {
       // Clear any previous errors
       toast.dismiss();
       
-      await signIn(values.email, values.password);
-      console.log('[AUTH FORM] Login successful');
+      const result = await signIn(values.email, values.password);
+      console.log('[AUTH FORM] Login result:', result ? 'success' : 'failed');
       
-      // Delay the onSuccess callback slightly to ensure authentication state is fully processed
-      if (onSuccess) {
-        setTimeout(() => {
-          onSuccess();
-        }, 500);
+      if (!result) {
+        throw new Error('Login failed. Please check your credentials and try again.');
       }
+      
+      // Set a brief delay to ensure auth state is fully processed
+      setTimeout(() => {
+        if (onSuccess) {
+          console.log('[AUTH FORM] Triggering onSuccess callback');
+          onSuccess();
+        }
+      }, 500);
+      
+      return true;
     } catch (error: any) {
       console.error('[AUTH FORM] Login error:', error);
       
@@ -41,13 +48,13 @@ export function useAuthForm({ onSuccess }: UseAuthFormProps = {}) {
       if (error.message?.includes('Email logins are not enabled')) {
         setEmailLoginsDisabled(true);
         toast.error('Email logins are not enabled');
-      } else if (error.message?.includes('Invalid login credentials')) {
+      } else if (error.message?.includes('Invalid login credentials') || error.message?.includes('Invalid email or password')) {
         toast.error('Invalid email or password');
       } else {
         toast.error(error.message || 'An error occurred during login');
       }
       
-      throw error;
+      return false;
     } finally {
       // Use a small timeout to prevent state updates during potential redirects
       setTimeout(() => {

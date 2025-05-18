@@ -43,24 +43,18 @@ const Auth = () => {
       setAuthStarted(true);
       console.log("[Auth Page] Authentication process started");
     }
-  }, [isLoading, user, requiresMFA, isAdmin, authInitialized]);
+  }, [isLoading, user, requiresMFA, isAdmin, authInitialized, authStarted]);
   
   useEffect(() => {
     // Only redirect when fully initialized and not loading
     if (user && !isLoading && authInitialized && !redirecting) {
+      console.log("[Auth Page] User authenticated, preparing redirect");
       setRedirecting(true);
       
       // Calculate where to redirect based on role
       const path = from === '/auth' ? (isAdmin ? '/dashboard' : '/live') : from;
-      setRedirectPath(path);
-      
-      // Add a small delay before redirect to ensure all auth data is processed
       console.log("[Auth Page] Will redirect to:", path);
-      
-      setTimeout(() => {
-        console.log("[Auth Page] Executing delayed redirect to:", path);
-        toast.success(`Welcome back!`);
-      }, 500);
+      setRedirectPath(path);
     }
   }, [isLoading, user, requiresMFA, isAdmin, from, redirecting, authInitialized]);
 
@@ -85,7 +79,7 @@ const Auth = () => {
   
   // Perform redirect if path is set
   if (redirectPath) {
-    console.log("[Auth Page] Redirecting to:", redirectPath);
+    console.log("[Auth Page] Executing redirect to:", redirectPath);
     return <Navigate to={redirectPath} replace />;
   }
   
@@ -116,6 +110,13 @@ const Auth = () => {
     ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } 
     : {};
 
+  const handleLoginSuccess = () => {
+    console.log("[Auth Page] Login success callback triggered");
+    if (user) {
+      console.log("[Auth Page] User already authenticated, will redirect shortly");
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-vision-dark-900 p-4 sm:p-8" style={containerStyle}>
       <div className="w-full max-w-md">
@@ -136,7 +137,7 @@ const Auth = () => {
               </TabsList>
 
               <TabsContent value="login">
-                <LoginForm />
+                <LoginForm onSuccess={handleLoginSuccess} />
               </TabsContent>
 
               <TabsContent value="reset">

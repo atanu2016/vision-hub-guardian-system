@@ -24,20 +24,31 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
     emailLoginsDisabled,
     setEmailLoginsDisabled,
     handleLogin,
-    isLoading
-  } = useAuthForm({ onSuccess });
+    isLoading,
+    loginAttemptCount
+  } = useAuthForm({ 
+    onSuccess: () => {
+      console.log('Login successful, triggering onSuccess');
+      if (onSuccess) {
+        setTimeout(() => onSuccess(), 300);
+      }
+    }
+  });
 
   useEffect(() => {
-    // Additional logging to help debug authentication loops
-    console.log('LoginForm rendered. showCreateAdmin:', showCreateAdmin, 'adminCheckComplete:', adminCheckComplete);
-  }, [showCreateAdmin, adminCheckComplete]);
+    console.log('LoginForm rendered. showCreateAdmin:', showCreateAdmin, 'adminCheckComplete:', adminCheckComplete, 'isLoading:', isLoading);
+  }, [showCreateAdmin, adminCheckComplete, isLoading]);
 
   const onLoginSubmit = async (values: LoginFormValues) => {
     try {
       console.log('Login form submitting with:', values.email);
-      await handleLogin(values);
+      const success = await handleLogin(values);
+      
+      if (success) {
+        console.log('Login successful in form handler');
+        toast.success(`Welcome back, ${values.email}`);
+      }
     } catch (error) {
-      // Error is handled in useAuthForm
       console.log('Login form error handler:', error);
     }
   };
@@ -49,8 +60,9 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   // Show a loading state while checking for admin users
   if (!adminCheckComplete) {
     return (
-      <div className="flex justify-center py-8">
+      <div className="flex flex-col items-center justify-center py-8 gap-3">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Checking system configuration...</p>
       </div>
     );
   }

@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from 'sonner';
 import { NavigateFunction } from 'react-router-dom';
 
-export async function signIn(email: string, password: string): Promise<void> {
+export async function signIn(email: string, password: string): Promise<boolean> {
   try {
     console.log("[AUTH ACTION] Signing in:", email);
     const { error, data } = await supabase.auth.signInWithPassword({ email, password });
@@ -13,11 +13,16 @@ export async function signIn(email: string, password: string): Promise<void> {
       throw error;
     }
     
+    if (!data.session || !data.user) {
+      console.error("[AUTH ACTION] Sign in failed: No session or user returned");
+      throw new Error("Authentication failed. Please try again.");
+    }
+    
     console.log("[AUTH ACTION] Sign in successful for:", email);
     
     // Set a small timeout to ensure state updates before redirects
     await new Promise(resolve => setTimeout(resolve, 100));
-    return;
+    return true;
   } catch (error: any) {
     console.error("[AUTH ACTION] Sign in exception:", error.message);
     throw error;
