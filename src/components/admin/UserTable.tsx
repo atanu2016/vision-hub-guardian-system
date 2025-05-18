@@ -14,9 +14,10 @@ import { MfaToggle } from "./MfaToggle";
 import { DeleteUserButton } from "./DeleteUserButton";
 import { useAuth } from "@/contexts/auth";
 import { Button } from "@/components/ui/button";
-import { Camera } from "lucide-react";
+import { Camera, Key } from "lucide-react";
 import { UserData, UserRole, MfaToggleProps, DeleteUserButtonProps } from "@/types/admin";
 import { usePermissions } from "@/hooks/usePermissions";
+import { toast } from "sonner";
 
 interface UserTableProps {
   users: UserData[];
@@ -26,6 +27,7 @@ interface UserTableProps {
   revokeMfaEnrollment: (userId: string) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
   onAssignCameras?: (userId: string, userName: string) => void;
+  onResetPassword?: (userId: string, userEmail: string) => Promise<void>;
 }
 
 export function UserTable({ 
@@ -35,11 +37,21 @@ export function UserTable({
   toggleMfaRequirement, 
   revokeMfaEnrollment, 
   deleteUser,
-  onAssignCameras 
+  onAssignCameras,
+  onResetPassword
 }: UserTableProps) {
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
   const canAssignCameras = hasPermission('assign-cameras');
+  const canManageUsers = hasPermission('manage-users:lower');
+
+  const handleResetPassword = async (userId: string, userEmail: string) => {
+    if (onResetPassword) {
+      await onResetPassword(userId, userEmail);
+    } else {
+      toast.info(`Password reset functionality not implemented for ${userEmail}`);
+    }
+  };
 
   if (loading) {
     return <TableLoadingSkeleton />;
@@ -50,7 +62,7 @@ export function UserTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Email</TableHead>
+            <TableHead className="min-w-[180px]">Email</TableHead>
             <TableHead>Name</TableHead>
             <TableHead>Role</TableHead>
             <TableHead>MFA Status</TableHead>
@@ -67,7 +79,9 @@ export function UserTable({
           ) : (
             users.map((userData) => (
               <TableRow key={userData.id}>
-                <TableCell className="font-medium">{userData.email}</TableCell>
+                <TableCell className="font-medium truncate max-w-[180px]" title={userData.email || ''}>
+                  {userData.email || 'N/A'}
+                </TableCell>
                 <TableCell>{userData.full_name || 'N/A'}</TableCell>
                 <TableCell>
                   <RoleSelector 
@@ -86,7 +100,18 @@ export function UserTable({
                     onRevokeMfaEnrollment={revokeMfaEnrollment}
                   />
                 </TableCell>
-                <TableCell className="text-right space-x-2">
+                <TableCell className="text-right space-x-1">
+                  {canManageUsers && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => handleResetPassword(userData.id, userData.email || '')}
+                      className="h-8 w-8"
+                      title="Reset Password"
+                    >
+                      <Key className="h-4 w-4" />
+                    </Button>
+                  )}
                   {canAssignCameras && onAssignCameras && (
                     <Button 
                       variant="ghost" 

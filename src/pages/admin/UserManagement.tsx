@@ -11,6 +11,8 @@ import { Camera } from "lucide-react";
 import CameraAssignmentModal from "@/components/admin/CameraAssignmentModal";
 import { Button } from "@/components/ui/button";
 import { UserData } from "@/types/admin";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const UserManagement = () => {
   const { isSuperAdmin } = useAuth();
@@ -30,11 +32,13 @@ const UserManagement = () => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUserName, setSelectedUserName] = useState<string>('');
   const [showCameraAssignment, setShowCameraAssignment] = useState(false);
+  const [showUserSelector, setShowUserSelector] = useState(false);
 
   const handleCameraAssignmentClick = (userId: string, userName: string) => {
     setSelectedUserId(userId);
     setSelectedUserName(userName);
     setShowCameraAssignment(true);
+    setShowUserSelector(false);
   };
 
   const handleCameraAssignmentClose = () => {
@@ -44,13 +48,31 @@ const UserManagement = () => {
   };
 
   const handleCameraAssignmentButtonClick = () => {
-    // If no user is selected, show a message or handle accordingly
-    if (users.length > 0) {
-      // Default to the first user in the list if none selected
-      const firstUser = users[0];
-      setSelectedUserId(firstUser.id);
-      setSelectedUserName(firstUser.email || "Selected User");
-      setShowCameraAssignment(true);
+    setShowUserSelector(true);
+  };
+
+  const handleUserSelect = (user: UserData) => {
+    setSelectedUserId(user.id);
+    setSelectedUserName(user.email || "Selected User");
+    setShowCameraAssignment(true);
+    setShowUserSelector(false);
+  };
+
+  const handleResetPassword = async (userId: string, userEmail: string) => {
+    try {
+      // Send password reset email using Supabase
+      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
+        redirectTo: `${window.location.origin}/auth?reset=true`,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success(`Password reset email sent to ${userEmail}`);
+    } catch (error: any) {
+      console.error("Error resetting password:", error);
+      toast.error(`Failed to send reset email: ${error.message || "Unknown error"}`);
     }
   };
 
@@ -73,6 +95,7 @@ const UserManagement = () => {
         revokeMfaEnrollment={handleRevokeMfaEnrollment}
         deleteUser={handleDeleteUser}
         onAssignCameras={handleCameraAssignmentClick}
+        onResetPassword={handleResetPassword}
       />
 
       {selectedUserId && (
@@ -82,6 +105,61 @@ const UserManagement = () => {
           userName={selectedUserName}
           onClose={handleCameraAssignmentClose}
         />
+      )}
+
+      {/* User selector modal for camera assignment */}
+      {showUserSelector && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-card border rounded-lg shadow-lg p-6 w-[500px] max-w-[90vw] max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">Select User</h3>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowUserSelector(false)}
+              >
+                ✕
+              </Button>
+            </div>
+            
+            <div className="space-y-2 mt-4">
+              {users.map(user => (
+                <div 
+                  key={user.id}
+                  className="p-3 border rounded-md hover:bg-accent cursor-pointer flex items-center justify-between"
+                  onClick={() => handleUserSelect(user)}
+                >
+                  <div>
+                    <p className="font-medium">{user.email || "No email"}</p>
+                    <p className="text-sm text-muted-foreground">{user.full_name || "No name"} • {user.role}</p>
+                  </div>
+                  <Button variant="ghost" size="sm">
+                    <Camera className="h-4 w-4 mr-1" />
+                    Assign
+                  </Button>
+                </div>
+              ))}
+              
+              {users.length === 0 && !loading && (
+                <div className="text-center py-4 text-muted-foreground">
+                  No users found
+                </div>
+              )}
+              
+              {loading && (
+                <div className="flex justify-center py-4">
+                  <div className="animate-spin h-6 w-6 border-t-2 border-b-2 border-primary rounded-full"></div>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-end mt-4">
+              <Button variant="outline" onClick={() => setShowUserSelector(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Add assign cameras button outside of the table component */}

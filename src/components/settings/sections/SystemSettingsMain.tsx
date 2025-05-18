@@ -51,14 +51,20 @@ const SystemSettingsMain = () => {
   const isLoading = isSystemLoading || isDetectionLoading;
   const isSaving = isSystemSaving || isDetectionSaving;
   
-  // Use useCallback for event handlers to avoid unnecessary re-renders
+  // Use useEffect for loading data when component mounts
   useEffect(() => {
-    // Load settings when component mounts with a small delay to improve perceived loading speed
+    console.log("SystemSettingsMain: Loading settings...");
     const loadData = async () => {
-      await Promise.all([
-        reloadSettings(),
-        loadDetectionSettings()
-      ]);
+      try {
+        await Promise.all([
+          reloadSettings(),
+          loadDetectionSettings()
+        ]);
+        console.log("SystemSettingsMain: Settings loaded successfully");
+      } catch (error) {
+        console.error("SystemSettingsMain: Failed to load settings", error);
+        toast.error("Failed to load settings");
+      }
     };
     
     loadData();
@@ -137,6 +143,9 @@ const SystemSettingsMain = () => {
     saveAllSettings();
     toast.success("All settings saved successfully");
   }, [saveAllSettings]);
+
+  console.log("SystemSettingsMain: Rendering with loading state:", isLoading);
+  console.log("SystemSettingsMain: Detection settings:", detectionSettings);
 
   if (isLoading) {
     return <LoadingSpinner />;
