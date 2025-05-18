@@ -30,6 +30,7 @@ export const UserSelectorModal: React.FC<UserSelectorModalProps> = ({
             variant="ghost" 
             size="sm" 
             onClick={onClose}
+            aria-label="Close"
           >
             ✕
           </Button>

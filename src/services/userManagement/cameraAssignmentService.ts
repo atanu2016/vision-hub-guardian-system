@@ -11,6 +11,10 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
   try {
     console.log(`Assigning cameras to user ${userId}. Camera IDs:`, cameraIds);
     
+    if (!userId) {
+      throw new Error("User ID is required");
+    }
+    
     // First, get current assignments to determine which ones to remove
     const { data: currentAssignments, error: fetchError } = await supabase
       .from('user_camera_access')
@@ -86,7 +90,7 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     return true;
   } catch (error) {
     console.error('Error assigning cameras to user:', error);
-    return false;
+    throw error; // Propagate the error to be handled by the caller
   }
 }
 
@@ -96,6 +100,11 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
 export async function getUserAssignedCameras(userId: string): Promise<string[]> {
   try {
     console.log("Fetching assigned cameras for user:", userId);
+    
+    if (!userId) {
+      console.warn("No user ID provided to getUserAssignedCameras");
+      return [];
+    }
     
     const { data, error } = await supabase
       .from('user_camera_access')
@@ -136,8 +145,6 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
         throw error;
       }
       
-      console.log(`Fetched ${data.length} cameras for admin user`);
-      
       // Transform database fields to match Camera type
       return data.map(cam => ({
         id: cam.id,
@@ -154,8 +161,8 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
         model: cam.model,
         status: cam.status as CameraStatus,
         lastSeen: cam.lastseen,
-        motionDetection: cam.motiondetection,
-        recording: cam.recording,
+        motionDetection: cam.motiondetection || false,
+        recording: cam.recording || false,
         thumbnail: cam.thumbnail,
         group: cam.group
       }));
@@ -199,8 +206,8 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
       model: cam.model,
       status: cam.status as CameraStatus,
       lastSeen: cam.lastseen,
-      motionDetection: cam.motiondetection,
-      recording: cam.recording,
+      motionDetection: cam.motiondetection || false,
+      recording: cam.recording || false,
       thumbnail: cam.thumbnail,
       group: cam.group
     }));

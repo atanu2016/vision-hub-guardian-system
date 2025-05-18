@@ -57,10 +57,8 @@ export default function CameraAssignmentModal({
         throw camerasError;
       }
 
-      console.log("Fetched cameras:", allCameras.length);
-
       // Map database fields to Camera type
-      const typedCameras: CameraType[] = allCameras.map(cam => ({
+      const typedCameras: CameraType[] = allCameras ? allCameras.map(cam => ({
         id: cam.id,
         name: cam.name,
         location: cam.location,
@@ -73,13 +71,13 @@ export default function CameraAssignmentModal({
         onvifPath: cam.onvifpath,
         manufacturer: cam.manufacturer,
         model: cam.model,
-        status: cam.status as CameraStatus,
+        status: (cam.status || 'offline') as CameraStatus,
         lastSeen: cam.lastseen,
-        motionDetection: cam.motiondetection,
-        recording: cam.recording,
+        motionDetection: cam.motiondetection || false,
+        recording: cam.recording || false,
         thumbnail: cam.thumbnail,
         group: cam.group
-      }));
+      })) : [];
 
       // Get user's assigned cameras
       const assignedCameraIds = await getUserAssignedCameras(userId);
@@ -106,16 +104,19 @@ export default function CameraAssignmentModal({
   };
 
   const handleSaveAssignments = async () => {
+    if (!userId) {
+      toast.error("No user selected");
+      return;
+    }
+    
     setIsSaving(true);
     try {
       console.log("Saving camera assignments for user:", userId);
       console.log("Selected camera IDs:", selectedCameraIds);
       
-      const success = await assignCamerasToUser(userId, selectedCameraIds);
-      if (success) {
-        toast.success(`Camera assignments updated for ${userName}`);
-        onClose();
-      }
+      await assignCamerasToUser(userId, selectedCameraIds);
+      toast.success(`Camera assignments updated for ${userName}`);
+      onClose();
     } catch (error) {
       console.error("Error saving camera assignments:", error);
       toast.error("Failed to update camera assignments");
