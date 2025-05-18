@@ -1,4 +1,3 @@
-
 export type Permission = 
   | 'view-dashboard'
   | 'view-cameras:all'
@@ -16,7 +15,9 @@ export type Permission =
   | 'manage-profile-settings'
   | 'manage-system'
   | 'access-logs'
-  | 'system-migration';
+  | 'system-migration'
+  | 'assign-roles'
+  | 'assign-cameras';
 
 export type UserRole = 'user' | 'operator' | 'observer' | 'admin' | 'superadmin';
 
@@ -47,7 +48,9 @@ const permissionMap: Record<Permission, UserRole[]> = {
   'manage-profile-settings': ['user', 'operator', 'observer', 'admin', 'superadmin'],
   'manage-system': ['superadmin'],
   'access-logs': ['admin', 'superadmin'],
-  'system-migration': ['superadmin']
+  'system-migration': ['superadmin'],
+  'assign-roles': ['admin', 'superadmin'],
+  'assign-cameras': ['admin', 'superadmin']
 };
 
 /**
