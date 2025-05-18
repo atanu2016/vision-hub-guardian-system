@@ -39,7 +39,8 @@ const UserMenu = () => {
     try {
       console.log("User menu: initiating sign out");
       toast.loading("Signing out...");
-      await signOut(navigate);
+      // Remove the navigate parameter
+      await signOut();
     } catch (error) {
       console.error("Sign out error:", error);
       toast.error("Failed to sign out. Please try again.");

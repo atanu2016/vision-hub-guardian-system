@@ -25,8 +25,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAuthInitialized,
     fetchUserData
   } = useAuthState();
-  
-  const navigate = useNavigate();
 
   // Setup session manager
   useSessionManager(
@@ -61,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const handleSignOut = async () => {
     console.log("[AUTH] Signing out user");
     handleProfileReset();
-    return signOut(navigate);
+    return signOut();
   };
 
   // Handle reset password function

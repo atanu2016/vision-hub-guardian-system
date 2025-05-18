@@ -16,7 +16,8 @@ const SidebarFooter = () => {
     try {
       console.log("Sidebar footer: initiating sign out");
       toast.loading("Signing out...");
-      await signOut(navigate);
+      // Pass navigate to signOut without explicit parameter
+      await signOut();
     } catch (error) {
       console.error("Sign out error:", error);
       toast.error("Failed to sign out. Please try again.");

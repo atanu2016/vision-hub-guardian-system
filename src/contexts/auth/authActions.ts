@@ -29,7 +29,7 @@ export async function signIn(email: string, password: string): Promise<boolean> 
   }
 }
 
-export async function signOut(navigate: NavigateFunction): Promise<void> {
+export async function signOut(): Promise<void> {
   try {
     console.log("[AUTH ACTION] Signing out user");
     
@@ -45,12 +45,12 @@ export async function signOut(navigate: NavigateFunction): Promise<void> {
       throw error;
     }
     
-    // Navigate after successful sign out
+    // Success message
     toast.success('Successfully signed out');
     
     // Add a small delay before navigation to let the state update
     setTimeout(() => {
-      navigate('/auth');
+      window.location.href = '/auth';
     }, 300);
   } catch (error: any) {
     console.error("[AUTH ACTION] Sign out exception:", error.message);
