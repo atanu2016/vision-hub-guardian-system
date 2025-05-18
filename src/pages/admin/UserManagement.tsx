@@ -7,12 +7,23 @@ import { useUserManagement } from "@/hooks/useUserManagement";
 import AppLayout from "@/components/layout/AppLayout";
 import { useAuth } from "@/contexts/auth";
 import { usePermissions } from "@/hooks/usePermissions";
-import { Camera } from "lucide-react";
+import { Camera, Key } from "lucide-react";
 import CameraAssignmentModal from "@/components/admin/CameraAssignmentModal";
 import { Button } from "@/components/ui/button";
 import { UserData } from "@/types/admin";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import LoadingSpinner from "@/components/settings/sections/LoadingSpinner";
+import { resetPassword } from "@/contexts/auth/authActions";
 
 const UserManagement = () => {
   const { isSuperAdmin } = useAuth();
@@ -33,6 +44,13 @@ const UserManagement = () => {
   const [selectedUserName, setSelectedUserName] = useState<string>('');
   const [showCameraAssignment, setShowCameraAssignment] = useState(false);
   const [showUserSelector, setShowUserSelector] = useState(false);
+  
+  // States for password reset functionality
+  const [showPasswordResetDialog, setShowPasswordResetDialog] = useState(false);
+  const [passwordResetEmail, setPasswordResetEmail] = useState('');
+  const [passwordResetLoading, setPasswordResetLoading] = useState(false);
+  const [showEmailResetDialog, setShowEmailResetDialog] = useState(false);
+  const [selectedUserEmail, setSelectedUserEmail] = useState('');
 
   const handleCameraAssignmentClick = (userId: string, userName: string) => {
     setSelectedUserId(userId);
@@ -59,20 +77,27 @@ const UserManagement = () => {
   };
 
   const handleResetPassword = async (userId: string, userEmail: string) => {
+    // Store the selected user's email and open the dialog
+    setSelectedUserEmail(userEmail);
+    setPasswordResetEmail(userEmail);
+    setShowEmailResetDialog(true);
+  };
+
+  const handleSendPasswordResetEmail = async () => {
+    if (!passwordResetEmail) {
+      toast.error("Email address is required");
+      return;
+    }
+
+    setPasswordResetLoading(true);
     try {
-      // Send password reset email using Supabase
-      const { error } = await supabase.auth.resetPasswordForEmail(userEmail, {
-        redirectTo: `${window.location.origin}/auth?reset=true`,
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      toast.success(`Password reset email sent to ${userEmail}`);
-    } catch (error: any) {
-      console.error("Error resetting password:", error);
-      toast.error(`Failed to send reset email: ${error.message || "Unknown error"}`);
+      await resetPassword(passwordResetEmail);
+      setPasswordResetLoading(false);
+      setShowEmailResetDialog(false);
+      // Email sent toast is handled in the resetPassword function
+    } catch (error) {
+      setPasswordResetLoading(false);
+      // Error toast is handled in the resetPassword function
     }
   };
 
@@ -161,6 +186,48 @@ const UserManagement = () => {
           </div>
         </div>
       )}
+
+      {/* Password Reset Email Dialog */}
+      <Dialog open={showEmailResetDialog} onOpenChange={setShowEmailResetDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Password Reset Email</DialogTitle>
+            <DialogDescription>
+              Send a password reset link to the user's email address. They will be able to set a new password.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="resetEmail">Email Address</Label>
+              <Input
+                id="resetEmail"
+                placeholder="user@example.com"
+                value={passwordResetEmail}
+                onChange={(e) => setPasswordResetEmail(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEmailResetDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSendPasswordResetEmail} disabled={passwordResetLoading}>
+              {passwordResetLoading ? (
+                <>
+                  <div className="mr-2">
+                    <LoadingSpinner />
+                  </div>
+                  Sending...
+                </>
+              ) : (
+                'Send Reset Email'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add assign cameras button outside of the table component */}
       {hasPermission('assign-cameras') && (

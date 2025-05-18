@@ -69,9 +69,10 @@ export async function signOut(): Promise<void> {
 
 export async function resetPassword(email: string): Promise<void> {
   try {
-    // Validate email format before sending to Supabase
-    if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-      toast.error('Please enter a valid email address');
+    // Improved email validation with more explicit error message
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      toast.error('Please enter a valid email address (e.g. user@example.com)');
       throw new Error('Invalid email format');
     }
 
@@ -94,6 +95,35 @@ export async function resetPassword(email: string): Promise<void> {
   } catch (error: any) {
     console.error("[AUTH ACTION] Reset password exception:", error.message);
     toast.error(error.message || 'Error sending password reset email');
+    throw error;
+  }
+}
+
+// New function for admin to reset user's password directly
+export async function adminResetUserPassword(userId: string, newPassword: string): Promise<void> {
+  try {
+    // Validate password strength
+    if (!newPassword || newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters long');
+      throw new Error('Password too short');
+    }
+    
+    console.log("[AUTH ACTION] Admin resetting password for user:", userId);
+    
+    // Use Supabase Edge Function for admin password reset
+    const { error } = await supabase.functions.invoke('admin-reset-password', {
+      body: { userId, newPassword }
+    });
+    
+    if (error) {
+      console.error("[AUTH ACTION] Admin password reset error:", error.message);
+      throw error;
+    }
+    
+    toast.success('User password has been reset successfully');
+  } catch (error: any) {
+    console.error("[AUTH ACTION] Admin password reset exception:", error.message);
+    toast.error(error.message || 'Error resetting user password');
     throw error;
   }
 }
