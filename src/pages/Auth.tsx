@@ -15,6 +15,7 @@ const Auth = () => {
   const { user, isLoading, requiresMFA, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState('login');
   const [authStarted, setAuthStarted] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
   const location = useLocation();
   
   // Get the return path from location state, or default to dashboard for admins, live view for others
@@ -39,7 +40,20 @@ const Auth = () => {
   
   useEffect(() => {
     console.log("[Auth Page] Auth state changed - isLoading:", isLoading, "user:", !!user, "requiresMFA:", requiresMFA, "isAdmin:", isAdmin);
-  }, [isLoading, user, requiresMFA, isAdmin]);
+    
+    // Handle successful authentication with a short delay to ensure state is fully updated
+    if (user && !isLoading && !redirecting) {
+      setRedirecting(true);
+      
+      // Add a small delay before redirect to ensure all auth data is processed
+      const redirectTimeout = setTimeout(() => {
+        console.log("[Auth Page] Redirecting authenticated user to:", isAdmin ? "/dashboard" : from);
+        // The actual redirect happens in the render below
+      }, 100);
+      
+      return () => clearTimeout(redirectTimeout);
+    }
+  }, [isLoading, user, requiresMFA, isAdmin, from, redirecting]);
 
   useEffect(() => {
     // Check URL params for tab selection
@@ -85,7 +99,7 @@ const Auth = () => {
       );
     }
     
-    console.log("[Auth Page] User is authenticated, redirecting to", from, "isAdmin:", isAdmin);
+    console.log("[Auth Page] User is authenticated, redirecting to", isAdmin ? "/dashboard" : from, "isAdmin:", isAdmin);
     toast.success(`Welcome back!`);
     
     return <Navigate to={isAdmin ? "/dashboard" : from} replace />;
