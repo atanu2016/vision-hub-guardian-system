@@ -69,9 +69,20 @@ export async function signOut(): Promise<void> {
 
 export async function resetPassword(email: string): Promise<void> {
   try {
+    // Validate email format before sending to Supabase
+    if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      toast.error('Please enter a valid email address');
+      throw new Error('Invalid email format');
+    }
+
     console.log("[AUTH ACTION] Resetting password for:", email);
+    
+    // Add a redirect URL that includes the full origin
+    const redirectUrl = `${window.location.origin}/auth?reset=true`;
+    console.log("[AUTH ACTION] Using redirect URL:", redirectUrl);
+    
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: redirectUrl,
     });
     
     if (error) {

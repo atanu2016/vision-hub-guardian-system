@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 
 export type DetectionSettings = {
@@ -20,7 +20,13 @@ export const useDetectionSettings = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
+  // Use useEffect to load settings when the hook is initialized
+  useEffect(() => {
+    loadDetectionSettings();
+  }, []);
+  
   const loadDetectionSettings = useCallback(async () => {
+    console.log("[Detection Settings] Loading detection settings...");
     setIsLoading(true);
     try {
       // Simulate API call with a delay
@@ -28,9 +34,9 @@ export const useDetectionSettings = () => {
       
       // In a real application, fetch settings from API
       // For now, using default settings defined in useState
-      console.log("Detection settings loaded");
+      console.log("[Detection Settings] Settings loaded successfully");
     } catch (error) {
-      console.error("Error loading detection settings:", error);
+      console.error("[Detection Settings] Error loading settings:", error);
       toast.error("Failed to load detection settings");
     } finally {
       setIsLoading(false);
@@ -39,6 +45,7 @@ export const useDetectionSettings = () => {
   }, [detectionSettings]);
   
   const updateDetectionSettings = useCallback((newSettings: Partial<DetectionSettings>) => {
+    console.log("[Detection Settings] Updating settings:", newSettings);
     setIsSaving(true);
     try {
       // Update local state
@@ -49,7 +56,7 @@ export const useDetectionSettings = () => {
       
       toast.success("Detection settings updated");
     } catch (error) {
-      console.error("Error updating detection settings:", error);
+      console.error("[Detection Settings] Error updating settings:", error);
       toast.error("Failed to update detection settings");
     } finally {
       setIsSaving(false);

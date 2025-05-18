@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, memo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -57,7 +56,7 @@ const SystemSettingsMain = () => {
     const loadData = async () => {
       try {
         await Promise.all([
-          reloadSettings(),
+          reloadSettings(true), // Force refresh
           loadDetectionSettings()
         ]);
         console.log("SystemSettingsMain: Settings loaded successfully");
@@ -156,7 +155,7 @@ const SystemSettingsMain = () => {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold">System Settings</h2>
         <Button 
-          onClick={handleSaveAll}
+          onClick={saveAllSettings}
           disabled={isSaving}
           className="flex items-center gap-2"
         >
@@ -172,9 +171,9 @@ const SystemSettingsMain = () => {
             darkMode={interfaceSettings.darkMode}
             notifications={interfaceSettings.notifications}
             audio={interfaceSettings.audio}
-            onChangeDarkMode={handleDarkModeChange}
-            onChangeNotifications={handleNotificationsChange}
-            onChangeAudio={handleAudioChange}
+            onChangeDarkMode={(enabled) => updateInterfaceSettings({...interfaceSettings, darkMode: enabled})}
+            onChangeNotifications={(enabled) => updateInterfaceSettings({...interfaceSettings, notifications: enabled})}
+            onChangeAudio={(enabled) => updateInterfaceSettings({...interfaceSettings, audio: enabled})}
           />
         </Card>
         
@@ -185,10 +184,10 @@ const SystemSettingsMain = () => {
             enabled={detectionSettings.enabled}
             objectTypes={detectionSettings.objectTypes}
             smartDetection={detectionSettings.smartDetection}
-            onChangeSensitivity={handleSensitivityChange}
-            onChangeEnabled={handleDetectionEnabledChange}
-            onChangeObjectTypes={handleObjectTypesChange}
-            onChangeSmartDetection={handleSmartDetectionChange}
+            onChangeSensitivity={(value) => updateDetectionSettings({sensitivityLevel: value[0]})}
+            onChangeEnabled={(enabled) => updateDetectionSettings({enabled})}
+            onChangeObjectTypes={(types) => updateDetectionSettings({objectTypes: types})}
+            onChangeSmartDetection={(enabled) => updateDetectionSettings({smartDetection: enabled})}
           />
         </Card>
         
@@ -198,9 +197,9 @@ const SystemSettingsMain = () => {
             autoDeleteOld={storageSettings.autoDeleteOld}
             maxStorageSize={storageSettings.maxStorageSize}
             backupSchedule={storageSettings.backupSchedule}
-            onChangeAutoDeleteOld={handleAutoDeleteChange}
-            onChangeMaxStorageSize={handleMaxStorageSizeChange}
-            onChangeBackupSchedule={handleBackupScheduleChange}
+            onChangeAutoDeleteOld={(enabled) => updateStorageSettings({...storageSettings, autoDeleteOld: enabled})}
+            onChangeMaxStorageSize={(size) => updateStorageSettings({...storageSettings, maxStorageSize: size})}
+            onChangeBackupSchedule={(schedule) => updateStorageSettings({...storageSettings, backupSchedule: schedule})}
           />
         </Card>
         

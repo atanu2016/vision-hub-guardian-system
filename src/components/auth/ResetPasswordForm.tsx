@@ -2,12 +2,13 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Mail } from 'lucide-react';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 
 const resetSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
@@ -16,6 +17,7 @@ const resetSchema = z.object({
 export const ResetPasswordForm = () => {
   const { resetPassword } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const form = useForm<z.infer<typeof resetSchema>>({
     resolver: zodResolver(resetSchema),
@@ -23,9 +25,16 @@ export const ResetPasswordForm = () => {
   });
 
   const handleSubmit = async (values: z.infer<typeof resetSchema>) => {
+    if (isSubmitting) return;
+    
     setIsSubmitting(true);
     try {
       await resetPassword(values.email);
+      setEmailSent(true);
+      toast.success('Password reset email sent successfully');
+    } catch (error: any) {
+      console.error('Reset password error:', error);
+      // Error toast is already shown in resetPassword function
     } finally {
       setIsSubmitting(false);
     }
@@ -41,22 +50,39 @@ export const ResetPasswordForm = () => {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="mail@example.com" {...field} />
+                <div className="relative">
+                  <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="mail@example.com" 
+                    className="pl-9" 
+                    {...field}
+                    disabled={isSubmitting || emailSent} 
+                  />
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Sending reset email...
-            </>
-          ) : (
-            'Reset password'
-          )}
-        </Button>
+        
+        {emailSent ? (
+          <div className="bg-green-50 dark:bg-green-950/30 p-3 rounded-md border border-green-200 dark:border-green-900">
+            <p className="text-green-800 dark:text-green-300 text-sm">
+              Reset link sent! Please check your email inbox.
+            </p>
+          </div>
+        ) : (
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Sending reset email...
+              </>
+            ) : (
+              'Reset password'
+            )}
+          </Button>
+        )}
       </form>
     </Form>
   );
