@@ -27,7 +27,7 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
       return transformCameraData(data || []);
     }
     
-    // For regular users, get their assigned camera IDs
+    // For regular users and observers, get their assigned camera IDs
     console.log("User is not admin, fetching assigned cameras");
     try {
       const assignedCameraIds = await getUserAssignedCameras(userId);

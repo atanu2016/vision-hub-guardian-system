@@ -1,107 +1,109 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/auth';
 import type { UserRole } from '@/contexts/auth/types';
 
 export function useRoleSubscription() {
-  const { user } = useAuth();
-  const [role, setRole] = useState<string>('user');
-  const [authRole, setAuthRole] = useState<string>('user');
+  const [role, setRole] = useState<UserRole>('user');
+  const [authRole, setAuthRole] = useState<UserRole>('user');
   const [error, setError] = useState<Error | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Effect to fetch the role of the current user
   useEffect(() => {
-    // Reset state when user changes
-    setRole('user');
-    setAuthRole('user');
-    setError(null);
-    
-    if (!user) {
-      setIsLoading(false);
-      return;
-    }
-    
-    const userId = user.id;
-    setIsLoading(true);
-    
-    // Simple function to check for special admin emails
-    const checkSpecialEmails = async () => {
-      const { data: userData } = await supabase.auth.getUser();
-      if (userData.user?.email === 'admin@home.local' || userData.user?.email === 'superadmin@home.local') {
-        setRole('superadmin');
-        setAuthRole('superadmin');
-        return true;
-      }
-      return false;
-    };
-    
-    const fetchRole = async () => {
+    let isMounted = true;
+
+    const setupRoleSubscription = async () => {
       try {
-        // First check for special admin emails
-        const isSpecialAdmin = await checkSpecialEmails();
-        if (isSpecialAdmin) {
+        // First get session to see if user is authenticated
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          // Not authenticated
           setIsLoading(false);
           return;
         }
         
-        // Try to get the role from vw_all_users view (which bypasses RLS)
-        const { data: viewUser, error: viewError } = await supabase
-          .from('vw_all_users')
-          .select('role')
-          .eq('id', userId)
-          .maybeSingle();
-          
-        if (!viewError && viewUser?.role) {
-          setRole(viewUser.role);
-          setAuthRole(viewUser.role);
+        // Check if user email is special admin account
+        const userEmail = session.user.email?.toLowerCase() || '';
+        if (userEmail === 'admin@home.local' || userEmail === 'superadmin@home.local') {
+          setRole('superadmin');
+          setAuthRole('superadmin');
           setIsLoading(false);
           return;
         }
         
-        // As a fallback, try to get role from user_roles table directly
+        // Get user role from database
         const { data: roleData, error: roleError } = await supabase
           .from('user_roles')
           .select('role')
-          .eq('user_id', userId)
-          .maybeSingle();
+          .eq('user_id', session.user.id)
+          .single();
         
-        if (roleError) {
-          console.error('Error fetching role:', roleError);
-          setError(roleError);
-          setRole('user'); // Default if something goes wrong
-        } else if (roleData) {
-          setRole(roleData.role);
-          setAuthRole(roleData.role);
+        if (roleError && roleError.code !== 'PGRST116') {  // PGRST116 is "no rows returned" error
+          console.error('Error fetching user role:', roleError);
+          if (isMounted) {
+            setError(new Error(roleError.message));
+          }
         }
-      } catch (e) {
-        console.error('Exception fetching role:', e);
-        setError(e instanceof Error ? e : new Error(String(e)));
-        setRole('user'); // Default if something goes wrong
+        
+        // Set role based on what we found in database, default to 'user' if not found
+        if (roleData) {
+          if (isMounted) {
+            const userRole = roleData.role as UserRole;
+            setRole(userRole);
+            setAuthRole(userRole);
+          }
+        } else {
+          // Check if observer role exists in profiles table
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', session.user.id)
+            .single();
+            
+          if (profileData && profileData.is_admin) {
+            setRole('superadmin');
+            setAuthRole('superadmin');
+          } else {
+            setRole('user');
+            setAuthRole('user');
+          }
+        }
+      } catch (err) {
+        console.error('Exception in role subscription:', err);
+        if (isMounted) {
+          setError(err instanceof Error ? err : new Error(String(err)));
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
-    
-    fetchRole();
-    
-    // Create a subscription for role changes
-    const subscription = supabase
-      .channel('role_changes')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'user_roles',
-        filter: `user_id=eq.${userId}`
-      }, fetchRole)
+
+    setupRoleSubscription();
+
+    // Subscribe to role changes
+    const channel = supabase
+      .channel('role-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'user_roles'
+      }, payload => {
+        if (payload.new && isMounted) {
+          const userRole = (payload.new as any).role as UserRole;
+          setRole(userRole);
+          setAuthRole(userRole);
+        }
+      })
       .subscribe();
-      
+
     return () => {
-      supabase.removeChannel(subscription);
+      isMounted = false;
+      supabase.removeChannel(channel);
     };
-    
-  }, [user]);
-  
+  }, []);
+
   return { role, authRole, error, isLoading };
 }

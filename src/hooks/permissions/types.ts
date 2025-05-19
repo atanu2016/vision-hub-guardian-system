@@ -1,20 +1,12 @@
 
-import { Permission } from "@/utils/permissionUtils";
-import { UserRole } from "@/contexts/auth/types";
+import { Permission, UserRole } from '@/utils/permissionUtils';
 
 export interface UsePermissionsReturn {
-  hasPermission: (permission: Permission) => boolean;
-  canManageRole: (targetRole: UserRole) => boolean;
+  hasPermission: (permission: Permission) => Promise<boolean> | boolean;
+  canManageRole: (role: UserRole) => boolean;
   role: UserRole;
   currentRole: UserRole;
   authRole: UserRole;
   isLoading: boolean;
-  error: string | null;
-}
-
-export interface PermissionCache {
-  [key: string]: {
-    timestamp: number;
-    result: boolean;
-  };
+  error?: string | null;
 }

@@ -1,5 +1,8 @@
 
 import { useState, useEffect } from "react";
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from "@/contexts/auth";
+import { getUserAssignedCameras } from '@/services/userManagement/cameraAssignment';
 
 // Recording interface from the original file
 interface Recording {
@@ -14,7 +17,7 @@ interface Recording {
   thumbnailUrl?: string;
 }
 
-// Later this should be fetched from an actual API
+// Mock recordings data for development
 const mockRecordings: Recording[] = [
   {
     id: "rec1",
@@ -117,20 +120,75 @@ export const useRecordings = () => {
   const [loading, setLoading] = useState(true);
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [storageUsed, setStorageUsed] = useState<StorageInfo>({ used: 134.5, total: 500 });
+  const { role, user } = useAuth();
 
   useEffect(() => {
-    // Simulate API call to get recordings and cameras
-    setTimeout(() => {
-      setRecordings(mockRecordings);
+    // Immediate authentication check
+    if (!user?.id) {
+      return;
+    }
+    
+    const loadCamerasAndRecordings = async () => {
+      setLoading(true);
       
-      // Extract unique cameras from recordings
-      const uniqueCameras = Array.from(new Set(mockRecordings.map(r => r.cameraName)))
-        .map(name => ({ id: name.toLowerCase().replace(/\s+/g, '-'), name }));
-      
-      setCameras(uniqueCameras);
-      setLoading(false);
-    }, 1000);
-  }, []);
+      try {
+        // For observers, get only assigned cameras
+        if (role === 'observer') {
+          const assignedCameraIds = await getUserAssignedCameras(user.id);
+          console.log(`Observer ${user.id} has ${assignedCameraIds.length} assigned cameras`);
+          
+          if (assignedCameraIds.length === 0) {
+            // No cameras assigned, return empty data
+            setCameras([]);
+            setRecordings([]);
+            setLoading(false);
+            return;
+          }
+          
+          // Fetch camera details for assigned cameras
+          const { data: cameraData, error: cameraError } = await supabase
+            .from('cameras')
+            .select('id, name')
+            .in('id', assignedCameraIds);
+            
+          if (cameraError) {
+            console.error("Error fetching assigned cameras:", cameraError);
+            return;
+          }
+          
+          // Transform to expected format
+          const uniqueCameras = cameraData.map(cam => ({
+            id: cam.id,
+            name: cam.name
+          }));
+          
+          setCameras(uniqueCameras);
+          
+          // Filter mock recordings to only show those from assigned cameras
+          const cameraNames = uniqueCameras.map(cam => cam.name);
+          const filteredRecordings = mockRecordings.filter(
+            rec => cameraNames.includes(rec.cameraName)
+          );
+          
+          setRecordings(filteredRecordings);
+        } else {
+          // For non-observers (admin, etc.), show all cameras and recordings
+          // Extract unique cameras from recordings
+          const uniqueCameras = Array.from(new Set(mockRecordings.map(r => r.cameraName)))
+            .map(name => ({ id: name.toLowerCase().replace(/\s+/g, '-'), name }));
+          
+          setCameras(uniqueCameras);
+          setRecordings(mockRecordings);
+        }
+      } catch (error) {
+        console.error("Error loading camera access data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCamerasAndRecordings();
+  }, [role, user?.id]);
 
   // Filter recordings based on selected camera and type
   const filteredRecordings = recordings.filter(recording => {

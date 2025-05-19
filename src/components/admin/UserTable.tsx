@@ -1,13 +1,5 @@
 
-import { useState } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RoleSelector } from "./RoleSelector";
 import { MfaToggle } from "./MfaToggle";
@@ -15,7 +7,7 @@ import { DeleteUserButton } from "./DeleteUserButton";
 import { useAuth } from "@/contexts/auth";
 import { Button } from "@/components/ui/button";
 import { Camera, Key } from "lucide-react";
-import { UserData, UserRole, MfaToggleProps, DeleteUserButtonProps } from "@/types/admin";
+import { UserData, UserRole } from "@/types/admin";
 import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "sonner";
 
@@ -100,7 +92,7 @@ export function UserTable({
                     onRevokeMfaEnrollment={revokeMfaEnrollment}
                   />
                 </TableCell>
-                <TableCell className="text-right space-x-1">
+                <TableCell className="text-right flex justify-end items-center space-x-1">
                   {canManageUsers && (
                     <Button 
                       variant="ghost" 

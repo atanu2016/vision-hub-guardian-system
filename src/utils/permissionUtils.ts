@@ -42,13 +42,14 @@ const permissionMap: Record<Permission, UserRole[]> = {
   'view-footage:assigned': ['observer', 'superadmin'],
   
   // User and superadmin permissions
-  'view-dashboard': ['superadmin'],
-  'manage-cameras:assigned': ['superadmin'],
+  'view-dashboard': ['user', 'superadmin'],
+  'manage-cameras:assigned': ['user', 'superadmin'],
   
   // Superadmin-only permissions
   'view-cameras:all': ['superadmin'],
   'view-footage:all': ['superadmin'],
   'manage-users:lower': ['superadmin'],
+  'manage-users:all': ['superadmin'],
   'manage-cameras:all': ['superadmin'],
   'configure-camera-settings': ['superadmin'],
   'configure-storage': ['superadmin'],
@@ -56,7 +57,6 @@ const permissionMap: Record<Permission, UserRole[]> = {
   'access-logs': ['superadmin'],
   'assign-roles': ['superadmin'],
   'assign-cameras': ['superadmin'],
-  'manage-users:all': ['superadmin'],
   'manage-system': ['superadmin'],
   'system-migration': ['superadmin']
 };

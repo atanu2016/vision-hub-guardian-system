@@ -10,7 +10,6 @@ import { UserData } from "@/types/admin";
 import { toast } from "sonner";
 import CameraAssignmentModal from "@/components/admin/CameraAssignmentModal";
 import { UserSelectorModal } from "@/components/admin/UserSelectorModal";
-import { UserActions } from "@/components/admin/UserManagement/UserActions";
 import { EmailResetDialog } from "@/components/admin/PasswordReset/EmailResetDialog";
 import { AdminPasswordResetDialog } from "@/components/admin/PasswordReset/AdminPasswordResetDialog";
 import { adminResetUserPassword, resetPassword } from "@/contexts/auth/authActions";
@@ -57,17 +56,6 @@ const UserManagement = () => {
     setShowCameraAssignment(false);
     setSelectedUserId(null);
     setSelectedUserName('');
-  };
-
-  const handleCameraAssignmentButtonClick = () => {
-    setShowUserSelector(true);
-  };
-
-  const handleUserSelect = (user: UserData) => {
-    setSelectedUserId(user.id);
-    setSelectedUserName(user.email || "Selected User");
-    setShowCameraAssignment(true);
-    setShowUserSelector(false);
   };
 
   // Password reset handlers
@@ -168,7 +156,7 @@ const UserManagement = () => {
       <UserSelectorModal
         isOpen={showUserSelector}
         onClose={() => setShowUserSelector(false)}
-        onUserSelect={handleUserSelect}
+        onUserSelect={(user) => handleCameraAssignmentClick(user.id, user.email || 'User')}
         users={users}
         loading={loading}
       />
@@ -192,9 +180,6 @@ const UserManagement = () => {
         onResetPassword={handleAdminPasswordReset}
         isLoading={adminPasswordResetLoading}
       />
-
-      {/* Actions outside of the table component */}
-      <UserActions onCameraAssignmentButtonClick={handleCameraAssignmentButtonClick} />
     </AppLayout>
   );
 };

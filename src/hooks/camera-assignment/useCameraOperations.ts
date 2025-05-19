@@ -48,11 +48,14 @@ export function useCameraOperations(
       
       if (!success) {
         toast.error("Failed to save camera assignments");
+        return false;
       }
       
-      return success;
+      toast.success(`Camera assignments saved successfully for ${assignedCameraIds.length} cameras`);
+      return true;
     } catch (error) {
       console.error("Error in camera assignment save operation:", error);
+      toast.error("An error occurred while saving camera assignments");
       return false;
     } finally {
       setSaving(false);
