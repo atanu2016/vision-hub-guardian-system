@@ -10,27 +10,53 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
   try {
     console.log(`Assigning cameras to user ${userId}. Camera count:`, cameraIds.length);
     
-    // First check session - most crucial step
+    // First check session - most crucial step with multiple fallbacks
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     
-    if (sessionError || !sessionData.session) {
-      console.error("No valid session when attempting camera assignment:", sessionError || "No session");
+    if (sessionError) {
+      console.error("Session error when attempting camera assignment:", sessionError);
       toast.error("Your session has expired. Please log in again.");
+      setTimeout(() => window.location.href = '/auth', 2000);
       return false;
     }
     
-    // Verify admin permissions
-    const { data: adminCheck, error: adminCheckError } = await supabase.rpc('is_admin_bypass_rls');
-    
-    if (adminCheckError) {
-      console.error("Error checking admin permissions:", adminCheckError);
-      toast.error("Permission verification failed: " + adminCheckError.message);
+    if (!sessionData.session) {
+      console.error("No valid session found during camera assignment");
+      toast.error("Authentication required. Please log in again.");
+      setTimeout(() => window.location.href = '/auth', 2000);
       return false;
     }
     
-    if (!adminCheck) {
-      console.error("User does not have admin permissions");
-      toast.error("You don't have permission to assign cameras");
+    // Do an explicit refresh of the session token before proceeding
+    try {
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        console.warn("Token refresh failed, but continuing with existing token:", refreshError);
+        // Continue with existing token - it might still work
+      }
+    } catch (refreshErr) {
+      console.warn("Error refreshing token, continuing with existing token:", refreshErr);
+      // Continue with existing token - it might still work
+    }
+    
+    // Verify admin permissions - cannot assign cameras without them
+    try {
+      const { data: adminCheck, error: adminCheckError } = await supabase.rpc('is_admin_bypass_rls');
+      
+      if (adminCheckError) {
+        console.error("Error checking admin permissions:", adminCheckError);
+        toast.error("Permission verification failed: " + adminCheckError.message);
+        return false;
+      }
+      
+      if (!adminCheck) {
+        console.error("User does not have admin permissions");
+        toast.error("You don't have permission to assign cameras");
+        return false;
+      }
+    } catch (permError: any) {
+      console.error("Exception checking admin permissions:", permError);
+      toast.error("Permission verification error: " + (permError?.message || "Unknown error"));
       return false;
     }
     
@@ -54,6 +80,11 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
       if (error) throw error;
       
       console.log(`Successfully assigned ${cameraIds.length} cameras to user ${userId} using transaction`);
+      
+      // Log success in background
+      addLogToDB('info', `Completed camera assignment for user ${userId}`, 'camera-assignment', 
+        `Successfully assigned ${cameraIds.length} cameras`);
+        
       return true;
     } catch (rpcError: any) {
       // If RPC fails, fall back to manual assignment approach

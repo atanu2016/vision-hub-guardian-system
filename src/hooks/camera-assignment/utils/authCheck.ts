@@ -20,14 +20,34 @@ export const checkAuthentication = async (): Promise<boolean> => {
     if (!sessionData.session) {
       console.error("No active session found");
       
-      // Use a non-blocking approach to redirect
-      toast.error("Authentication required. Please log in again.", {
+      // Use toast with redirection to ensure user knows they're being redirected
+      toast.error("Your session has expired. Please login again.", {
         onDismiss: () => {
           window.location.href = '/auth';
-        }
+        },
+        duration: 4000
       });
       
       return false;
+    }
+    
+    // Verify session is still valid with backend check
+    try {
+      const { data: validCheck, error: validError } = await supabase.rpc('check_session_valid');
+      
+      if (validError || validCheck !== true) {
+        console.error("Session validation failed:", validError || "Backend check returned false");
+        toast.error("Session validation failed. Please login again.", {
+          onDismiss: () => {
+            window.location.href = '/auth';
+          },
+          duration: 3000
+        });
+        return false;
+      }
+    } catch (validationError) {
+      console.error("Error validating session:", validationError);
+      // Continue with normal flow if RPC doesn't exist yet - fallback behavior
     }
     
     return true;
