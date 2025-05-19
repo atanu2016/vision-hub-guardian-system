@@ -36,7 +36,11 @@ export interface Camera {
 export interface CameraGroup {
   id: string;
   name: string;
-  cameras: Camera[];
+  description?: string;
+}
+
+export interface GroupedCameras {
+  [groupName: string]: Camera[];
 }
 
 export interface StorageSettings {

@@ -6,6 +6,7 @@ import { UseCameraAssignmentReturn } from './types';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useCameraGroups } from './useCameraGroups';
 
 export function useAssignCameras(userId: string, isOpen: boolean): UseCameraAssignmentReturn {
   const { canAssignCameras } = useAdminPermission();
@@ -13,6 +14,7 @@ export function useAssignCameras(userId: string, isOpen: boolean): UseCameraAssi
   const [authChecked, setAuthChecked] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { saving, handleCameraToggle, handleSave: operationsSave } = useCameraOperations(userId, cameras, setCameras);
+  const { groupedCameras, getAvailableGroups, getCamerasByGroup } = useCameraGroups(cameras);
 
   // Check authentication status when the component loads and any time isOpen changes
   useEffect(() => {
@@ -74,6 +76,9 @@ export function useAssignCameras(userId: string, isOpen: boolean): UseCameraAssi
     saving,
     canAssignCameras,
     isAuthenticated,
+    groupedCameras,
+    getAvailableGroups,
+    getCamerasByGroup,
     error,
     handleCameraToggle,
     handleSave,

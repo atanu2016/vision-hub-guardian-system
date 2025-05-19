@@ -9,6 +9,9 @@ import { toast } from 'sonner';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from '@/integrations/supabase/client';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useCameraGroups } from '@/hooks/camera-assignment/useCameraGroups';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface CameraAssignmentModalProps {
   isOpen: boolean;
@@ -20,6 +23,7 @@ interface CameraAssignmentModalProps {
 const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssignmentModalProps) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<string>('All Cameras');
   
   const { 
     cameras, 
@@ -32,6 +36,11 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
     handleSave,
     loadCamerasAndAssignments
   } = useAssignCameras(userId, isOpen);
+  
+  const { 
+    getAvailableGroups,
+    getCamerasByGroup
+  } = useCameraGroups(cameras);
 
   // Check authentication status when modal opens and periodically
   useEffect(() => {
@@ -131,6 +140,9 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
   // Check if the user is truly authenticated by combining all auth checks
   const combinedIsAuthenticated = isAuthenticated && hookIsAuthenticated;
 
+  // Get cameras for the currently selected group
+  const filteredCameras = selectedGroup ? getCamerasByGroup(selectedGroup) : cameras;
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md md:max-w-xl">
@@ -181,8 +193,28 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
             </Alert>
           )}
           
+          {/* Camera Group Selection */}
+          <div className="mb-4">
+            <Select
+              value={selectedGroup}
+              onValueChange={setSelectedGroup}
+              disabled={loading || saving}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select Camera Group" />
+              </SelectTrigger>
+              <SelectContent>
+                {getAvailableGroups().map((group) => (
+                  <SelectItem key={group} value={group}>
+                    {group} ({getCamerasByGroup(group).length})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
           <CameraList 
-            cameras={cameras}
+            cameras={filteredCameras}
             loading={loading}
             saving={saving}
             canAssignCameras={canAssignCameras && combinedIsAuthenticated}

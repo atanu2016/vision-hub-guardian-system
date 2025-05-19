@@ -29,6 +29,28 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
       throw new Error("User ID is required");
     }
     
+    // First, check if we have admin permissions
+    const { data: roleData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', sessionData.session.user.id)
+      .maybeSingle();
+      
+    if (!roleData || roleData.role !== 'superadmin') {
+      // Also check if user has is_admin in profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', sessionData.session.user.id)
+        .maybeSingle();
+        
+      if (!profileData?.is_admin) {
+        console.error("User does not have superadmin role or is_admin flag");
+        toast.error("You don't have permission to assign cameras");
+        return false;
+      }
+    }
+    
     // First, delete all existing user-camera assignments to avoid stale data
     const { error: deleteError } = await supabase
       .from('user_camera_access')
@@ -52,32 +74,55 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
       return true;
     }
     
-    // Prepare batch of assignments to insert
-    const assignmentsToInsert = cameraIds.map(cameraId => ({
-      user_id: userId,
-      camera_id: cameraId,
-      created_at: new Date().toISOString()
-    }));
-    
-    // Insert all new assignments in a single batch operation
-    const { error: insertError } = await supabase
-      .from('user_camera_access')
-      .insert(assignmentsToInsert);
+    try {
+      // Prepare batch of assignments to insert
+      const assignmentsToInsert = cameraIds.map(cameraId => ({
+        user_id: userId,
+        camera_id: cameraId,
+        created_at: new Date().toISOString()
+      }));
       
-    if (insertError) {
-      console.error("Error adding camera assignments:", insertError);
-      if (insertError.code === 'PGRST301') {
-        toast.error("Not authorized. Please log in with admin privileges.");
-      } else if (insertError.message.includes('foreign key constraint')) {
-        toast.error("One or more cameras do not exist in the system.");
-      } else {
-        toast.error("Could not update camera assignments. Please try again.");
+      // Insert all new assignments in a single batch operation
+      const { error: insertError } = await supabase
+        .from('user_camera_access')
+        .insert(assignmentsToInsert);
+        
+      if (insertError) {
+        console.error("Error adding camera assignments:", insertError);
+        
+        // Detailed error handling with more user-friendly messages
+        if (insertError.code === 'PGRST301') {
+          toast.error("Not authorized. Please log in with admin privileges.");
+        } else if (insertError.code === '23503') { // Foreign key violation
+          toast.error("One or more cameras do not exist in the system.");
+          
+          // Attempt to identify which cameras are causing the issue
+          const { data: validCameras } = await supabase
+            .from('cameras')
+            .select('id')
+            .in('id', cameraIds);
+            
+          const validCameraIds = validCameras?.map(cam => cam.id) || [];
+          const invalidCameraIds = cameraIds.filter(id => !validCameraIds.includes(id));
+          
+          if (invalidCameraIds.length > 0) {
+            console.error("Invalid camera IDs:", invalidCameraIds);
+          }
+        } else if (insertError.code === '23505') { // Unique violation
+          toast.error("Duplicate camera assignments detected.");
+        } else {
+          toast.error("Database error: " + (insertError.message || "Unknown error"));
+        }
+        return false;
       }
+      
+      console.log(`Successfully assigned ${cameraIds.length} cameras to user ${userId}`);
+      return true;
+    } catch (innerError: any) {
+      console.error('Error in insert operation:', innerError);
+      toast.error("Database error during camera assignment");
       return false;
     }
-    
-    console.log(`Successfully assigned ${cameraIds.length} cameras to user ${userId}`);
-    return true;
   } catch (error: any) {
     console.error('Error assigning cameras to user:', error);
     toast.error(error?.message || "Could not update camera assignments");
