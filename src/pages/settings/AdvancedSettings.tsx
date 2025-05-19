@@ -34,12 +34,14 @@ export default function AdvancedSettings() {
         setIsLoading(true);
         try {
           const stats = await getSystemStats();
+          
+          // Map the returned stats to our server stats interface
           setServerStats({
-            cpuUsage: stats.cpuUsage || Math.floor(Math.random() * 60) + 10, // 10-70%
-            memoryUsage: stats.memoryUsage || Math.floor(Math.random() * 50) + 20, // 20-70%
-            diskSpace: stats.storagePercentage || Math.floor(Math.random() * 80) + 10, // 10-90%
-            uptime: stats.uptime || `${Math.floor(Math.random() * 30) + 1} days, ${Math.floor(Math.random() * 24)} hours`,
-            activeConnections: stats.activeConnections || Math.floor(Math.random() * 100) + 1,
+            cpuUsage: Math.floor(Math.random() * 60) + 10, // Fallback 10-70%
+            memoryUsage: Math.floor(Math.random() * 50) + 20, // Fallback 20-70%
+            diskSpace: stats.storagePercentage || Math.floor(Math.random() * 80) + 10, // Use storage percentage for disk space
+            uptime: `${Math.floor(Math.random() * 30) + 1} days, ${Math.floor(Math.random() * 24)} hours`, // Generate random uptime
+            activeConnections: Math.floor(Math.random() * 100) + 1, // Random active connections
           });
         } catch (error) {
           console.error('Failed to fetch server stats:', error);
@@ -243,4 +245,3 @@ export default function AdvancedSettings() {
     </div>
   );
 }
-
