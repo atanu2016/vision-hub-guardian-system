@@ -1,12 +1,12 @@
 
-import { Camera } from '@/components/admin/camera-assignment/types';
+import { Camera } from "@/components/admin/camera-assignment/types";
 
 export interface UseCameraAssignmentReturn {
   cameras: Camera[];
   loading: boolean;
   saving: boolean;
   canAssignCameras: boolean;
-  isAuthenticated: boolean;
+  isAuthenticated: boolean; // Added isAuthenticated status
   error: string | null;
   handleCameraToggle: (cameraId: string, checked: boolean) => void;
   handleSave: () => Promise<boolean>;

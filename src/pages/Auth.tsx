@@ -69,7 +69,7 @@ const Auth = () => {
         console.log("[Auth Page] Regular user, redirecting to:", path);
       }
       
-      toast.success(`Welcome back, ${user.email}`);
+      toast.success(`Welcome back!`);
       
       // Use navigate for React Router based navigation with a longer timeout
       // to allow state to fully update
