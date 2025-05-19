@@ -14,20 +14,22 @@ export default function RecordingCalendar({ cameraId }: RecordingCalendarProps) 
     selectedDateRecordings,
     selectedTimeframe,
     setSelectedTimeframe,
-    handleDateSelect
+    handleDateSelect,
+    isRecordingDate
   } = useRecordingCalendar(cameraId);
 
   return (
-    <Card className="border rounded-md">
-      <CardHeader className="pb-3">
-        <CardTitle>Recording History</CardTitle>
-        <CardDescription>View and manage your recordings</CardDescription>
+    <Card className="border rounded-md shadow-sm">
+      <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40">
+        <CardTitle className="text-xl text-blue-800 dark:text-blue-300">Recording History</CardTitle>
+        <CardDescription>View and manage your security footage</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-5">
         <div className="space-y-4">
           <CalendarDatePicker 
             date={date} 
-            onSelect={handleDateSelect} 
+            onSelect={handleDateSelect}
+            hasRecordings={isRecordingDate}
           />
           
           <div>
@@ -43,15 +45,16 @@ export default function RecordingCalendar({ cameraId }: RecordingCalendarProps) 
                 selectedTimeframe={selectedTimeframe}
               />
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-8 text-muted-foreground bg-slate-50 dark:bg-slate-900/50 rounded-md">
                 Select a date to view recordings
               </div>
             )}
           </div>
         </div>
       </CardContent>
-      <CardFooter className="flex justify-end">
-        <Button variant="outline">Export Recordings</Button>
+      <CardFooter className="flex justify-between bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40">
+        <Button variant="outline" size="sm">Filter</Button>
+        <Button variant="outline" size="sm">Export Recordings</Button>
       </CardFooter>
     </Card>
   );

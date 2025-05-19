@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -93,43 +94,27 @@ export const useRecordingCalendar = (cameraId?: string) => {
     }
   };
 
-  // Completely rewritten function to avoid TypeScript recursion issues
-  const isRecordingDate = (dateToCheck: Date | undefined): boolean => {
-    // Handle null/undefined case
-    if (!dateToCheck) {
-      return false;
-    }
+  // Custom isRecordingDate implementation using a standard for loop approach
+  const isRecordingDate = (dateToCheck: Date): boolean => {
+    if (!dateToCheck) return false;
+    if (!recordingDates || recordingDates.length === 0) return false;
     
-    // Handle empty recordings array
-    if (!recordingDates || recordingDates.length === 0) {
-      return false;
-    }
-    
-    // Format the date to compare only year/month/day
     const checkYear = dateToCheck.getFullYear();
     const checkMonth = dateToCheck.getMonth();
     const checkDay = dateToCheck.getDate();
     
-    // Loop through recordings without using array methods
-    // This prevents TypeScript's type instantiation from going too deep
-    let hasRecording = false;
-    
-    // Using simple loop with fixed counter to avoid recursion
     for (let i = 0; i < recordingDates.length; i++) {
-      const currentDate = recordingDates[i];
-      
-      // Compare year, month and day separately to avoid date object comparison issues
+      const recordDate = recordingDates[i];
       if (
-        currentDate.getFullYear() === checkYear &&
-        currentDate.getMonth() === checkMonth &&
-        currentDate.getDate() === checkDay
+        recordDate.getFullYear() === checkYear &&
+        recordDate.getMonth() === checkMonth &&
+        recordDate.getDate() === checkDay
       ) {
-        hasRecording = true;
-        break;
+        return true;
       }
     }
     
-    return hasRecording;
+    return false;
   };
 
   return {
