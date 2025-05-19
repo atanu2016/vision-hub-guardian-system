@@ -1,12 +1,11 @@
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format, subYears, addYears } from "date-fns";
+import { format } from "date-fns";
 import { useState } from "react";
-import { DayProps } from "react-day-picker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface CalendarDatePickerProps {
   date: Date | undefined;
@@ -16,20 +15,38 @@ interface CalendarDatePickerProps {
 
 export default function CalendarDatePicker({ date, onSelect, hasRecordings }: CalendarDatePickerProps) {
   const today = new Date();
+  const [month, setMonth] = useState(today.getMonth());
+  const [year, setYear] = useState(today.getFullYear());
   const [calendarOpen, setCalendarOpen] = useState(false);
   
-  // Set calendar range to 3.5 years before and 3.5 years after current date
-  const fromDate = subYears(today, 3);
-  const toDate = addYears(today, 3);
-  
-  // Custom day rendering to highlight dates with recordings
-  const getDayClassNames = (day: Date) => {
-    const hasRecordingClass = hasRecordings?.(day) 
-      ? "bg-blue-100 dark:bg-blue-900 border border-blue-300 dark:border-blue-700" 
-      : "";
-    return hasRecordingClass;
+  // Generate array of days in the selected month
+  const getDaysInMonth = (year: number, month: number): Date[] => {
+    const days = [];
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(new Date(year, month, i));
+    }
+    
+    return days;
   };
 
+  const daysInMonth = getDaysInMonth(year, month);
+  
+  // Generate last 3 years and next 3 years for year dropdown
+  const years = Array.from({ length: 7 }, (_, i) => today.getFullYear() - 3 + i);
+  
+  // Month names
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  
+  const handleDaySelect = (day: Date) => {
+    onSelect(day);
+    setCalendarOpen(false);
+  };
+  
   return (
     <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
       <PopoverTrigger asChild>
@@ -44,27 +61,84 @@ export default function CalendarDatePicker({ date, onSelect, hasRecordings }: Ca
           {date ? format(date, "PPP") : <span>Pick a date</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
-        <Calendar
-          mode="single"
-          selected={date}
-          onSelect={(selectedDate) => {
-            onSelect(selectedDate);
-            setCalendarOpen(false);
-          }}
-          fromDate={fromDate}
-          toDate={toDate}
-          initialFocus
-          className="pointer-events-auto"
-          modifiersClassNames={{
-            selected: "bg-primary text-primary-foreground",
-            today: "bg-accent text-accent-foreground",
-            hasRecording: getDayClassNames
-          }}
-          modifiers={{
-            hasRecording: (day) => hasRecordings?.(day) || false
-          }}
-        />
+      <PopoverContent className="w-auto p-4" align="start">
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Select
+                value={month.toString()}
+                onValueChange={(value) => setMonth(parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {monthNames.map((name, index) => (
+                    <SelectItem key={name} value={index.toString()}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Select
+                value={year.toString()}
+                onValueChange={(value) => setYear(parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-7 gap-1 text-center">
+            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => (
+              <div key={day} className="text-xs font-semibold text-muted-foreground">
+                {day}
+              </div>
+            ))}
+          </div>
+          
+          <div className="grid grid-cols-7 gap-1">
+            {/* Add empty cells for days before the start of the month */}
+            {Array.from({ length: new Date(year, month, 1).getDay() }).map((_, i) => (
+              <div key={`empty-start-${i}`} className="h-8 w-8" />
+            ))}
+            
+            {/* Days of the month */}
+            {daysInMonth.map((day) => {
+              const isSelected = date && day.toDateString() === date.toDateString();
+              const isToday = day.toDateString() === today.toDateString();
+              const hasRecording = hasRecordings?.(day) || false;
+              
+              return (
+                <Button
+                  key={day.toDateString()}
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "h-8 w-8 p-0 font-normal",
+                    isSelected && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+                    isToday && !isSelected && "bg-accent text-accent-foreground",
+                    hasRecording && !isSelected && "ring-1 ring-blue-400 dark:ring-blue-600 bg-blue-50 dark:bg-blue-900/30"
+                  )}
+                  onClick={() => handleDaySelect(day)}
+                >
+                  {day.getDate()}
+                </Button>
+              );
+            })}
+          </div>
+        </div>
       </PopoverContent>
     </Popover>
   );
