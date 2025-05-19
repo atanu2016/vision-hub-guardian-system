@@ -5,7 +5,7 @@ import RecordingsSidebar from "@/components/recordings/RecordingsSidebar";
 import RecordingsList from "@/components/recordings/RecordingsList";
 import { useRecordings } from "@/hooks/useRecordings";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, ListFilter } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";

@@ -29,7 +29,7 @@ export const useCamerasFetch = () => {
           name: cam.name,
           status: (cam.status as CameraStatus) || 'offline',
           location: cam.location || 'Unknown',
-          ipAddress: cam.ipaddress,
+          ipAddress: cam.ipaddress || '', // Ensure it's never undefined
           lastSeen: cam.lastseen,
           recording: cam.recording || false
         }));

@@ -17,9 +17,9 @@ export interface Recording {
 export interface Camera {
   id: string;
   name: string;
-  status: CameraStatus; // Required to match type in @/types/camera
-  location: string;     // Required to match type in @/types/camera
-  ipAddress?: string;
+  status: CameraStatus;  // Required to match type in @/types/camera
+  location: string;      // Required to match type in @/types/camera
+  ipAddress: string;     // Changed from optional to required
   lastSeen?: string;
   recording?: boolean;
 }
