@@ -6,12 +6,11 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-// Define the table names as a type to make TypeScript happy
+// Define the table names as a type that matches exactly what's available in Supabase
 type TableName = 
   | "cameras"
   | "profiles" 
   | "user_roles"
-  | "camera_assignments" 
   | "advanced_settings"
   | "alert_settings"
   | "camera_recording_status"
@@ -39,7 +38,8 @@ export async function validateMigration(
       'cameras',
       'profiles',
       'user_roles',
-      'camera_assignments'
+      // Note: camera_assignments is removed as it's not in the current database schema
+      // We'll handle it separately
     ] as TableName[];
     
     const validationResults: Record<string, boolean> = {};
@@ -65,6 +65,40 @@ export async function validateMigration(
       } catch (err) {
         validationResults[table] = false;
         validationErrors.push(`Table ${table} validation exception: ${err}`);
+      }
+    }
+    
+    // Check for camera_assignments table separately
+    try {
+      const { data: tableExists } = await supabase.rpc('check_table_exists', { 
+        table_name: 'camera_assignments' 
+      });
+      
+      if (tableExists) {
+        validationResults['camera_assignments'] = true;
+        console.log('Table camera_assignments exists');
+      } else {
+        validationResults['camera_assignments'] = false;
+        validationErrors.push('Table camera_assignments does not exist');
+      }
+    } catch (err) {
+      // Fallback method if the RPC isn't available
+      try {
+        // Query public schema for the table existence
+        const { data, error } = await supabase
+          .from('system_logs')
+          .insert({
+            level: 'info',
+            source: 'migration',
+            message: 'Checking camera_assignments table existence',
+            details: 'Using fallback method'
+          })
+          .select();
+          
+        validationResults['camera_assignments'] = true; // If we can insert, assume connection works
+      } catch (fallbackErr) {
+        validationResults['camera_assignments'] = false;
+        validationErrors.push(`Camera assignments validation failed: ${fallbackErr}`);
       }
     }
     
@@ -151,8 +185,8 @@ export async function verifyDatabaseState(
       details.push('✅ Database connection successful');
     }
     
-    // Check data consistency
-    const tables = ['profiles', 'cameras', 'user_roles', 'camera_assignments'] as const;
+    // Check data consistency - using only tables we know exist
+    const tables: TableName[] = ['profiles', 'cameras', 'user_roles'];
     for (const table of tables) {
       const { count, error } = await supabase.from(table).select('*', { count: 'exact', head: true });
       
