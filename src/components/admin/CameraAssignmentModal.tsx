@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -36,7 +35,7 @@ export default function CameraAssignmentModal({
   const [error, setError] = useState<string | null>(null);
   const [canAssignCameras, setCanAssignCameras] = useState(false);
 
-  // Check admin status using both direct checks to avoid RLS issues
+  // Simplified admin check that avoids RLS recursion issues
   useEffect(() => {
     async function checkAdminAccess() {
       try {
@@ -56,15 +55,15 @@ export default function CameraAssignmentModal({
             .from('profiles')
             .select('is_admin')
             .eq('id', sessionData?.session?.user?.id)
-            .maybeSingle();
+            .single();
             
           if (profileData?.is_admin) {
             console.log("Admin profile flag detected, granting camera assignment permission");
             setCanAssignCameras(true);
             return;
           }
-        } catch (error) {
-          console.warn("Error checking profile admin status:", error);
+        } catch (profileError) {
+          console.warn("Error checking profile admin status:", profileError);
         }
         
         // Check user roles directly
@@ -73,15 +72,15 @@ export default function CameraAssignmentModal({
             .from('user_roles')
             .select('role')
             .eq('user_id', sessionData?.session?.user?.id)
-            .maybeSingle();
+            .single();
             
           if (roleData?.role === 'admin' || roleData?.role === 'superadmin') {
             console.log("Admin role detected, granting camera assignment permission");
             setCanAssignCameras(true);
             return;
           }
-        } catch (error) {
-          console.warn("Error checking user role:", error);
+        } catch (roleError) {
+          console.warn("Error checking user role:", roleError);
         }
         
         console.log("User does not appear to be an admin, denying camera assignment permission");

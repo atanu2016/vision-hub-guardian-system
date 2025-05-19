@@ -15,47 +15,35 @@ export function useProfileUpdates(userId?: string) {
       console.log("[PROFILE UPDATE] Updating profile for user:", userId, "with name:", fullName);
       
       // First check if profile exists
-      const { data: existingProfile } = await supabase
+      const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
         .select('id')
         .eq('id', userId)
-        .maybeSingle();
+        .single();
+      
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error("[PROFILE UPDATE] Error checking profile:", checkError);
+      }
       
       if (existingProfile) {
-        // Update existing profile - Use direct update with functions to avoid RLS recursion
-        console.log("[PROFILE UPDATE] Profile exists, updating...");
+        // Update existing profile
+        console.log("[PROFILE UPDATE] Profile exists, updating directly...");
         
-        // Use direct update strategy
-        try {
-          // Use a direct update to the profiles table
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({
-              full_name: fullName,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', userId);
-            
-          if (updateError) {
-            console.error("[PROFILE UPDATE] Update Error:", updateError);
-            throw updateError;
-          }
-        } catch (functionErr) {
-          console.error("[PROFILE UPDATE] Direct update error:", functionErr);
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({
+            full_name: fullName,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId);
           
-          // Fall back to direct update if first attempt fails
-          const { error: directUpdateError } = await supabase
-            .from('profiles')
-            .update({
-              full_name: fullName,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', userId);
-            
-          if (directUpdateError) throw directUpdateError;
+        if (updateError) {
+          console.error("[PROFILE UPDATE] Update Error:", updateError);
+          throw updateError;
         }
       } else {
-        // Create new profile with direct insert to avoid RLS issues
+        // Create new profile
+        console.log("[PROFILE UPDATE] No profile exists, creating...");
         const { error: insertError } = await supabase
           .from('profiles')
           .insert({
@@ -63,20 +51,20 @@ export function useProfileUpdates(userId?: string) {
             full_name: fullName,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
-          })
-          .select();
+          });
 
         if (insertError) {
           console.error("[PROFILE UPDATE] Error creating profile:", insertError);
           
-          // If we get duplicate key, the profile was created in the meantime, so try update instead
-          if (insertError.code === '23505') { // PostgreSQL unique constraint violation
-            const { error: updateError } = await supabase
+          // If we get duplicate key, try update instead
+          if (insertError.code === '23505') {
+            console.log("[PROFILE UPDATE] Profile was created in the meantime, trying update...");
+            const { error: retryError } = await supabase
               .from('profiles')
               .update({ full_name: fullName })
               .eq('id', userId);
               
-            if (updateError) throw updateError;
+            if (retryError) throw retryError;
           } else {
             throw insertError;
           }

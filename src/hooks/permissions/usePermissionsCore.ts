@@ -1,4 +1,3 @@
-
 import { useMemo, useCallback } from 'react';
 import { hasPermission as checkPermission, canManageRole } from '@/utils/permissionUtils';
 import { useRoleSubscription } from './useRoleSubscription';
@@ -71,7 +70,7 @@ export function usePermissionsCore(): UsePermissionsReturn {
     
     return result;
   }, [role, error]);
-
+  
   // Fast role management function
   const canManageRoleFunc = useCallback((targetRole: UserRole): boolean => {
     return canManageRole(role as UserRole, targetRole);
@@ -107,9 +106,8 @@ export function usePermissionsCore(): UsePermissionsReturn {
     
     return result;
   }, [role, error]);
-
+  
   // Return memoized values to prevent unnecessary re-renders
-  // Fix the error property type to match UsePermissionsReturn
   return useMemo(() => ({
     hasPermission: hasPermissionSync,
     canManageRole: canManageRoleFunc,
