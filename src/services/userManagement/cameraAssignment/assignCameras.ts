@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { addLogToDB } from '@/services/database/logsService';
 
 /**
- * Assigns cameras to a specific user with optimized performance
+ * Assigns cameras to a specific user with optimized performance and proper error handling
  */
 export async function assignCamerasToUser(userId: string, cameraIds: string[]): Promise<boolean> {
   try {
@@ -31,12 +31,15 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     try {
       const { error: refreshError } = await supabase.auth.refreshSession();
       if (refreshError) {
-        console.warn("Token refresh failed, but continuing with existing token:", refreshError);
-        // Continue with existing token - it might still work
+        console.error("Failed to refresh session:", refreshError);
+        toast.error("Session refresh failed. Please login again.");
+        setTimeout(() => window.location.href = '/auth', 2000);
+        return false;
       }
+      console.log("Session refreshed successfully before camera assignment");
     } catch (refreshErr) {
-      console.warn("Error refreshing token, continuing with existing token:", refreshErr);
-      // Continue with existing token - it might still work
+      console.error("Error refreshing token:", refreshErr);
+      // Continue with existing token as a fallback - it might still work
     }
     
     // Verify admin permissions - cannot assign cameras without them
@@ -69,27 +72,8 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     addLogToDB('info', `Starting camera assignment for user ${userId}`, 'camera-assignment', 
       `Assigning ${cameraIds.length} cameras to user ${userId}`);
     
-    // First try the optimized database function
+    // Manual assignment approach - most reliable method
     try {
-      // Using type assertion to bypass TypeScript type checking for the RPC function name
-      const { error } = await (supabase.rpc as any)('assign_cameras_transaction', {
-        p_user_id: userId,
-        p_camera_ids: cameraIds
-      });
-      
-      if (error) throw error;
-      
-      console.log(`Successfully assigned ${cameraIds.length} cameras to user ${userId} using transaction`);
-      
-      // Log success in background
-      addLogToDB('info', `Completed camera assignment for user ${userId}`, 'camera-assignment', 
-        `Successfully assigned ${cameraIds.length} cameras`);
-        
-      return true;
-    } catch (rpcError: any) {
-      // If RPC fails, fall back to manual assignment approach
-      console.warn("Transaction RPC failed, falling back to manual assignment:", rpcError);
-      
       // Delete existing assignments first
       const { error: deleteError } = await supabase
         .from('user_camera_access')
@@ -121,16 +105,25 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
         }
       }
       
-      console.log(`Successfully assigned ${cameraIds.length} cameras to user ${userId} using manual approach`);
+      console.log(`Successfully assigned ${cameraIds.length} cameras to user ${userId}`);
       
       // Log success in background
       addLogToDB('info', `Completed camera assignment for user ${userId}`, 'camera-assignment', 
-        `Successfully assigned ${cameraIds.length} cameras using fallback method`);
+        `Successfully assigned ${cameraIds.length} cameras using direct method`);
       
       return true;
+    } catch (error: any) {
+      console.error('Error assigning cameras to user:', error);
+      toast.error(error?.message || "Failed to update camera assignments");
+      
+      // Log exception in background
+      addLogToDB('error', `Exception in camera assignment for user ${userId}`, 'camera-assignment', 
+        `Error: ${error?.message || "Unknown error"}`);
+        
+      return false;
     }
   } catch (error: any) {
-    console.error('Error assigning cameras to user:', error);
+    console.error('Error in camera assignment process:', error);
     toast.error(error?.message || "Failed to update camera assignments");
     
     // Log exception in background

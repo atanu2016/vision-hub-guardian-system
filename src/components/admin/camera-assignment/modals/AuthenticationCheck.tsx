@@ -23,6 +23,9 @@ export function AuthenticationCheck({ isOpen, onClose }: AuthenticationCheckProp
           <p className="text-center text-muted-foreground">
             Verifying your session before accessing camera assignments.
           </p>
+          <p className="text-center text-sm text-muted-foreground">
+            If you've been logged out, you'll need to sign in again.
+          </p>
           <div className="flex gap-2 mt-4">
             <Button variant="outline" onClick={onClose}>Cancel</Button>
             <Button onClick={handleRedirect}>Go to Login</Button>

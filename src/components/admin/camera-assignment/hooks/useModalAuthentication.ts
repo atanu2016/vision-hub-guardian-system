@@ -36,29 +36,23 @@ export function useModalAuthentication(isOpen: boolean) {
           }, 2000);
           
         } else {
-          // We have a session, now verify it's still valid with a backend check
+          // Do an explicit refresh of the session token before proceeding
           try {
-            // Use type assertion to work around TypeScript error for RPC function
-            const { data: validCheck, error: validError } = await (supabase.rpc as any)('check_session_valid');
-            
-            if (validError) {
-              console.warn("Session validation RPC failed (may not exist yet):", validError);
-              // If RPC doesn't exist, assume session is valid since we have it
-              setIsAuthenticated(true);
-            } else if (validCheck !== true) {
-              console.error("Session validation failed - returned false");
+            const { error: refreshError } = await supabase.auth.refreshSession();
+            if (refreshError) {
+              console.error("Failed to refresh session:", refreshError);
               setIsAuthenticated(false);
-              toast.error("Session validation failed. Please login again.");
+              toast.error("Session refresh failed. Please login again.");
               setTimeout(() => window.location.href = '/auth', 2000);
-            } else {
-              // Valid session confirmed by RPC
-              setIsAuthenticated(true);
+              return;
             }
-          } catch (validationError) {
-            // Fallback - if RPC fails assume session is valid since we have one
-            console.warn("Error validating session (RPC may not exist):", validationError);
-            setIsAuthenticated(true);
+          } catch (refreshErr) {
+            console.warn("Error during session refresh:", refreshErr);
+            // Continue with current session as fallback
           }
+          
+          // We have a valid session that's been refreshed
+          setIsAuthenticated(true);
         }
         
         setAuthChecked(true);
