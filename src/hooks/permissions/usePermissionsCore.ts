@@ -34,8 +34,8 @@ export function usePermissionsCore(): UsePermissionsReturn {
         }
         
         // Fallback check for special emails
-        const { data: sessionData } = await supabase.auth.getSession();
-        const userEmail = sessionData?.session?.user?.email;
+        const sessionResponse = await supabase.auth.getSession();
+        const userEmail = sessionResponse.data?.session?.user?.email;
         
         if (userEmail) {
           const lowerEmail = userEmail.toLowerCase();
@@ -91,10 +91,15 @@ export function usePermissionsCore(): UsePermissionsReturn {
     }
 
     // Special emails that always have admin privileges
-    const specialEmails = ['admin@home.local', 'superadmin@home.local'];
-    const { data: { user } } = supabase.auth.getUser();
-    if (user?.email && specialEmails.includes(user.email.toLowerCase())) {
-      return true;
+    try {
+      const sessionData = supabase.auth.getUser();
+      if (sessionData && typeof sessionData.then === 'function') {
+        // This is a Promise, we can't use it synchronously
+        // We'll need to handle this differently
+        console.warn("[PERMISSIONS] Cannot check user email synchronously");
+      }
+    } catch (err) {
+      console.error("[PERMISSIONS] Error checking user email:", err);
     }
     
     // Create cache key combining role and permission
