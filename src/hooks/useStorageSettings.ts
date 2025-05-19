@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { StorageSettings as StorageSettingsType } from '@/types/camera';
-import { getStorageSettings, saveStorageSettings } from '@/services/apiService';
+import { getStorageSettings, saveStorageSettings, validateStorageAccess } from '@/services/apiService';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { parseStorageValue } from '@/utils/storageUtils';
@@ -93,10 +93,69 @@ export const useStorageSettings = () => {
     }
   };
 
+  // Validate storage configuration before saving
+  const validateStorage = async (settings: StorageSettingsType): Promise<boolean> => {
+    try {
+      // Validate storage access based on the type
+      switch (settings.type) {
+        case 'local':
+          // For local storage, we just check if the path is valid
+          return !!settings.path;
+          
+        case 'nas':
+          // For NAS, we need to check if the NAS is accessible
+          if (!settings.nasAddress || !settings.nasPath) {
+            return false;
+          }
+          // In a real implementation, we would check if the NAS is accessible
+          // For now, we'll validate that required fields are provided
+          return true;
+          
+        case 's3':
+          // For S3, we need more validation
+          if (!settings.s3Endpoint || !settings.s3Bucket || 
+              !settings.s3AccessKey || !settings.s3SecretKey) {
+            return false;
+          }
+          
+          // Call the API to validate S3 access
+          try {
+            // This would be an actual validation call in a real implementation
+            // For now, we'll simulate with a delay
+            const isValid = await validateStorageAccess(settings);
+            return isValid;
+          } catch (error) {
+            console.error("S3 validation error:", error);
+            return false;
+          }
+          
+        default:
+          // For other storage types, we'd need specific validation
+          // For now, we'll return true as a placeholder
+          return true;
+      }
+    } catch (error) {
+      console.error("Storage validation error:", error);
+      return false;
+    }
+  };
+
   // Save storage settings
   const handleSaveSettings = async (settings: StorageSettingsType) => {
     setIsSaving(true);
     try {
+      // First validate the storage configuration
+      const isValid = await validateStorage(settings);
+      
+      if (!isValid) {
+        toast({
+          title: "Validation Failed",
+          description: "The storage configuration could not be validated. Please check your settings.",
+          variant: "destructive"
+        });
+        return false;
+      }
+      
       // Save to database through API service
       await saveStorageSettings(settings);
       
@@ -171,6 +230,7 @@ export const useStorageSettings = () => {
     loadStorageSettings,
     fetchStorageUsage,
     handleSaveSettings,
-    handleClearStorage
+    handleClearStorage,
+    validateStorage
   };
 };

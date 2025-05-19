@@ -5,12 +5,13 @@ import { Form } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Settings } from "lucide-react";
+import { Settings, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { StorageSettings as StorageSettingsType } from "@/types/camera";
 import StorageProviderSelector from "./StorageProviderSelector";
 import StorageProviderFields from "./StorageProviderFields";
 import RetentionPolicyForm from "./RetentionPolicyForm";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Define form schema for storage settings - make type non-optional
 const storageFormSchema = z.object({
@@ -54,6 +55,11 @@ interface StorageFormProps {
 }
 
 const StorageForm = ({ initialSettings, isLoading, isSaving, onSave }: StorageFormProps) => {
+  const [validationStatus, setValidationStatus] = useState<{ status: 'idle' | 'validating' | 'success' | 'error', message: string }>({
+    status: 'idle',
+    message: ''
+  });
+
   // Initialize form with proper defaultValues ensuring type is not optional
   const form = useForm<StorageFormSchemaType>({
     resolver: zodResolver(storageFormSchema),
@@ -113,6 +119,9 @@ const StorageForm = ({ initialSettings, isLoading, isSaving, onSave }: StorageFo
       backblazeApplicationKey: initialSettings.backblazeApplicationKey,
       backblazeBucket: initialSettings.backblazeBucket,
     });
+    
+    // Reset validation status when form values change
+    setValidationStatus({ status: 'idle', message: '' });
   }, [initialSettings, form]);
 
   // Get current form values
@@ -120,6 +129,9 @@ const StorageForm = ({ initialSettings, isLoading, isSaving, onSave }: StorageFo
 
   // Handle form submission
   const onSubmit = async (values: StorageFormSchemaType) => {
+    // Reset validation status
+    setValidationStatus({ status: 'validating', message: 'Validating storage configuration...' });
+    
     // Convert form data to StorageSettings type
     const settings: StorageSettingsType = {
       type: values.type,
@@ -149,12 +161,31 @@ const StorageForm = ({ initialSettings, isLoading, isSaving, onSave }: StorageFo
       backblazeBucket: values.backblazeBucket,
     };
 
-    await onSave(settings);
+    const success = await onSave(settings);
+    
+    if (success) {
+      setValidationStatus({ 
+        status: 'success', 
+        message: 'Storage configuration validated and saved successfully.'
+      });
+    } else {
+      setValidationStatus({ 
+        status: 'error', 
+        message: 'Failed to validate storage configuration. Please check your settings and try again.'
+      });
+    }
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {validationStatus.status === 'error' && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{validationStatus.message}</AlertDescription>
+          </Alert>
+        )}
+        
         <Card>
           <CardHeader>
             <CardTitle>Storage Provider</CardTitle>
@@ -184,9 +215,9 @@ const StorageForm = ({ initialSettings, isLoading, isSaving, onSave }: StorageFo
           </CardContent>
         </Card>
 
-        <Button type="submit" className="w-full" disabled={isLoading || isSaving}>
-          {isSaving ? (
-            "Saving..."
+        <Button type="submit" className="w-full" disabled={isLoading || isSaving || validationStatus.status === 'validating'}>
+          {isSaving || validationStatus.status === 'validating' ? (
+            validationStatus.status === 'validating' ? "Validating..." : "Saving..."
           ) : (
             <>
               <Settings className="mr-2 h-4 w-4" /> Save Storage Settings

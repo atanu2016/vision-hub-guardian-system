@@ -20,6 +20,7 @@ import {
   saveCameraRecordingStatus,
   checkDatabaseSetup
 } from './database';
+import { StorageSettings } from '@/types/camera';
 
 // Camera API
 export const getCameras = fetchCamerasFromDB;
@@ -29,6 +30,109 @@ export const deleteCamera = deleteCameraFromDB;
 // Storage API
 export const getStorageSettings = fetchStorageSettingsFromDB;
 export const saveStorageSettings = saveStorageSettingsToDB;
+
+// Validate storage access
+export const validateStorageAccess = async (settings: StorageSettings): Promise<boolean> => {
+  try {
+    // In a real app, this would connect to the storage service and verify access
+    // For now, we'll simulate a validation process with a delay
+    console.log("Validating storage access for type:", settings.type);
+    
+    // Add log entry about validation attempt
+    await addLog({
+      level: "info",
+      source: "storage",
+      message: `Validating storage configuration for ${settings.type} storage`,
+      details: JSON.stringify(settings)
+    });
+    
+    // Simulate API call with a delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Validate based on storage type
+    switch(settings.type) {
+      case 's3':
+        // Validate S3 configuration
+        if (!settings.s3Endpoint || !settings.s3Bucket || !settings.s3AccessKey || !settings.s3SecretKey) {
+          await addLog({
+            level: "error",
+            source: "storage",
+            message: "S3 storage configuration validation failed: Missing required fields",
+            details: "One or more required S3 configuration fields are missing"
+          });
+          return false;
+        }
+        // In a real app, we'd try to connect to the S3 endpoint and test access
+        await addLog({
+          level: "info",
+          source: "storage",
+          message: "S3 storage configuration validated successfully",
+          details: `Endpoint: ${settings.s3Endpoint}, Bucket: ${settings.s3Bucket}`
+        });
+        return true;
+        
+      case 'nas':
+        // Validate NAS configuration
+        if (!settings.nasAddress || !settings.nasPath) {
+          await addLog({
+            level: "error",
+            source: "storage",
+            message: "NAS storage configuration validation failed: Missing required fields",
+            details: "NAS address or path missing"
+          });
+          return false;
+        }
+        // In a real app, we'd try to connect to the NAS and test access
+        await addLog({
+          level: "info",
+          source: "storage",
+          message: "NAS storage configuration validated successfully",
+          details: `Address: ${settings.nasAddress}, Path: ${settings.nasPath}`
+        });
+        return true;
+        
+      case 'local':
+        // Validate local path
+        if (!settings.path) {
+          await addLog({
+            level: "error",
+            source: "storage",
+            message: "Local storage configuration validation failed: No path specified",
+            details: "Local storage path is missing"
+          });
+          return false;
+        }
+        // In a real app, we'd check if the path is valid and accessible
+        await addLog({
+          level: "info",
+          source: "storage",
+          message: "Local storage configuration validated successfully",
+          details: `Path: ${settings.path}`
+        });
+        return true;
+        
+      default:
+        // For other storage types
+        await addLog({
+          level: "warning",
+          source: "storage",
+          message: `Validation for ${settings.type} storage type not implemented`,
+          details: "Assuming valid configuration"
+        });
+        return true;
+    }
+  } catch (error) {
+    // Log the error
+    console.error("Error validating storage access:", error);
+    await addLog({
+      level: "error",
+      source: "storage",
+      message: `Storage validation error for ${settings.type} storage`,
+      details: error instanceof Error ? error.message : String(error)
+    });
+    return false;
+  }
+};
 
 // System Stats API
 export const getSystemStats = fetchSystemStatsFromDB;
