@@ -47,6 +47,11 @@ export default function CalendarDatePicker({ date, onSelect, hasRecordings }: Ca
     setCalendarOpen(false);
   };
   
+  // Safe check for hasRecordings function
+  const checkHasRecordings = (date: Date): boolean => {
+    return typeof hasRecordings === 'function' ? hasRecordings(date) : false;
+  };
+  
   return (
     <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
       <PopoverTrigger asChild>
@@ -118,8 +123,7 @@ export default function CalendarDatePicker({ date, onSelect, hasRecordings }: Ca
             {daysInMonth.map((day) => {
               const isSelected = date && day.toDateString() === date.toDateString();
               const isToday = day.toDateString() === today.toDateString();
-              // Safely check if hasRecordings is provided and use it
-              const hasRecording = hasRecordings ? hasRecordings(day) : false;
+              const hasRecording = checkHasRecordings(day);
               
               return (
                 <Button
