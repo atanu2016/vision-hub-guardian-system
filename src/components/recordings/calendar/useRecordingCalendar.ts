@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -94,30 +93,43 @@ export const useRecordingCalendar = (cameraId?: string) => {
     }
   };
 
-  // Simplified helper function to check if a date has recordings
-  // Approach: Manual date comparison to avoid complex type inference
+  // Completely rewritten function to avoid TypeScript recursion issues
   const isRecordingDate = (dateToCheck: Date | undefined): boolean => {
-    if (!dateToCheck) return false;
-    if (!recordingDates || recordingDates.length === 0) return false;
+    // Handle null/undefined case
+    if (!dateToCheck) {
+      return false;
+    }
     
-    // Extract date components for comparison
-    const day = dateToCheck.getDate();
-    const month = dateToCheck.getMonth();
-    const year = dateToCheck.getFullYear();
+    // Handle empty recordings array
+    if (!recordingDates || recordingDates.length === 0) {
+      return false;
+    }
     
-    // Simple loop with explicit index management to avoid type recursion
+    // Format the date to compare only year/month/day
+    const checkYear = dateToCheck.getFullYear();
+    const checkMonth = dateToCheck.getMonth();
+    const checkDay = dateToCheck.getDate();
+    
+    // Loop through recordings without using array methods
+    // This prevents TypeScript's type instantiation from going too deep
+    let hasRecording = false;
+    
+    // Using simple loop with fixed counter to avoid recursion
     for (let i = 0; i < recordingDates.length; i++) {
-      const recordedDate = recordingDates[i];
+      const currentDate = recordingDates[i];
       
-      // Simple comparison of date components
-      if (recordedDate.getDate() === day && 
-          recordedDate.getMonth() === month && 
-          recordedDate.getFullYear() === year) {
-        return true;
+      // Compare year, month and day separately to avoid date object comparison issues
+      if (
+        currentDate.getFullYear() === checkYear &&
+        currentDate.getMonth() === checkMonth &&
+        currentDate.getDate() === checkDay
+      ) {
+        hasRecording = true;
+        break;
       }
     }
     
-    return false;
+    return hasRecording;
   };
 
   return {
