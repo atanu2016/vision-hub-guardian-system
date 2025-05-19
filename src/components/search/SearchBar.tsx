@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search } from 'lucide-react';
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -78,8 +77,8 @@ export default function SearchBar() {
       // Search users
       const { data: users, error: userError } = await supabase
         .from('profiles')
-        .select('id, full_name, email')
-        .or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
+        .select('id, full_name')
+        .ilike('full_name', `%${searchQuery}%`)
         .order('full_name')
         .limit(5);
         
@@ -101,13 +100,13 @@ export default function SearchBar() {
           description: `Source: ${log.source}`,
           path: `/settings/logs`,
         })),
-        ...(users || []).map(user => ({
+        ...((users || []).map(user => ({
           id: user.id,
-          name: user.full_name || user.email || 'Unknown user',
+          name: user.full_name || 'Unknown user',
           type: 'user' as const,
-          description: user.email ? `Email: ${user.email}` : undefined,
+          description: `User profile`,
           path: `/admin/users`,
-        })),
+        }))),
       ];
 
       setResults(formattedResults);
