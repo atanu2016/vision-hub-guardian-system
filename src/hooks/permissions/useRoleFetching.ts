@@ -1,130 +1,87 @@
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { UserRole } from "@/contexts/auth/types";
-import { getCachedRole, setCachedRole } from "@/services/userManagement/roleServices/roleCache";
+import { toast } from "sonner";
 
 /**
- * Hook to handle role fetching with optimizations
+ * Hook to fetch current user role from the database
  */
-export function useRoleFetching(userId: string | undefined, fallbackRole: UserRole) {
-  const [error, setError] = useState<string | null>(null);
-  const lastFetchRef = useRef<number>(0);
-  const [fetchInProgress, setFetchInProgress] = useState(false);
+export function useRoleFetching(userId: string | undefined, defaultRole: UserRole = 'user') {
+  const [isFetching, setIsFetching] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
   
-  // Function to extract role value from potentially complex return type
-  const extractRoleValue = (cachedResult: any): UserRole => {
-    if (cachedResult === null) return fallbackRole;
-    
-    return typeof cachedResult === 'object' && 'role' in cachedResult 
-      ? cachedResult.role as UserRole
-      : cachedResult as UserRole;
-  };
-  
-  // Function to fetch the current role from database
-  const fetchCurrentRole = useCallback(async (forceRefresh = false): Promise<UserRole> => {
-    // Only proceed if we have a user ID
-    if (!userId) return fallbackRole;
-    
-    // Throttle fetches
-    const now = Date.now();
-    const MIN_FETCH_INTERVAL = 5000;
-    
-    if (fetchInProgress || (!forceRefresh && (now - lastFetchRef.current < MIN_FETCH_INTERVAL))) {
-      // Use cached role if available during throttling
-      const cachedRoleResult = getCachedRole(userId);
-      return extractRoleValue(cachedRoleResult);
+  // Enhanced fetch function that checks multiple sources for role information
+  const fetchCurrentRole = useCallback(async () => {
+    if (!userId) {
+      console.log('[ROLE FETCHING] No user ID provided, returning default role:', defaultRole);
+      return defaultRole;
     }
     
-    setFetchInProgress(true);
-    lastFetchRef.current = now;
+    setIsFetching(true);
+    setError(null);
     
     try {
-      console.log('[ROLE FETCHING] Fetching current role');
-      setError(null);
+      console.log('[ROLE FETCHING] Fetching role for user:', userId);
       
-      // First check cache for immediate response
-      const cachedRoleResult = getCachedRole(userId);
+      // First check - direct check for special admin emails
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userEmail = sessionData?.session?.user?.email;
       
-      if (cachedRoleResult !== null && !forceRefresh) {
-        const cachedRole = extractRoleValue(cachedRoleResult);
-        console.log('[ROLE FETCHING] Using cached role:', cachedRole);
-        setFetchInProgress(false);
-        return cachedRole;
-      }
-      
-      // Check cache age if we need fresh data
-      const cachedWithTimestamp = getCachedRole(userId, true);
-      const cacheTimestamp = cachedWithTimestamp && typeof cachedWithTimestamp === 'object' && 'timestamp' in cachedWithTimestamp 
-        ? cachedWithTimestamp.timestamp 
-        : 0;
-        
-      const cacheAge = now - cacheTimestamp;
-      
-      if (!forceRefresh && cacheAge < 30000 && cachedRoleResult !== null) {
-        console.log('[ROLE FETCHING] Cache is fresh, skipping database query');
-        setFetchInProgress(false);
-        return extractRoleValue(cachedRoleResult);
-      }
-      
-      // Try direct query without RLS via function
-      try {
-        const { data: functionResult, error: functionError } = await supabase
-          .rpc('get_user_role', { _user_id: userId });
-          
-        if (!functionError && functionResult) {
-          console.log('[ROLE FETCHING] Got role from function:', functionResult);
-          const fetchedRole = functionResult as UserRole;
-          setCachedRole(userId, fetchedRole);
-          setFetchInProgress(false);
-          return fetchedRole;
+      if (userEmail) {
+        const lowerEmail = userEmail.toLowerCase();
+        if (lowerEmail === 'admin@home.local' || lowerEmail === 'superadmin@home.local') {
+          console.log('[ROLE FETCHING] Special admin email detected:', userEmail);
+          return 'superadmin' as UserRole;
         }
-      } catch (functionErr) {
-        console.warn('[ROLE FETCHING] Function error:', functionErr);
-        // Fall through to regular query
       }
       
-      // Standard query as fallback
-      const { data, error } = await supabase
+      // Second check - check profiles table for is_admin flag
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', userId)
+        .maybeSingle();
+        
+      if (!profileError && profileData?.is_admin) {
+        console.log('[ROLE FETCHING] Admin flag found in profile:', profileData);
+        return 'admin' as UserRole;
+      }
+      
+      // Third check - check user_roles table
+      const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
         .maybeSingle();
         
-      if (!error && data) {
-        const fetchedRole = data.role as UserRole;
-        console.log('[ROLE FETCHING] Fetched role from database:', fetchedRole);
-        setCachedRole(userId, fetchedRole);
-        setFetchInProgress(false);
-        return fetchedRole;
-      } else if (error) {
-        console.error('[ROLE FETCHING] Error fetching role:', error);
-        setError(error.message);
-        
-        // Try to use cached value
-        if (cachedRoleResult !== null) {
-          const fallbackRole = extractRoleValue(cachedRoleResult);
-          console.log('[ROLE FETCHING] Using fallback cached role:', fallbackRole);
-          setFetchInProgress(false);
-          return fallbackRole;
-        }
+      if (roleError && roleError.code !== 'PGRST116') {
+        // PGRST116 means no rows returned
+        console.error('[ROLE FETCHING] Error fetching role:', roleError);
+        setError(roleError);
+        throw roleError;
       }
       
-      // Ultimate fallback
-      console.log('[ROLE FETCHING] Falling back to authRole:', fallbackRole);
-      setFetchInProgress(false);
-      return fallbackRole;
+      if (roleData && roleData.role) {
+        console.log('[ROLE FETCHING] Role from database:', roleData.role);
+        return roleData.role as UserRole;
+      }
       
-    } catch (err) {
-      console.error('[ROLE FETCHING] Error in role fetch:', err);
-      setFetchInProgress(false);
-      return fallbackRole;
+      // Return default role if nothing found
+      console.log('[ROLE FETCHING] No role found in database, using default:', defaultRole);
+      return defaultRole;
+    } catch (err: any) {
+      console.error('[ROLE FETCHING] Error in fetchCurrentRole:', err);
+      setError(err);
+      return defaultRole;
+    } finally {
+      setIsFetching(false);
     }
-  }, [userId, fallbackRole]);
+  }, [userId, defaultRole]);
   
   return {
     fetchCurrentRole,
-    isFetching: fetchInProgress,
-    error
+    error,
+    isFetching
   };
 }

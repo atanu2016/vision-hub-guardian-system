@@ -30,38 +30,18 @@ export function useProfileUpdates(userId?: string) {
       if (existingProfile) {
         console.log("[PROFILE UPDATE] Updating existing profile");
         
-        // First try using the function via raw SQL query to avoid TypeScript errors
-        try {
-          const { error: funcError } = await supabase.rpc(
-            'update_user_profile',
-            { 
-              user_id: userId, 
-              full_name_param: fullName 
-            }
-          );
-          
-          if (funcError) {
-            console.error("[PROFILE UPDATE] Error using function:", funcError);
-            throw funcError;
-          } else {
-            console.log("[PROFILE UPDATE] Profile updated via function successfully");
-          }
-        } catch (funcCatchError) {
-          console.error("[PROFILE UPDATE] Function call failed, falling back to direct update:", funcCatchError);
-          
-          // Fallback to direct update
-          const { error } = await supabase
-            .from('profiles')
-            .update({
-              full_name: fullName,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', userId);
+        // Update the profile directly
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            full_name: fullName,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId);
 
-          if (error) {
-            console.error("[PROFILE UPDATE] Error updating profile:", error);
-            throw error;
-          }
+        if (error) {
+          console.error("[PROFILE UPDATE] Error updating profile:", error);
+          throw error;
         }
       } else {
         console.log("[PROFILE UPDATE] Creating new profile");
