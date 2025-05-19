@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Recording } from "./types";
 import { mockRecordings } from "./mockData";
 import { useAssignedCameras } from "./camera/useAssignedCameras";
-import { useStorageData } from "./storage/useStorageData";
+import { useRecordingsStorage } from "../storage/useRecordingsStorage";
 import { useRecordingOperations } from "./operations/useRecordingOperations";
 
 export const useRecordingsData = (userId?: string, userRole?: string) => {
@@ -15,7 +15,7 @@ export const useRecordingsData = (userId?: string, userRole?: string) => {
   const { cameras, loading: camerasLoading } = useAssignedCameras(userId, userRole);
   
   // Get storage data management
-  const { storageUsed, updateStorageAfterDelete } = useStorageData(recordings);
+  const { storageUsed, updateStorageAfterDelete } = useRecordingsStorage(recordings);
   
   // Get recording operations
   const { deleteRecording } = useRecordingOperations(

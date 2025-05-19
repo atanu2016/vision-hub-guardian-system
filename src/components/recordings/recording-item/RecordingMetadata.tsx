@@ -1,6 +1,6 @@
 
 import { Badge } from "@/components/ui/badge";
-import { formatDuration } from "@/hooks/useRecordings";
+import { formatDuration } from "@/hooks/recordings/utils";
 import { Calendar } from "lucide-react";
 import { format } from "date-fns";
 

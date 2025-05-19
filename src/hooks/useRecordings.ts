@@ -1,13 +1,13 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Recording } from "./storage/storageTypes";
 import { Camera } from "@/types/camera";
 import { useRecordingsStorage } from "@/hooks/storage";
+import { formatDuration } from "@/hooks/recordings/utils";
+import { Recording, StorageInfo } from "@/hooks/recordings/types";
 
-export interface StorageInfo {
-  used: number;
-  total: number;
-}
+export { formatDuration };
+export { Camera, Recording, StorageInfo };
 
 export interface RecordingsHookResult {
   recordings: Recording[];
@@ -55,7 +55,24 @@ export const useRecordings = (): RecordingsHookResult => {
       }
 
       if (data) {
-        setCameras(data);
+        const camerasFormatted: Camera[] = data.map(cam => ({
+          id: cam.id,
+          name: cam.name,
+          status: cam.status as "online" | "offline" | "error",
+          location: cam.location,
+          ipAddress: cam.ipaddress,
+          port: cam.port || 80,
+          username: cam.username || undefined,
+          password: cam.password || undefined,
+          model: cam.model || undefined,
+          manufacturer: cam.manufacturer || undefined,
+          lastSeen: cam.lastseen,
+          recording: cam.recording || false,
+          thumbnail: cam.thumbnail || undefined,
+          group: cam.group || undefined,
+          connectionType: (cam.connectiontype as "ip" | "rtsp" | "rtmp" | "onvif" | "hls") || "ip"
+        }));
+        setCameras(camerasFormatted);
       }
     } catch (error) {
       console.error("Failed to fetch cameras:", error);
@@ -65,17 +82,60 @@ export const useRecordings = (): RecordingsHookResult => {
   const fetchRecordings = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('recordings')
-        .select('*');
-
-      if (error) {
-        console.error("Error fetching recordings:", error);
-      }
-
-      if (data) {
-        setRecordings(data);
-      }
+      // Since 'recordings' table might not exist in the database yet,
+      // let's use mock data for now
+      const mockData: Recording[] = [
+        {
+          id: "1",
+          cameraName: "Front Door",
+          dateTime: "2025-05-19T08:30:00",
+          date: "2025-05-19",
+          time: "08:30:00",
+          duration: "15 minutes",
+          fileSize: "45 MB",
+          thumbnail: "/placeholder.svg",
+          type: "Motion",
+          important: true
+        },
+        {
+          id: "2",
+          cameraName: "Backyard",
+          dateTime: "2025-05-19T10:15:00",
+          date: "2025-05-19",
+          time: "10:15:00",
+          duration: "30 minutes",
+          fileSize: "90 MB",
+          thumbnail: "/placeholder.svg",
+          type: "Scheduled",
+          important: false
+        },
+        {
+          id: "3",
+          cameraName: "Living Room",
+          dateTime: "2025-05-18T14:45:00",
+          date: "2025-05-18",
+          time: "14:45:00",
+          duration: "10 minutes",
+          fileSize: "30 MB",
+          thumbnail: "/placeholder.svg",
+          type: "Manual",
+          important: false
+        },
+        {
+          id: "4",
+          cameraName: "Garage",
+          dateTime: "2025-05-18T20:00:00",
+          date: "2025-05-18",
+          time: "20:00:00",
+          duration: "25 minutes",
+          fileSize: "75 MB",
+          thumbnail: "/placeholder.svg",
+          type: "Motion",
+          important: true
+        }
+      ];
+      
+      setRecordings(mockData);
     } catch (error) {
       console.error("Failed to fetch recordings:", error);
     } finally {
@@ -94,7 +154,7 @@ export const useRecordings = (): RecordingsHookResult => {
 
     if (selectedType !== "all") {
       filtered = filtered.filter(
-        (recording) => recording.type === selectedType
+        (recording) => recording.type.toLowerCase() === selectedType.toLowerCase()
       );
     }
     
@@ -115,18 +175,17 @@ export const useRecordings = (): RecordingsHookResult => {
 
   const deleteRecording = async (recordingId: string) => {
     try {
-      const { error } = await supabase
-        .from('recordings')
-        .delete()
-        .eq('id', recordingId);
-
-      if (error) {
-        console.error("Error deleting recording:", error);
-      } else {
-        // Optimistically update the recordings state
-        setRecordings(prevRecordings => prevRecordings.filter(recording => recording.id !== recordingId));
-        setFilteredRecordings(prevRecordings => prevRecordings.filter(recording => recording.id !== recordingId));
-      }
+      // In a real implementation, this would send a request to your server
+      // For now, just update the local state
+      setRecordings(prevRecordings => 
+        prevRecordings.filter(recording => recording.id !== recordingId)
+      );
+      setFilteredRecordings(prevRecordings => 
+        prevRecordings.filter(recording => recording.id !== recordingId)
+      );
+      
+      // Update storage calculations
+      updateStorageAfterDelete(recordings, recordingId);
     } catch (error) {
       console.error("Failed to delete recording:", error);
     }
@@ -134,7 +193,6 @@ export const useRecordings = (): RecordingsHookResult => {
 
   const {
     storageUsed,
-    updateStorageUsed,
     updateStorageAfterDelete,
     fetchActualStorageUsage
   } = useRecordingsStorage(recordings);

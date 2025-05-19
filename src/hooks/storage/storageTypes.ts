@@ -20,4 +20,7 @@ export interface Recording {
   fileSize: string;
   thumbnail: string;
   type: string;
+  date?: string;
+  time?: string;
+  important?: boolean;
 }

@@ -1,7 +1,9 @@
+
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Camera, StorageInfo } from "@/hooks/useRecordings";
+import { Camera } from "@/types/camera";
+import { StorageInfo } from "@/hooks/recordings/types";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
 import { CalendarX } from "lucide-react";

@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
-import { formatDuration } from "@/hooks/useRecordings";
+import { formatDuration } from "@/hooks/recordings/utils";
 import { format } from "date-fns";
 import { 
   Dialog, 

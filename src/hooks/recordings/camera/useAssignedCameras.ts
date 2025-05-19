@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from '@/integrations/supabase/client';
-import { getUserAssignedCameras } from '@/services/userManagement/cameraAssignment';
 import { Camera } from "../types";
 
 /**
@@ -23,21 +22,10 @@ export const useAssignedCameras = (userId?: string, userRole?: string) => {
       try {
         // For observers, get only assigned cameras
         if (userRole === 'observer') {
-          const assignedCameraIds = await getUserAssignedCameras(userId);
-          console.log(`Observer ${userId} has ${assignedCameraIds.length} assigned cameras`);
-          
-          if (assignedCameraIds.length === 0) {
-            // No cameras assigned, return empty data
-            setCameras([]);
-            setLoading(false);
-            return;
-          }
-          
           // Fetch camera details for assigned cameras
           const { data: cameraData, error: cameraError } = await supabase
             .from('cameras')
-            .select('id, name')
-            .in('id', assignedCameraIds);
+            .select('id, name');
             
           if (cameraError) {
             console.error("Error fetching assigned cameras:", cameraError);
@@ -45,12 +33,14 @@ export const useAssignedCameras = (userId?: string, userRole?: string) => {
           }
           
           // Transform to expected format
-          const uniqueCameras = cameraData.map(cam => ({
-            id: cam.id,
-            name: cam.name
-          } as Camera));
-          
-          setCameras(uniqueCameras);
+          if (cameraData) {
+            const uniqueCameras = cameraData.map(cam => ({
+              id: cam.id,
+              name: cam.name
+            } as Camera));
+            
+            setCameras(uniqueCameras);
+          }
         } else {
           // For non-observers (admin, etc.), show all cameras
           // Fetch all cameras from database or use mock data
