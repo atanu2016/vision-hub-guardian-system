@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Camera, CameraStatus } from '@/types/camera';
 import { logUserActivity } from '../activityLoggingService';
+import { usePermissions } from '@/hooks/permissions';
 
 /**
  * Assigns cameras to a specific user
@@ -41,13 +42,15 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     console.log("Cameras to remove:", camerasToRemove);
     console.log("Cameras to add:", camerasToAdd);
     
-    // Use auth.getUser() for special admin handling
-    const { data: userData } = await supabase.auth.getUser();
-    const userEmail = userData?.user?.email;
-    console.log("Current user email:", userEmail);
+    // Check if current user has admin role using the role service
+    const { data: adminCheckData } = await supabase.rpc('check_admin_status');
+    const isAdmin = !!adminCheckData;
     
-    // Special handling for admin users
-    const isAdmin = userEmail === 'admin@home.local' || userEmail === 'superadmin@home.local';
+    console.log("Current user has admin status:", isAdmin);
+    
+    if (!isAdmin) {
+      throw new Error("Only administrators can assign cameras");
+    }
     
     // Remove camera assignments that are no longer in the list
     if (camerasToRemove.length > 0) {
@@ -73,30 +76,13 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
       }));
       
       // Perform the insert, handling errors appropriately
-      // Try using direct SQL for admins if needed
       const { error: insertError } = await supabase
         .from('user_camera_access')
         .insert(assignmentsToInsert);
         
       if (insertError) {
         console.error("Error adding camera assignments:", insertError);
-        
-        // If admin and there's an error, try with service role
-        if (isAdmin) {
-          console.log("Trying special admin handling for camera assignments");
-          
-          // Simply try again (backend policies should handle admin access)
-          const { error: retryError } = await supabase
-            .from('user_camera_access')
-            .insert(assignmentsToInsert);
-            
-          if (retryError) {
-            console.error("Admin retry error:", retryError);
-            throw retryError;
-          }
-        } else {
-          throw insertError;
-        }
+        throw insertError;
       }
     }
     

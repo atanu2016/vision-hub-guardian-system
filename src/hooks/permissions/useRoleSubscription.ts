@@ -6,6 +6,7 @@ import { setCachedRole } from "@/services/userManagement/roleServices/roleCache"
 import { useRoleDatabase } from "./useRoleDatabase";
 import { useRoleFetching } from "./useRoleFetching";
 import { useRolePolling } from "./useRolePolling";
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Main hook for role subscription with optimizations
@@ -62,6 +63,31 @@ export function useRoleSubscription() {
     isFetching 
   } = fetchRoleData;
   
+  // Direct check from database using our SQL function
+  const fetchRoleUsingFunction = useCallback(async () => {
+    if (!userId) return authRole;
+    
+    try {
+      console.log('[ROLE SUBSCRIPTION] Fetching role directly using SQL function');
+      const { data: roleData, error: roleError } = await supabase.rpc('get_user_role', { _user_id: userId });
+      
+      if (roleError) {
+        console.error('[ROLE SUBSCRIPTION] Error fetching role via function:', roleError);
+        return authRole;
+      }
+      
+      if (roleData) {
+        console.log('[ROLE SUBSCRIPTION] Role from SQL function:', roleData);
+        return roleData as UserRole;
+      }
+      
+      return authRole;
+    } catch (err) {
+      console.error('[ROLE SUBSCRIPTION] Error in fetchRoleUsingFunction:', err);
+      return authRole;
+    }
+  }, [userId, authRole]);
+  
   // Wrapper function for the polling mechanism with error handling
   const fetchRoleWrapper = useCallback(async () => {
     if (!userId) {
@@ -70,13 +96,22 @@ export function useRoleSubscription() {
     }
     try {
       setIsLoading(true);
+      
+      // First try using the SQL function
+      const sqlFunctionRole = await fetchRoleUsingFunction();
+      if (sqlFunctionRole && sqlFunctionRole !== 'user') {
+        handleRoleUpdate(sqlFunctionRole as UserRole);
+        return;
+      }
+      
+      // Fall back to normal fetch
       const fetchedRole = await fetchCurrentRole();
       handleRoleUpdate(fetchedRole as UserRole);
     } catch (err) {
       console.error('[ROLE SUBSCRIPTION] Error in fetchRoleWrapper:', err);
       setIsLoading(false);
     }
-  }, [userId, fetchCurrentRole, handleRoleUpdate]);
+  }, [userId, fetchCurrentRole, fetchRoleUsingFunction, handleRoleUpdate]);
   
   // Set up database subscription with error handling
   let dbSubscription = { isSubscribed: false };

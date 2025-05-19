@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Camera as CameraType, CameraStatus } from '@/types/camera';
 import { assignCamerasToUser, getUserAssignedCameras } from '@/services/userManagement/cameraAssignmentService';
 import { toast } from 'sonner';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface CameraAssignmentModalProps {
   isOpen: boolean;
@@ -35,6 +36,9 @@ export default function CameraAssignmentModal({
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { hasPermission } = usePermissions();
+  
+  const canAssignCameras = hasPermission('assign-cameras');
 
   // Fetch all cameras and user assignments
   useEffect(() => {
@@ -48,6 +52,10 @@ export default function CameraAssignmentModal({
     setError(null);
     try {
       console.log("Loading camera assignments for user:", userId);
+      
+      if (!canAssignCameras) {
+        throw new Error("You don't have permission to assign cameras");
+      }
       
       // Get all cameras
       const { data: allCameras, error: camerasError } = await supabase
@@ -110,6 +118,11 @@ export default function CameraAssignmentModal({
   const handleSaveAssignments = async () => {
     if (!userId) {
       toast.error("No user selected");
+      return;
+    }
+    
+    if (!canAssignCameras) {
+      toast.error("You don't have permission to assign cameras");
       return;
     }
     
@@ -190,7 +203,7 @@ export default function CameraAssignmentModal({
           </Button>
           <Button 
             onClick={handleSaveAssignments} 
-            disabled={isLoading || isSaving}
+            disabled={isLoading || isSaving || !canAssignCameras}
           >
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Camera className="mr-2 h-4 w-4" />}
             Save Assignments
