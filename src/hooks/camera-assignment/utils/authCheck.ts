@@ -11,21 +11,29 @@ export const checkAuthentication = async (): Promise<boolean> => {
     // Check for valid session before making any requests
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     
-    if (sessionError || !sessionData.session) {
-      console.error("Authentication error:", sessionError || "No active session");
-      toast.error("Authentication required. Please log in again.");
+    if (sessionError) {
+      console.error("Authentication error:", sessionError);
+      toast.error("Authentication error: " + sessionError.message);
+      return false;
+    }
+    
+    if (!sessionData.session) {
+      console.error("No active session found");
       
-      // Redirect to auth page after brief delay
-      setTimeout(() => {
-        window.location.href = '/auth';
-      }, 1000);
+      // Use a non-blocking approach to redirect
+      toast.error("Authentication required. Please log in again.", {
+        onDismiss: () => {
+          window.location.href = '/auth';
+        }
+      });
       
       return false;
     }
     
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in authentication check:", error);
+    toast.error("Authentication error: " + (error?.message || "Unknown error"));
     return false;
   }
 };

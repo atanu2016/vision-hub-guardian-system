@@ -10,12 +10,21 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
   try {
     console.log(`Assigning cameras to user ${userId}. Camera count:`, cameraIds.length);
     
-    // Use the RPC function for admin check - fastest possible method without recursion
+    // First check session - most crucial step
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !sessionData.session) {
+      console.error("No valid session when attempting camera assignment:", sessionError || "No session");
+      toast.error("Your session has expired. Please log in again.");
+      return false;
+    }
+    
+    // Verify admin permissions
     const { data: adminCheck, error: adminCheckError } = await supabase.rpc('is_admin_bypass_rls');
     
     if (adminCheckError) {
       console.error("Error checking admin permissions:", adminCheckError);
-      toast.error("Could not verify admin permissions");
+      toast.error("Permission verification failed: " + adminCheckError.message);
       return false;
     }
     
@@ -34,34 +43,64 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     addLogToDB('info', `Starting camera assignment for user ${userId}`, 'camera-assignment', 
       `Assigning ${cameraIds.length} cameras to user ${userId}`);
     
-    // Use the optimized database function that handles everything in one transaction
-    // Using 'as any' to bypass TypeScript type checking for the RPC function name
-    const { error } = await (supabase.rpc as any)('assign_cameras_transaction', {
-      p_user_id: userId,
-      p_camera_ids: cameraIds
-    });
-    
-    if (error) {
-      console.error("Error assigning cameras:", error);
-      toast.error("Failed to update camera assignments");
+    // First try the optimized database function
+    try {
+      // Using 'as any' to bypass TypeScript type checking for the RPC function name
+      const { error } = await (supabase.rpc as any)('assign_cameras_transaction', {
+        p_user_id: userId,
+        p_camera_ids: cameraIds
+      });
       
-      // Log failure in background
-      addLogToDB('error', `Failed camera assignment for user ${userId}`, 'camera-assignment', 
-        `Error: ${error.message}`);
+      if (error) throw error;
+      
+      console.log(`Successfully assigned ${cameraIds.length} cameras to user ${userId} using transaction`);
+      return true;
+    } catch (rpcError: any) {
+      // If RPC fails, fall back to manual assignment approach
+      console.warn("Transaction RPC failed, falling back to manual assignment:", rpcError);
+      
+      // Delete existing assignments first
+      const { error: deleteError } = await supabase
+        .from('user_camera_access')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (deleteError) {
+        console.error("Error deleting existing camera assignments:", deleteError);
+        throw deleteError;
+      }
+      
+      // Only insert new assignments if there are any to add
+      if (cameraIds.length > 0) {
+        // Prepare batch insert data
+        const assignments = cameraIds.map(cameraId => ({
+          user_id: userId,
+          camera_id: cameraId,
+          created_at: new Date().toISOString()
+        }));
         
-      return false;
-    }
-    
-    console.log(`Successfully assigned ${cameraIds.length} cameras to user ${userId}`);
-    
-    // Log success in background
-    addLogToDB('info', `Completed camera assignment for user ${userId}`, 'camera-assignment', 
-      `Successfully assigned ${cameraIds.length} cameras`);
+        // Insert all new assignments
+        const { error: insertError } = await supabase
+          .from('user_camera_access')
+          .insert(assignments);
+        
+        if (insertError) {
+          console.error("Error inserting camera assignments:", insertError);
+          throw insertError;
+        }
+      }
       
-    return true;
+      console.log(`Successfully assigned ${cameraIds.length} cameras to user ${userId} using manual approach`);
+      
+      // Log success in background
+      addLogToDB('info', `Completed camera assignment for user ${userId}`, 'camera-assignment', 
+        `Successfully assigned ${cameraIds.length} cameras using fallback method`);
+      
+      return true;
+    }
   } catch (error: any) {
     console.error('Error assigning cameras to user:', error);
-    toast.error(error?.message || "Could not update camera assignments");
+    toast.error(error?.message || "Failed to update camera assignments");
     
     // Log exception in background
     addLogToDB('error', `Exception in camera assignment for user ${userId}`, 'camera-assignment', 

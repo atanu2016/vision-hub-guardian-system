@@ -1,24 +1,36 @@
 
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface AuthenticationCheckProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const AuthenticationCheck = ({ isOpen, onClose }: AuthenticationCheckProps) => {
+export function AuthenticationCheck({ isOpen, onClose }: AuthenticationCheckProps) {
+  const handleRedirect = () => {
+    window.location.href = '/auth';
+  };
+  
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md md:max-w-xl">
-        <DialogHeader>
-          <div className="text-lg font-semibold leading-none tracking-tight">Checking authentication...</div>
-        </DialogHeader>
-        <div className="flex justify-center py-8">
-          <Loader2 className="h-8 w-8 animate-spin" />
+      <DialogContent className="sm:max-w-md">
+        <div className="flex flex-col items-center justify-center py-8 space-y-4">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <h3 className="text-xl font-semibold">Checking authentication...</h3>
+          <p className="text-center text-muted-foreground">
+            Verifying your session before accessing camera assignments.
+          </p>
+          <div className="flex gap-2 mt-4">
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            <Button onClick={handleRedirect}>Go to Login</Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
   );
-};
+}
+
+export default AuthenticationCheck;
