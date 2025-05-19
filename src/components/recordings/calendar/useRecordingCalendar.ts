@@ -94,13 +94,13 @@ export const useRecordingCalendar = (cameraId?: string) => {
     }
   };
 
-  // Create a lookup map for checking recording dates efficiently
+  // Create a lookup map for checking recording dates efficiently using primitive types
   const recordingDatesMap = useMemo(() => {
-    // Use a primitive object instead of a Map or Set to avoid deep type instantiation
     const lookup: Record<string, boolean> = {};
     
     recordingDates.forEach(date => {
       if (date instanceof Date && !isNaN(date.getTime())) {
+        // Use a simple string format that doesn't rely on complex object properties
         const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
         lookup[key] = true;
       }
@@ -109,7 +109,7 @@ export const useRecordingCalendar = (cameraId?: string) => {
     return lookup;
   }, [recordingDates]);
 
-  // Simple check function that avoids type instantiation issues
+  // Simple check function that uses the string-based lookup
   const isRecordingDate = useCallback((date: Date): boolean => {
     if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
       return false;
