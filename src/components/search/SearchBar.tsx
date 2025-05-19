@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 type SearchResult = {
   id: string;
   name: string;
-  type: 'camera' | 'recording' | 'alert' | 'log';
+  type: 'camera' | 'recording' | 'alert' | 'log' | 'user';
   description?: string;
   path: string;
 };
@@ -75,6 +75,16 @@ export default function SearchBar() {
         
       if (logError) throw logError;
       
+      // Search users
+      const { data: users, error: userError } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
+        .order('full_name')
+        .limit(5);
+        
+      if (userError && userError.code !== 'PGRST116') throw userError;
+      
       // Format results
       const formattedResults: SearchResult[] = [
         ...(cameras || []).map(camera => ({
@@ -90,6 +100,13 @@ export default function SearchBar() {
           type: 'log' as const,
           description: `Source: ${log.source}`,
           path: `/settings/logs`,
+        })),
+        ...(users || []).map(user => ({
+          id: user.id,
+          name: user.full_name || user.email || 'Unknown user',
+          type: 'user' as const,
+          description: user.email ? `Email: ${user.email}` : undefined,
+          path: `/admin/users`,
         })),
       ];
 

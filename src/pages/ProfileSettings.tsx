@@ -1,3 +1,4 @@
+
 import AppLayout from "@/components/layout/AppLayout";
 import { PersonalInfoCard } from "@/components/profile/PersonalInfoCard";
 import { SecuritySettingsCard } from "@/components/profile/SecuritySettingsCard";
@@ -24,6 +25,7 @@ const ProfileSettings = () => {
   });
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [role, setRole] = useState<UserRole>('user');
+  const [updateInProgress, setUpdateInProgress] = useState(false);
 
   // Immediately set initial data from auth context as soon as available
   useEffect(() => {
@@ -188,21 +190,51 @@ const ProfileSettings = () => {
     e.preventDefault();
     if (!user) return;
 
+    setUpdateInProgress(true);
     try {
-      // Update profile in database
-      const { error } = await supabase
+      // Check if the profile exists first
+      const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
-        .update({
-          full_name: formData.fullName,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+        
+      if (checkError && checkError.code !== 'PGRST116') {
+        // PGRST116 means no rows returned - that's expected if the profile doesn't exist yet
+        throw checkError;
+      }
 
-      if (error) throw error;
+      if (existingProfile) {
+        // Update existing profile
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            full_name: formData.fullName,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id);
+
+        if (error) throw error;
+      } else {
+        // Create new profile
+        const { error } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            full_name: formData.fullName,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+
+        if (error) throw error;
+      }
+      
       toast.success('Profile updated successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating profile:', error);
-      toast.error('Failed to update profile');
+      toast.error(error?.message || 'Failed to update profile');
+    } finally {
+      setUpdateInProgress(false);
     }
   };
 
@@ -221,6 +253,7 @@ const ProfileSettings = () => {
       return;
     }
 
+    setUpdateInProgress(true);
     try {
       const { error } = await supabase.auth.updateUser({
         password: formData.newPassword
@@ -239,6 +272,8 @@ const ProfileSettings = () => {
     } catch (error: any) {
       console.error('Error updating password:', error);
       toast.error(error.message || 'Failed to update password');
+    } finally {
+      setUpdateInProgress(false);
     }
   };
 
@@ -334,6 +369,6 @@ const ProfileSettings = () => {
       </div>
     </AppLayout>
   );
-};
+}
 
 export default ProfileSettings;
