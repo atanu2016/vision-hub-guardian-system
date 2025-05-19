@@ -26,7 +26,12 @@ export function useRecordingSettings() {
     setIsLoading(true);
     try {
       const data = await fetchRecordingSettingsFromDB();
-      setSettings(data);
+      // Ensure schedule is of type RecordingScheduleType
+      const typedData = {
+        ...data,
+        schedule: data.schedule as RecordingScheduleType
+      };
+      setSettings(typedData);
     } catch (error) {
       console.error("Error loading recording settings:", error);
       toast.error("Failed to load recording settings");
