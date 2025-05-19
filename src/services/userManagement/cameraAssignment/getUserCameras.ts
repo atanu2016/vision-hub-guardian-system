@@ -13,19 +13,37 @@ export async function getUserAssignedCameras(userId: string): Promise<string[]> 
       return [];
     }
     
-    // Fetch camera assignments for user - using direct path for consistent results
-    const { data, error } = await supabase
-      .from('user_camera_access')
-      .select('camera_id')
-      .eq('user_id', userId);
-      
-    if (error) {
-      console.error("Error fetching user camera assignments:", error);
-      return []; // Return empty array instead of throwing for resilience
-    }
+    // Fetch camera assignments for user with retry mechanism
+    let attempts = 0;
+    const maxAttempts = 2;
+    let cameraIds: string[] = [];
     
-    const cameraIds = data?.map(item => item.camera_id) || [];
-    console.log(`User ${userId} has ${cameraIds.length} assigned cameras:`, cameraIds);
+    while (attempts < maxAttempts) {
+      attempts++;
+      try {
+        const { data, error } = await supabase
+          .from('user_camera_access')
+          .select('camera_id')
+          .eq('user_id', userId);
+          
+        if (error) {
+          console.warn(`Attempt ${attempts} - Error fetching camera assignments:`, error);
+          if (attempts === maxAttempts) throw error;
+          // Wait briefly before retry
+          await new Promise(r => setTimeout(r, 500));
+          continue;
+        }
+        
+        cameraIds = data?.map(item => item.camera_id) || [];
+        console.log(`User ${userId} has ${cameraIds.length} assigned cameras:`, cameraIds);
+        break;
+      } catch (fetchError) {
+        if (attempts === maxAttempts) throw fetchError;
+        console.warn(`Attempt ${attempts} - Error:`, fetchError);
+        // Wait briefly before retry
+        await new Promise(r => setTimeout(r, 500));
+      }
+    }
     
     return cameraIds;
   } catch (error) {

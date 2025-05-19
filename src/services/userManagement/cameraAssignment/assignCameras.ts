@@ -41,30 +41,27 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     console.log("Cameras to remove:", camerasToRemove);
     console.log("Cameras to add:", camerasToAdd);
     
-    // Remove camera assignments that are no longer in the list
-    for (const cameraId of camerasToRemove) {
-      const { error: removeError } = await supabase
+    // First remove all existing assignments to avoid conflicts
+    if (currentCameraIds.length > 0) {
+      const { error: deleteError } = await supabase
         .from('user_camera_access')
         .delete()
-        .eq('user_id', userId)
-        .eq('camera_id', cameraId);
+        .eq('user_id', userId);
         
-      if (removeError) {
-        console.error(`Error removing camera assignment for camera ${cameraId}:`, removeError);
-        // Continue with others even if one fails
+      if (deleteError) {
+        console.error("Error removing existing camera assignments:", deleteError);
+        throw deleteError;
       }
     }
     
-    // Add new camera assignments
-    if (camerasToAdd.length > 0) {
-      // Create assignments array
-      const assignmentsToInsert = camerasToAdd.map(cameraId => ({
+    // Then add all new assignments in a single operation
+    if (cameraIds.length > 0) {
+      const assignmentsToInsert = cameraIds.map(cameraId => ({
         user_id: userId,
         camera_id: cameraId,
         created_at: new Date().toISOString()
       }));
       
-      // Perform the insert, handling errors appropriately
       const { error: insertError } = await supabase
         .from('user_camera_access')
         .insert(assignmentsToInsert);
@@ -89,9 +86,11 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     }
     
     console.log("Camera assignments updated successfully");
+    toast.success("Camera assignments saved successfully");
     return true;
   } catch (error) {
     console.error('Error assigning cameras to user:', error);
+    toast.error("Failed to save camera assignments");
     throw error; // Propagate the error to be handled by the caller
   }
 }

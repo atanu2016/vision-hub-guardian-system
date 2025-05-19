@@ -34,6 +34,7 @@ export default function CameraAssignmentModal({
   const onSave = async () => {
     const success = await handleSave();
     if (success) {
+      toast.success(`Camera access updated for ${userName}`);
       onClose();
     }
   };

@@ -27,22 +27,20 @@ export function useAdminPermission() {
           return;
         }
         
-        // SIMPLE CHECK 2: Try check_admin_status_safe function
+        // SIMPLE CHECK 2: Try is_admin_by_email function
         try {
-          const { data: isAdmin, error: funcError } = await supabase.rpc('check_admin_status_safe');
+          const { data: isAdmin, error: funcError } = await supabase.rpc('is_admin_by_email');
           
-          if (funcError) {
-            console.warn("Admin check via check_admin_status_safe failed:", funcError);
-          } else if (isAdmin) {
-            console.log("Admin status confirmed via admin check function");
+          if (!funcError && isAdmin) {
+            console.log("Admin status confirmed via email check function");
             setCanAssignCameras(true);
             return;
           }
         } catch (funcErr) {
-          console.warn("Admin function check failed:", funcErr);
+          console.warn("Admin email check failed:", funcErr);
         }
         
-        // SIMPLE CHECK 3: Check user_roles directly with normal query
+        // SIMPLE CHECK 3: Check user_roles directly 
         try {
           const { data: roleData } = await supabase
             .from('user_roles')
@@ -51,7 +49,7 @@ export function useAdminPermission() {
             .maybeSingle();
             
           if (roleData && (roleData.role === 'admin' || roleData.role === 'superadmin')) {
-            console.log("Admin status confirmed via role check", roleData.role);
+            console.log("Admin status confirmed via role check:", roleData.role);
             setCanAssignCameras(true);
             return;
           }
