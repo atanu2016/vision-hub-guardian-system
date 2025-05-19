@@ -1,13 +1,22 @@
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { RecordingDayData } from "./types";
 import { logRecordingAccess } from "./loggingUtils";
 
+// Helper function to format a date to a simple string key (outside of component to avoid deep type instantiation)
+const formatDateKey = (date: Date): string => {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+};
+
+// Simple type for our recordings map
+type RecordingDatesMap = {[key: string]: boolean};
+
 export const useRecordingCalendar = (cameraId?: string) => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [recordingDates, setRecordingDates] = useState<Date[]>([]);
+  const [recordingDatesMap, setRecordingDatesMap] = useState<RecordingDatesMap>({});
   const [isLoading, setIsLoading] = useState(false);
   const [selectedDateRecordings, setSelectedDateRecordings] = useState<RecordingDayData[]>([]);
   const [selectedTimeframe, setSelectedTimeframe] = useState<string | null>(null);
@@ -16,6 +25,20 @@ export const useRecordingCalendar = (cameraId?: string) => {
   useEffect(() => {
     fetchRecordingDates();
   }, []);
+  
+  // Update the dates map whenever recording dates change
+  useEffect(() => {
+    const map: RecordingDatesMap = {};
+    
+    recordingDates.forEach(date => {
+      if (date instanceof Date && !isNaN(date.getTime())) {
+        const key = formatDateKey(date);
+        map[key] = true;
+      }
+    });
+    
+    setRecordingDatesMap(map);
+  }, [recordingDates]);
   
   const fetchRecordingDates = async () => {
     setIsLoading(true);
@@ -94,28 +117,13 @@ export const useRecordingCalendar = (cameraId?: string) => {
     }
   };
 
-  // Create a lookup map for checking recording dates efficiently using primitive types
-  const recordingDatesMap = useMemo(() => {
-    const lookup: Record<string, boolean> = {};
-    
-    recordingDates.forEach(date => {
-      if (date instanceof Date && !isNaN(date.getTime())) {
-        // Use a simple string format that doesn't rely on complex object properties
-        const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-        lookup[key] = true;
-      }
-    });
-    
-    return lookup;
-  }, [recordingDates]);
-
   // Simple check function that uses the string-based lookup
   const isRecordingDate = useCallback((date: Date): boolean => {
     if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
       return false;
     }
     
-    const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+    const key = formatDateKey(date);
     return !!recordingDatesMap[key];
   }, [recordingDatesMap]);
 
