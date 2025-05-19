@@ -70,11 +70,17 @@ export async function validateMigration(
     
     // Check for camera_assignments table separately
     try {
-      const { data: tableExists } = await supabase.rpc('check_table_exists', { 
-        table_name: 'camera_assignments' 
-      });
+      // Use type assertion to tell TypeScript that this RPC function exists
+      const { data: tableExists, error } = await supabase.rpc(
+        'check_table_exists' as any, 
+        { table_name: 'camera_assignments' }
+      );
       
-      if (tableExists) {
+      if (error) {
+        console.error('Error checking table existence:', error);
+        validationResults['camera_assignments'] = false;
+        validationErrors.push(`Table check error: ${error.message}`);
+      } else if (tableExists) {
         validationResults['camera_assignments'] = true;
         console.log('Table camera_assignments exists');
       } else {
