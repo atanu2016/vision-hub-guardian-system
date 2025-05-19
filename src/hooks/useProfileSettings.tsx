@@ -3,16 +3,9 @@ import { useState } from 'react';
 import { useProfileData } from './profile/useProfileData';
 import { useAvatarManagement } from './profile/useAvatarManagement';
 import { useProfileUpdates } from './profile/useProfileUpdates';
-import { usePasswordUpdate } from './profile/usePasswordUpdate';
+import { usePasswordUpdate, PasswordData } from './profile/usePasswordUpdate';
 import { useRoleManagement } from './profile/useRoleManagement';
 import { UserRole } from '@/types/admin';
-
-// Define interfaces for password data to ensure type safety
-export interface PasswordData {
-  currentPassword: string;
-  newPassword: string;
-  confirmPassword: string;
-}
 
 export function useProfileSettings() {
   const { user, loading: isLoading, formData, role: userRole, handleInputChange } = useProfileData();
@@ -40,7 +33,7 @@ export function useProfileSettings() {
     } as React.ChangeEvent<HTMLInputElement>);
   };
 
-  // Create wrapper functions that match the expected signatures
+  // Create wrapper functions that match the expected signatures in the ProfileSettings component
   const handleProfileUpdateWrapper = (e: React.FormEvent) => {
     e.preventDefault();
     return handleProfileUpdate(e, formData.fullName);
@@ -48,7 +41,7 @@ export function useProfileSettings() {
   
   const handlePasswordUpdateWrapper = (e: React.FormEvent) => {
     e.preventDefault();
-    const passwordData = {
+    const passwordData: PasswordData = {
       currentPassword: formData.currentPassword || '',
       newPassword: formData.newPassword || '',
       confirmPassword: formData.confirmPassword || ''

@@ -11,7 +11,7 @@ CREATE POLICY "Admins can view camera assignments"
   FOR SELECT 
   TO authenticated
   USING (
-    -- Check if user is admin using the function without recursion
+    -- Check if user is admin using the hardcoded email approach to avoid recursion
     EXISTS (
       SELECT 1 FROM auth.users
       WHERE auth.users.id = auth.uid() 
@@ -20,10 +20,6 @@ CREATE POLICY "Admins can view camera assignments"
         auth.users.email = 'superadmin@home.local'
       )
     )
-    OR
-    public.is_admin() = true
-    OR
-    public.get_user_role() IN ('admin', 'superadmin')
   );
 
 -- Create policy that allows admins to insert camera assignments
@@ -40,10 +36,6 @@ CREATE POLICY "Admins can insert camera assignments"
         auth.users.email = 'superadmin@home.local'
       )
     )
-    OR
-    public.is_admin() = true
-    OR
-    public.get_user_role() IN ('admin', 'superadmin')
   );
 
 -- Create policy that allows admins to update camera assignments
@@ -60,10 +52,6 @@ CREATE POLICY "Admins can update camera assignments"
         auth.users.email = 'superadmin@home.local'
       )
     )
-    OR
-    public.is_admin() = true
-    OR
-    public.get_user_role() IN ('admin', 'superadmin')
   );
 
 -- Create policy that allows admins to delete camera assignments
@@ -80,10 +68,6 @@ CREATE POLICY "Admins can delete camera assignments"
         auth.users.email = 'superadmin@home.local'
       )
     )
-    OR
-    public.is_admin() = true
-    OR
-    public.get_user_role() IN ('admin', 'superadmin')
   );
 
 -- Enable RLS

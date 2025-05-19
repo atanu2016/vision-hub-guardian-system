@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 export function useProfileUpdates(userId?: string) {
   const [updateInProgress, setUpdateInProgress] = useState(false);
 
-  const handleProfileUpdate = async (e: React.FormEvent, fullName: string) => {
+  const handleProfileUpdate = async (e: React.FormEvent, fullName: string): Promise<void> => {
     e.preventDefault();
     if (!userId) return;
 

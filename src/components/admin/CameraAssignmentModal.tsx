@@ -119,7 +119,9 @@ export default function CameraAssignmentModal({
       console.log("Saving camera assignments for user:", userId);
       console.log("Selected camera IDs:", selectedCameraIds);
       
+      // Use the service function to assign cameras
       await assignCamerasToUser(userId, selectedCameraIds);
+      
       toast.success(`Camera assignments updated for ${userName}`);
       onClose();
     } catch (error: any) {
@@ -186,7 +188,10 @@ export default function CameraAssignmentModal({
           <Button variant="outline" onClick={onClose} disabled={isSaving}>
             Cancel
           </Button>
-          <Button onClick={handleSaveAssignments} disabled={isLoading || isSaving}>
+          <Button 
+            onClick={handleSaveAssignments} 
+            disabled={isLoading || isSaving}
+          >
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Camera className="mr-2 h-4 w-4" />}
             Save Assignments
           </Button>

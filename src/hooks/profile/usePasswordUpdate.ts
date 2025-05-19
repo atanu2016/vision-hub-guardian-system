@@ -12,7 +12,7 @@ export interface PasswordData {
 export function usePasswordUpdate() {
   const [updateInProgress, setUpdateInProgress] = useState(false);
 
-  const handlePasswordUpdate = async (e: React.FormEvent, passwordData: PasswordData) => {
+  const handlePasswordUpdate = async (e: React.FormEvent, passwordData: PasswordData): Promise<PasswordData> => {
     e.preventDefault();
     
     // Simple validation
