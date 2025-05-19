@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useSearchParams } from "react-router-dom";
+import { Camera as RecordingTypeCamera } from "@/hooks/recordings/types";
 
 const Recordings = () => {
   const {
@@ -44,6 +45,12 @@ const Recordings = () => {
     if (success) {
       toast.success("Recording deleted successfully");
     }
+  };
+
+  // Find camera ID from the recording types Camera
+  const findCameraId = (cameraName: string): string | undefined => {
+    const camera = cameras.find(c => c.name === cameraName);
+    return camera?.id;
   };
 
   return (
@@ -108,9 +115,7 @@ const Recordings = () => {
           {/* Main content area */}
           {viewMode === "calendar" ? (
             <RecordingCalendar 
-              cameraId={selectedCamera !== "all" ? 
-                cameras.find(c => c.name === selectedCamera)?.id : 
-                undefined} 
+              cameraId={selectedCamera !== "all" ? findCameraId(selectedCamera) : undefined} 
             />
           ) : (
             <RecordingsList 

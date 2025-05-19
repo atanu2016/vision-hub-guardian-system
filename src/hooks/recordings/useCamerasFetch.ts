@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Camera } from "./types";
 import { toast } from "sonner";
+import { CameraStatus } from "@/types/camera";
 
 export const useCamerasFetch = () => {
   const [cameras, setCameras] = useState<Camera[]>([]);
@@ -26,7 +27,7 @@ export const useCamerasFetch = () => {
         const camerasFormatted: Camera[] = data.map(cam => ({
           id: cam.id,
           name: cam.name,
-          status: cam.status as string,
+          status: cam.status as CameraStatus,
           location: cam.location,
           ipAddress: cam.ipaddress,
           lastSeen: cam.lastseen,

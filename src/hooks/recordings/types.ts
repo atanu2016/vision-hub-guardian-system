@@ -1,4 +1,6 @@
 
+import { CameraStatus } from "@/types/camera";
+
 export interface Recording {
   id: string;
   cameraName: string;
@@ -15,7 +17,7 @@ export interface Recording {
 export interface Camera {
   id: string;
   name: string;
-  status?: string;
+  status?: CameraStatus;
   location?: string;
   ipAddress?: string;
   lastSeen?: string;
