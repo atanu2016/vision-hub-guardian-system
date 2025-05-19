@@ -1,13 +1,13 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera } from "@/types/camera";
+import type { Camera } from "@/types/camera"; // Using type import
 import { useRecordingsStorage } from "@/hooks/storage";
 import { formatDuration } from "@/hooks/recordings/utils";
-import { Recording, StorageInfo } from "@/hooks/recordings/types";
+import type { Recording, StorageInfo } from "@/hooks/recordings/types"; // Using type import
 
 export { formatDuration };
-export { Camera, Recording, StorageInfo };
+export type { Camera, Recording, StorageInfo }; // Using type exports for re-exports
 
 export interface RecordingsHookResult {
   recordings: Recording[];
@@ -88,50 +88,50 @@ export const useRecordings = (): RecordingsHookResult => {
         {
           id: "1",
           cameraName: "Front Door",
-          dateTime: "2025-05-19T08:30:00",
           date: "2025-05-19",
           time: "08:30:00",
-          duration: "15 minutes",
+          duration: 15, // Changed to number
           fileSize: "45 MB",
-          thumbnail: "/placeholder.svg",
           type: "Motion",
-          important: true
+          important: true,
+          thumbnailUrl: "/placeholder.svg",
+          dateTime: "2025-05-19T08:30:00"
         },
         {
           id: "2",
           cameraName: "Backyard",
-          dateTime: "2025-05-19T10:15:00",
           date: "2025-05-19",
           time: "10:15:00",
-          duration: "30 minutes",
+          duration: 30, // Changed to number
           fileSize: "90 MB",
-          thumbnail: "/placeholder.svg",
           type: "Scheduled",
-          important: false
+          important: false,
+          thumbnailUrl: "/placeholder.svg",
+          dateTime: "2025-05-19T10:15:00"
         },
         {
           id: "3",
           cameraName: "Living Room",
-          dateTime: "2025-05-18T14:45:00",
           date: "2025-05-18",
           time: "14:45:00",
-          duration: "10 minutes",
+          duration: 10, // Changed to number
           fileSize: "30 MB",
-          thumbnail: "/placeholder.svg",
           type: "Manual",
-          important: false
+          important: false,
+          thumbnailUrl: "/placeholder.svg",
+          dateTime: "2025-05-18T14:45:00"
         },
         {
           id: "4",
           cameraName: "Garage",
-          dateTime: "2025-05-18T20:00:00",
           date: "2025-05-18",
           time: "20:00:00",
-          duration: "25 minutes",
+          duration: 25, // Changed to number
           fileSize: "75 MB",
-          thumbnail: "/placeholder.svg",
           type: "Motion",
-          important: true
+          important: true,
+          thumbnailUrl: "/placeholder.svg",
+          dateTime: "2025-05-18T20:00:00"
         }
       ];
       
@@ -185,7 +185,7 @@ export const useRecordings = (): RecordingsHookResult => {
       );
       
       // Update storage calculations
-      updateStorageAfterDelete(recordings, recordingId);
+      updateStorageAfterDelete(recordings as any, recordingId);
     } catch (error) {
       console.error("Failed to delete recording:", error);
     }
@@ -195,7 +195,7 @@ export const useRecordings = (): RecordingsHookResult => {
     storageUsed,
     updateStorageAfterDelete,
     fetchActualStorageUsage
-  } = useRecordingsStorage(recordings);
+  } = useRecordingsStorage(recordings as any);
 
   return {
     recordings,

@@ -20,7 +20,7 @@ interface PlayDialogProps {
   cameraName: string;
   date: string;
   time: string;
-  duration: number;
+  duration: number; // Updated to expect a number
   type: string;
   videoSource: string;
   onDownload: () => void;

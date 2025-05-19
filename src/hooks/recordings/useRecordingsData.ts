@@ -15,13 +15,14 @@ export const useRecordingsData = (userId?: string, userRole?: string) => {
   const { cameras, loading: camerasLoading } = useAssignedCameras(userId, userRole);
   
   // Get storage data management
-  const { storageUsed, updateStorageAfterDelete } = useRecordingsStorage(recordings);
+  // Cast recordings to match expected type for useRecordingsStorage
+  const { storageUsed, updateStorageAfterDelete } = useRecordingsStorage(recordings as any);
   
   // Get recording operations
   const { deleteRecording } = useRecordingOperations(
     recordings, 
     setRecordings, 
-    updateStorageAfterDelete
+    (recs: Recording[], id: string) => updateStorageAfterDelete(recs as any, id)
   );
 
   useEffect(() => {

@@ -16,11 +16,12 @@ export interface Recording {
   id: string;
   cameraName: string;
   dateTime: string;
-  duration: string;
+  duration: number;  // Changed to number
   fileSize: string;
-  thumbnail: string;
+  thumbnail?: string;
   type: string;
   date?: string;
   time?: string;
   important?: boolean;
+  thumbnailUrl?: string; // Added to match recordings type
 }

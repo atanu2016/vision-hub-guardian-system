@@ -4,11 +4,12 @@ export interface Recording {
   cameraName: string;
   date: string;
   time: string;
-  duration: number;
+  duration: number; // Changed to number to match expectations
   fileSize: string;
   type: "Scheduled" | "Motion" | "Manual";
   important: boolean;
   thumbnailUrl?: string;
+  dateTime: string; // Added to match storage type
 }
 
 export interface Camera {

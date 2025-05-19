@@ -8,7 +8,7 @@ interface RecordingMetadataProps {
   cameraName: string;
   date: string;
   time: string;
-  duration: number;
+  duration: number; // Now expecting a number
   fileSize: string;
   type: "Scheduled" | "Motion" | "Manual";
   important: boolean;
