@@ -27,7 +27,7 @@ export function useAdminPermission() {
           return;
         }
         
-        // Try using a function to avoid RLS issues
+        // Try using the check_admin_status_safe function
         try {
           const { data: isAdmin, error: funcError } = await supabase.rpc('check_admin_status_safe');
           
@@ -37,20 +37,24 @@ export function useAdminPermission() {
             return;
           }
         } catch (funcErr) {
-          console.warn("RPC function failed:", funcErr);
+          console.warn("RPC function check_admin_status_safe failed:", funcErr);
         }
         
-        // If email doesn't match special admin emails, bypass RLS checks by directly checking the profile
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', sessionData.session.user?.id)
-          .maybeSingle();
-          
-        if (profileData?.is_admin) {
-          console.log("Admin flag found in profile, granting permission");
-          setCanAssignCameras(true);
-          return;
+        // Direct query for profile's admin flag - this might trigger RLS recursion in some cases
+        try {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', sessionData.session.user?.id)
+            .maybeSingle();
+            
+          if (profileData?.is_admin) {
+            console.log("Admin flag found in profile, granting permission");
+            setCanAssignCameras(true);
+            return;
+          }
+        } catch (profileErr) {
+          console.warn("Profile check failed (possibly due to RLS):", profileErr);
         }
         
         // Default to false if no admin status detected

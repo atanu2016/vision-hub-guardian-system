@@ -15,12 +15,7 @@ export function useCameraOperations(userId: string, cameras: Camera[], setCamera
   };
   
   // Save camera assignments
-  const handleSave = async (canAssignCameras: boolean) => {
-    if (!canAssignCameras) {
-      toast.error("You don't have permission to assign cameras");
-      return false;
-    }
-    
+  const handleSave = async () => {
     setSaving(true);
     
     try {
@@ -99,6 +94,6 @@ export function useCameraOperations(userId: string, cameras: Camera[], setCamera
   return {
     saving,
     handleCameraToggle,
-    handleSave: () => handleSave(true), // We'll update this with the real permission check
+    handleSave
   };
 }
