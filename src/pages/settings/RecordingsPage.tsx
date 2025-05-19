@@ -17,22 +17,22 @@ export default function RecordingsPage() {
         </p>
       </div>
       
-      <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+      <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="mb-4 w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
           <TabsTrigger value="settings">Recording Settings</TabsTrigger>
           <TabsTrigger value="schedules">Recording Schedules</TabsTrigger>
           <TabsTrigger value="history">Recording History</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="settings">
+        <TabsContent value="settings" className="mt-4">
           <GeneralRecordingSettings />
         </TabsContent>
         
-        <TabsContent value="schedules">
+        <TabsContent value="schedules" className="mt-4">
           <SchedulesContent />
         </TabsContent>
         
-        <TabsContent value="history">
+        <TabsContent value="history" className="mt-4">
           <RecordingCalendar />
         </TabsContent>
       </Tabs>
