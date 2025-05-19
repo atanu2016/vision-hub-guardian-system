@@ -31,28 +31,26 @@ const roleHierarchy: Record<UserRole, number> = {
 
 // Permission mapping - which roles have which permissions
 const permissionMap: Record<Permission, UserRole[]> = {
-  // Basic user permissions
+  // Basic user and observer permissions - available to all authenticated users
   'view-profile': ['user', 'observer', 'superadmin'],
   'manage-profile-settings': ['user', 'observer', 'superadmin'],
   
-  // Live view permissions - all roles
+  // Live view permissions - available to all authenticated users
   'view-cameras:assigned': ['user', 'observer', 'superadmin'],
   
-  // Observer and above permissions
-  'view-footage:assigned': ['observer', 'user', 'superadmin'],
-  'view-dashboard': ['user', 'superadmin'],
+  // Observer-specific permissions
+  'view-footage:assigned': ['observer', 'superadmin'],
   
-  // User and above permissions
-  'manage-cameras:assigned': ['user', 'superadmin'],
+  // User and superadmin permissions
+  'view-dashboard': ['superadmin'],
+  'manage-cameras:assigned': ['superadmin'],
   
-  // CRITICAL: Configure camera settings - only superadmin should have this permission
-  'configure-camera-settings': ['superadmin'],
-  
-  // Superadmin permissions
+  // Superadmin-only permissions
   'view-cameras:all': ['superadmin'],
   'view-footage:all': ['superadmin'],
   'manage-users:lower': ['superadmin'],
   'manage-cameras:all': ['superadmin'],
+  'configure-camera-settings': ['superadmin'],
   'configure-storage': ['superadmin'],
   'configure-global-policies': ['superadmin'],
   'access-logs': ['superadmin'],

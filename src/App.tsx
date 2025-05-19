@@ -1,10 +1,11 @@
+
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme/theme-provider"
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/auth"; 
-import { usePermissions } from "@/hooks/usePermissions"; 
+import { usePermissions } from "@/hooks/permissions"; 
 
 import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
@@ -44,14 +45,14 @@ function App() {
               {/* Auth route */}
               <Route path="/auth" element={<Auth />} />
               
-              {/* Redirect root to dashboard for admin users, live view for others */}
+              {/* Redirect root to dashboard for superadmin, live view for others */}
               <Route path="/" element={
                 <ProtectedRoute>
                   <RoleBasedRedirect />
                 </ProtectedRoute>
               } />
               
-              {/* Dashboard - accessible only with view-dashboard permission */}
+              {/* Dashboard - accessible only to superadmin */}
               <Route path="/dashboard" element={
                 <ProtectedRoute requiredPermission="view-dashboard">
                   <Index />
@@ -100,7 +101,7 @@ function App() {
                 </ProtectedRoute>
               } />
               
-              {/* Settings routes - most require admin permissions */}
+              {/* Settings routes - superadmin only */}
               <Route path="/settings" element={
                 <ProtectedRoute requiredPermission="configure-global-policies">
                   <Settings />
@@ -147,7 +148,7 @@ function App() {
                 </ProtectedRoute>
               } />
               
-              {/* Admin routes */}
+              {/* Admin routes - superadmin only */}
               <Route path="/admin" element={
                 <ProtectedRoute requiredPermission="manage-users:lower">
                   <Admin />
@@ -175,23 +176,19 @@ function App() {
 
 // Role-based redirect component
 const RoleBasedRedirect = () => {
-  const { isAdmin, isSuperAdmin, role } = useAuth();
-  const { hasPermission } = usePermissions();
+  const { role } = useAuth();
   
   console.log("RoleBasedRedirect - User role:", role);
-  console.log("RoleBasedRedirect - isAdmin:", isAdmin);
-  console.log("RoleBasedRedirect - isSuperAdmin:", isSuperAdmin);
   
-  // Directly check admin/superadmin status first, since that's our primary condition
-  if (isAdmin || isSuperAdmin || role === 'superadmin') {
-    console.log("RoleBasedRedirect - Redirecting admin/superadmin to dashboard");
+  // For superadmin, go to dashboard
+  if (role === 'superadmin') {
+    console.log("RoleBasedRedirect - Redirecting superadmin to dashboard");
     return <Navigate to="/dashboard" replace />;
   }
   
-  // For regular users, check permission and send to appropriate view
-  return hasPermission('view-dashboard') ? 
-    <Navigate to="/dashboard" replace /> : 
-    <Navigate to="/live" replace />;
+  // For all other roles, go to live view
+  console.log("RoleBasedRedirect - Redirecting to live view");
+  return <Navigate to="/live" replace />;
 };
 
 export default App;

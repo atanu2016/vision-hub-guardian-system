@@ -8,25 +8,20 @@ import {
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import { Home, Camera, Settings, Shield, Video, FileText, User } from "lucide-react";
-import { useAuth } from "@/contexts/auth";
-import { usePermissions } from "@/hooks/usePermissions";
+import { usePermissions } from "@/hooks/permissions";
 
 interface MainNavigationProps {
   isActive: (path: string) => boolean;
 }
 
 const MainNavigation = ({ isActive }: MainNavigationProps) => {
-  const { role: authRole } = useAuth();
-  const { hasPermission, currentRole } = usePermissions();
-  
-  // Using both authRole and currentRole from usePermissions for redundancy
-  const role = currentRole || authRole;
+  const { hasPermission } = usePermissions();
 
   return (
     <SidebarGroup>
       <SidebarGroupContent>
         <SidebarMenu>
-          {/* Navigation for Live View - available to all user roles */}
+          {/* Live View - available to all user roles */}
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={isActive("/live")} className="hover:bg-vision-dark-800">
               <Link to="/live">
@@ -36,7 +31,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
             </SidebarMenuButton>
           </SidebarMenuItem>
 
-          {/* Recordings - Only available to observer and above */}
+          {/* Recordings - Only available to observer and superadmin */}
           {hasPermission('view-footage:assigned') && (
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={isActive("/recordings")} className="hover:bg-vision-dark-800">
@@ -48,7 +43,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
             </SidebarMenuItem>
           )}
 
-          {/* Dashboard - only for user and superadmin */}
+          {/* Dashboard - only for superadmin */}
           {hasPermission('view-dashboard') && (
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={isActive("/")} className="hover:bg-vision-dark-800">
@@ -104,7 +99,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
                 <span>Profile</span>
               </Link>
             </SidebarMenuButton>
-            </SidebarMenuItem>
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>

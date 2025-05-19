@@ -18,7 +18,7 @@ const ProtectedRoute = ({
   superadminRequired = false,
   requiredPermission
 }: ProtectedRouteProps) => {
-  const { user, isLoading: authLoading, isAdmin, role, authInitialized } = useAuth();
+  const { user, isLoading: authLoading, role, authInitialized } = useAuth();
   const location = useLocation();
   const [permissionChecked, setPermissionChecked] = useState(false);
   const [hasRequiredPermission, setHasRequiredPermission] = useState(true);
@@ -88,17 +88,11 @@ const ProtectedRoute = ({
       return <Navigate to="/live" replace />;
     }
     
-    // If admin access is required but user is not an admin, redirect to home
-    if (adminRequired && !isAdmin) {
-      console.log("Protected route: Admin access required but user is not admin, redirecting to /live");
-      return <Navigate to="/live" replace />;
-    }
-    
     // User is authenticated and has required role/permission if specified
     console.log("Protected route: Access granted");
     return children;
   }, [children, user, requiredPermission, permissionChecked, hasRequiredPermission, 
-      superadminRequired, adminRequired, isAdmin, role, isInitializing, location.pathname]);
+      superadminRequired, role, isInitializing, location.pathname]);
 };
 
 export default ProtectedRoute;
