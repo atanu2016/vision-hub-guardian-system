@@ -1,4 +1,3 @@
-
 // Add the missing imports if needed
 import { useState, useEffect } from 'react';
 import { useForm } from "react-hook-form";
@@ -9,7 +8,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuthForm } from '@/hooks/useAuthForm';
-import { LoginFormSchema, LoginFormValues } from "./forms/LoginFormSchema";
+import { loginSchema, LoginFormValues } from "./forms/LoginFormSchema";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -24,7 +23,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   const [adminLoginAttempted, setAdminLoginAttempted] = useState(false);
 
   const form = useForm<LoginFormValues>({
-    resolver: zodResolver(LoginFormSchema),
+    resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
       password: ""
