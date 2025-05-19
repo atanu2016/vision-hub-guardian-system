@@ -6,6 +6,24 @@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+// Define the table names as a type to make TypeScript happy
+type TableName = 
+  | "cameras"
+  | "profiles" 
+  | "user_roles"
+  | "camera_assignments" 
+  | "advanced_settings"
+  | "alert_settings"
+  | "camera_recording_status"
+  | "database_config"
+  | "recording_settings"
+  | "smtp_config"
+  | "storage_settings"
+  | "system_logs"
+  | "system_stats"
+  | "user_camera_access"
+  | "webhooks";
+
 /**
  * Validates if a migration was successful
  * @param sourceType The source database type ('firebase', 'supabase', 'mysql')
@@ -22,7 +40,7 @@ export async function validateMigration(
       'profiles',
       'user_roles',
       'camera_assignments'
-    ];
+    ] as TableName[];
     
     const validationResults: Record<string, boolean> = {};
     const validationErrors: string[] = [];
@@ -134,7 +152,7 @@ export async function verifyDatabaseState(
     }
     
     // Check data consistency
-    const tables = ['profiles', 'cameras', 'user_roles', 'camera_assignments'];
+    const tables = ['profiles', 'cameras', 'user_roles', 'camera_assignments'] as const;
     for (const table of tables) {
       const { count, error } = await supabase.from(table).select('*', { count: 'exact', head: true });
       
