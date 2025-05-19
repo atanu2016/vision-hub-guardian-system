@@ -40,7 +40,7 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
     getCamerasByGroup
   } = useAssignCameras(userId, isOpen);
   
-  // Check authentication status when modal opens
+  // Check authentication status when modal opens - optimized to run only once
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -69,12 +69,12 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
       }
     };
     
-    if (isOpen) {
+    if (isOpen && !authChecked) {
       checkAuth();
     }
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, authChecked]);
 
-  // Subscribe to auth state changes
+  // Subscribe to auth state changes - kept for security
   useEffect(() => {
     const { data: { subscription }} = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
@@ -101,10 +101,8 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
   };
 
   const handleSubmit = async () => {
-    // Check authentication status before saving
-    const { data } = await supabase.auth.getSession();
-    
-    if (!data.session) {
+    // Simplified authentication check - rely on handleSave to perform the check
+    if (!isAuthenticated || !hookIsAuthenticated) {
       toast.error("Authentication required. Please log in again.");
       onClose();
       window.location.href = '/auth';
@@ -117,7 +115,14 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
     }
     
     try {
+      // Show a loading toast to indicate progress
+      const toastId = toast.loading("Saving camera assignments...");
+      
       const success = await handleSave();
+      
+      // Dismiss the loading toast and show success/error
+      toast.dismiss(toastId);
+      
       if (success) {
         toast.success("Camera assignments saved successfully");
         onClose();
@@ -129,10 +134,8 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
   };
   
   const handleRefresh = async () => {
-    // Check authentication status before refreshing
-    const { data } = await supabase.auth.getSession();
-    
-    if (!data.session) {
+    // Simplified authentication check
+    if (!isAuthenticated || !hookIsAuthenticated) {
       toast.error("Authentication required. Please log in again.");
       onClose();
       window.location.href = '/auth';
@@ -266,9 +269,15 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
           <Button 
             onClick={handleSubmit} 
             disabled={loading || saving || !!error || !canAssignCameras || !isTrulyAuthenticated}
+            className="relative"
           >
-            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {saving ? "Saving..." : "Save Changes"}
+            {saving && (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <span>Saving...</span>
+              </>
+            )}
+            {!saving && "Save Changes"}
           </Button>
         </div>
       </DialogContent>
