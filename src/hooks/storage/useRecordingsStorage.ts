@@ -1,12 +1,14 @@
 
 import { useState, useEffect } from "react";
-import { StorageInfo, Recording } from "../types";
 import { supabase } from "@/integrations/supabase/client";
+import { StorageInfo, Recording } from "./storageTypes";
+import { parseStorageValue } from "@/utils/storageUtils";
+import { calculateStorageFromRecordings } from "./useStorageCalculations";
 
 /**
  * Hook to manage storage usage statistics for recordings
  */
-export const useStorageData = (initialRecordings: Recording[]) => {
+export const useRecordingsStorage = (initialRecordings: Recording[]) => {
   const [storageUsed, setStorageUsed] = useState<StorageInfo>({ used: 0, total: 1000 });
 
   // Load actual storage data on mount
@@ -47,27 +49,6 @@ export const useStorageData = (initialRecordings: Recording[]) => {
   };
 
   /**
-   * Parse storage values from formatted strings (e.g. "500 GB" to 500)
-   */
-  const parseStorageValue = (storageString: string): number => {
-    const matches = storageString.match(/(\d+(?:\.\d+)?)\s*([KMGTP]B)/i);
-    if (!matches) return 0;
-    
-    const value = parseFloat(matches[1]);
-    const unit = matches[2].toUpperCase();
-    
-    // Convert all to GB for consistent comparison
-    switch (unit) {
-      case 'KB': return value / 1024 / 1024;
-      case 'MB': return value / 1024;
-      case 'GB': return value;
-      case 'TB': return value * 1024;
-      case 'PB': return value * 1024 * 1024;
-      default: return value;
-    }
-  };
-
-  /**
    * Updates storage usage when recordings are added or removed
    */
   const updateStorageUsed = async (recordings: Recording[], deletedId?: string) => {
@@ -75,19 +56,12 @@ export const useStorageData = (initialRecordings: Recording[]) => {
     await fetchActualStorageUsage();
     
     // Then calculate the adjustment based on recordings change
-    const relevantRecordings = deletedId 
-      ? recordings.filter((r) => r.id !== deletedId)
-      : recordings;
+    const usedGB = calculateStorageFromRecordings(recordings, deletedId);
       
-    const totalSizeInMB = relevantRecordings.reduce((total, recording) => {
-      const sizeInMB = parseFloat(recording.fileSize.replace(' MB', ''));
-      return total + sizeInMB;
-    }, 0);
-    
     // Update with the new calculation
     setStorageUsed(prev => ({
       ...prev,
-      used: Math.max(0, totalSizeInMB / 1000) // Convert to GB
+      used: usedGB
     }));
   };
 
