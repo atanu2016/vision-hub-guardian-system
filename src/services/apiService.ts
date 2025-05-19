@@ -1,4 +1,3 @@
-
 import {
   fetchCamerasFromDB,
   saveCameraToDB,

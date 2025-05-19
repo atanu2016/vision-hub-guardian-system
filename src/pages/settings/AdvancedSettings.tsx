@@ -3,7 +3,10 @@ import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import MFAEnrollment from '@/components/settings/security/MFAEnrollment';
-import { Loader2 } from 'lucide-react';
+import FirewallSettings from '@/components/settings/security/FirewallSettings';
+import DebugLogDialog from '@/components/settings/DebugLogDialog';
+import { Button } from '@/components/ui/button';
+import { Loader2, Bug, Server, Settings } from 'lucide-react';
 
 // Interface for server statistics
 interface ServerStats {
@@ -18,6 +21,7 @@ export default function AdvancedSettings() {
   const [activeTab, setActiveTab] = useState('general');
   const [serverStats, setServerStats] = useState<ServerStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [debugLogOpen, setDebugLogOpen] = useState(false);
 
   // Fetch server statistics
   useEffect(() => {
@@ -134,21 +138,80 @@ export default function AdvancedSettings() {
         </TabsContent>
         
         <TabsContent value="security" className="space-y-6">
+          <FirewallSettings />
           <MFAEnrollment />
         </TabsContent>
         
         <TabsContent value="debugging" className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Debug Options</CardTitle>
-              <CardDescription>Configure logging and diagnostic options</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <div>
+                <CardTitle className="flex items-center">
+                  <Bug className="mr-2 h-5 w-5" />
+                  Debug Options
+                </CardTitle>
+                <CardDescription>System logs and diagnostic information</CardDescription>
+              </div>
+              <Button onClick={() => setDebugLogOpen(true)}>
+                View System Logs
+              </Button>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">Debug options will be implemented in a future update</p>
+              <div className="space-y-4">
+                <div className="bg-secondary/30 rounded-md p-4">
+                  <h3 className="text-sm font-medium mb-2">System Logs</h3>
+                  <p className="text-sm text-muted-foreground">
+                    View real-time system logs to diagnose issues and monitor system events.
+                    Click "View System Logs" to open the log viewer.
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                  <div className="border rounded-md p-4">
+                    <h3 className="text-sm font-medium mb-2">Log Settings</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Log Level</span>
+                        <select className="text-sm border rounded px-2 py-1">
+                          <option value="debug">Debug</option>
+                          <option value="info">Info</option>
+                          <option value="warn">Warning</option>
+                          <option value="error">Error</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Log Retention</span>
+                        <select className="text-sm border rounded px-2 py-1">
+                          <option value="7">7 Days</option>
+                          <option value="14">14 Days</option>
+                          <option value="30">30 Days</option>
+                          <option value="90">90 Days</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="border rounded-md p-4">
+                    <h3 className="text-sm font-medium mb-2">Advanced Debug</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Debug Mode</span>
+                        <Button variant="outline" size="sm">Enable</Button>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Diagnostic Report</span>
+                        <Button variant="outline" size="sm">Generate</Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+      
+      <DebugLogDialog open={debugLogOpen} onOpenChange={setDebugLogOpen} />
     </div>
   );
 }
