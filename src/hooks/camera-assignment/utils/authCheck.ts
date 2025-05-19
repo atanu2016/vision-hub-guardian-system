@@ -14,20 +14,14 @@ export const checkAuthentication = async (): Promise<boolean> => {
     if (sessionError) {
       console.error("Authentication error:", sessionError);
       toast.error("Authentication error: " + sessionError.message);
+      window.location.href = '/auth';
       return false;
     }
     
     if (!sessionData.session) {
       console.error("No active session found");
-      
-      // Use toast with redirection to ensure user knows they're being redirected
-      toast.error("Your session has expired. Please login again.", {
-        duration: 4000,
-        onDismiss: () => {
-          window.location.href = '/auth';
-        }
-      });
-      
+      toast.error("Your session has expired. Please login again.");
+      window.location.href = '/auth';
       return false;
     }
     
@@ -36,41 +30,44 @@ export const checkAuthentication = async (): Promise<boolean> => {
       const { error: refreshError } = await supabase.auth.refreshSession();
       if (refreshError) {
         console.error("Failed to refresh session:", refreshError);
-        toast.error("Session refresh failed. Please login again.", {
-          duration: 3000,
-          onDismiss: () => {
-            window.location.href = '/auth';
-          }
-        });
+        toast.error("Session refresh failed. Please login again.");
+        window.location.href = '/auth';
         return false;
       }
       
-      // Session refreshed successfully
       console.log("Session refreshed successfully");
     } catch (refreshError) {
       console.error("Error refreshing token:", refreshError);
       // Continue with existing token as a fallback
     }
     
-    // Verify session is still valid with backend check if available - but don't break if not
+    // Quick session validation - fail fast if not valid
     try {
-      // Use any type to bypass TypeScript error for RPC function
-      const { data, error } = await supabase.rpc('check_admin_status');
+      const { data, error } = await supabase.rpc('check_session_valid' as any);
       
       if (error) {
-        // If this specific function fails, it might not exist yet - this is non-critical
-        console.warn("Admin status check failed:", error);
-        // Don't return false here as this is just an additional check
+        console.error("Session validation failed:", error);
+        toast.error("Session validation failed. Please login again.");
+        window.location.href = '/auth';
+        return false;
+      }
+      
+      if (!data) {
+        console.error("Session is invalid");
+        toast.error("Your session is invalid. Please login again.");
+        window.location.href = '/auth';
+        return false;
       }
     } catch (validationError) {
-      console.warn("Error checking admin status:", validationError);
-      // This is non-critical, so we continue
+      console.warn("Error validating session:", validationError);
+      // Non-critical, continue with other checks
     }
     
     return true;
   } catch (error: any) {
     console.error("Error in authentication check:", error);
     toast.error("Authentication error: " + (error?.message || "Unknown error"));
+    window.location.href = '/auth';
     return false;
   }
 };

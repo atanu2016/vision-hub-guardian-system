@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 export function useModalAuthentication(isOpen: boolean) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
+  const [authCheckAttempts, setAuthCheckAttempts] = useState(0);
 
   // Optimized authentication check - immediate check when modal opens
   useEffect(() => {
@@ -14,6 +15,9 @@ export function useModalAuthentication(isOpen: boolean) {
     
     const checkAuth = async () => {
       try {
+        // Track auth check attempts
+        setAuthCheckAttempts(prev => prev + 1);
+        
         // First use cached session to avoid network request if possible
         const { data, error } = await supabase.auth.getSession();
         
@@ -24,7 +28,7 @@ export function useModalAuthentication(isOpen: boolean) {
           
           setTimeout(() => {
             window.location.href = '/auth';
-          }, 2000);
+          }, 1500);
           
         } else if (!data.session) {
           console.error("No active session found");
@@ -33,7 +37,7 @@ export function useModalAuthentication(isOpen: boolean) {
           
           setTimeout(() => {
             window.location.href = '/auth';
-          }, 2000);
+          }, 1500);
           
         } else {
           // Do an explicit refresh of the session token before proceeding
@@ -43,16 +47,36 @@ export function useModalAuthentication(isOpen: boolean) {
               console.error("Failed to refresh session:", refreshError);
               setIsAuthenticated(false);
               toast.error("Session refresh failed. Please login again.");
-              setTimeout(() => window.location.href = '/auth', 2000);
+              setTimeout(() => window.location.href = '/auth', 1500);
               return;
             }
+            console.log("Session refreshed successfully");
+            
+            // Verify session validity with RPC call
+            if (authCheckAttempts < 3) { // Only try RPC validation a few times
+              try {
+                const { data: validData, error: validError } = await supabase.rpc('check_session_valid' as any);
+                
+                if (validError || !validData) {
+                  console.error("Session validation failed:", validError);
+                  setIsAuthenticated(false);
+                  toast.error("Session validation failed. Please login again.");
+                  setTimeout(() => window.location.href = '/auth', 1500);
+                  return;
+                }
+              } catch (validError) {
+                console.warn("RPC validation unavailable:", validError);
+                // Continue without RPC validation as fallback
+              }
+            }
+            
+            // If we got here, authentication is valid
+            setIsAuthenticated(true);
           } catch (refreshErr) {
             console.warn("Error during session refresh:", refreshErr);
-            // Continue with current session as fallback
+            // Continue with current session as fallback if refresh fails
+            setIsAuthenticated(true);
           }
-          
-          // We have a valid session that's been refreshed
-          setIsAuthenticated(true);
         }
         
         setAuthChecked(true);
@@ -65,7 +89,7 @@ export function useModalAuthentication(isOpen: boolean) {
     };
     
     checkAuth();
-  }, [isOpen]);
+  }, [isOpen, authCheckAttempts]);
 
   // Auth state subscription - monitor for changes while modal is open
   useEffect(() => {

@@ -24,18 +24,24 @@ export function useModalActions({
   const [savingProgress, setSavingProgress] = useState(0);
   const [savingComplete, setSavingComplete] = useState(false);
   const [saveAttempts, setSaveAttempts] = useState(0);
+  const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const handleClose = () => {
     if (isSaving && !savingComplete) {
-      toast.error("Please wait until the save operation completes");
-      return;
+      const confirmClose = window.confirm("The save operation is still in progress. Are you sure you want to close?");
+      if (!confirmClose) return;
+      
+      // Clear any pending timeout
+      if (saveTimeout) clearTimeout(saveTimeout);
     }
+    
     onClose();
     // Reset states when closing
     setSavingProgress(0);
     setSavingStep('');
     setSavingComplete(false);
     setSaveAttempts(0);
+    if (saveTimeout) clearTimeout(saveTimeout);
   };
 
   const handleSubmit = async () => {
@@ -70,7 +76,22 @@ export function useModalActions({
       setSavingStep('Saving to database...');
       setSavingProgress(25);
       
+      // Set a timeout to show error if operation takes too long
+      const timeout = setTimeout(() => {
+        if (isSaving && !savingComplete) {
+          toast.dismiss(toastId);
+          toast.error("Operation is taking longer than expected. You can wait or try again later.");
+          setSavingStep('Operation is taking longer than expected...');
+        }
+      }, 8000);
+      
+      setSaveTimeout(timeout);
+      
       const success = await handleSave();
+      
+      // Clear timeout since operation completed
+      clearTimeout(timeout);
+      setSaveTimeout(null);
       
       if (success) {
         // Show progress steps quickly
@@ -106,6 +127,12 @@ export function useModalActions({
       setSavingStep('');
       setSavingProgress(0);
       setIsSaving(false);
+      
+      // Clear any pending timeout
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+        setSaveTimeout(null);
+      }
     }
   };
   
