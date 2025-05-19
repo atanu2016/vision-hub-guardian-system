@@ -34,9 +34,10 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     await addLogToDB('info', `Starting camera assignment for user ${userId}`, 'camera-assignment', 
       `Assigning ${cameraIds.length} cameras to user ${userId}`);
     
-    // Use the new optimized database function that handles everything in one transaction
-    // This is much faster than separate delete and insert operations
-    const { error } = await supabase.rpc('assign_cameras_transaction', {
+    // Use the optimized database function that handles everything in one transaction
+    // Using 'as any' to bypass TypeScript type checking for the RPC function name
+    // This is necessary because the function exists in the database but not in the TypeScript types
+    const { error } = await (supabase.rpc as any)('assign_cameras_transaction', {
       p_user_id: userId,
       p_camera_ids: cameraIds
     });
