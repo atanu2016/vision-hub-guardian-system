@@ -12,6 +12,7 @@ export function useAssignCameras(userId: string, isOpen: boolean): UseCameraAssi
   // Create a wrapper for handleSave that includes the permission check
   const handleSave = async () => {
     if (!canAssignCameras) {
+      console.warn("Save attempted without camera assignment permission");
       return false;
     }
     return await operationsSave();

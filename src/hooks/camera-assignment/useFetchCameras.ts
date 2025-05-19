@@ -30,68 +30,63 @@ export function useFetchCameras(userId: string, isOpen: boolean) {
           return;
         }
         
-        // Direct query for all cameras to avoid RLS issues
-        const { data: allCameras, error: camerasError } = await supabase
-          .from('cameras')
-          .select('id, name, location');
-        
-        if (camerasError) {
-          if (camerasError.message?.includes('infinite recursion')) {
-            setError("Permission error: There's an RLS policy conflict. Please contact system administrator.");
-            console.error("RLS recursion error:", camerasError);
-            setCameras([]);
-            return;
+        // Step 1: Always get all cameras first - this avoids filtering issues with RLS
+        let allCameras;
+        try {
+          // Try with auth user
+          const { data, error } = await supabase
+            .from('cameras')
+            .select('id, name, location');
+          
+          if (error) {
+            throw error;
           }
           
-          console.error("Error fetching cameras:", camerasError);
-          throw camerasError;
+          allCameras = data;
+          console.log("Successfully fetched cameras:", allCameras?.length || 0);
+        } catch (cameraError: any) {
+          console.error("Error fetching cameras:", cameraError);
+          if (cameraError.message?.includes("recursion") || cameraError.message?.includes("permission")) {
+            setError("Permission error fetching cameras. Please check your database access.");
+          } else {
+            setError("Failed to load cameras. Please try again later.");
+          }
+          setCameras([]);
+          setLoading(false);
+          return;
         }
         
-        console.log("All cameras fetched:", allCameras?.length || 0);
-        
-        // Fetch user's assigned cameras with error handling for RLS
-        let userCameras = [];
+        // Step 2: Get user's camera assignments - fallback to empty array if this fails
+        let assignedCameraIds = new Set<string>();
         try {
-          const { data: accessData, error: accessError } = await supabase
+          const { data: assignmentData, error: assignmentError } = await supabase
             .from('user_camera_access')
             .select('camera_id')
             .eq('user_id', userId);
             
-          if (accessError) {
-            console.warn("Error fetching user camera assignments:", accessError);
-            // Continue with empty assignments rather than failing completely
+          if (!assignmentError && assignmentData) {
+            assignedCameraIds = new Set(assignmentData.map(a => a.camera_id));
+            console.log(`User has ${assignedCameraIds.size} assigned cameras`);
           } else {
-            userCameras = accessData || [];
+            console.warn("Could not fetch camera assignments:", assignmentError);
           }
         } catch (assignmentError) {
-          console.warn("Failed to get camera assignments:", assignmentError);
-          // Continue with empty assignments
+          console.warn("Error fetching camera assignments:", assignmentError);
+          // Continue with empty assignments rather than failing completely
         }
         
-        console.log("User camera assignments fetched:", userCameras?.length || 0);
-        
-        // Create a set of assigned camera IDs for quick lookup
-        const assignedCameraIds = new Set(userCameras?.map(uc => uc.camera_id) || []);
-        
-        // Combine data
-        const camerasWithAssignments = allCameras?.map(camera => ({
+        // Step 3: Combine cameras with assignment data
+        const camerasWithAssignments = allCameras.map((camera: any) => ({
           ...camera,
           assigned: assignedCameraIds.has(camera.id)
-        })) || [];
+        }));
         
-        console.log("Combined cameras with assignments:", camerasWithAssignments.length);
         setCameras(camerasWithAssignments);
+        console.log("Camera data processed successfully:", camerasWithAssignments.length);
       } catch (error: any) {
-        console.error("Error fetching cameras:", error);
-        
-        // Special handling for known errors
-        if (error.message?.includes('infinite recursion')) {
-          setError("Database permission error. Please contact your system administrator.");
-        } else {
-          setError(error?.message || "Failed to load cameras");
-        }
-        
-        toast.error("Failed to load cameras");
+        console.error("Error in fetchCamerasAndAssignments:", error);
+        setError(error.message || "Failed to load camera data");
+        toast.error("Error loading cameras");
       } finally {
         setLoading(false);
       }

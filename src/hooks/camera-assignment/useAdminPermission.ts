@@ -9,7 +9,7 @@ export function useAdminPermission() {
   useEffect(() => {
     const checkAdminStatus = async () => {
       try {
-        // Check current user's email for quick admin verification
+        // Step 1: Check for special admin emails first - fastest and most reliable path
         const { data: sessionData } = await supabase.auth.getSession();
         
         if (!sessionData?.session) {
@@ -19,45 +19,57 @@ export function useAdminPermission() {
         }
         
         const userEmail = sessionData.session.user?.email?.toLowerCase();
+        const userId = sessionData.session.user?.id;
         
-        // Special case for admin emails first - fastest path
+        // Special case for admin emails - guaranteed to work
         if (userEmail === 'admin@home.local' || userEmail === 'superadmin@home.local') {
-          console.log("Admin email detected, granting camera assignment permission");
+          console.log(`Admin email detected: ${userEmail}, granting camera assignment permission`);
           setCanAssignCameras(true);
           return;
         }
         
-        // Try using the check_admin_status_safe function
+        // Step 2: Try using the dedicated RPC function which is designed to avoid recursion
+        console.log("Checking admin status via RPC function");
         try {
           const { data: isAdmin, error: funcError } = await supabase.rpc('check_admin_status_safe');
           
-          if (!funcError && isAdmin) {
-            console.log("Admin status confirmed via function call");
-            setCanAssignCameras(true);
-            return;
+          if (!funcError) {
+            console.log("RPC check result:", isAdmin);
+            if (isAdmin) {
+              console.log("Admin status confirmed via function call");
+              setCanAssignCameras(true);
+              return;
+            }
+          } else {
+            console.warn("RPC function check_admin_status_safe failed:", funcError);
           }
         } catch (funcErr) {
-          console.warn("RPC function check_admin_status_safe failed:", funcErr);
+          console.warn("RPC check failed:", funcErr);
         }
         
-        // Direct query for profile's admin flag - this might trigger RLS recursion in some cases
+        // Step 3: Check user roles directly - should be safe with our fixed RLS
         try {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('is_admin')
-            .eq('id', sessionData.session.user?.id)
+          const { data: userRoles, error: rolesError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', userId)
             .maybeSingle();
             
-          if (profileData?.is_admin) {
-            console.log("Admin flag found in profile, granting permission");
-            setCanAssignCameras(true);
-            return;
+          if (!rolesError && userRoles) {
+            const role = userRoles.role;
+            console.log(`Found user role: ${role}`);
+            if (role === 'admin' || role === 'superadmin') {
+              console.log("Admin role confirmed, granting permission");
+              setCanAssignCameras(true);
+              return;
+            }
           }
-        } catch (profileErr) {
-          console.warn("Profile check failed (possibly due to RLS):", profileErr);
+        } catch (rolesErr) {
+          console.warn("Roles check failed:", rolesErr);
         }
         
-        // Default to false if no admin status detected
+        // Default to false if no admin status detected through any method
+        console.log("No admin privileges detected, denying camera assignment permission");
         setCanAssignCameras(false);
       } catch (error) {
         console.error("Error checking admin status:", error);

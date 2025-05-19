@@ -42,8 +42,7 @@ export function useCameraOperations(userId: string, cameras: Camera[], setCamera
         .filter(c => !c.assigned && currentlyAssigned.has(c.id))
         .map(c => c.id);
       
-      console.log("Cameras to add:", toAdd.length);
-      console.log("Cameras to remove:", toRemove.length);
+      console.log(`Changes to process: ${toAdd.length} cameras to add, ${toRemove.length} cameras to remove`);
       
       // Add new assignments
       if (toAdd.length > 0) {
@@ -52,10 +51,11 @@ export function useCameraOperations(userId: string, cameras: Camera[], setCamera
           .insert(toAdd);
           
         if (insertError) {
-          // Handle infinite recursion errors specifically
-          if (insertError.message?.includes('recursion') || insertError.message?.includes('profiles')) {
-            console.error("RLS policy recursion error detected:", insertError);
-            toast.error("Permission error: Cannot assign cameras due to RLS policy conflict");
+          if (insertError.message?.includes('recursion') || 
+              insertError.message?.includes('profiles') || 
+              insertError.message?.includes('permission')) {
+            console.error("Permission error:", insertError);
+            toast.error("Permission error: Cannot assign cameras due to permission conflicts");
             return false;
           }
           
@@ -64,8 +64,10 @@ export function useCameraOperations(userId: string, cameras: Camera[], setCamera
         }
       }
       
-      // Remove old assignments
+      // Remove old assignments - use for..of to handle one by one for better error handling
       if (toRemove.length > 0) {
+        let anyDeleteFailed = false;
+        
         for (const cameraId of toRemove) {
           const { error: deleteError } = await supabase
             .from('user_camera_access')
@@ -74,13 +76,17 @@ export function useCameraOperations(userId: string, cameras: Camera[], setCamera
             .eq('camera_id', cameraId);
             
           if (deleteError) {
-            console.error("Error removing camera assignment:", deleteError);
-            // Continue with others even if one fails
+            console.error(`Error removing camera assignment for camera ${cameraId}:`, deleteError);
+            anyDeleteFailed = true;
           }
+        }
+        
+        if (anyDeleteFailed) {
+          toast.warning("Some camera assignments could not be removed");
         }
       }
       
-      toast.success(`Camera assignments updated`);
+      toast.success(`Camera assignments updated successfully`);
       return true;
     } catch (error: any) {
       console.error("Error saving camera assignments:", error);
