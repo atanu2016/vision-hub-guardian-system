@@ -48,6 +48,7 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     // If there are no cameras to assign, we're done (we already removed all assignments)
     if (cameraIds.length === 0) {
       console.log("No cameras to assign, all assignments cleared");
+      toast.success("Camera assignments cleared successfully");
       return true;
     }
     

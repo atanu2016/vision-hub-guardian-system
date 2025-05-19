@@ -10,18 +10,36 @@ import { toast } from 'sonner';
 export function useAssignCameras(userId: string, isOpen: boolean): UseCameraAssignmentReturn {
   const { canAssignCameras } = useAdminPermission();
   const { cameras, setCameras, loading, error, loadCamerasAndAssignments } = useFetchCameras(userId, isOpen);
-  const { saving, handleCameraToggle, handleSave: operationsSave, isAuthenticated } = useCameraOperations(userId, cameras, setCameras);
   const [authChecked, setAuthChecked] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { saving, handleCameraToggle, handleSave: operationsSave } = useCameraOperations(userId, cameras, setCameras);
 
-  // Verify authentication when the component loads
+  // Check authentication status when the component loads and any time isOpen changes
   useEffect(() => {
     const checkAuth = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (error || !data.session) {
-        toast.error("Please log in to manage camera assignments");
-        console.warn("Camera assignment attempted without authentication");
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Auth check error:", error);
+          setIsAuthenticated(false);
+          toast.error("Authentication error. Please log in again.");
+        } else {
+          // Set authenticated based on session existence
+          const authenticated = !!data.session;
+          setIsAuthenticated(authenticated);
+          
+          if (!authenticated) {
+            console.warn("Camera assignment attempted without valid authentication");
+            toast.error("Please log in to manage camera assignments");
+          }
+        }
+      } catch (err) {
+        console.error("Authentication check failed:", err);
+        setIsAuthenticated(false);
+      } finally {
+        setAuthChecked(true);
       }
-      setAuthChecked(true);
     };
     
     if (isOpen) {
@@ -31,7 +49,11 @@ export function useAssignCameras(userId: string, isOpen: boolean): UseCameraAssi
 
   // Create a wrapper for handleSave that includes the permission check
   const handleSave = async () => {
-    if (!isAuthenticated) {
+    // Perform a fresh auth check before save to ensure we have the latest status
+    const { data } = await supabase.auth.getSession();
+    const currentlyAuthenticated = !!data.session;
+    
+    if (!currentlyAuthenticated) {
       console.warn("Save attempted without authentication");
       toast.error("Authentication required. Please log in again.");
       return false;

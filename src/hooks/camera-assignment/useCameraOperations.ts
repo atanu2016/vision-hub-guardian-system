@@ -9,7 +9,7 @@ export function useCameraOperations(userId: string, cameras: Camera[], setCamera
   const [saving, setSaving] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Check authentication status
+  // Check authentication status on init and periodically
   useEffect(() => {
     const checkAuth = async () => {
       const { data, error } = await supabase.auth.getSession();
@@ -21,6 +21,15 @@ export function useCameraOperations(userId: string, cameras: Camera[], setCamera
     };
     
     checkAuth();
+    
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setIsAuthenticated(!!session);
+    });
+    
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Handle checkbox change
@@ -37,7 +46,9 @@ export function useCameraOperations(userId: string, cameras: Camera[], setCamera
       return false;
     }
     
-    if (!isAuthenticated) {
+    // Check authentication status before save
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) {
       toast.error("Authentication required. Please log in again.");
       return false;
     }
