@@ -1,3 +1,4 @@
+
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,12 +11,27 @@ import { useToast } from "@/hooks/use-toast";
 import { getCameras, saveCamera, deleteCamera } from "@/services/apiService";
 import { checkDatabaseSetup } from "@/services/database";
 
+// Sample HLS camera for consistency with LiveView
+const sampleHLSCamera: Camera = {
+  id: "sample-hls-1",
+  name: "Sample HLS Stream",
+  status: "online",
+  location: "Demo Location",
+  ipAddress: "",
+  lastSeen: new Date().toISOString(),
+  recording: false,
+  connectionType: "hls",
+  hlsUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", // Public HLS test stream
+  group: "Demo"
+};
+
 const Cameras = () => {
   const { toast } = useToast();
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [includeSampleCamera, setIncludeSampleCamera] = useState(true);
   
   // Initialize system and load cameras from API on component mount
   useEffect(() => {
@@ -39,10 +55,31 @@ const Cameras = () => {
     setLoading(true);
     try {
       const camerasData = await getCameras();
-      setCameras(camerasData);
+      
+      // Add sample HLS camera if enabled
+      if (includeSampleCamera) {
+        // Check if sample camera already exists in the database
+        const sampleExists = camerasData.some(camera => 
+          camera.id === sampleHLSCamera.id || 
+          (camera.hlsUrl === sampleHLSCamera.hlsUrl && camera.connectionType === 'hls')
+        );
+        
+        if (!sampleExists) {
+          setCameras([...camerasData, sampleHLSCamera]);
+        } else {
+          setCameras(camerasData);
+        }
+      } else {
+        setCameras(camerasData);
+      }
     } catch (error) {
       console.error('Error fetching cameras:', error);
       toast.error("Could not load cameras from the server. Using cached data.");
+      
+      // Still show the sample camera if there's an error
+      if (includeSampleCamera) {
+        setCameras([sampleHLSCamera]);
+      }
     } finally {
       setLoading(false);
     }
@@ -97,6 +134,11 @@ const Cameras = () => {
     })).filter(group => group.cameras.length > 0);
   }, [cameraGroups, searchQuery]);
 
+  // Helper function to toggle the sample camera
+  const toggleSampleCamera = () => {
+    setIncludeSampleCamera(prev => !prev);
+  };
+
   const handleAddCamera = async (newCamera: Omit<Camera, "id" | "lastSeen">) => {
     try {
       // Add to cameras list with temporary ID and current timestamp
@@ -120,6 +162,12 @@ const Cameras = () => {
   };
 
   const handleDeleteCamera = async (cameraId: string) => {
+    // Don't allow deletion of the sample camera
+    if (cameraId === sampleHLSCamera.id) {
+      toast.error("Cannot delete sample camera. Use the toggle instead.");
+      return;
+    }
+    
     try {
       await deleteCamera(cameraId);
       
@@ -166,6 +214,15 @@ const Cameras = () => {
               Add Camera
             </Button>
           </div>
+        </div>
+        
+        <div className="flex justify-end mb-4">
+          <Button
+            onClick={toggleSampleCamera}
+            className="px-4 py-2 text-sm bg-secondary hover:bg-secondary/90 rounded-md"
+          >
+            {includeSampleCamera ? "Hide Sample Stream" : "Show Sample Stream"}
+          </Button>
         </div>
         
         {loading ? (
