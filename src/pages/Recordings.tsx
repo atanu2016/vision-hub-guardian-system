@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useSearchParams } from "react-router-dom";
-import { Camera as RecordingTypeCamera } from "@/hooks/recordings/types";
+import { Camera } from "@/hooks/recordings/types";
 
 const Recordings = () => {
   const {
@@ -47,7 +47,7 @@ const Recordings = () => {
     }
   };
 
-  // Find camera ID from the recording types Camera
+  // Helper function to find camera ID from name
   const findCameraId = (cameraName: string): string | undefined => {
     const camera = cameras.find(c => c.name === cameraName);
     return camera?.id;

@@ -17,16 +17,16 @@ export const useRecordingCalendar = (cameraId?: string) => {
   const [selectedDateRecordings, setSelectedDateRecordings] = useState<RecordingDayData[]>([]);
   const [selectedTimeframe, setSelectedTimeframe] = useState<string | null>(null);
   
-  // Fetch recording dates from the database
+  // Simplified fetch recordings function to avoid excessive type nesting
   const fetchRecordingDates = useCallback(async () => {
     setIsLoading(true);
     try {
-      const query = supabase
+      let query = supabase
         .from('recordings')
         .select('date, date_time');
         
       if (cameraId) {
-        query.eq('camera_id', cameraId);
+        query = query.eq('camera_id', cameraId);
       }
       
       const { data, error } = await query;
@@ -66,7 +66,7 @@ export const useRecordingCalendar = (cameraId?: string) => {
     fetchRecordingDates();
   }, [fetchRecordingDates]);
   
-  // Handle date selection
+  // Handle date selection - simplified to avoid type recursion
   const handleDateSelect = useCallback(async (selectedDate: Date | undefined) => {
     setDate(selectedDate);
     
