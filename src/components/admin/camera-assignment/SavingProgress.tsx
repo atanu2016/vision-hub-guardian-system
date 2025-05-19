@@ -25,7 +25,7 @@ export function SavingProgress({
           {savingComplete ? (
             <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
           ) : (
-            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+            <Loader2 className={`h-5 w-5 mr-2 ${isSaving ? 'animate-spin' : ''}`} />
           )}
           <span className="font-medium">{savingStep}</span>
         </div>
@@ -34,23 +34,22 @@ export function SavingProgress({
       
       <ProgressBar 
         value={savingProgress} 
-        className={savingComplete ? "bg-green-500" : ""} 
+        className={`transition-all duration-500 ease-in-out ${savingComplete ? "bg-green-500" : ""}`} 
       />
       
       {savingComplete && (
-        <div className="text-center text-sm text-green-600 mt-2">
+        <div className="text-center text-sm text-green-600 mt-2 animate-fade-in">
           Camera assignment updated successfully
         </div>
       )}
       
       {showSlowWarning && !savingComplete && (
-        <div className="bg-amber-100 border-l-4 border-amber-500 text-amber-700 p-4 rounded mt-4">
+        <div className="bg-amber-100 border-l-4 border-amber-500 text-amber-700 p-4 rounded mt-4 animate-pulse">
           <div className="flex">
             <AlertTriangle className="h-5 w-5 mr-2" />
             <div>
               <p className="font-medium">This operation is taking longer than expected.</p>
-              <p className="text-sm">This may be due to network latency or database operations.</p>
-              <p className="text-sm">You can wait for it to complete or try again later.</p>
+              <p className="text-sm">Please wait while we complete the camera assignment.</p>
             </div>
           </div>
         </div>

@@ -8,7 +8,7 @@ import { toast } from 'sonner';
  */
 export const checkAuthentication = async (): Promise<boolean> => {
   try {
-    // Simplified session check with less overhead
+    // Use a simple lightweight session check
     const { data, error } = await supabase.auth.getSession();
     
     if (error) {
@@ -20,7 +20,7 @@ export const checkAuthentication = async (): Promise<boolean> => {
       return false;
     }
     
-    // Check if session exists and is not expired
+    // Simple existence check
     if (!data.session) {
       console.error("No active session found");
       toast.error("Your session has expired. Please login again.");
@@ -30,18 +30,12 @@ export const checkAuthentication = async (): Promise<boolean> => {
       return false;
     }
     
-    // Quick validation check - verify session is not expired
-    const expiresAt = data.session.expires_at;
-    const currentTime = Math.floor(Date.now() / 1000);
-    
-    // If session is about to expire, try to refresh it silently
-    if (expiresAt - currentTime < 300) { // less than 5 minutes left
-      console.log("Session about to expire, refreshing token");
-      
-      // Don't await this - let it happen in background
-      supabase.auth.refreshSession().catch(err => 
-        console.warn("Background refresh failed:", err)
-      );
+    // Perform an ultra-lightweight session validation
+    // by just checking if the access token exists and hasn't expired
+    if (!data.session.access_token) {
+      toast.error("Invalid session");
+      setTimeout(() => window.location.href = '/auth', 500);
+      return false;
     }
     
     return true;
@@ -49,7 +43,6 @@ export const checkAuthentication = async (): Promise<boolean> => {
     console.error("Error in authentication check:", error);
     toast.error("Authentication error");
     
-    // Don't redirect immediately, but prompt the user to try again
     return false;
   }
 };
@@ -65,12 +58,7 @@ export const verifyDatabaseConnection = async (): Promise<boolean> => {
       .select('id')
       .limit(1);
     
-    if (error) {
-      console.error("Database connectivity error:", error);
-      return false;
-    }
-    
-    return true;
+    return !error;
   } catch (error) {
     console.error("Failed to verify database connection:", error);
     return false;

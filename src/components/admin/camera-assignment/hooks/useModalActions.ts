@@ -82,13 +82,14 @@ export function useModalActions({
       setSavingProgress(25);
       setShowSlowWarning(false);
       
-      // Set timeouts for the slow warning and operation timeout
+      // Use a quicker timeout for the slow warning (1.5 seconds)
       const slowWarningTimeout = setTimeout(() => {
         if (isSaving && !savingComplete) {
           setShowSlowWarning(true);
         }
-      }, 3000);
+      }, 1500);
       
+      // Use a more reasonable timeout (8 seconds instead of 15)
       const operationTimeout = setTimeout(() => {
         if (isSaving && !savingComplete) {
           toast.dismiss(toastId);
@@ -97,18 +98,15 @@ export function useModalActions({
           setSavingStep('');
           setSavingProgress(0);
         }
-      }, 15000); // 15 seconds timeout
+      }, 8000);
       
       setSaveTimeout(operationTimeout);
       
-      // Execute save operation with a timeout wrapper
-      const savePromise = handleSave();
-      const timeoutPromise = new Promise<boolean>((resolve) => {
-        setTimeout(() => resolve(false), 10000); // 10 second timeout
-      });
+      // Show progress before actual save to improve perceived performance
+      setSavingProgress(50);
       
-      // Race between the actual save and the timeout
-      const success = await Promise.race([savePromise, timeoutPromise]);
+      // Execute save operation
+      const success = await handleSave();
       
       // Clear timeouts
       clearTimeout(slowWarningTimeout);

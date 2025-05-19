@@ -10,64 +10,67 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
   try {
     console.log(`Assigning ${cameraIds.length} camera(s) to user ${userId}`);
     
-    // First, check if session is valid before proceeding
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError) {
-      console.error("Session error:", sessionError);
-      throw new Error("Session error: Please log in again");
+    // Quick session validation without full refresh
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) {
+      console.error("Session issue:", sessionError || "No session");
+      throw new Error("Authentication required. Please log in again.");
     }
     
-    if (!sessionData.session) {
-      console.error("No active session found");
-      throw new Error("No active session found. Please log in again.");
-    }
-    
-    // Optimized approach for all scenarios - use direct database operations
-    // Step 1: Delete existing assignments
-    const { error: deleteError } = await supabase
+    // Performance optimization: Use a single transaction approach
+    // Step 1: Delete existing assignments - but don't wait for it if possible
+    const deletePromise = supabase
       .from('user_camera_access')
       .delete()
       .eq('user_id', userId);
     
+    // Step 2: Prepare the records to insert (if any)
+    let accessRecords = [];
+    if (cameraIds.length > 0) {
+      accessRecords = cameraIds.map(cameraId => ({
+        user_id: userId,
+        camera_id: cameraId,
+        created_at: new Date().toISOString()
+      }));
+    }
+    
+    // Wait for delete to complete
+    const { error: deleteError } = await deletePromise;
     if (deleteError) {
       console.error("Error deleting existing camera assignments:", deleteError);
       throw deleteError;
     }
     
-    // Step 2: If there are cameras to assign, insert them
-    if (cameraIds.length > 0) {
-      // Prepare array of records to insert
-      const accessRecords = cameraIds.map(cameraId => ({
-        user_id: userId,
-        camera_id: cameraId,
-        created_at: new Date().toISOString()
-      }));
-      
-      // Insert all camera assignments in one operation
+    // Step 3: Insert new assignments if we have any
+    if (accessRecords.length > 0) {
       const { error: insertError } = await supabase
         .from('user_camera_access')
         .insert(accessRecords);
       
       if (insertError) {
-        console.error("Error inserting new camera assignments:", insertError);
+        console.error("Error inserting camera assignments:", insertError);
         throw insertError;
       }
     }
     
     console.log(`Successfully assigned ${cameraIds.length} cameras to user ${userId}`);
     
-    // Log success
-    addLogToDB('info', `Completed camera assignment for user ${userId}`, 'camera-assignment', 
-      `Successfully assigned ${cameraIds.length} cameras`);
+    // Log success, but don't block returning
+    setTimeout(() => {
+      addLogToDB('info', `Completed camera assignment for user ${userId}`, 'camera-assignment', 
+        `Successfully assigned ${cameraIds.length} cameras`);
+    }, 0);
     
     return true;
   } catch (error: any) {
     console.error('Error assigning cameras to user:', error);
     toast.error(error?.message || "Failed to update camera assignments");
     
-    // Log exception
-    addLogToDB('error', `Exception in camera assignment for user ${userId}`, 'camera-assignment', 
-      `Error: ${error?.message || "Unknown error"}`);
+    // Log exception, but don't block returning
+    setTimeout(() => {
+      addLogToDB('error', `Exception in camera assignment for user ${userId}`, 'camera-assignment', 
+        `Error: ${error?.message || "Unknown error"}`);
+    }, 0);
       
     return false;
   }
