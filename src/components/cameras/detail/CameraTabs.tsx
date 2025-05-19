@@ -5,15 +5,15 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
-// Define a simple record type that doesn't rely on nested types
-type SimpleRecording = {
+// Define a simple record type completely separate from Supabase types
+interface SimpleRecording {
   id: string;
   time: string;
   duration: number;
   type: string;
   file_size: string;
   date: string;
-};
+}
 
 const CameraTabs = ({ cameraId }: { cameraId?: string }) => {
   const [recordings, setRecordings] = useState<SimpleRecording[]>([]);
@@ -28,7 +28,7 @@ const CameraTabs = ({ cameraId }: { cameraId?: string }) => {
   const loadRecordings = async (cameraId: string) => {
     setIsLoading(true);
     try {
-      // Query only specific fields to avoid deep type issues
+      // Use any type for data to avoid TypeScript recursion issues
       const { data, error } = await supabase
         .from('recordings')
         .select('id, time, duration, type, file_size, date')
@@ -38,18 +38,22 @@ const CameraTabs = ({ cameraId }: { cameraId?: string }) => {
 
       if (error) throw error;
       
-      // Explicitly cast data to our simple type
-      const formattedData: SimpleRecording[] = data ? 
-        data.map(item => ({
-          id: item.id,
-          time: item.time,
-          duration: item.duration,
-          type: item.type,
-          file_size: item.file_size,
-          date: item.date
-        })) : [];
+      // Manually map to our safe interface to avoid type inference issues
+      const safeData: SimpleRecording[] = [];
+      if (data) {
+        for (const item of data) {
+          safeData.push({
+            id: item.id,
+            time: item.time,
+            duration: item.duration,
+            type: item.type,
+            file_size: item.file_size,
+            date: item.date
+          });
+        }
+      }
       
-      setRecordings(formattedData);
+      setRecordings(safeData);
     } catch (error) {
       console.error('Error loading camera recordings:', error);
     } finally {
