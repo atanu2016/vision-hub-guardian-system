@@ -28,7 +28,6 @@ export function useAdminPermission() {
         }
         
         // SIMPLE CHECK 2: Try check_admin_status_safe function
-        // Using a valid function from the error message list
         try {
           const { data: isAdmin, error: funcError } = await supabase.rpc('check_admin_status_safe');
           

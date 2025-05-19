@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { Camera, CameraStatus } from '@/types/camera';
+import { getUserAssignedCameras } from './getUserCameras';
 
 /**
  * Returns cameras that a user can access based on role and assignments
@@ -21,35 +22,21 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
         throw error;
       }
       
+      console.log(`Found ${data?.length || 0} cameras for admin user`);
       // Transform database fields to match Camera type
       return transformCameraData(data || []);
     }
     
-    // For users and operators, first get assigned cameras from user_camera_access
+    // For regular users, get their assigned camera IDs
     console.log("User is not admin, fetching assigned cameras");
+    const assignedCameraIds = await getUserAssignedCameras(userId);
     
-    // Direct query to get camera assignments - add extensive logging to debug the issue
-    console.log(`Querying user_camera_access for userId: ${userId}`);
-    const { data: accessData, error: accessError } = await supabase
-      .from('user_camera_access')
-      .select('camera_id')
-      .eq('user_id', userId);
-      
-    if (accessError) {
-      console.error("Error fetching camera assignments:", accessError);
-      // Return empty array instead of throwing for resilience
-      return [];
-    }
-    
-    console.log("Camera access data received:", accessData);
-    
-    if (!accessData || accessData.length === 0) {
+    if (assignedCameraIds.length === 0) {
       console.log("No camera assignments found for user");
       return [];
     }
     
-    const assignedCameraIds = accessData.map(item => item.camera_id);
-    console.log(`Found ${assignedCameraIds.length} assigned camera IDs:`, assignedCameraIds);
+    console.log(`User has ${assignedCameraIds.length} assigned cameras, fetching details`);
     
     // Fetch the actual camera details for the assigned IDs
     const { data, error } = await supabase
@@ -62,7 +49,7 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
       return [];
     }
     
-    console.log(`Found ${data?.length || 0} cameras for user`);
+    console.log(`Found ${data?.length || 0} accessible cameras for user`);
     
     // Transform database fields to match Camera type
     return transformCameraData(data || []);

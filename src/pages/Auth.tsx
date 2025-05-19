@@ -9,6 +9,7 @@ import { LoginForm } from '@/components/auth/LoginForm';
 import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm';
 import { AuthBranding } from '@/components/auth/AuthBranding';
 import { MFAEnrollmentForm } from '@/components/auth/MFAEnrollmentForm';
+import { toast } from 'sonner';
 
 const Auth = () => {
   const { user, isLoading, requiresMFA, isAdmin, isSuperAdmin, authInitialized } = useAuth();
@@ -67,6 +68,8 @@ const Auth = () => {
         path = from === '/auth' ? '/live' : from;
         console.log("[Auth Page] Regular user, redirecting to:", path);
       }
+      
+      toast.success(`Welcome back, ${user.email}`);
       
       // Use navigate for React Router based navigation with a longer timeout
       // to allow state to fully update

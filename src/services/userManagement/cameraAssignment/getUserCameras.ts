@@ -13,7 +13,7 @@ export async function getUserAssignedCameras(userId: string): Promise<string[]> 
       return [];
     }
     
-    // Direct query to user_camera_access table
+    // Fetch camera assignments for user - using direct path for consistent results
     const { data, error } = await supabase
       .from('user_camera_access')
       .select('camera_id')
