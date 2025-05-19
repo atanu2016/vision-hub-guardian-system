@@ -5,8 +5,8 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
-// Define a simple record type completely separate from Supabase types
-interface SimpleRecording {
+// Completely separate interface to avoid type recursion
+interface RecordingData {
   id: string;
   time: string;
   duration: number;
@@ -16,7 +16,7 @@ interface SimpleRecording {
 }
 
 const CameraTabs = ({ cameraId }: { cameraId?: string }) => {
-  const [recordings, setRecordings] = useState<SimpleRecording[]>([]);
+  const [recordings, setRecordings] = useState<RecordingData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -28,32 +28,33 @@ const CameraTabs = ({ cameraId }: { cameraId?: string }) => {
   const loadRecordings = async (cameraId: string) => {
     setIsLoading(true);
     try {
-      // Use any type for data to avoid TypeScript recursion issues
-      const { data, error } = await supabase
+      // Using any to break the recursive type chain
+      const response = await supabase
         .from('recordings')
         .select('id, time, duration, type, file_size, date')
         .eq('camera_id', cameraId)
         .order('date_time', { ascending: false })
         .limit(10);
-
-      if (error) throw error;
       
-      // Manually map to our safe interface to avoid type inference issues
-      const safeData: SimpleRecording[] = [];
-      if (data) {
-        for (const item of data) {
-          safeData.push({
-            id: item.id,
-            time: item.time,
-            duration: item.duration,
-            type: item.type,
-            file_size: item.file_size,
-            date: item.date
+      if (response.error) throw response.error;
+      
+      // Manually transform data to avoid TypeScript recursion
+      const formattedRecordings: RecordingData[] = [];
+      
+      if (response.data) {
+        for (const item of response.data) {
+          formattedRecordings.push({
+            id: item.id as string,
+            time: item.time as string,
+            duration: item.duration as number,
+            type: item.type as string,
+            file_size: item.file_size as string,
+            date: item.date as string
           });
         }
       }
       
-      setRecordings(safeData);
+      setRecordings(formattedRecordings);
     } catch (error) {
       console.error('Error loading camera recordings:', error);
     } finally {
