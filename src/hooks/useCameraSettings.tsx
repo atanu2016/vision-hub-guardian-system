@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Camera } from "@/types/camera";
 import { useToast } from "@/hooks/use-toast";
@@ -97,6 +98,7 @@ export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera
     setHasChanges(false);
   };
 
+  // Export all necessary properties
   return {
     cameraData,
     isLoading,

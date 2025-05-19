@@ -6,27 +6,56 @@ import ConnectionSettings from "./settings/ConnectionSettings";
 import RecordingSettings from "./settings/RecordingSettings";
 import SettingsActionButtons from "./settings/SettingsActionButtons";
 import { useCameraSettings } from "@/hooks/useCameraSettings";
+import { UserRole } from "@/utils/permissionUtils";
+import { hasPermission } from "@/utils/permissionUtils";
 
-const CameraSettings = ({ camera, onSave }: CameraSettingsProps) => {
+const CameraSettings = ({ camera, onSave, userRole = 'user' }: CameraSettingsProps) => {
   const { 
     cameraData, 
     isLoading, 
     handleChange, 
     handleSave,
-    handleReset
+    handleReset,
+    hasChanges,
+    isValid
   } = useCameraSettings(camera, onSave);
+
+  // Check if user has permission to edit camera settings
+  const canEditSettings = userRole ? hasPermission(userRole, 'configure-camera-settings') : false;
+  const isDisabled = !canEditSettings;
 
   return (
     <div className="space-y-8 pb-16 relative">
-      <BasicSettings cameraData={cameraData} handleChange={handleChange} />
-      <ConnectionSettings cameraData={cameraData} handleChange={handleChange} />
-      <RecordingSettings cameraData={cameraData} handleChange={handleChange} />
-
-      <SettingsActionButtons 
-        onSave={handleSave}
-        onReset={handleReset}
-        isLoading={isLoading}
+      <BasicSettings 
+        cameraData={cameraData} 
+        handleChange={handleChange} 
+        userRole={userRole}
+        disabled={isDisabled}
       />
+      
+      <ConnectionSettings 
+        cameraData={cameraData} 
+        handleChange={handleChange} 
+        userRole={userRole}
+        disabled={isDisabled}
+      />
+      
+      <RecordingSettings 
+        cameraData={cameraData} 
+        handleChange={handleChange} 
+        userRole={userRole}
+        disabled={isDisabled}
+      />
+
+      {canEditSettings && (
+        <SettingsActionButtons 
+          onSave={handleSave}
+          onReset={handleReset}
+          isLoading={isLoading}
+          hasChanges={hasChanges}
+          isValid={isValid}
+        />
+      )}
     </div>
   );
 };

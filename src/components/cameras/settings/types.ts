@@ -1,6 +1,6 @@
 
 import { Camera } from "@/types/camera";
-import { UserRole } from "@/types/admin";
+import { UserRole } from "@/utils/permissionUtils";
 
 export interface CameraSettingsProps {
   camera: Camera;
