@@ -9,32 +9,20 @@ export function useAdminPermission() {
   useEffect(() => {
     const checkAdminStatus = async () => {
       try {
-        // Use our security definer function that bypasses RLS
-        // Use type assertion to bypass the TypeScript error
+        // Use our security definer function that only checks roles
         const { data: isAdmin, error: funcError } = await supabase.rpc(
           'check_if_user_is_admin' as any
         );
         
         if (!funcError && isAdmin === true) {
-          console.log("Admin status confirmed via bypass function");
+          console.log("Admin status confirmed via role check");
           setCanAssignCameras(true);
           return;
         }
         
-        // If function fails, fall back to email check
+        // If function fails, log error and set permission to false
         if (funcError) {
-          console.log("Admin check function failed:", funcError);
-          
-          // Get current user email
-          const { data: { session } } = await supabase.auth.getSession();
-          const userEmail = session?.user?.email?.toLowerCase();
-          
-          // Special admin emails
-          if (userEmail === 'admin@home.local' || userEmail === 'superadmin@home.local') {
-            console.log(`Admin email detected: ${userEmail}, granting camera assignment permission`);
-            setCanAssignCameras(true);
-            return;
-          }
+          console.error("Admin check function failed:", funcError);
         }
         
         setCanAssignCameras(false);
