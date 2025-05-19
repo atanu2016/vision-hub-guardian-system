@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { RecordingDayData } from "./types";
+import { logRecordingAccess } from "./loggingUtils";
 
 export const useRecordingCalendar = (cameraId?: string) => {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -84,13 +85,8 @@ export const useRecordingCalendar = (cameraId?: string) => {
         setSelectedDateRecordings([]);
       }
       
-      // In a real implementation, log this action
-      await supabase.from('system_logs').insert({
-        level: 'info',
-        source: 'recordings',
-        message: `Accessed recordings for date: ${format(selectedDate, 'yyyy-MM-dd')}`,
-        details: `Accessed recordings ${cameraId ? `for camera ${cameraId} ` : ''}on date ${format(selectedDate, 'yyyy-MM-dd')}`
-      }).catch(err => console.error('Failed to log access:', err));
+      // Log this action using our separated logging utility
+      await logRecordingAccess(selectedDate, cameraId);
     } catch (error) {
       console.error('Error loading recordings:', error);
     } finally {
