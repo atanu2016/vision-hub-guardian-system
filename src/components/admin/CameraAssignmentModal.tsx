@@ -14,9 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Camera, AlertCircle } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { Camera as CameraType, CameraStatus } from '@/types/camera';
-import { assignCamerasToUser, getUserAssignedCameras } from '@/services/userManagement/cameraAssignmentService';
 import { toast } from 'sonner';
-import { usePermissions } from '@/hooks/permissions';
 
 interface CameraAssignmentModalProps {
   isOpen: boolean;
@@ -36,12 +34,9 @@ export default function CameraAssignmentModal({
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { role } = usePermissions();
-  
-  // Direct check for admin status - avoid RLS recursion
   const [canAssignCameras, setCanAssignCameras] = useState(false);
 
-  // Check admin status directly
+  // Check admin status directly without relying on permission hooks
   useEffect(() => {
     async function checkAdminStatus() {
       try {
@@ -68,22 +63,31 @@ export default function CameraAssignmentModal({
           }
         }
         
-        // Fallback to role check
-        if (role === 'admin' || role === 'superadmin') {
-          setCanAssignCameras(true);
-          return;
+        // Check for admin/superadmin role in user_roles table
+        if (sessionData?.session?.user?.id) {
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', sessionData.session.user.id)
+            .maybeSingle();
+            
+          if (roleData?.role === 'admin' || roleData?.role === 'superadmin') {
+            setCanAssignCameras(true);
+            return;
+          }
         }
         
         setCanAssignCameras(false);
       } catch (error) {
         console.error("Error checking admin status:", error);
-        // Fall back to role-based check
-        setCanAssignCameras(role === 'superadmin' || role === 'admin');
+        setCanAssignCameras(false);
       }
     }
     
-    checkAdminStatus();
-  }, [role, isOpen]);
+    if (isOpen) {
+      checkAdminStatus();
+    }
+  }, [isOpen]);
 
   // Fetch all cameras and user assignments
   useEffect(() => {
@@ -97,7 +101,6 @@ export default function CameraAssignmentModal({
     setError(null);
     try {
       console.log("Loading camera assignments for user:", userId);
-      console.log("Current user role:", role);
       
       // Get all cameras
       const { data: allCameras, error: camerasError } = await supabase
@@ -132,7 +135,7 @@ export default function CameraAssignmentModal({
         group: cam.group
       })) : [];
 
-      // Get user's assigned cameras - direct query to avoid RLS issues
+      // Get user's assigned cameras
       try {
         const { data: assignedCameras, error: assignmentError } = await supabase
           .from('user_camera_access')
@@ -190,8 +193,7 @@ export default function CameraAssignmentModal({
       console.log("Saving camera assignments for user:", userId);
       console.log("Selected camera IDs:", selectedCameraIds);
       
-      // Direct database operations to avoid RLS issues
-      // First remove all existing assignments
+      // Direct database operations - first remove all existing assignments
       const { error: deleteError } = await supabase
         .from('user_camera_access')
         .delete()

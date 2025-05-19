@@ -19,19 +19,20 @@ export function useProfileUpdates(userId?: string) {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .maybeSingle();
+        .single();
         
       if (checkError && checkError.code !== 'PGRST116') {
         // PGRST116 means no rows returned - that's expected if the profile doesn't exist yet
         console.error("[PROFILE UPDATE] Error checking profile:", checkError);
-        throw checkError;
+        
+        // Try to continue anyway - the profile might still exist
       }
 
       if (existingProfile) {
         console.log("[PROFILE UPDATE] Updating existing profile");
         
-        // Update the profile directly using from() instead of rpc()
-        const { error } = await supabase
+        // Update the profile directly
+        const { error: updateError } = await supabase
           .from('profiles')
           .update({
             full_name: fullName,
@@ -39,14 +40,14 @@ export function useProfileUpdates(userId?: string) {
           })
           .eq('id', userId);
 
-        if (error) {
-          console.error("[PROFILE UPDATE] Error updating profile:", error);
-          throw error;
+        if (updateError) {
+          console.error("[PROFILE UPDATE] Error updating profile:", updateError);
+          throw updateError;
         }
       } else {
         console.log("[PROFILE UPDATE] Creating new profile");
         // Create new profile
-        const { error } = await supabase
+        const { error: insertError } = await supabase
           .from('profiles')
           .insert({
             id: userId,
@@ -55,9 +56,9 @@ export function useProfileUpdates(userId?: string) {
             updated_at: new Date().toISOString()
           });
 
-        if (error) {
-          console.error("[PROFILE UPDATE] Error creating profile:", error);
-          throw error;
+        if (insertError) {
+          console.error("[PROFILE UPDATE] Error creating profile:", insertError);
+          throw insertError;
         }
       }
       

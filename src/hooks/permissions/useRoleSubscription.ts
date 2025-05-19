@@ -49,6 +49,64 @@ export function useRoleSubscription() {
     setIsLoading(false);
   }, [role, userId]);
   
+  // Simplified direct role check without using RLS-protected tables
+  const fetchRoleUsingDirectApproach = useCallback(async () => {
+    if (!userId) return authRole;
+    
+    try {
+      console.log('[ROLE SUBSCRIPTION] Fetching role directly');
+      
+      // First check email directly for admin accounts
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userEmail = sessionData?.session?.user?.email;
+      
+      if (userEmail && (
+          userEmail.toLowerCase() === 'admin@home.local' || 
+          userEmail.toLowerCase() === 'superadmin@home.local'
+      )) {
+        console.log('[ROLE SUBSCRIPTION] Special admin email detected, returning superadmin role');
+        return 'superadmin' as UserRole;
+      }
+      
+      // Check for admin flag in profiles
+      try {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', userId)
+          .maybeSingle();
+          
+        if (profileData?.is_admin) {
+          console.log('[ROLE SUBSCRIPTION] Admin flag found in profile, returning admin role');
+          return 'admin' as UserRole;
+        }
+      } catch (profileError) {
+        console.error('[ROLE SUBSCRIPTION] Error checking profile:', profileError);
+      }
+      
+      // Try getting role from user_roles table
+      try {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId)
+          .maybeSingle();
+          
+        if (roleData && roleData.role) {
+          console.log('[ROLE SUBSCRIPTION] Role from table:', roleData.role);
+          return roleData.role as UserRole;
+        }
+      } catch (roleError) {
+        console.error('[ROLE SUBSCRIPTION] Error fetching role from table:', roleError);
+      }
+      
+      return authRole;
+    } catch (err) {
+      console.error('[ROLE SUBSCRIPTION] Error in fetchRoleUsingDirectApproach:', err);
+      return authRole;
+    }
+  }, [userId, authRole]);
+  
   // Set up role fetching mechanism with error handling
   let fetchRoleData = { fetchCurrentRole: async () => authRole, error: null, isFetching: false };
   try {
@@ -63,58 +121,6 @@ export function useRoleSubscription() {
     isFetching 
   } = fetchRoleData;
   
-  // Direct check from database using our SQL function
-  const fetchRoleUsingFunction = useCallback(async () => {
-    if (!userId) return authRole;
-    
-    try {
-      console.log('[ROLE SUBSCRIPTION] Fetching role directly using SQL function');
-      
-      // First check email directly for admin accounts
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userEmail = sessionData?.session?.user?.email;
-      
-      if (userEmail === 'admin@home.local' || userEmail === 'superadmin@home.local') {
-        console.log('[ROLE SUBSCRIPTION] Special admin email detected, returning superadmin role');
-        return 'superadmin' as UserRole;
-      }
-      
-      // Then check profiles table for is_admin flag
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', userId)
-        .maybeSingle();
-      
-      if (!profileError && profileData?.is_admin) {
-        console.log('[ROLE SUBSCRIPTION] Admin flag found in profile, returning admin role');
-        return 'admin' as UserRole;
-      }
-      
-      // Try getting role from user_roles table
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .maybeSingle();
-        
-      if (roleError) {
-        console.error('[ROLE SUBSCRIPTION] Error fetching role from table:', roleError);
-        return authRole;
-      }
-      
-      if (roleData) {
-        console.log('[ROLE SUBSCRIPTION] Role from table:', roleData.role);
-        return roleData.role as UserRole;
-      }
-      
-      return authRole;
-    } catch (err) {
-      console.error('[ROLE SUBSCRIPTION] Error in fetchRoleUsingFunction:', err);
-      return authRole;
-    }
-  }, [userId, authRole]);
-  
   // Wrapper function for the polling mechanism with error handling
   const fetchRoleWrapper = useCallback(async () => {
     if (!userId) {
@@ -124,21 +130,21 @@ export function useRoleSubscription() {
     try {
       setIsLoading(true);
       
-      // First try using the SQL function
-      const sqlFunctionRole = await fetchRoleUsingFunction();
-      if (sqlFunctionRole && sqlFunctionRole !== 'user') {
-        handleRoleUpdate(sqlFunctionRole as UserRole);
+      // Use direct approach as primary method
+      const directRole = await fetchRoleUsingDirectApproach();
+      if (directRole) {
+        handleRoleUpdate(directRole);
         return;
       }
       
-      // Fall back to normal fetch
+      // Fall back to normal fetch as backup
       const fetchedRole = await fetchCurrentRole();
       handleRoleUpdate(fetchedRole as UserRole);
     } catch (err) {
       console.error('[ROLE SUBSCRIPTION] Error in fetchRoleWrapper:', err);
       setIsLoading(false);
     }
-  }, [userId, fetchCurrentRole, fetchRoleUsingFunction, handleRoleUpdate]);
+  }, [userId, fetchCurrentRole, fetchRoleUsingDirectApproach, handleRoleUpdate]);
   
   // Set up database subscription with error handling
   let dbSubscription = { isSubscribed: false };
