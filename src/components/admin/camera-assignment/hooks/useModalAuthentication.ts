@@ -3,118 +3,85 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-export function useModalAuthentication(isOpen: boolean) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false);
-  const [authCheckAttempts, setAuthCheckAttempts] = useState(0);
+interface UseModalAuthenticationReturn {
+  isAuthenticated: boolean;
+  authChecked: boolean;
+  authError: string | null;
+}
 
-  // Optimized authentication check - immediate check when modal opens
+export function useModalAuthentication(isOpen: boolean): UseModalAuthenticationReturn {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [authChecked, setAuthChecked] = useState<boolean>(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
   useEffect(() => {
-    if (!isOpen) return;
-    setAuthChecked(false);
+    let isMounted = true;
     
     const checkAuth = async () => {
+      if (!isOpen) {
+        return;
+      }
+      
       try {
-        // Track auth check attempts
-        setAuthCheckAttempts(prev => prev + 1);
-        
-        // First use cached session to avoid network request if possible
+        // Check if user is logged in
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error("Authentication check failed:", error);
-          setIsAuthenticated(false);
-          toast.error("Authentication required. Please login again.");
-          
-          setTimeout(() => {
-            window.location.href = '/auth';
-          }, 1500);
-          
-        } else if (!data.session) {
-          console.error("No active session found");
-          setIsAuthenticated(false);
-          toast.error("Your session has expired. Please login again.");
-          
-          setTimeout(() => {
-            window.location.href = '/auth';
-          }, 1500);
-          
-        } else {
-          // Do an explicit refresh of the session token before proceeding
-          try {
-            const { error: refreshError } = await supabase.auth.refreshSession();
-            if (refreshError) {
-              console.error("Failed to refresh session:", refreshError);
-              setIsAuthenticated(false);
-              toast.error("Session refresh failed. Please login again.");
-              setTimeout(() => window.location.href = '/auth', 1500);
-              return;
-            }
-            console.log("Session refreshed successfully");
-            
-            // Verify session validity with RPC call
-            if (authCheckAttempts < 3) { // Only try RPC validation a few times
-              try {
-                const { data: validData, error: validError } = await supabase.rpc('check_session_valid' as any);
-                
-                if (validError || !validData) {
-                  console.error("Session validation failed:", validError);
-                  setIsAuthenticated(false);
-                  toast.error("Session validation failed. Please login again.");
-                  setTimeout(() => window.location.href = '/auth', 1500);
-                  return;
-                }
-              } catch (validError) {
-                console.warn("RPC validation unavailable:", validError);
-                // Continue without RPC validation as fallback
-              }
-            }
-            
-            // If we got here, authentication is valid
-            setIsAuthenticated(true);
-          } catch (refreshErr) {
-            console.warn("Error during session refresh:", refreshErr);
-            // Continue with current session as fallback if refresh fails
-            setIsAuthenticated(true);
+          if (isMounted) {
+            setAuthError(error.message);
+            setIsAuthenticated(false);
+            setAuthChecked(true);
           }
+          return;
         }
         
-        setAuthChecked(true);
-      } catch (err) {
-        console.error("Authentication check error:", err);
-        setIsAuthenticated(false);
-        setAuthChecked(true);
-        toast.error("Authentication error. Please try logging in again.");
+        if (!data.session) {
+          if (isMounted) {
+            setAuthError("No active session");
+            setIsAuthenticated(false);
+            setAuthChecked(true);
+          }
+          return;
+        }
+        
+        // Optional: Verify session is valid via RPC call
+        try {
+          // Using type assertion to fix TypeScript error
+          const { data: validSession, error: validError } = await supabase.rpc('check_session_valid' as any);
+          
+          if (validError || !validSession) {
+            if (isMounted) {
+              setAuthError("Session validation failed");
+              setIsAuthenticated(false);
+              setAuthChecked(true);
+            }
+            return;
+          }
+        } catch (validationErr) {
+          console.warn("Session validation check failed, continuing:", validationErr);
+          // Non-critical - continue
+        }
+        
+        if (isMounted) {
+          setIsAuthenticated(true);
+          setAuthChecked(true);
+          setAuthError(null);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setAuthError(err?.message || "Authentication check failed");
+          setIsAuthenticated(false);
+          setAuthChecked(true);
+        }
       }
     };
     
     checkAuth();
-  }, [isOpen, authCheckAttempts]);
-
-  // Auth state subscription - monitor for changes while modal is open
-  useEffect(() => {
-    if (!isOpen) return;
-    
-    const { data: { subscription }} = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Auth state changed:", event);
-      
-      if (event === 'SIGNED_OUT') {
-        setIsAuthenticated(false);
-        toast.error("Your session has ended. Please login again.");
-        window.location.href = '/auth';
-      } else if (event === 'SIGNED_IN' && session) {
-        setIsAuthenticated(true);
-      } else if (event === 'TOKEN_REFRESHED' && session) {
-        setIsAuthenticated(true);
-      } else if (event === 'USER_UPDATED' && session) {
-        setIsAuthenticated(true);
-      }
-    });
     
     return () => {
-      subscription.unsubscribe();
+      isMounted = false;
     };
   }, [isOpen]);
 
-  return { isAuthenticated, authChecked };
+  return { isAuthenticated, authChecked, authError };
 }

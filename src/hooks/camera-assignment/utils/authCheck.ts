@@ -43,6 +43,7 @@ export const checkAuthentication = async (): Promise<boolean> => {
     
     // Quick session validation - fail fast if not valid
     try {
+      // Using type assertion to fix TypeScript error
       const { data, error } = await supabase.rpc('check_session_valid' as any);
       
       if (error) {

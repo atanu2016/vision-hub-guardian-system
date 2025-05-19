@@ -11,12 +11,13 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     console.log(`Assigning cameras to user ${userId}. Camera count:`, cameraIds.length);
     
     // Use the optimized database transaction function for maximum performance
+    // Need to use 'as any' type assertion here since TypeScript doesn't recognize the function name
     const { data, error } = await supabase.rpc(
-      'assign_cameras_transaction',
+      'assign_cameras_transaction' as any, 
       { 
         p_user_id: userId, 
         p_camera_ids: cameraIds 
-      } as any // Type assertion needed due to RPC function not in TypeScript definitions
+      }
     );
     
     if (error) {
