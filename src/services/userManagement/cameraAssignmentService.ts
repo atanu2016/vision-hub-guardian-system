@@ -43,16 +43,16 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     console.log("Cameras to add:", camerasToAdd);
     
     // Remove camera assignments that are no longer in the list
-    if (camerasToRemove.length > 0) {
+    for (const cameraId of camerasToRemove) {
       const { error: removeError } = await supabase
         .from('user_camera_access')
         .delete()
         .eq('user_id', userId)
-        .in('camera_id', camerasToRemove);
+        .eq('camera_id', cameraId);
         
       if (removeError) {
-        console.error("Error removing camera assignments:", removeError);
-        throw removeError;
+        console.error(`Error removing camera assignment for camera ${cameraId}:`, removeError);
+        // Continue with others even if one fails
       }
     }
     
@@ -136,7 +136,7 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
   try {
     console.log(`Getting accessible cameras for user ${userId} with role ${userRole}`);
     
-    // If admin or superadmin, return all cameras with direct query
+    // If admin or superadmin, return all cameras
     if (userRole === 'admin' || userRole === 'superadmin') {
       console.log("User is admin/superadmin, fetching all cameras");
       const { data, error } = await supabase

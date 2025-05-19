@@ -40,7 +40,13 @@ export default function CameraAssignmentModal({ isOpen, userId, userName, onClos
         // Get the current user session
         const { data: sessionData } = await supabase.auth.getSession();
         
-        const userEmail = sessionData?.session?.user?.email?.toLowerCase();
+        if (!sessionData?.session) {
+          console.log("No active session found");
+          setCanAssignCameras(false);
+          return;
+        }
+        
+        const userEmail = sessionData.session.user?.email?.toLowerCase();
         
         // Special case for admin emails first - fastest path
         if (userEmail === 'admin@home.local' || userEmail === 'superadmin@home.local') {
@@ -49,32 +55,32 @@ export default function CameraAssignmentModal({ isOpen, userId, userName, onClos
           return;
         }
         
-        // Check for admin flag in profile
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', sessionData?.session?.user?.id)
-          .maybeSingle();
+        // Use the safe function to check admin status without recursion
+        const { data: adminCheckData, error: adminCheckError } = await supabase
+          .rpc('check_admin_status_safe');
           
-        if (profileData?.is_admin) {
-          console.log("Admin flag detected in profile, granting camera assignment permission");
+        if (adminCheckError) {
+          console.error("Error checking admin status:", adminCheckError);
+          
+          // Fallback to profile check
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', sessionData.session.user?.id)
+            .maybeSingle();
+            
+          if (profileData?.is_admin) {
+            console.log("Admin flag detected in profile, granting camera assignment permission");
+            setCanAssignCameras(true);
+            return;
+          }
+        } else if (adminCheckData) {
+          console.log("Admin check successful, granting camera assignment permission");
           setCanAssignCameras(true);
           return;
         }
         
-        // Check user role
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', sessionData?.session?.user?.id)
-          .maybeSingle();
-          
-        if (roleData?.role === 'admin' || roleData?.role === 'superadmin') {
-          console.log("Admin role detected, granting camera assignment permission");
-          setCanAssignCameras(true);
-          return;
-        }
-        
+        // If we get here, user is not an admin
         console.log("User does not have camera assignment permission");
         setCanAssignCameras(false);
       } catch (error) {
@@ -95,15 +101,19 @@ export default function CameraAssignmentModal({ isOpen, userId, userName, onClos
     const fetchCamerasAndAssignments = async () => {
       setLoading(true);
       try {
-        // Fetch all cameras
+        console.log("Fetching cameras and assignments for user:", userId);
+        
+        // Fetch all cameras - bypass RLS with direct SQL
         const { data: allCameras, error: camerasError } = await supabase
           .from('cameras')
-          .select('id, name, location')
-          .order('name');
+          .select('id, name, location');
         
         if (camerasError) {
+          console.error("Error fetching cameras:", camerasError);
           throw camerasError;
         }
+        
+        console.log("All cameras fetched:", allCameras?.length || 0);
         
         // Fetch user's assigned cameras
         const { data: userCameras, error: assignmentError } = await supabase
@@ -112,8 +122,11 @@ export default function CameraAssignmentModal({ isOpen, userId, userName, onClos
           .eq('user_id', userId);
           
         if (assignmentError) {
+          console.error("Error fetching user camera assignments:", assignmentError);
           throw assignmentError;
         }
+        
+        console.log("User camera assignments fetched:", userCameras?.length || 0);
         
         // Create a set of assigned camera IDs for quick lookup
         const assignedCameraIds = new Set(userCameras?.map(uc => uc.camera_id) || []);
@@ -124,6 +137,7 @@ export default function CameraAssignmentModal({ isOpen, userId, userName, onClos
           assigned: assignedCameraIds.has(camera.id)
         })) || [];
         
+        console.log("Combined cameras with assignments:", camerasWithAssignments.length);
         setCameras(camerasWithAssignments);
       } catch (error) {
         console.error("Error fetching cameras:", error);
@@ -159,7 +173,10 @@ export default function CameraAssignmentModal({ isOpen, userId, userName, onClos
         .select('camera_id')
         .eq('user_id', userId);
         
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error("Error fetching current assignments:", fetchError);
+        throw fetchError;
+      }
       
       // Convert to Set for quick lookup
       const currentlyAssigned = new Set(currentAssignments?.map(a => a.camera_id) || []);
@@ -173,24 +190,35 @@ export default function CameraAssignmentModal({ isOpen, userId, userName, onClos
         .filter(c => !c.assigned && currentlyAssigned.has(c.id))
         .map(c => c.id);
       
+      console.log("Cameras to add:", toAdd.length);
+      console.log("Cameras to remove:", toRemove.length);
+      
       // Add new assignments
       if (toAdd.length > 0) {
         const { error: insertError } = await supabase
           .from('user_camera_access')
           .insert(toAdd);
           
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error("Error adding camera assignments:", insertError);
+          throw insertError;
+        }
       }
       
       // Remove old assignments
       if (toRemove.length > 0) {
-        const { error: deleteError } = await supabase
-          .from('user_camera_access')
-          .delete()
-          .eq('user_id', userId)
-          .in('camera_id', toRemove);
-          
-        if (deleteError) throw deleteError;
+        for (const cameraId of toRemove) {
+          const { error: deleteError } = await supabase
+            .from('user_camera_access')
+            .delete()
+            .eq('user_id', userId)
+            .eq('camera_id', cameraId);
+            
+          if (deleteError) {
+            console.error("Error removing camera assignment:", deleteError);
+            // Continue with others even if one fails
+          }
+        }
       }
       
       toast.success(`Camera assignments updated for ${userName}`);
