@@ -27,16 +27,20 @@ export function useAdminPermission() {
           return;
         }
         
-        // SIMPLE CHECK 2: Try is_admin_by_email function
+        // SIMPLE CHECK 2: Try check_admin_status_safe function
+        // Using a valid function from the error message list
         try {
-          const { data: isAdminByEmail } = await supabase.rpc('is_admin_by_email');
-          if (isAdminByEmail) {
-            console.log("Admin status confirmed via email function");
+          const { data: isAdmin, error: funcError } = await supabase.rpc('check_admin_status_safe');
+          
+          if (funcError) {
+            console.warn("Admin check via check_admin_status_safe failed:", funcError);
+          } else if (isAdmin) {
+            console.log("Admin status confirmed via admin check function");
             setCanAssignCameras(true);
             return;
           }
         } catch (funcErr) {
-          console.warn("Email admin check failed:", funcErr);
+          console.warn("Admin function check failed:", funcErr);
         }
         
         // SIMPLE CHECK 3: Check user_roles directly with normal query
