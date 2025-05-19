@@ -2,8 +2,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Camera } from '@/components/admin/camera-assignment/types';
-import { getCameraCount } from '@/services/database/camera/checkCamerasExist';
-import { toast } from 'sonner';
 
 export function useFetchCameras(userId: string, isOpen: boolean) {
   const [cameras, setCameras] = useState<Camera[]>([]);
@@ -20,20 +18,9 @@ export function useFetchCameras(userId: string, isOpen: boolean) {
       try {
         console.log("Fetching cameras and assignments for user:", userId);
         
-        // First check if we have any cameras in the system at all
-        const cameraCount = await getCameraCount();
-        
-        if (cameraCount === 0) {
-          console.log("No cameras found in the system");
-          setCameras([]);
-          setLoading(false);
-          return;
-        }
-        
-        // Step 1: Always get all cameras first - this avoids filtering issues with RLS
-        let allCameras;
+        // Step 1: Get all cameras
+        let allCameras: any[] = [];
         try {
-          // Try with auth user
           const { data, error } = await supabase
             .from('cameras')
             .select('id, name, location');
@@ -42,21 +29,17 @@ export function useFetchCameras(userId: string, isOpen: boolean) {
             throw error;
           }
           
-          allCameras = data;
-          console.log("Successfully fetched cameras:", allCameras?.length || 0);
+          allCameras = data || [];
+          console.log(`Successfully fetched ${allCameras.length} cameras`);
         } catch (cameraError: any) {
           console.error("Error fetching cameras:", cameraError);
-          if (cameraError.message?.includes("recursion") || cameraError.message?.includes("permission")) {
-            setError("Permission error fetching cameras. Please check your database access.");
-          } else {
-            setError("Failed to load cameras. Please try again later.");
-          }
+          setError("Failed to load cameras. Please try again later.");
           setCameras([]);
           setLoading(false);
           return;
         }
         
-        // Step 2: Get user's camera assignments - fallback to empty array if this fails
+        // Step 2: Get user's camera assignments - with error resilience
         let assignedCameraIds = new Set<string>();
         try {
           const { data: assignmentData, error: assignmentError } = await supabase
@@ -67,8 +50,9 @@ export function useFetchCameras(userId: string, isOpen: boolean) {
           if (!assignmentError && assignmentData) {
             assignedCameraIds = new Set(assignmentData.map(a => a.camera_id));
             console.log(`User has ${assignedCameraIds.size} assigned cameras`);
-          } else {
-            console.warn("Could not fetch camera assignments:", assignmentError);
+          } else if (assignmentError) {
+            console.warn("Assignment fetch error:", assignmentError);
+            // Continue with empty assignments
           }
         } catch (assignmentError) {
           console.warn("Error fetching camera assignments:", assignmentError);
@@ -85,8 +69,7 @@ export function useFetchCameras(userId: string, isOpen: boolean) {
         console.log("Camera data processed successfully:", camerasWithAssignments.length);
       } catch (error: any) {
         console.error("Error in fetchCamerasAndAssignments:", error);
-        setError(error.message || "Failed to load camera data");
-        toast.error("Error loading cameras");
+        setError("Failed to load camera data. Please try again later.");
       } finally {
         setLoading(false);
       }

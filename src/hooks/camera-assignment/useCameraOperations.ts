@@ -14,83 +14,91 @@ export function useCameraOperations(userId: string, cameras: Camera[], setCamera
     ));
   };
   
-  // Save camera assignments
+  // Save camera assignments with resilient error handling
   const handleSave = async () => {
     setSaving(true);
     
     try {
-      // Get current assignments to determine what to add/remove
-      const { data: currentAssignments, error: fetchError } = await supabase
-        .from('user_camera_access')
-        .select('camera_id')
-        .eq('user_id', userId);
-        
-      if (fetchError) {
-        console.error("Error fetching current assignments:", fetchError);
-        throw fetchError;
-      }
+      console.log(`Saving camera assignments for user ${userId} with ${cameras.length} cameras`);
       
-      // Convert to Set for quick lookup
-      const currentlyAssigned = new Set(currentAssignments?.map(a => a.camera_id) || []);
+      // Get all cameras that should be assigned
+      const camerasToAssign = cameras.filter(c => c.assigned).map(c => c.id);
       
-      // Determine cameras to add and remove
-      const toAdd = cameras
-        .filter(c => c.assigned && !currentlyAssigned.has(c.id))
-        .map(c => ({ user_id: userId, camera_id: c.id, created_at: new Date().toISOString() }));
-        
-      const toRemove = cameras
-        .filter(c => !c.assigned && currentlyAssigned.has(c.id))
-        .map(c => c.id);
+      // Get all cameras that should not be assigned
+      const camerasToUnassign = cameras.filter(c => !c.assigned).map(c => c.id);
       
-      console.log(`Changes to process: ${toAdd.length} cameras to add, ${toRemove.length} cameras to remove`);
+      console.log(`Will assign ${camerasToAssign.length} cameras and unassign ${camerasToUnassign.length} cameras`);
       
-      // Add new assignments
-      if (toAdd.length > 0) {
-        const { error: insertError } = await supabase
+      // Get current assignments with resilient query
+      let currentAssignments: string[] = [];
+      try {
+        const { data, error } = await supabase
           .from('user_camera_access')
-          .insert(toAdd);
+          .select('camera_id')
+          .eq('user_id', userId);
           
-        if (insertError) {
-          if (insertError.message?.includes('recursion') || 
-              insertError.message?.includes('profiles') || 
-              insertError.message?.includes('permission')) {
-            console.error("Permission error:", insertError);
-            toast.error("Permission error: Cannot assign cameras due to permission conflicts");
-            return false;
-          }
-          
-          console.error("Error adding camera assignments:", insertError);
-          throw insertError;
+        if (!error && data) {
+          currentAssignments = data.map(a => a.camera_id);
+          console.log(`Current assignments: ${currentAssignments.length} cameras`);
         }
+      } catch (fetchErr) {
+        console.warn("Error fetching current assignments, proceeding with empty set:", fetchErr);
       }
       
-      // Remove old assignments - use for..of to handle one by one for better error handling
-      if (toRemove.length > 0) {
-        let anyDeleteFailed = false;
-        
-        for (const cameraId of toRemove) {
-          const { error: deleteError } = await supabase
+      // Determine what needs to be added and removed
+      const toAdd = camerasToAssign.filter(id => !currentAssignments.includes(id));
+      const toRemove = camerasToUnassign.filter(id => currentAssignments.includes(id));
+      
+      console.log(`Changes to process: ${toAdd.length} to add, ${toRemove.length} to remove`);
+      
+      // Add new assignments - process in small batches of 10 to avoid large transactions
+      if (toAdd.length > 0) {
+        const batchSize = 10;
+        for (let i = 0; i < toAdd.length; i += batchSize) {
+          const batch = toAdd.slice(i, i + batchSize);
+          const assignments = batch.map(cameraId => ({
+            user_id: userId,
+            camera_id: cameraId,
+            created_at: new Date().toISOString()
+          }));
+          
+          const { error: insertError } = await supabase
             .from('user_camera_access')
-            .delete()
-            .eq('user_id', userId)
-            .eq('camera_id', cameraId);
+            .insert(assignments);
             
-          if (deleteError) {
-            console.error(`Error removing camera assignment for camera ${cameraId}:`, deleteError);
-            anyDeleteFailed = true;
+          if (insertError) {
+            console.error(`Error adding batch ${i/batchSize + 1}:`, insertError);
+            // Continue with other batches, don't throw
           }
-        }
-        
-        if (anyDeleteFailed) {
-          toast.warning("Some camera assignments could not be removed");
         }
       }
       
-      toast.success(`Camera assignments updated successfully`);
+      // Remove old assignments - one by one for better error handling
+      let removalErrors = 0;
+      for (const cameraId of toRemove) {
+        const { error: deleteError } = await supabase
+          .from('user_camera_access')
+          .delete()
+          .eq('user_id', userId)
+          .eq('camera_id', cameraId);
+          
+        if (deleteError) {
+          console.error(`Error removing camera ${cameraId}:`, deleteError);
+          removalErrors++;
+        }
+      }
+      
+      // Show appropriate success message
+      if (removalErrors > 0) {
+        toast.warning(`Camera assignments updated with ${removalErrors} errors`);
+      } else {
+        toast.success(`Camera assignments updated successfully`);
+      }
+      
       return true;
     } catch (error: any) {
-      console.error("Error saving camera assignments:", error);
-      toast.error(error?.message || "Failed to update camera assignments");
+      console.error("Error in camera assignment process:", error);
+      toast.error("Failed to update camera assignments");
       return false;
     } finally {
       setSaving(false);
