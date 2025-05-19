@@ -66,7 +66,7 @@ export default function CalendarDatePicker({ date, onSelect, hasRecordings }: Ca
           {date ? format(date, "PPP") : <span>Pick a date</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-4" align="start">
+      <PopoverContent className="w-auto p-4 pointer-events-auto" align="start">
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-2">
             <div>

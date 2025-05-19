@@ -12,21 +12,21 @@ export const useRecordingCalendar = (cameraId?: string) => {
   const [selectedDateRecordings, setSelectedDateRecordings] = useState<RecordingDayData[]>([]);
   const [selectedTimeframe, setSelectedTimeframe] = useState<string | null>(null);
   
-  // Format date for use as map key - separate pure function to avoid type issues
-  const formatDateKey = useCallback((date: Date): string => {
+  // Simple function to format date for map key - extracted to avoid type issues
+  const formatDateKey = (date: Date): string => {
     return format(date, 'yyyy-MM-dd');
-  }, []);
+  };
 
   // Fetch recording dates from the database
   const fetchRecordingDates = useCallback(async () => {
     setIsLoading(true);
     try {
-      let query = supabase
+      const query = supabase
         .from('recordings')
         .select('date_time');
         
       if (cameraId) {
-        query = query.eq('camera_id', cameraId);
+        query.eq('camera_id', cameraId);
       }
       
       const { data, error } = await query;
@@ -126,7 +126,7 @@ export const useRecordingCalendar = (cameraId?: string) => {
       return false;
     }
     
-    const key = format(date, 'yyyy-MM-dd');
+    const key = formatDateKey(date);
     return !!recordingDatesMap[key];
   }, [recordingDatesMap]);
 
