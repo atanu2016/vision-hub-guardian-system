@@ -21,7 +21,8 @@ const CameraSettings = ({ camera, onSave, userRole = 'user' }: CameraSettingsPro
   } = useCameraSettings(camera, onSave);
 
   // Check if user has permission to edit camera settings
-  const canEditSettings = userRole ? hasPermission(userRole, 'configure-camera-settings') : false;
+  // Only superadmin should be able to configure camera settings
+  const canEditSettings = userRole === 'superadmin';
   const isDisabled = !canEditSettings;
 
   return (

@@ -44,7 +44,9 @@ const permissionMap: Record<Permission, UserRole[]> = {
   
   // User and above permissions
   'manage-cameras:assigned': ['user', 'superadmin'],
-  'configure-camera-settings': ['user', 'superadmin'],
+  
+  // CRITICAL: Configure camera settings - only superadmin should have this permission
+  'configure-camera-settings': ['superadmin'],
   
   // Superadmin permissions
   'view-cameras:all': ['superadmin'],
@@ -66,7 +68,7 @@ const permissionMap: Record<Permission, UserRole[]> = {
  */
 export function hasPermission(role: UserRole, permission: Permission): boolean {
   // Special case for assign-cameras which should only be allowed for superadmin
-  if (permission === 'assign-cameras') {
+  if (permission === 'assign-cameras' || permission === 'configure-camera-settings') {
     return role === 'superadmin';
   }
   
