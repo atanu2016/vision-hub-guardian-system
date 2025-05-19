@@ -36,7 +36,7 @@ export default function CameraAssignmentModal({
   const [error, setError] = useState<string | null>(null);
   const [canAssignCameras, setCanAssignCameras] = useState(false);
 
-  // Check admin status without relying on RLS
+  // Check admin status using both direct checks to avoid RLS issues
   useEffect(() => {
     async function checkAdminAccess() {
       try {
@@ -50,20 +50,40 @@ export default function CameraAssignmentModal({
           return;
         }
         
-        // Try to query the user role directly
+        // Check if user has admin flag directly in profiles
         try {
-          const { data: roleData } = await supabase.rpc('get_user_role');
-          if (roleData === 'admin' || roleData === 'superadmin') {
-            console.log("Admin role detected via RPC, granting camera assignment permission");
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', sessionData?.session?.user?.id)
+            .maybeSingle();
+            
+          if (profileData?.is_admin) {
+            console.log("Admin profile flag detected, granting camera assignment permission");
             setCanAssignCameras(true);
             return;
           }
-        } catch (rpcError) {
-          console.warn("RPC error checking role:", rpcError);
-          // Continue to fallback checks
+        } catch (error) {
+          console.warn("Error checking profile admin status:", error);
         }
         
-        // Default - deny ability to assign cameras
+        // Check user roles directly
+        try {
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', sessionData?.session?.user?.id)
+            .maybeSingle();
+            
+          if (roleData?.role === 'admin' || roleData?.role === 'superadmin') {
+            console.log("Admin role detected, granting camera assignment permission");
+            setCanAssignCameras(true);
+            return;
+          }
+        } catch (error) {
+          console.warn("Error checking user role:", error);
+        }
+        
         console.log("User does not appear to be an admin, denying camera assignment permission");
         setCanAssignCameras(false);
       } catch (error) {

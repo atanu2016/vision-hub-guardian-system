@@ -25,9 +25,9 @@ export function useProfileUpdates(userId?: string) {
         // Update existing profile - Use direct update with functions to avoid RLS recursion
         console.log("[PROFILE UPDATE] Profile exists, updating...");
         
-        // Instead of using RPC, use a direct REST call to the function
+        // Use direct update strategy
         try {
-          // Use a direct update to the profiles table instead of RPC
+          // Use a direct update to the profiles table
           const { error: updateError } = await supabase
             .from('profiles')
             .update({
