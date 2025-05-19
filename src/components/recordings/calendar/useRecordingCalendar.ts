@@ -94,11 +94,13 @@ export const useRecordingCalendar = (cameraId?: string) => {
     }
   };
 
-  function isRecordingDate(date: Date) {
-    return recordingDates.some(d => 
-      d.getDate() === date.getDate() && 
-      d.getMonth() === date.getMonth() && 
-      d.getFullYear() === date.getFullYear()
+  // Helper function to check if a date has recordings
+  // Simplified to avoid possible recursive type issues
+  function isRecordingDate(dateToCheck: Date): boolean {
+    return recordingDates.some(recordedDate => 
+      recordedDate.getDate() === dateToCheck.getDate() && 
+      recordedDate.getMonth() === dateToCheck.getMonth() && 
+      recordedDate.getFullYear() === dateToCheck.getFullYear()
     );
   }
 
