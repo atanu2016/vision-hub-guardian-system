@@ -20,7 +20,7 @@ export interface Camera {
   status: CameraStatus;  // Required to match type in @/types/camera
   location: string;      // Required to match type in @/types/camera
   ipAddress: string;     // Changed from optional to required
-  lastSeen?: string;
+  lastSeen: string;      // Changed from optional to required
   recording?: boolean;
 }
 

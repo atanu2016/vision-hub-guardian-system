@@ -5,18 +5,18 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
-// Define a simple interface for recording data
-interface RecordingItem {
+// Define a simple record type instead of a deep nested type
+type SimpleRecording = {
   id: string;
   time: string;
   duration: number;
   type: string;
   file_size: string;
   date: string;
-}
+};
 
 const CameraTabs = ({ cameraId }: { cameraId?: string }) => {
-  const [recordings, setRecordings] = useState<RecordingItem[]>([]);
+  const [recordings, setRecordings] = useState<SimpleRecording[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -28,7 +28,7 @@ const CameraTabs = ({ cameraId }: { cameraId?: string }) => {
   const loadRecordings = async (cameraId: string) => {
     setIsLoading(true);
     try {
-      // Simplified query to avoid deep type instantiation
+      // Query only the specific fields we need
       const { data, error } = await supabase
         .from('recordings')
         .select('id, time, duration, type, file_size, date')
@@ -37,7 +37,9 @@ const CameraTabs = ({ cameraId }: { cameraId?: string }) => {
         .limit(10);
 
       if (error) throw error;
-      setRecordings(data as RecordingItem[] || []);
+      
+      // Use type assertion with a simple type to avoid deep instantiation
+      setRecordings(data || []);
     } catch (error) {
       console.error('Error loading camera recordings:', error);
     } finally {
