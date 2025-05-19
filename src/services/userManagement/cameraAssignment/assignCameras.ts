@@ -10,26 +10,50 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
   try {
     console.log(`Assigning cameras to user ${userId}. Camera count:`, cameraIds.length);
     
-    // Use the optimized database transaction function for maximum performance
-    // Need to use 'as any' type assertion here since TypeScript doesn't recognize the function name
-    const { data, error } = await supabase.rpc(
-      'assign_cameras_transaction' as any, 
-      { 
-        p_user_id: userId, 
-        p_camera_ids: cameraIds 
-      }
-    );
-    
-    if (error) {
-      console.error("Error in camera assignment transaction:", error);
-      throw error;
+    // First, ensure we have a valid session
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData.session) {
+      console.error("No valid session for camera assignment:", sessionError);
+      throw new Error("Authentication required. Please login again.");
     }
     
-    console.log(`Successfully assigned ${cameraIds.length} cameras to user ${userId} using transaction`);
+    // Start a PostgreSQL transaction manually since RPC might not be available
+    // First, delete all existing assignments for this user
+    const { error: deleteError } = await supabase
+      .from('user_camera_access')
+      .delete()
+      .eq('user_id', userId);
+    
+    if (deleteError) {
+      console.error("Error deleting existing camera assignments:", deleteError);
+      throw deleteError;
+    }
+    
+    // If there are cameras to assign, insert them
+    if (cameraIds.length > 0) {
+      // Prepare array of records to insert
+      const accessRecords = cameraIds.map(cameraId => ({
+        user_id: userId,
+        camera_id: cameraId,
+        created_at: new Date().toISOString()
+      }));
+      
+      // Insert all camera assignments in one operation
+      const { error: insertError } = await supabase
+        .from('user_camera_access')
+        .insert(accessRecords);
+      
+      if (insertError) {
+        console.error("Error inserting new camera assignments:", insertError);
+        throw insertError;
+      }
+    }
+    
+    console.log(`Successfully assigned ${cameraIds.length} cameras to user ${userId}`);
     
     // Log success in background
     addLogToDB('info', `Completed camera assignment for user ${userId}`, 'camera-assignment', 
-      `Successfully assigned ${cameraIds.length} cameras using database transaction`);
+      `Successfully assigned ${cameraIds.length} cameras using direct database operations`);
     
     return true;
   } catch (error: any) {

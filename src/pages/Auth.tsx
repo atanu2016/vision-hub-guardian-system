@@ -10,6 +10,7 @@ import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm';
 import { AuthBranding } from '@/components/auth/AuthBranding';
 import { MFAEnrollmentForm } from '@/components/auth/MFAEnrollmentForm';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const Auth = () => {
   const { user, isLoading, requiresMFA, isAdmin, isSuperAdmin, authInitialized } = useAuth();
@@ -34,6 +35,26 @@ const Auth = () => {
   const from = location.state?.from || getDefaultPath();
   
   const { backgroundUrl, LogoComponent } = AuthBranding();
+  
+  // Refresh session token if possible
+  useEffect(() => {
+    const refreshSession = async () => {
+      try {
+        console.log("[Auth Page] Attempting to refresh session token");
+        const { error } = await supabase.auth.refreshSession();
+        if (error) {
+          console.warn("[Auth Page] Session refresh failed:", error.message);
+        } else {
+          console.log("[Auth Page] Session refreshed successfully");
+        }
+      } catch (err) {
+        console.error("[Auth Page] Session refresh exception:", err);
+      }
+    };
+    
+    // Attempt to refresh the token when the auth page loads
+    refreshSession();
+  }, []);
   
   // Track authentication state transitions
   useEffect(() => {
@@ -61,15 +82,19 @@ const Auth = () => {
       
       // Calculate where to redirect based on role
       let path;
-      if (isAdmin || isSuperAdmin) {
+      if (location.state?.from) {
+        // If we have a specific return path, use that
+        path = location.state.from;
+        console.log("[Auth Page] Redirecting to requested path:", path);
+      } else if (isAdmin || isSuperAdmin) {
         path = '/dashboard';
         console.log("[Auth Page] Admin user, redirecting to dashboard");
       } else {
-        path = from === '/auth' ? '/live' : from;
-        console.log("[Auth Page] Regular user, redirecting to:", path);
+        path = '/live';
+        console.log("[Auth Page] Regular user, redirecting to live view");
       }
       
-      toast.success(`Welcome back, ${user.email}`);
+      toast.success(`Welcome back${user.email ? `, ${user.email}` : ''}`);
       
       // Use navigate for React Router based navigation with a longer timeout
       // to allow state to fully update
@@ -78,7 +103,7 @@ const Auth = () => {
         navigate(path, { replace: true });
       }, 1000);
     }
-  }, [isLoading, user, from, redirecting, authInitialized, navigate, requiresMFA, isAdmin, isSuperAdmin]);
+  }, [isLoading, user, from, redirecting, authInitialized, navigate, requiresMFA, isAdmin, isSuperAdmin, location.state]);
 
   useEffect(() => {
     // Check URL params for tab selection
@@ -125,13 +150,19 @@ const Auth = () => {
   // If user is already authenticated and we're not in a sign-in flow, redirect
   if (user && authInitialized && !isLoading && !redirecting) {
     let redirectPath;
-    if (isAdmin || isSuperAdmin) {
+    
+    if (location.state?.from) {
+      // If we have a specific return path, use that
+      redirectPath = location.state.from;
+      console.log("[Auth Page] Direct redirect to requested path:", redirectPath);
+    } else if (isAdmin || isSuperAdmin) {
       redirectPath = '/dashboard';
       console.log("[Auth Page] Direct redirect to dashboard for admin");
     } else {
-      redirectPath = from === '/auth' ? '/live' : from;
-      console.log("[Auth Page] Direct redirect to:", redirectPath);
+      redirectPath = '/live';
+      console.log("[Auth Page] Direct redirect to live view");
     }
+    
     return <Navigate to={redirectPath} replace />;
   }
 
