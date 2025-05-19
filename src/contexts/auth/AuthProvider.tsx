@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   // Check both profile.is_admin and role for admin status - more explicitly check roles
   const isAdmin = role === 'superadmin' || !!profile?.is_admin;
-  const isSuperAdmin = role === 'superadmin' || (!!profile?.is_admin && role === 'superadmin');
+  const isSuperAdmin = role === 'superadmin';
 
   const contextValue: AuthContextType = {
     session,

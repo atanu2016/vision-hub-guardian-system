@@ -51,7 +51,7 @@ export function usePermissionsCore(): UsePermissionsReturn {
           .eq('user_id', sessionData?.session?.user?.id || '')
           .maybeSingle();
           
-        if (roleData?.role === 'admin' || roleData?.role === 'superadmin') {
+        if (roleData?.role === 'superadmin') {
           return true;
         }
       } catch (err) {
@@ -96,8 +96,8 @@ export function usePermissionsCore(): UsePermissionsReturn {
       return true; // Allow access when we can't determine roles due to DB errors
     }
     
-    // For admin/superadmin emails, grant permission - quick check
-    if (role === 'admin' || role === 'superadmin') {
+    // For superadmin, grant permission - quick check
+    if (role === 'superadmin') {
       return true;
     }
     
