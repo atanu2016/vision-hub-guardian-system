@@ -1,8 +1,7 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { HardDrive, Trash2, Clock } from "lucide-react";
+import { HardDrive, Trash2, Clock, RefreshCw } from "lucide-react";
 
 interface StorageUsageDisplayProps {
   storageUsage: {
@@ -15,13 +14,15 @@ interface StorageUsageDisplayProps {
   retentionDays: number;
   isClearing: boolean;
   onClearStorage: () => void;
+  onRefreshStorage?: () => void;
 }
 
 const StorageUsageDisplay = ({ 
   storageUsage, 
   retentionDays, 
   isClearing, 
-  onClearStorage 
+  onClearStorage,
+  onRefreshStorage
 }: StorageUsageDisplayProps) => {
   return (
     <div className="space-y-4">
@@ -30,8 +31,20 @@ const StorageUsageDisplay = ({
           <div className="text-sm font-medium">
             {storageUsage.usedSpaceFormatted} used of {storageUsage.totalSpaceFormatted}
           </div>
-          <div className="text-sm text-muted-foreground">
-            {storageUsage.usedPercentage}%
+          <div className="flex items-center gap-2">
+            <div className="text-sm text-muted-foreground">
+              {storageUsage.usedPercentage}%
+            </div>
+            {onRefreshStorage && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={onRefreshStorage} 
+                className="h-6 w-6 p-0"
+              >
+                <RefreshCw className="h-3 w-3" />
+              </Button>
+            )}
           </div>
         </div>
         <Progress value={storageUsage.usedPercentage} />

@@ -1,4 +1,3 @@
-
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -137,8 +136,12 @@ export default function RecordingsSidebar({
             <Progress value={usedPercentage} className="h-2" />
           </div>
           <Separator className="my-4" />
-          <Button variant="outline" className="w-full">
-            Cleanup Old Recordings
+          <Button 
+            variant="outline" 
+            className="w-full"
+            onClick={() => window.location.href = "/settings/storage"}
+          >
+            Manage Storage
           </Button>
         </CardContent>
       </Card>

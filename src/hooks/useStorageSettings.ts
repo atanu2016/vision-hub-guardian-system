@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { StorageSettings as StorageSettingsType } from '@/types/camera';
 import { getStorageSettings, saveStorageSettings, validateStorageAccess } from '@/services/apiService';
@@ -26,6 +27,11 @@ export const useStorageSettings = () => {
     usedSpaceFormatted: "0 GB",
     totalSpaceFormatted: "1 TB"
   });
+
+  // Fetch storage usage on component mount
+  useEffect(() => {
+    fetchStorageUsage();
+  }, []);
 
   // Load storage settings from API
   const loadStorageSettings = async () => {
