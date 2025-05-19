@@ -15,7 +15,7 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
       throw new Error("User ID is required");
     }
     
-    // Get current assignments without using RLS-protected queries
+    // Get current assignments - direct query to avoid RLS issues
     const { data: currentAssignments, error: fetchError } = await supabase
       .from('user_camera_access')
       .select('camera_id')
@@ -41,51 +41,6 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     
     console.log("Cameras to remove:", camerasToRemove);
     console.log("Cameras to add:", camerasToAdd);
-    
-    // Check admin status directly for current user
-    let isAdmin = false;
-    
-    // Check via email first (fastest method)
-    if (actorEmail) {
-      isAdmin = actorEmail.toLowerCase() === 'admin@home.local' || 
-                actorEmail.toLowerCase() === 'superadmin@home.local';
-      console.log("Admin check via email:", isAdmin, actorEmail);
-    }
-    
-    // If not admin via email, check profile
-    if (!isAdmin && actorId) {
-      try {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', actorId)
-          .maybeSingle();
-          
-        isAdmin = !!profileData?.is_admin;
-        console.log("Admin check via profile:", isAdmin);
-      } catch (e) {
-        console.warn("Error checking profile is_admin:", e);
-      }
-    }
-    
-    // Last resort - check user_roles table
-    if (!isAdmin && actorId) {
-      try {
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', actorId)
-          .maybeSingle();
-          
-        isAdmin = roleData?.role === 'admin' || roleData?.role === 'superadmin';
-        console.log("Admin check via user_roles:", isAdmin);
-      } catch (e) {
-        console.warn("Error checking user roles:", e);
-      }
-    }
-    
-    // Skip admin check for now to avoid RLS issues - we'll handle this in the UI
-    console.log("Current user has admin status:", isAdmin);
     
     // Remove camera assignments that are no longer in the list
     if (camerasToRemove.length > 0) {
@@ -181,7 +136,7 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
   try {
     console.log(`Getting accessible cameras for user ${userId} with role ${userRole}`);
     
-    // If admin or superadmin, return all cameras
+    // If admin or superadmin, return all cameras with direct query
     if (userRole === 'admin' || userRole === 'superadmin') {
       console.log("User is admin/superadmin, fetching all cameras");
       const { data, error } = await supabase
@@ -216,9 +171,21 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
       }));
     }
     
-    // For users and operators, return only assigned cameras
+    // For users and operators, first get assigned cameras from user_camera_access
     console.log("User is not admin, fetching assigned cameras");
-    const assignedCameraIds = await getUserAssignedCameras(userId);
+    
+    // Direct query to get camera assignments
+    const { data: accessData, error: accessError } = await supabase
+      .from('user_camera_access')
+      .select('camera_id')
+      .eq('user_id', userId);
+      
+    if (accessError) {
+      console.error("Error fetching camera assignments:", accessError);
+      return [];
+    }
+    
+    const assignedCameraIds = accessData?.map(item => item.camera_id) || [];
     
     if (assignedCameraIds.length === 0) {
       console.log("User has no assigned cameras");

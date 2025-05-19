@@ -32,23 +32,41 @@ const LiveView = () => {
         return;
       }
 
-      // Use the role-based access control for cameras
+      // Determine user access level
+      let isAdmin = false;
+      
+      // Special case for admin email
+      const userEmail = user.email?.toLowerCase();
+      if (userEmail === 'admin@home.local' || userEmail === 'superadmin@home.local') {
+        isAdmin = true;
+      } else {
+        isAdmin = role === 'admin' || role === 'superadmin';
+      }
+      
+      // Fetch cameras based on access level
       let camerasData: Camera[] = [];
       
-      // For admin and superadmin, show all cameras
-      if (role === 'admin' || role === 'superadmin') {
+      if (isAdmin) {
         console.log("User is admin/superadmin, fetching all cameras");
-        const dbCameras = await fetchCamerasFromDB();
-        camerasData = dbCameras;
+        try {
+          const allCameras = await fetchCamerasFromDB();
+          camerasData = allCameras;
+        } catch (adminErr) {
+          console.error("Error fetching all cameras:", adminErr);
+          setError("Failed to fetch cameras. Please try again.");
+          setCameras([]);
+          return;
+        }
       } else {
-        // For users and operators, show only assigned cameras
+        // For users and operators, directly fetch only assigned cameras
         console.log("User is normal user/operator, fetching assigned cameras");
         try {
-          camerasData = await getAccessibleCameras(user.id, role);
+          camerasData = await getAccessibleCameras(user.id, 'user'); // Force user role for fetching
         } catch (err) {
-          console.error("Error fetching assigned cameras, showing empty view", err);
-          // Don't fall back to showing all cameras for security reasons
-          camerasData = [];
+          console.error("Error fetching assigned cameras:", err);
+          setError("Failed to fetch cameras. Please try again.");
+          setCameras([]);
+          return;
         }
       }
       
@@ -62,7 +80,7 @@ const LiveView = () => {
     } finally {
       setLoading(false);
     }
-  }, [user, role]); // Ensure stable dependencies
+  }, [user, role]); 
 
   useEffect(() => {
     if (user) {
