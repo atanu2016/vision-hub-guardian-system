@@ -8,74 +8,87 @@ export function useProfileUpdates(userId?: string) {
 
   const handleProfileUpdate = async (e: React.FormEvent, fullName: string): Promise<void> => {
     e.preventDefault();
-    if (!userId) return;
+    if (!userId) {
+      toast.error("No user ID available");
+      return;
+    }
 
     setUpdateInProgress(true);
     try {
       console.log("[PROFILE UPDATE] Updating profile for user:", userId, "with name:", fullName);
       
-      // First check if profile exists
-      const { data: existingProfile, error: checkError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', userId)
-        .single();
+      // Use our new security definer function that bypasses RLS
+      const { data, error } = await supabase
+        .rpc('update_user_profile_safe', {
+          _user_id: userId,
+          _full_name: fullName
+        });
       
-      if (checkError && checkError.code !== 'PGRST116') {
-        console.error("[PROFILE UPDATE] Error checking profile:", checkError);
+      if (error) {
+        console.error("[PROFILE UPDATE] Error updating profile:", error);
+        throw error;
       }
       
-      if (existingProfile) {
-        // Update existing profile
-        console.log("[PROFILE UPDATE] Profile exists, updating directly...");
-        
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            full_name: fullName,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', userId);
-          
-        if (updateError) {
-          console.error("[PROFILE UPDATE] Update Error:", updateError);
-          throw updateError;
-        }
-      } else {
-        // Create new profile
-        console.log("[PROFILE UPDATE] No profile exists, creating...");
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            full_name: fullName,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-
-        if (insertError) {
-          console.error("[PROFILE UPDATE] Error creating profile:", insertError);
-          
-          // If we get duplicate key, try update instead
-          if (insertError.code === '23505') {
-            console.log("[PROFILE UPDATE] Profile was created in the meantime, trying update...");
-            const { error: retryError } = await supabase
-              .from('profiles')
-              .update({ full_name: fullName })
-              .eq('id', userId);
-              
-            if (retryError) throw retryError;
-          } else {
-            throw insertError;
-          }
-        }
+      if (data === false) {
+        console.warn("[PROFILE UPDATE] Function returned false, potential issue");
+        throw new Error("Profile update unsuccessful");
       }
       
       console.log("[PROFILE UPDATE] Profile updated successfully");
       toast.success('Profile updated successfully');
     } catch (error: any) {
       console.error('[PROFILE UPDATE] Error updating profile:', error);
-      toast.error(error?.message || 'Failed to update profile');
+      
+      // Fallback method - try direct update if RPC fails
+      try {
+        console.log("[PROFILE UPDATE] Attempting fallback direct update");
+        
+        // First check if profile exists
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle();
+        
+        if (existingProfile) {
+          // Update existing profile
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              full_name: fullName,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+            
+          if (updateError) {
+            console.error("[PROFILE UPDATE] Fallback update error:", updateError);
+            toast.error(updateError.message || 'Failed to update profile');
+            return;
+          }
+        } else {
+          // Create new profile
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              full_name: fullName,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            });
+  
+          if (insertError) {
+            console.error("[PROFILE UPDATE] Fallback insert error:", insertError);
+            toast.error(insertError.message || 'Failed to create profile');
+            return;
+          }
+        }
+        
+        console.log("[PROFILE UPDATE] Fallback update successful");
+        toast.success('Profile updated successfully');
+      } catch (fallbackError: any) {
+        console.error('[PROFILE UPDATE] Fallback error:', fallbackError);
+        toast.error(fallbackError?.message || 'Failed to update profile');
+      }
     } finally {
       setUpdateInProgress(false);
     }

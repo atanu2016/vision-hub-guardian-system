@@ -20,32 +20,99 @@ export function useAuthState() {
   const [role, setRole] = useState<UserRole>('user');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [authInitialized, setAuthInitialized] = useState<boolean>(false);
+  const [errors, setErrors] = useState<string[]>([]);
 
-  // Optimized function to fetch user data
+  // Optimized function to fetch user data with better error handling
   const fetchUserData = useCallback(async (userId: string, currentUser: User) => {
     try {
       console.log("[AUTH] Fetching user data for:", userId);
       
+      // Reset errors before new fetch
+      setErrors([]);
+      
       // Fetch profile and role in parallel for better performance
-      const [profileData, roleData] = await Promise.all([
+      // Use Promise.allSettled to handle partial failures
+      const results = await Promise.allSettled([
         fetchUserProfile(userId, currentUser),
         fetchUserRole(userId, currentUser)
       ]);
       
-      if (profileData) {
-        console.log("[AUTH] Profile data fetched:", profileData);
-        setProfile(profileData);
+      // Process profile result
+      if (results[0].status === 'fulfilled' && results[0].value) {
+        console.log("[AUTH] Profile data fetched:", results[0].value);
+        setProfile(results[0].value);
+      } else if (results[0].status === 'rejected') {
+        console.error("[AUTH] Error fetching profile:", results[0].reason);
+        setErrors(prev => [...prev, `Profile fetch error: ${results[0].reason}`]);
+        
+        // Attempt fallback direct fetch
+        try {
+          const { data } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+          
+          if (data) {
+            setProfile(data as Profile);
+            console.log("[AUTH] Profile fetched via fallback");
+          }
+        } catch (err) {
+          console.error("[AUTH] Fallback profile fetch failed:", err);
+        }
       }
       
-      console.log("[AUTH] Role data fetched:", roleData);
-      setRole(roleData);
+      // Process role result
+      if (results[1].status === 'fulfilled') {
+        console.log("[AUTH] Role data fetched:", results[1].value);
+        setRole(results[1].value);
+      } else {
+        console.error("[AUTH] Error fetching role:", results[1].reason);
+        setErrors(prev => [...prev, `Role fetch error: ${results[1].reason}`]);
+        
+        // Default to user role for safety
+        setRole('user');
+        
+        // Try fallback method - direct query
+        try {
+          const { data } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', userId)
+            .single();
+            
+          if (data?.role) {
+            setRole(data.role as UserRole);
+            console.log("[AUTH] Role fetched via fallback:", data.role);
+          }
+        } catch (err) {
+          console.error("[AUTH] Fallback role fetch failed:", err);
+        }
+      }
       
-      return { profile: profileData, role: roleData };
+      // Ensure we have at least a basic profile
+      if (!profile) {
+        // Create default profile based on user data
+        setProfile({
+          id: userId,
+          full_name: currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'User',
+          is_admin: false,
+          mfa_enrolled: false,
+          mfa_required: false
+        });
+      }
+      
+      return {
+        profile: results[0].status === 'fulfilled' ? results[0].value : null,
+        role: results[1].status === 'fulfilled' ? results[1].value : 'user' as UserRole,
+        errors: errors
+      };
     } catch (error) {
       console.error("[AUTH] Error fetching user data:", error);
+      setErrors(prev => [...prev, `General error: ${error}`]);
       return null;
     }
-  }, []);
+  }, [errors, profile]);
 
   return {
     user,
@@ -60,6 +127,9 @@ export function useAuthState() {
     setIsLoading,
     authInitialized,
     setAuthInitialized,
-    fetchUserData
+    fetchUserData,
+    errors
   };
 }
+
+import { supabase } from '@/integrations/supabase/client';

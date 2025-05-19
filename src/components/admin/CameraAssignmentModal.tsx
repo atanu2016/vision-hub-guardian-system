@@ -35,30 +35,53 @@ export default function CameraAssignmentModal({
   const [error, setError] = useState<string | null>(null);
   const [canAssignCameras, setCanAssignCameras] = useState(false);
 
-  // Simplified admin check that avoids RLS recursion issues
+  // Direct admin check that avoids RLS recursion issues
   useEffect(() => {
     async function checkAdminAccess() {
       try {
-        // First check if the user is using a special admin email
+        // Get session data for current user
         const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData?.session?.user?.id) {
+          setCanAssignCameras(false);
+          return;
+        }
+        
         const userEmail = sessionData?.session?.user?.email?.toLowerCase();
         
+        // Check for special admin emails first - fastest path
         if (userEmail === 'admin@home.local' || userEmail === 'superadmin@home.local') {
           console.log("Admin email detected, granting camera assignment permission");
           setCanAssignCameras(true);
           return;
         }
         
-        // Check if user has admin flag directly in profiles
+        // Try using the new security definer function that bypasses RLS
+        try {
+          const { data: isAdmin, error: rpcError } = await supabase
+            .rpc('check_admin_status_safe', { 
+              _user_id: sessionData?.session?.user?.id 
+            });
+            
+          if (!rpcError && isAdmin === true) {
+            console.log("Admin status confirmed via RPC function");
+            setCanAssignCameras(true);
+            return;
+          }
+        } catch (rpcErr) {
+          console.warn("Error checking admin status via RPC:", rpcErr);
+          // Continue checking other methods
+        }
+        
+        // Check admin flag in profile directly as fallback
         try {
           const { data: profileData } = await supabase
             .from('profiles')
             .select('is_admin')
-            .eq('id', sessionData?.session?.user?.id)
+            .eq('id', sessionData.session.user.id)
             .single();
             
           if (profileData?.is_admin) {
-            console.log("Admin profile flag detected, granting camera assignment permission");
+            console.log("Admin profile flag detected");
             setCanAssignCameras(true);
             return;
           }
@@ -66,16 +89,16 @@ export default function CameraAssignmentModal({
           console.warn("Error checking profile admin status:", profileError);
         }
         
-        // Check user roles directly
+        // Check user roles directly as final fallback
         try {
           const { data: roleData } = await supabase
             .from('user_roles')
             .select('role')
-            .eq('user_id', sessionData?.session?.user?.id)
+            .eq('user_id', sessionData.session.user.id)
             .single();
             
           if (roleData?.role === 'admin' || roleData?.role === 'superadmin') {
-            console.log("Admin role detected, granting camera assignment permission");
+            console.log("Admin role detected");
             setCanAssignCameras(true);
             return;
           }
@@ -83,7 +106,7 @@ export default function CameraAssignmentModal({
           console.warn("Error checking user role:", roleError);
         }
         
-        console.log("User does not appear to be an admin, denying camera assignment permission");
+        console.log("User does not appear to be an admin");
         setCanAssignCameras(false);
       } catch (error) {
         console.error("Error checking admin status:", error);
@@ -109,7 +132,7 @@ export default function CameraAssignmentModal({
     try {
       console.log("Loading camera assignments for user:", userId);
       
-      // Get all cameras - direct query to avoid RLS issues
+      // Get all cameras with direct query
       const { data: allCameras, error: camerasError } = await supabase
         .from('cameras')
         .select('*');
@@ -215,13 +238,18 @@ export default function CameraAssignmentModal({
           created_at: new Date().toISOString()
         }));
         
-        const { error: insertError } = await supabase
-          .from('user_camera_access')
-          .insert(assignmentsToInsert);
+        // Split into batches of 50 to avoid potential payload size issues
+        for (let i = 0; i < assignmentsToInsert.length; i += 50) {
+          const batch = assignmentsToInsert.slice(i, i + 50);
           
-        if (insertError) {
-          console.error("Error adding camera assignments:", insertError);
-          throw insertError;
+          const { error: insertError } = await supabase
+            .from('user_camera_access')
+            .insert(batch);
+            
+          if (insertError) {
+            console.error("Error adding camera assignments batch:", insertError);
+            throw insertError;
+          }
         }
       }
       
