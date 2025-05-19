@@ -29,7 +29,7 @@ export function useCameraOperations(userId: string, cameras: Camera[], setCamera
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthenticated(!!session);
-      if (!session && (event === 'SIGNED_OUT' || event === 'USER_DELETED')) {
+      if (!session && event === 'SIGNED_OUT') {
         console.log("User signed out during camera operations");
       }
     });
