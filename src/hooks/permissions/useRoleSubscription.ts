@@ -91,7 +91,7 @@ export function useRoleSubscription() {
         return 'admin' as UserRole;
       }
       
-      // Try using the function
+      // Try getting role from user_roles table
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
