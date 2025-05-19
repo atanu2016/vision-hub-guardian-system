@@ -20,46 +20,42 @@ export type Permission =
   | 'assign-roles'
   | 'assign-cameras';
 
-export type UserRole = 'user' | 'operator' | 'observer' | 'admin' | 'superadmin';
+export type UserRole = 'user' | 'observer' | 'superadmin';
 
 // Role hierarchy for permission checking
 const roleHierarchy: Record<UserRole, number> = {
   'observer': 0,
   'user': 1,
-  'operator': 2,
-  'admin': 3,
   'superadmin': 4
 };
 
 // Permission mapping - which roles have which permissions
 const permissionMap: Record<Permission, UserRole[]> = {
   // Basic user permissions
-  'view-profile': ['user', 'operator', 'observer', 'admin', 'superadmin'],
-  'manage-profile-settings': ['user', 'operator', 'observer', 'admin', 'superadmin'],
+  'view-profile': ['user', 'observer', 'superadmin'],
+  'manage-profile-settings': ['user', 'observer', 'superadmin'],
   
   // Live view permissions - all roles
-  'view-cameras:assigned': ['user', 'operator', 'observer', 'admin', 'superadmin'],
+  'view-cameras:assigned': ['user', 'observer', 'superadmin'],
   
   // Observer and above permissions
-  'view-footage:assigned': ['observer', 'operator', 'admin', 'superadmin'],
-  'view-dashboard': ['operator', 'admin', 'superadmin'],
+  'view-footage:assigned': ['observer', 'user', 'superadmin'],
+  'view-dashboard': ['user', 'superadmin'],
   
-  // Operator and above permissions
-  'manage-cameras:assigned': ['operator', 'admin', 'superadmin'],
-  'configure-camera-settings': ['operator', 'admin', 'superadmin'],
+  // User and above permissions
+  'manage-cameras:assigned': ['user', 'superadmin'],
+  'configure-camera-settings': ['user', 'superadmin'],
   
-  // Admin and above permissions
-  'view-cameras:all': ['admin', 'superadmin'],
-  'view-footage:all': ['admin', 'superadmin'],
-  'manage-users:lower': ['admin', 'superadmin'],
-  'manage-cameras:all': ['admin', 'superadmin'],
-  'configure-storage': ['admin', 'superadmin'],
-  'configure-global-policies': ['admin', 'superadmin'],
-  'access-logs': ['admin', 'superadmin'],
-  'assign-roles': ['admin', 'superadmin'],
-  'assign-cameras': ['admin', 'superadmin'],
-  
-  // Superadmin only permissions
+  // Superadmin permissions
+  'view-cameras:all': ['superadmin'],
+  'view-footage:all': ['superadmin'],
+  'manage-users:lower': ['superadmin'],
+  'manage-cameras:all': ['superadmin'],
+  'configure-storage': ['superadmin'],
+  'configure-global-policies': ['superadmin'],
+  'access-logs': ['superadmin'],
+  'assign-roles': ['superadmin'],
+  'assign-cameras': ['superadmin'],
   'manage-users:all': ['superadmin'],
   'manage-system': ['superadmin'],
   'system-migration': ['superadmin']

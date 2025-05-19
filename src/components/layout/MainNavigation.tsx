@@ -48,7 +48,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
             </SidebarMenuItem>
           )}
 
-          {/* Dashboard - only for operator and above */}
+          {/* Dashboard - only for user and superadmin */}
           {hasPermission('view-dashboard') && (
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={isActive("/")} className="hover:bg-vision-dark-800">
@@ -60,7 +60,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
             </SidebarMenuItem>
           )}
 
-          {/* Cameras - only for admin and superadmin */}
+          {/* Cameras - only for superadmin */}
           {hasPermission('view-cameras:all') && (
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={isActive("/cameras")} className="hover:bg-vision-dark-800">
@@ -72,7 +72,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
             </SidebarMenuItem>
           )}
 
-          {/* Settings - only for admin and superadmin */}
+          {/* Settings - only for superadmin */}
           {hasPermission('configure-global-policies') && (
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={isActive("/settings")} className="hover:bg-vision-dark-800">
@@ -84,7 +84,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
             </SidebarMenuItem>
           )}
 
-          {/* Admin - only for admin and superadmin */}
+          {/* Admin - only for superadmin */}
           {hasPermission('manage-users:lower') && (
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={isActive("/admin")} className="hover:bg-vision-dark-800">
@@ -104,7 +104,7 @@ const MainNavigation = ({ isActive }: MainNavigationProps) => {
                 <span>Profile</span>
               </Link>
             </SidebarMenuButton>
-          </SidebarMenuItem>
+            </SidebarMenuItem>
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>

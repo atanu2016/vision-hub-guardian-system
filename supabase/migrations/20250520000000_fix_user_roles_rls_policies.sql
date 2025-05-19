@@ -22,7 +22,7 @@ CREATE POLICY "Admins can view all roles"
   USING (
     EXISTS (
       SELECT 1 FROM public.user_roles 
-      WHERE user_id = auth.uid() AND role IN ('admin', 'superadmin')
+      WHERE user_id = auth.uid() AND role IN ('superadmin')
     )
   );
 
