@@ -9,56 +9,31 @@ export function useAdminPermission() {
   useEffect(() => {
     const checkAdminStatus = async () => {
       try {
-        // Get the current session
-        const { data: sessionData } = await supabase.auth.getSession();
+        // Use our new security definer function that bypasses RLS
+        const { data: isAdmin, error: funcError } = await supabase.rpc('check_if_user_is_admin');
         
-        if (!sessionData?.session) {
-          console.log("No active session found");
-          setCanAssignCameras(false);
-          return;
-        }
-        
-        const userEmail = sessionData.session.user?.email?.toLowerCase();
-        
-        // SIMPLE CHECK 1: Special admin emails
-        if (userEmail === 'admin@home.local' || userEmail === 'superadmin@home.local') {
-          console.log(`Admin email detected: ${userEmail}, granting camera assignment permission`);
+        if (!funcError && isAdmin === true) {
+          console.log("Admin status confirmed via bypass function");
           setCanAssignCameras(true);
           return;
         }
         
-        // Use our new security definer function that bypasses RLS
-        try {
-          const { data: isAdmin, error: funcError } = await supabase.rpc('is_admin_bypass_rls');
+        // If function fails, fall back to email check
+        if (funcError) {
+          console.warn("Admin check function failed:", funcError);
           
-          if (!funcError && isAdmin) {
-            console.log("Admin status confirmed via bypass function");
+          // Get current user email
+          const { data: { session } } = await supabase.auth.getSession();
+          const userEmail = session?.user?.email?.toLowerCase();
+          
+          // Special admin emails
+          if (userEmail === 'admin@home.local' || userEmail === 'superadmin@home.local') {
+            console.log(`Admin email detected: ${userEmail}, granting camera assignment permission`);
             setCanAssignCameras(true);
             return;
           }
-        } catch (funcErr) {
-          console.warn("Admin check function failed:", funcErr);
-          // Continue with fallback checks
         }
         
-        // SIMPLE CHECK 3: Check user_roles directly without using profiles
-        try {
-          const { data: roleData } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', sessionData.session.user.id)
-            .maybeSingle();
-            
-          if (roleData && (roleData.role === 'admin' || roleData.role === 'superadmin')) {
-            console.log("Admin status confirmed via role check:", roleData.role);
-            setCanAssignCameras(true);
-            return;
-          }
-        } catch (roleErr) {
-          console.warn("Role check failed:", roleErr);
-        }
-        
-        console.log("No admin privileges confirmed, denying camera assignment permission");
         setCanAssignCameras(false);
       } catch (error) {
         console.error("Error checking admin status:", error);

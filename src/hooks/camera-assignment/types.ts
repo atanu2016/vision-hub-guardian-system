@@ -1,5 +1,5 @@
 
-import { Camera } from '@/components/admin/camera-assignment/types';
+import { Camera } from "@/components/admin/camera-assignment/types";
 
 export interface UseCameraAssignmentReturn {
   cameras: Camera[];
