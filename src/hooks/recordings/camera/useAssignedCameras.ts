@@ -97,10 +97,14 @@ export const useAssignedCameras = (userId?: string, userRole?: string) => {
     // Import done inside function to avoid circular dependencies
     const { mockRecordings } = require('../mockData');
     return Array.from(new Set(mockRecordings.map(r => r.cameraName)))
-      .map(name => ({
-        id: name.toLowerCase().replace(/\s+/g, '-'),
-        name
-      } as Camera));
+      .map(name => {
+        // Ensure type safety: cast 'name' to string before using toLowerCase
+        const cameraName = String(name);
+        return {
+          id: cameraName.toLowerCase().replace(/\s+/g, '-'),
+          name: cameraName
+        } as Camera;
+      });
   };
 
   return {
