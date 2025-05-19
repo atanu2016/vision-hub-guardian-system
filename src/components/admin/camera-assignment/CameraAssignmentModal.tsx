@@ -123,45 +123,30 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
     }
     
     try {
-      // Improved progress feedback
+      // Optimized feedback - show immediate progress
       const toastId = toast.loading("Processing camera assignments...");
       setIsSaving(true);
       
-      // Display steps to improve user experience during long operations
-      setSavingStep('Preparing camera assignments...');
-      setSavingProgress(10);
-      await new Promise(resolve => setTimeout(resolve, 100)); // Small delay to update UI
-      
+      // Short feedback for better UX
       setSavingStep('Saving to database...');
-      setSavingProgress(30);
-      
-      // Simulate progress updates during the save operation
-      const progressInterval = setInterval(() => {
-        setSavingProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return 90;
-          }
-          return prev + 5;
-        });
-      }, 500); // Faster progress updates
+      setSavingProgress(50);
       
       const success = await handleSave();
-      clearInterval(progressInterval);
       
-      setSavingStep(success ? 'Assignment completed!' : 'Assignment failed');
+      // Quickly complete progress
       setSavingProgress(100);
+      setSavingStep(success ? 'Assignment completed!' : 'Assignment failed');
       setSavingComplete(true);
       toast.dismiss(toastId);
       
       if (success) {
         toast.success("Camera assignments saved successfully");
-        // Give user a moment to see the success message
+        // Give user a brief moment to see success before closing
         setTimeout(() => {
           setIsSaving(false);
           setSavingStep('');
           onClose();
-        }, 1500);
+        }, 800);
       } else {
         setIsSaving(false);
       }

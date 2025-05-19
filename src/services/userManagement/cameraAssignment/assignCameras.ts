@@ -30,13 +30,12 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
       throw new Error("User ID is required");
     }
     
-    // Log the operation start
-    await addLogToDB('info', `Starting camera assignment for user ${userId}`, 'camera-assignment', 
+    // Log operation but don't await it - let it run in background
+    addLogToDB('info', `Starting camera assignment for user ${userId}`, 'camera-assignment', 
       `Assigning ${cameraIds.length} cameras to user ${userId}`);
     
     // Use the optimized database function that handles everything in one transaction
     // Using 'as any' to bypass TypeScript type checking for the RPC function name
-    // This is necessary because the function exists in the database but not in the TypeScript types
     const { error } = await (supabase.rpc as any)('assign_cameras_transaction', {
       p_user_id: userId,
       p_camera_ids: cameraIds
@@ -46,8 +45,8 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
       console.error("Error assigning cameras:", error);
       toast.error("Failed to update camera assignments");
       
-      // Log the failure
-      await addLogToDB('error', `Failed camera assignment for user ${userId}`, 'camera-assignment', 
+      // Log failure in background
+      addLogToDB('error', `Failed camera assignment for user ${userId}`, 'camera-assignment', 
         `Error: ${error.message}`);
         
       return false;
@@ -55,8 +54,8 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     
     console.log(`Successfully assigned ${cameraIds.length} cameras to user ${userId}`);
     
-    // Log the success
-    await addLogToDB('info', `Completed camera assignment for user ${userId}`, 'camera-assignment', 
+    // Log success in background
+    addLogToDB('info', `Completed camera assignment for user ${userId}`, 'camera-assignment', 
       `Successfully assigned ${cameraIds.length} cameras`);
       
     return true;
@@ -64,8 +63,8 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     console.error('Error assigning cameras to user:', error);
     toast.error(error?.message || "Could not update camera assignments");
     
-    // Log the exception
-    await addLogToDB('error', `Exception in camera assignment for user ${userId}`, 'camera-assignment', 
+    // Log exception in background
+    addLogToDB('error', `Exception in camera assignment for user ${userId}`, 'camera-assignment', 
       `Error: ${error?.message || "Unknown error"}`);
       
     return false;

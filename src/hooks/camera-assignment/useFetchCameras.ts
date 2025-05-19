@@ -1,14 +1,25 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Camera } from '@/components/admin/camera-assignment/types';
 import { supabase } from '@/integrations/supabase/client';
 import { getUserAssignedCameras } from '@/services/userManagement/cameraAssignment';
 import { toast } from 'sonner';
 
+// Cache structure for storing camera data to prevent unnecessary reloads
+const cameraCache = new Map<string, {
+  cameras: Camera[],
+  timestamp: number,
+  assignments: string[]
+}>();
+
+// Cache TTL in milliseconds (5 minutes)
+const CACHE_TTL = 5 * 60 * 1000;
+
 export function useFetchCameras(userId: string, isOpen: boolean) {
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const lastFetchRef = useRef<number>(0);
 
   // Load cameras when modal is opened
   useEffect(() => {
@@ -22,6 +33,8 @@ export function useFetchCameras(userId: string, isOpen: boolean) {
       setLoading(true);
       setError(null);
       
+      const now = Date.now();
+      
       // Check for valid session before making any requests
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       
@@ -33,6 +46,18 @@ export function useFetchCameras(userId: string, isOpen: boolean) {
           // Redirect to auth page
           window.location.href = '/auth';
         }, 1500);
+        setLoading(false);
+        return;
+      }
+      
+      // Check cache first
+      const cacheKey = userId;
+      const cachedData = cameraCache.get(cacheKey);
+      
+      // Use cache if it's still valid and we haven't fetched recently
+      if (cachedData && (now - cachedData.timestamp) < CACHE_TTL && (now - lastFetchRef.current) > 1000) {
+        console.log('Using cached camera data');
+        setCameras(cachedData.cameras);
         setLoading(false);
         return;
       }
@@ -81,6 +106,16 @@ export function useFetchCameras(userId: string, isOpen: boolean) {
       }));
       
       setCameras(formattedCameras);
+      
+      // Update cache
+      cameraCache.set(cacheKey, {
+        cameras: formattedCameras,
+        timestamp: now,
+        assignments: assignedCameraIds
+      });
+      
+      // Update last fetch time
+      lastFetchRef.current = now;
     } catch (error: any) {
       console.error("Error in loadCamerasAndAssignments:", error);
       setError("Failed to load camera data: " + (error?.message || "Unknown error"));

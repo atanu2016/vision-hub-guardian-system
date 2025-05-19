@@ -39,10 +39,9 @@ export function useCameraOperations(
         .filter(camera => camera.assigned)
         .map(camera => camera.id);
       
-      const totalCount = assignedCameraIds.length;
-      console.log(`Saving ${totalCount} camera assignments for user ${userId}`);
+      console.log(`Saving ${assignedCameraIds.length} camera assignments for user ${userId}`);
       
-      // Send only the IDs to the backend
+      // Send only the IDs to the backend for processing
       const success = await assignCamerasToUser(userId, assignedCameraIds);
       
       if (!success) {
