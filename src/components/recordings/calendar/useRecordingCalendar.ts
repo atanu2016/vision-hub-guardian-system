@@ -94,28 +94,27 @@ export const useRecordingCalendar = (cameraId?: string) => {
     }
   };
 
-  // Instead of using a complex Map that could cause excessive type instantiation,
-  // let's create a simpler approach with a Set and explicit date formatting
-  const dateKeySet = useMemo(() => {
-    const keys = new Set<string>();
+  // Create a simple lookup system using primitive strings rather than a complex data structure
+  const recordingDatesSet = useMemo(() => {
+    const dateSet = new Set<string>();
     recordingDates.forEach(date => {
       if (date instanceof Date && !isNaN(date.getTime())) {
-        const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-        keys.add(key);
+        // Use string format that avoids complex type instantiation
+        dateSet.add(`${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`);
       }
     });
-    return keys;
+    return dateSet;
   }, [recordingDates]);
 
-  // Simple check function that doesn't use complex type instantiation
+  // Simple check function that doesn't cause excessive type instantiation
   const isRecordingDate = useCallback((dateToCheck: Date): boolean => {
     if (!dateToCheck || !(dateToCheck instanceof Date) || isNaN(dateToCheck.getTime())) {
       return false;
     }
     
     const key = `${dateToCheck.getFullYear()}-${dateToCheck.getMonth()}-${dateToCheck.getDate()}`;
-    return dateKeySet.has(key);
-  }, [dateKeySet]);
+    return recordingDatesSet.has(key);
+  }, [recordingDatesSet]);
 
   return {
     date,

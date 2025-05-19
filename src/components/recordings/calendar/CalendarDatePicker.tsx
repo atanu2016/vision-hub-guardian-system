@@ -58,19 +58,11 @@ export default function CalendarDatePicker({ date, onSelect, hasRecordings }: Ca
           className="pointer-events-auto"
           modifiersClassNames={{
             selected: "bg-primary text-primary-foreground",
-            today: "bg-accent text-accent-foreground"
+            today: "bg-accent text-accent-foreground",
+            hasRecording: getDayClassNames
           }}
           modifiers={{
             hasRecording: (day) => hasRecordings?.(day) || false
-          }}
-          components={{
-            // Instead of trying to modify the Day component with className,
-            // we'll use the standard modifier approach of react-day-picker
-            Day: (props) => {
-              // Create a consistent structure that just passes props through
-              // without trying to modify className directly
-              return <div {...props} />;
-            }
           }}
         />
       </PopoverContent>
