@@ -94,32 +94,34 @@ export const useRecordingCalendar = (cameraId?: string) => {
     }
   };
 
-  // Create a simple string representation of dates for efficient lookup
-  const recordingDatesMap = useMemo(() => {
-    const dateMap = new Map<string, boolean>();
-    
-    recordingDates.forEach(date => {
-      if (date) {
-        const dateKey = formatDateKey(date);
-        dateMap.set(dateKey, true);
-      }
-    });
-    
-    return dateMap;
-  }, [recordingDates]);
-  
-  // Helper function to generate consistent date keys
-  const formatDateKey = (date: Date): string => {
+  // Create a string representation of a date for consistent lookup
+  const formatDateKey = useCallback((date: Date): string => {
     return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-  };
-  
-  // New implementation of isRecordingDate using the Map
-  const isRecordingDate = useCallback((dateToCheck: Date): boolean => {
-    if (!dateToCheck) return false;
+  }, []);
+
+  // Store recording dates in a Set for fast O(1) lookups
+  const recordingDateKeys = useMemo(() => {
+    const dateSet = new Set<string>();
     
-    const dateKey = formatDateKey(dateToCheck);
-    return recordingDatesMap.has(dateKey);
-  }, [recordingDatesMap]);
+    // Only process valid dates
+    for (const date of recordingDates) {
+      if (date instanceof Date && !isNaN(date.getTime())) {
+        dateSet.add(formatDateKey(date));
+      }
+    }
+    
+    return dateSet;
+  }, [recordingDates, formatDateKey]);
+  
+  // Simplified check for recording dates
+  const isRecordingDate = useCallback((dateToCheck: Date): boolean => {
+    if (!dateToCheck || !(dateToCheck instanceof Date) || isNaN(dateToCheck.getTime())) {
+      return false;
+    }
+    
+    const key = formatDateKey(dateToCheck);
+    return recordingDateKeys.has(key);
+  }, [formatDateKey, recordingDateKeys]);
 
   return {
     date,

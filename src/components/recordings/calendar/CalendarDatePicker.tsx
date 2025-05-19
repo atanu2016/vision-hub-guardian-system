@@ -64,13 +64,24 @@ export default function CalendarDatePicker({ date, onSelect, hasRecordings }: Ca
             hasRecording: (day) => hasRecordings?.(day) || false
           }}
           components={{
-            // Fix: Use DayProps from react-day-picker for proper typing
-            Day: ({ date: dayDate, ...props }: DayProps) => (
-              <div
-                {...props}
-                className={cn(props.className || "", dayDate ? getDayClassNames(dayDate) : "")}
-              />
-            )
+            // Fix: Only use props that are part of DayProps
+            Day: (props: DayProps) => {
+              // Only apply custom class if we have a date
+              if (props.date) {
+                return (
+                  <div
+                    {...props}
+                    className={cn(
+                      // Safe access of className
+                      typeof props.className === 'string' ? props.className : "",
+                      getDayClassNames(props.date)
+                    )}
+                  />
+                );
+              }
+              // If no date, just render the default
+              return <div {...props} />;
+            }
           }}
         />
       </PopoverContent>
