@@ -67,8 +67,10 @@ const permissionMap: Record<Permission, UserRole[]> = {
  * Check if the given role has the specified permission
  */
 export function hasPermission(role: UserRole, permission: Permission): boolean {
-  // Special case for assign-cameras which should only be allowed for superadmin
-  if (permission === 'assign-cameras' || permission === 'configure-camera-settings') {
+  // Special case for critical permissions that should only be allowed for superadmin
+  if (permission === 'assign-cameras' || permission === 'configure-camera-settings' || 
+      permission === 'assign-roles' || permission === 'manage-system' || 
+      permission === 'system-migration') {
     return role === 'superadmin';
   }
   

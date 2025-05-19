@@ -583,6 +583,10 @@ export type Database = {
         Args: { user_id?: string }
         Returns: boolean
       }
+      is_superadmin_check: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       notify_role_change: {
         Args: { user_id: string }
         Returns: undefined
