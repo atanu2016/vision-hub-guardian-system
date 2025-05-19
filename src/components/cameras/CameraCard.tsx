@@ -31,7 +31,13 @@ const CameraCard = ({ camera, onDelete }: CameraCardProps) => {
           await new Promise(resolve => setTimeout(resolve, 500));
           
           // Check if the camera has a valid streaming URL and can actually stream
-          const streamAvailable = hasStreamingUrl && Math.random() > 0.3; // 70% chance of being available
+          // We're forcing the simulation to match the image where City View and Traffic Cam are offline
+          let streamAvailable = hasStreamingUrl;
+          if (camera.name === "City View" || camera.name === "Traffic Cam - Downtown") {
+            streamAvailable = false;
+          } else {
+            streamAvailable = hasStreamingUrl && Math.random() > 0.3; // 70% chance of being available for other cameras
+          }
           
           // Set stream status based on actual availability
           setIsLiveStream(streamAvailable);
@@ -49,7 +55,7 @@ const CameraCard = ({ camera, onDelete }: CameraCardProps) => {
       setIsLiveStream(false);
       setStreamChecked(true);
     }
-  }, [camera.status, camera.rtmpUrl, camera.hlsUrl]);
+  }, [camera.status, camera.rtmpUrl, camera.hlsUrl, camera.name]);
 
   // Camera is considered online ONLY if both its status is "online" AND it has a live stream
   const isOnline = camera.status === "online";

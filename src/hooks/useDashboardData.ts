@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { getCameras } from "@/services/apiService";
 import { useToast } from "@/hooks/use-toast";
@@ -25,12 +26,16 @@ export const useDashboardData = () => {
     if (camera.status !== 'online') return false;
     
     // In a real implementation, we would make an actual API call to check if the stream is available
-    // For demo purposes, we're simulating that some online cameras might still have unavailable streams
     const hasStreamUrl = Boolean(camera.rtmpUrl?.length > 0 || camera.hlsUrl?.length > 0);
     
     if (!hasStreamUrl) return false;
     
-    // Simulate stream check with 70% chance of success for cameras marked as "online"
+    // Simulate specific cameras being unavailable to match the example shown in the image
+    if (camera.name === "City View" || camera.name === "Traffic Cam - Downtown") {
+      return false;
+    }
+    
+    // Simulate stream check with 70% chance of success for other cameras marked as "online"
     return Math.random() > 0.3;
   }, []);
   
