@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Camera } from './types';
 import { toast } from 'sonner';
+import { checkCamerasExist, getCameraCount } from '@/services/database/camera/checkCamerasExist';
 
 export function useCameraAssignment(userId: string, isOpen: boolean) {
   const [cameras, setCameras] = useState<Camera[]>([]);
@@ -15,7 +16,17 @@ export function useCameraAssignment(userId: string, isOpen: boolean) {
   useEffect(() => {
     const checkAdminStatus = async () => {
       try {
-        // Get the current user session
+        // Check if we have cameras in the system first
+        const hasCameras = await checkCamerasExist();
+        if (!hasCameras) {
+          console.log("No cameras found in the system");
+          setCameras([]);
+          setError(null); // Clear errors as this is not an error state
+          setLoading(false);
+          return;
+        }
+        
+        // Check current user's email for quick admin verification
         const { data: sessionData } = await supabase.auth.getSession();
         
         if (!sessionData?.session) {
@@ -31,6 +42,19 @@ export function useCameraAssignment(userId: string, isOpen: boolean) {
           console.log("Admin email detected, granting camera assignment permission");
           setCanAssignCameras(true);
           return;
+        }
+        
+        // Try using a function to avoid RLS issues
+        try {
+          const { data: isAdmin, error: funcError } = await supabase.rpc('check_admin_status_safe');
+          
+          if (!funcError && isAdmin) {
+            console.log("Admin status confirmed via function call");
+            setCanAssignCameras(true);
+            return;
+          }
+        } catch (funcErr) {
+          console.warn("RPC function failed:", funcErr);
         }
         
         // If email doesn't match special admin emails, bypass RLS checks by directly checking the profile
@@ -70,14 +94,7 @@ export function useCameraAssignment(userId: string, isOpen: boolean) {
         console.log("Fetching cameras and assignments for user:", userId);
         
         // First check if we have any cameras in the system at all
-        const { count: cameraCount, error: countError } = await supabase
-          .from('cameras')
-          .select('*', { count: 'exact', head: true });
-          
-        if (countError) {
-          console.error("Error checking camera count:", countError);
-          throw countError;
-        }
+        const cameraCount = await getCameraCount();
         
         if (cameraCount === 0) {
           console.log("No cameras found in the system");
@@ -206,6 +223,13 @@ export function useCameraAssignment(userId: string, isOpen: boolean) {
           .insert(toAdd);
           
         if (insertError) {
+          // Handle infinite recursion errors specifically
+          if (insertError.message?.includes('recursion') || insertError.message?.includes('profiles')) {
+            console.error("RLS policy recursion error detected:", insertError);
+            toast.error("Permission error: Cannot assign cameras due to RLS policy conflict");
+            return false;
+          }
+          
           console.error("Error adding camera assignments:", insertError);
           throw insertError;
         }

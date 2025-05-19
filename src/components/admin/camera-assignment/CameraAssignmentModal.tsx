@@ -13,7 +13,7 @@ import { useCameraAssignment } from './useCameraAssignment';
 import CameraList from './CameraList';
 import PermissionAlert from './PermissionAlert';
 import { CameraAssignmentModalProps } from './types';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Camera } from 'lucide-react';
 
 export default function CameraAssignmentModal({ 
   isOpen, 
@@ -60,6 +60,7 @@ export default function CameraAssignmentModal({
           
           {cameras.length === 0 && !loading && !error && (
             <div className="text-center py-6 text-muted-foreground border rounded-md">
+              <Camera className="mx-auto h-8 w-8 opacity-50 mb-2" />
               <p className="mb-2">No cameras available to assign</p>
               <p className="text-sm">Add cameras to the system first before assigning them to users.</p>
             </div>

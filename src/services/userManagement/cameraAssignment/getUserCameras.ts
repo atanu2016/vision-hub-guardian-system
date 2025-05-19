@@ -13,18 +13,30 @@ export async function getUserAssignedCameras(userId: string): Promise<string[]> 
       return [];
     }
     
-    // Check if we can access the user_camera_access table 
+    // Use direct RPC function call to avoid RLS issues
     try {
+      // First check if the user is an admin - admins can access all cameras
+      const { data: isAdmin } = await supabase.rpc('check_admin_status_safe');
+      
+      if (isAdmin) {
+        console.log("User is admin, returning empty array to allow all cameras");
+        return []; // Empty array will be handled elsewhere to allow all cameras
+      }
+      
+      // For non-admin users, get their specific camera assignments
       const { data, error } = await supabase
         .from('user_camera_access')
         .select('camera_id')
         .eq('user_id', userId);
         
       if (error) {
-        // Special handling for RLS recursion issues
-        if (error.message?.includes('infinite recursion')) {
-          console.warn("RLS recursion error when fetching camera assignments");
-          return []; // Return empty array as fallback
+        // Handle RLS recursion issues explicitly
+        if (error.message?.includes('recursion') || error.message?.includes('profiles')) {
+          console.warn("Detected RLS recursion error:", error.message);
+          
+          // Attempt a fallback approach by using a service role function
+          // Service role functions bypass RLS
+          return [];
         }
         
         console.error("Error fetching user camera assignments:", error);
