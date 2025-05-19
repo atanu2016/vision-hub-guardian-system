@@ -5,7 +5,6 @@ import { SecuritySettingsCard } from "@/components/profile/SecuritySettingsCard"
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useAuth } from '@/contexts/auth';
-import { usePermissions } from '@/hooks/usePermissions';
 import { RoleDiagnosticTool } from "@/components/admin/RoleDiagnosticTool";
 import { Button } from "@/components/ui/button";
 import { useProfileSettings } from '@/hooks/useProfileSettings';
