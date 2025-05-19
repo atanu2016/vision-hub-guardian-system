@@ -4,15 +4,18 @@ import { Camera } from "@/types/camera";
 
 interface CameraStatusBadgesProps {
   camera: Camera;
+  isStreaming?: boolean;
 }
 
-const CameraStatusBadges = ({ camera }: CameraStatusBadgesProps) => {
+const CameraStatusBadges = ({ camera, isStreaming = false }: CameraStatusBadgesProps) => {
   const isOnline = camera.status === "online";
+  // A camera is truly online only if both status is online AND streaming is available
+  const isTrulyOnline = isOnline && isStreaming;
   
   return (
     <>
-      <Badge variant={isOnline ? "default" : "outline"} className="ml-2">
-        {isOnline ? "Online" : "Offline"}
+      <Badge variant={isTrulyOnline ? "default" : "outline"} className="ml-2">
+        {isTrulyOnline ? "Online" : "Offline"}
       </Badge>
       {camera.recording && (
         <Badge variant="outline" className="bg-vision-dark-700 text-red-500">

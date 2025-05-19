@@ -12,7 +12,7 @@ const CameraStatusIndicator: React.FC<CameraStatusIndicatorProps> = ({
   isRecording, 
   isStreaming 
 }) => {
-  // Camera is truly online only if both status is online AND streaming is available
+  // A camera is truly online only if both status is online AND streaming is available
   const isTrulyOnline = isOnline && isStreaming;
   
   return (
@@ -24,6 +24,7 @@ const CameraStatusIndicator: React.FC<CameraStatusIndicatorProps> = ({
             ? "bg-green-500" 
             : "bg-red-500"
       }`}
+      title={isRecording ? "Recording" : isTrulyOnline ? "Online" : "Offline"}
     />
   );
 };
