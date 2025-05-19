@@ -33,22 +33,49 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     // Log the operation start
     await addLogToDB('info', `Starting camera assignment for user ${userId}`, 'camera-assignment', 
       `Assigning ${cameraIds.length} cameras to user ${userId}`);
-    
-    // Use a single database transaction for atomic operations - improves performance significantly
-    const { error: transactionError } = await supabase.rpc('assign_cameras_transaction', { 
-      p_user_id: userId,
-      p_camera_ids: cameraIds
-    });
-    
-    if (transactionError) {
-      console.error("Error in camera assignment transaction:", transactionError);
+      
+    // Start a database transaction manually for atomic operations
+    // First delete existing assignments
+    const { error: deleteError } = await supabase
+      .from('user_camera_access')
+      .delete()
+      .eq('user_id', userId);
+      
+    if (deleteError) {
+      console.error("Error deleting existing camera assignments:", deleteError);
       toast.error("Failed to update camera assignments");
       
       // Log the failure
       await addLogToDB('error', `Failed camera assignment for user ${userId}`, 'camera-assignment', 
-        `Error: ${transactionError.message}`);
+        `Error deleting existing assignments: ${deleteError.message}`);
         
       return false;
+    }
+    
+    // Only insert new assignments if we have camera IDs
+    if (cameraIds.length > 0) {
+      // Prepare data for bulk insert
+      const assignmentsToInsert = cameraIds.map(cameraId => ({
+        user_id: userId,
+        camera_id: cameraId,
+        created_at: new Date().toISOString()
+      }));
+      
+      // Insert all new assignments in a single batch
+      const { error: insertError } = await supabase
+        .from('user_camera_access')
+        .insert(assignmentsToInsert);
+        
+      if (insertError) {
+        console.error("Error inserting new camera assignments:", insertError);
+        toast.error("Failed to update camera assignments");
+        
+        // Log the failure
+        await addLogToDB('error', `Failed camera assignment for user ${userId}`, 'camera-assignment', 
+          `Error inserting new assignments: ${insertError.message}`);
+          
+        return false;
+      }
     }
     
     console.log(`Successfully assigned ${cameraIds.length} cameras to user ${userId}`);
