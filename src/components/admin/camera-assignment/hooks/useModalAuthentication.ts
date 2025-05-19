@@ -13,105 +13,75 @@ export function useModalAuthentication(isOpen: boolean): UseModalAuthenticationR
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [authChecked, setAuthChecked] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [checkAttempts, setCheckAttempts] = useState<number>(0);
 
   useEffect(() => {
+    if (!isOpen) return;
+    
     let isMounted = true;
-    let timeoutId: NodeJS.Timeout;
+    let authTimeout: NodeJS.Timeout;
     
     const checkAuth = async () => {
-      if (!isOpen) {
-        return;
-      }
-      
       try {
-        // Set a timeout to catch hangs
-        const authTimeout = new Promise<{success: false, error: string}>(resolve => {
-          timeoutId = setTimeout(() => {
-            resolve({success: false, error: "Authentication check timed out"});
-          }, 3000); // 3 second timeout
-        });
+        // Aggressive timeout to prevent hanging (1.5 seconds)
+        authTimeout = setTimeout(() => {
+          if (isMounted && !authChecked) {
+            console.warn("Auth check timed out");
+            setAuthChecked(true);
+            setIsAuthenticated(false);
+            setAuthError("Authentication check timed out");
+          }
+        }, 1500);
         
-        // Race between the actual auth check and the timeout
-        const authCheckPromise = supabase.auth.getSession()
-          .then(({ data, error }) => {
-            clearTimeout(timeoutId);
-            
-            if (error) return { success: false, error: error.message };
-            if (!data.session) return { success: false, error: "No active session" };
-            
-            return { success: true, data: data.session };
-          })
-          .catch(error => {
-            return { success: false, error: error.message || "Unknown authentication error" };
-          });
+        // Use an optimized session check
+        const { data, error } = await supabase.auth.getSession();
         
-        // Use Promise.race to handle timeouts
-        const result = await Promise.race([authCheckPromise, authTimeout]);
+        clearTimeout(authTimeout);
+        
+        if (error) {
+          if (isMounted) {
+            setAuthError(error.message);
+            setIsAuthenticated(false);
+            setAuthChecked(true);
+          }
+          return;
+        }
         
         if (isMounted) {
-          if (!result.success) {
-            setAuthError(result.error);
-            setIsAuthenticated(false);
-            
-            // If we've tried multiple times, suggest logging in again
-            if (checkAttempts > 1) {
-              toast.error("Authentication issues. Please try logging in again.");
-            }
-          } else {
-            setIsAuthenticated(true);
-            setAuthError(null);
-            // Reset check attempts on success
-            setCheckAttempts(0);
-          }
-          
-          // Always mark auth as checked to avoid hanging
+          setIsAuthenticated(!!data.session);
+          setAuthError(null);
           setAuthChecked(true);
         }
       } catch (err: any) {
+        clearTimeout(authTimeout);
+        
         if (isMounted) {
           console.error("Authentication check error:", err);
           setAuthError(err?.message || "Authentication check failed");
           setIsAuthenticated(false);
-          setAuthChecked(true); // Always mark as checked to avoid hanging
-          setCheckAttempts(prev => prev + 1);
+          setAuthChecked(true);
         }
       }
     };
     
     checkAuth();
     
-    // Set a backup timeout to ensure authChecked is always set
-    const backupTimeout = setTimeout(() => {
-      if (!authChecked && isMounted) {
-        console.warn("Auth check taking too long, forcing completion");
-        setAuthChecked(true);
-        if (!isAuthenticated) {
-          setAuthError("Authentication check timed out");
-        }
-      }
-    }, 5000);
-    
     return () => {
       isMounted = false;
-      clearTimeout(timeoutId);
-      clearTimeout(backupTimeout);
+      clearTimeout(authTimeout);
     };
-  }, [isOpen, checkAttempts]);
+  }, [isOpen]);
 
-  // If we're not authenticated after 2 attempts, show a more visible error
+  // Redirect to auth page if authentication fails
   useEffect(() => {
-    if (checkAttempts >= 2 && !isAuthenticated && authChecked) {
-      toast.error("Authentication failed. Please log in again.", {
-        duration: 5000,
-      });
+    if (authChecked && !isAuthenticated && authError) {
+      toast.error("Authentication required. Please log in again.");
       
-      // Redirect to auth page if authentication repeatedly fails
+      // Redirect to auth page with a short delay
       setTimeout(() => {
         window.location.href = `/auth`;
-      }, 1000);
+      }, 500);
     }
-  }, [checkAttempts, isAuthenticated, authChecked]);
+  }, [authChecked, isAuthenticated, authError]);
 
   return { isAuthenticated, authChecked, authError };
 }

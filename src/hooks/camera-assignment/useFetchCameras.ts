@@ -2,13 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Camera } from '@/components/admin/camera-assignment/types';
 import { toast } from 'sonner';
-import { cameraCache, isCacheValid, updateCache } from './utils/cameraCache';
 import { checkAuthentication } from './utils/authCheck';
-import { 
-  fetchAllCameras, 
-  formatCamerasWithAssignments, 
-  fetchUserAssignments 
-} from './utils/cameraFetching';
 import { supabase } from '@/integrations/supabase/client';
 
 export function useFetchCameras(userId: string, isOpen: boolean) {
@@ -16,79 +10,101 @@ export function useFetchCameras(userId: string, isOpen: boolean) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const lastFetchRef = useRef<number>(0);
+  const cacheTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cached camera data with 5-minute expiration
+  const cameraCache = useRef<{
+    data: Camera[] | null;
+    timestamp: number;
+    userId: string | null;
+  }>({
+    data: null,
+    timestamp: 0,
+    userId: null
+  });
 
   // Load cameras when modal is opened
   useEffect(() => {
     if (isOpen && userId) {
+      // Check if we have valid cached data for this user (within last 5 minutes)
+      const now = Date.now();
+      if (
+        cameraCache.current.data && 
+        cameraCache.current.userId === userId &&
+        now - cameraCache.current.timestamp < 5 * 60 * 1000
+      ) {
+        setCameras(cameraCache.current.data);
+        setLoading(false);
+        return;
+      }
+      
       loadCamerasAndAssignments();
     }
+    
+    return () => {
+      // Clear any pending cache timeout
+      if (cacheTimeoutRef.current) {
+        clearTimeout(cacheTimeoutRef.current);
+      }
+    };
   }, [isOpen, userId]);
 
   const loadCamerasAndAssignments = async () => {
     try {
       setLoading(true);
       setError(null);
+      lastFetchRef.current = Date.now();
       
-      // First check authentication
+      // First check authentication - fast path
       const isAuthenticated = await checkAuthentication();
       if (!isAuthenticated) {
         setLoading(false);
         return;
       }
       
-      // Do an explicit refresh of the session token before proceeding
-      try {
-        const { error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError) {
-          console.warn("Token refresh warning:", refreshError);
-          // Continue without refresh as a fallback
-        } else {
-          console.log("Session refreshed successfully before camera fetch");
-        }
-      } catch (refreshErr) {
-        console.warn("Error refreshing token (non-fatal):", refreshErr);
-        // Continue with existing token - it might still work
-      }
+      // Streamlined parallel fetching for maximum performance
+      const [camerasResponse, userCameraResponse] = await Promise.all([
+        // Fetch cameras with minimal columns for performance
+        supabase
+          .from('cameras')
+          .select('id, name, location, group')
+          .order('name', { ascending: true }),
+          
+        // Fetch user's assigned cameras
+        supabase
+          .from('user_camera_access')
+          .select('camera_id')
+          .eq('user_id', userId)
+      ]);
       
-      // Fetch all cameras using direct database query for maximum reliability
-      const { data: allCameras, error: camerasError } = await supabase
-        .from('cameras')
-        .select('id, name, location, group')
-        .order('name', { ascending: true });
-      
-      if (camerasError) {
-        setError("Failed to load cameras: " + camerasError.message);
+      // Handle potential errors
+      if (camerasResponse.error) {
+        setError("Failed to load cameras: " + camerasResponse.error.message);
         toast.error("Could not load cameras");
         setLoading(false);
         return;
       }
       
-      if (!allCameras || allCameras.length === 0) {
+      if (userCameraResponse.error) {
+        setError("Failed to load assignments: " + userCameraResponse.error.message);
+        toast.error("Could not load current assignments");
+        setLoading(false);
+        return;
+      }
+      
+      const allCameras = camerasResponse.data || [];
+      const assignedCameraIds = userCameraResponse.data.map(item => item.camera_id);
+      
+      if (allCameras.length === 0) {
         setError("No cameras found in system");
         setCameras([]);
         setLoading(false);
         return;
       }
       
-      console.log(`Found ${allCameras.length} cameras in system`);
+      console.log(`Found ${allCameras.length} cameras, user ${userId} has ${assignedCameraIds.length} assigned`);
       
-      // Get user's assigned cameras
-      const { data: userCameraData, error: userCameraError } = await supabase
-        .from('user_camera_access')
-        .select('camera_id')
-        .eq('user_id', userId);
-        
-      if (userCameraError) {
-        console.error("Error fetching camera assignments:", userCameraError);
-        toast.error("Could not load current assignments");
-      }
-      
-      // Extract assigned camera IDs
-      const assignedCameraIds = userCameraData ? userCameraData.map(item => item.camera_id) : [];
-      
-      console.log(`User ${userId} has ${assignedCameraIds.length} assigned cameras`);
-      
-      // Format cameras with assignment information
+      // Format cameras with assignment information - optimized for speed
       const formattedCameras = allCameras.map(camera => ({
         id: camera.id,
         name: camera.name || 'Unnamed Camera',
@@ -97,13 +113,23 @@ export function useFetchCameras(userId: string, isOpen: boolean) {
         assigned: assignedCameraIds.includes(camera.id)
       }));
       
+      // Update state and cache
       setCameras(formattedCameras);
+      cameraCache.current = {
+        data: formattedCameras,
+        timestamp: Date.now(),
+        userId
+      };
       
-      // Update cache
-      updateCache(userId, formattedCameras, assignedCameraIds);
+      // Set a timeout to invalidate the cache after 5 minutes
+      if (cacheTimeoutRef.current) {
+        clearTimeout(cacheTimeoutRef.current);
+      }
       
-      // Update last fetch time
-      lastFetchRef.current = Date.now();
+      cacheTimeoutRef.current = setTimeout(() => {
+        cameraCache.current.data = null;
+      }, 5 * 60 * 1000);
+      
     } catch (error: any) {
       console.error("Error in loadCamerasAndAssignments:", error);
       setError("Failed to load camera data: " + (error?.message || "Unknown error"));

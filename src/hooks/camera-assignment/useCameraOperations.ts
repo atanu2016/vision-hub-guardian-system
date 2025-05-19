@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { assignCamerasToUser } from '@/services/userManagement/cameraAssignment';
 import { Camera } from '@/components/admin/camera-assignment/types';
 import { toast } from 'sonner';
@@ -11,7 +11,7 @@ export function useCameraOperations(
 ) {
   const [saving, setSaving] = useState(false);
 
-  // Optimized toggle function with O(1) lookup
+  // Optimized toggle function with O(1) lookup and memoized handler function
   const handleCameraToggle = useCallback((cameraId: string) => {
     if (saving) return; // Prevent changes while saving
     
@@ -24,7 +24,14 @@ export function useCameraOperations(
     );
   }, [saving, setCameras]);
 
-  // Optimized save function with batch processing
+  // Memoized assigned camera IDs for instant access during save
+  const assignedCameraIds = useMemo(() => {
+    return cameras
+      .filter(camera => camera.assigned)
+      .map(camera => camera.id);
+  }, [cameras]);
+
+  // Ultra-optimized save function
   const handleSave = useCallback(async () => {
     if (!userId) {
       console.error("Cannot save camera assignments: No user ID provided");
@@ -34,19 +41,13 @@ export function useCameraOperations(
     setSaving(true);
     
     try {
-      // Extract only assigned camera IDs for better performance
-      const assignedCameraIds = cameras
-        .filter(camera => camera.assigned)
-        .map(camera => camera.id);
-      
       console.log(`Saving ${assignedCameraIds.length} camera assignments for user ${userId}`);
       
-      // Send only the IDs to the backend for processing
+      // Send only the IDs to the backend for maximum performance
       const success = await assignCamerasToUser(userId, assignedCameraIds);
       
       if (!success) {
-        console.error("Camera assignment failed");
-        toast.error("Failed to save camera assignments. Please try again.");
+        toast.error("Failed to save camera assignments");
       }
       
       return success;
@@ -56,7 +57,7 @@ export function useCameraOperations(
     } finally {
       setSaving(false);
     }
-  }, [cameras, userId]);
+  }, [assignedCameraIds, userId]);
 
   return {
     saving,

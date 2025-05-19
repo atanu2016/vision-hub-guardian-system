@@ -47,11 +47,9 @@ export function useModalActions({
   };
 
   const handleSubmit = async () => {
-    // Check authentication first - most crucial check
+    // Fast authentication check
     const isSessionValid = await checkAuthentication();
-    if (!isSessionValid) {
-      return; // checkAuthentication already shows toast and redirects
-    }
+    if (!isSessionValid) return;
     
     // Combined auth check
     if (!isAuthenticated) {
@@ -71,9 +69,7 @@ export function useModalActions({
       setSaveAttempts(prev => prev + 1);
       
       // Clear any existing timeouts
-      if (saveTimeout) {
-        clearTimeout(saveTimeout);
-      }
+      if (saveTimeout) clearTimeout(saveTimeout);
       
       // Start feedback immediately
       const toastId = toast.loading("Saving camera assignments...");
@@ -82,14 +78,14 @@ export function useModalActions({
       setSavingProgress(25);
       setShowSlowWarning(false);
       
-      // Use a quicker timeout for the slow warning (1.5 seconds)
+      // Use a quick timeout for the slow warning (1 second)
       const slowWarningTimeout = setTimeout(() => {
         if (isSaving && !savingComplete) {
           setShowSlowWarning(true);
         }
-      }, 1500);
+      }, 1000);
       
-      // Use a more reasonable timeout (8 seconds instead of 15)
+      // Use a shorter timeout (5 seconds instead of 8)
       const operationTimeout = setTimeout(() => {
         if (isSaving && !savingComplete) {
           toast.dismiss(toastId);
@@ -98,15 +94,23 @@ export function useModalActions({
           setSavingStep('');
           setSavingProgress(0);
         }
-      }, 8000);
+      }, 5000);
       
       setSaveTimeout(operationTimeout);
       
-      // Show progress before actual save to improve perceived performance
+      // Show progress before actual save for better perceived performance
       setSavingProgress(50);
       
-      // Execute save operation
+      // Execute save operation with an artificial minimum time of 300ms
+      // to ensure progress animations look smooth and the UI feels responsive
+      const startTime = Date.now();
       const success = await handleSave();
+      const elapsedTime = Date.now() - startTime;
+      
+      // Ensure a minimum duration for better UX
+      if (elapsedTime < 300) {
+        await new Promise(resolve => setTimeout(resolve, 300 - elapsedTime));
+      }
       
       // Clear timeouts
       clearTimeout(slowWarningTimeout);
@@ -158,10 +162,11 @@ export function useModalActions({
   };
   
   const handleRefresh = async () => {
-    // Verify session before refresh
-    const isSessionValid = await checkAuthentication();
-    if (!isSessionValid) {
-      return; // checkAuthentication already shows toast and redirects
+    // Verify session before refresh - use fast path
+    if (!isAuthenticated) {
+      toast.error("Authentication required. Please login again");
+      window.location.href = '/auth';
+      return;
     }
     
     setIsRefreshing(true);

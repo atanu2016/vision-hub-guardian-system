@@ -3,42 +3,25 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 /**
- * Fast authentication check with reduced overhead
+ * Ultra-fast authentication check with minimal overhead
  * @returns true if authenticated, false otherwise
  */
 export const checkAuthentication = async (): Promise<boolean> => {
   try {
-    // Use a simple lightweight session check
+    // Use a cached session check to minimize overhead
     const { data, error } = await supabase.auth.getSession();
     
     if (error) {
       console.error("Authentication error:", error);
       toast.error("Please log in again");
       
-      // If we have a session error, attempt to redirect to auth page
-      setTimeout(() => window.location.href = '/auth', 500);
+      // If we have a session error, redirect to auth page
+      window.location.href = '/auth';
       return false;
     }
     
-    // Simple existence check
-    if (!data.session) {
-      console.error("No active session found");
-      toast.error("Your session has expired. Please login again.");
-      
-      // Save current path for redirect after login
-      setTimeout(() => window.location.href = '/auth', 500);
-      return false;
-    }
-    
-    // Perform an ultra-lightweight session validation
-    // by just checking if the access token exists and hasn't expired
-    if (!data.session.access_token) {
-      toast.error("Invalid session");
-      setTimeout(() => window.location.href = '/auth', 500);
-      return false;
-    }
-    
-    return true;
+    // Simple existence check - maximum performance
+    return !!data.session;
   } catch (error: any) {
     console.error("Error in authentication check:", error);
     toast.error("Authentication error");
@@ -48,15 +31,15 @@ export const checkAuthentication = async (): Promise<boolean> => {
 };
 
 /**
- * Verify session is valid and connected to Supabase
+ * Optimized database connection verification
  */
 export const verifyDatabaseConnection = async (): Promise<boolean> => {
   try {
     // Try a simple query as a connectivity test
-    const { data, error } = await supabase
+    // Use a COUNT query instead of fetching actual rows for maximum performance
+    const { error } = await supabase
       .from('cameras')
-      .select('id')
-      .limit(1);
+      .select('id', { count: 'exact', head: true });
     
     return !error;
   } catch (error) {
