@@ -10,14 +10,22 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     console.log(`Assigning cameras to user ${userId}. Camera IDs:`, cameraIds);
     
     // Check for valid session before making any requests
-    const { data: sessionData } = await supabase.auth.getSession();
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError) {
+      console.error("Session error:", sessionError);
+      toast.error("Authentication error. Please log in again.");
+      return false;
+    }
+    
     if (!sessionData.session) {
       console.error("No active session when attempting to assign cameras");
-      toast.error("Authentication required. Please log in again.");
+      toast.error("You must be logged in to assign cameras. Please log in again.");
       return false;
     }
     
     if (!userId) {
+      toast.error("No user selected for camera assignment");
       throw new Error("User ID is required");
     }
     
@@ -29,7 +37,12 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
       
     if (deleteError) {
       console.error("Error removing existing camera assignments:", deleteError);
-      throw new Error("Could not update camera assignments. Please try again.");
+      if (deleteError.code === 'PGRST301') {
+        toast.error("Not authorized. Please log in with admin privileges.");
+      } else {
+        toast.error("Could not update camera assignments. Database error occurred.");
+      }
+      return false;
     }
     
     // If there are no cameras to assign, we're done (we already removed all assignments)
@@ -52,11 +65,14 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
       
     if (insertError) {
       console.error("Error adding camera assignments:", insertError);
-      if (insertError.message.includes('foreign key constraint')) {
-        throw new Error("One or more cameras do not exist in the system.");
+      if (insertError.code === 'PGRST301') {
+        toast.error("Not authorized. Please log in with admin privileges.");
+      } else if (insertError.message.includes('foreign key constraint')) {
+        toast.error("One or more cameras do not exist in the system.");
       } else {
-        throw new Error("Could not update camera assignments. Please try again.");
+        toast.error("Could not update camera assignments. Please try again.");
       }
+      return false;
     }
     
     console.log(`Successfully assigned ${cameraIds.length} cameras to user ${userId}`);

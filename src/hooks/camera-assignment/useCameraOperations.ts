@@ -1,11 +1,27 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { assignCamerasToUser } from '@/services/userManagement/cameraAssignment';
 import { Camera } from '@/components/admin/camera-assignment/types';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export function useCameraOperations(userId: string, cameras: Camera[], setCameras: (cameras: Camera[]) => void) {
   const [saving, setSaving] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      setIsAuthenticated(!!data.session);
+      
+      if (error || !data.session) {
+        console.warn("Camera operations attempted without valid authentication");
+      }
+    };
+    
+    checkAuth();
+  }, []);
 
   // Handle checkbox change
   const handleCameraToggle = (cameraId: string, checked: boolean) => {
@@ -18,6 +34,11 @@ export function useCameraOperations(userId: string, cameras: Camera[], setCamera
   const handleSave = async () => {
     if (!userId) {
       toast.error("No user selected");
+      return false;
+    }
+    
+    if (!isAuthenticated) {
+      toast.error("Authentication required. Please log in again.");
       return false;
     }
     
@@ -49,6 +70,7 @@ export function useCameraOperations(userId: string, cameras: Camera[], setCamera
 
   return {
     saving,
+    isAuthenticated,
     handleCameraToggle,
     handleSave
   };

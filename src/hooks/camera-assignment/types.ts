@@ -6,6 +6,7 @@ export interface UseCameraAssignmentReturn {
   loading: boolean;
   saving: boolean;
   canAssignCameras: boolean;
+  isAuthenticated: boolean;
   error: string | null;
   handleCameraToggle: (cameraId: string, checked: boolean) => void;
   handleSave: () => Promise<boolean>;
