@@ -1,5 +1,5 @@
 
-import { FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form";
+import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { UseFormReturn } from "react-hook-form";
@@ -10,6 +10,7 @@ interface RetentionPolicyFormProps {
   isLoading: boolean;
 }
 
+// Component for retention policy settings
 const RetentionPolicyForm = ({ form, isLoading }: RetentionPolicyFormProps) => {
   return (
     <>
@@ -22,16 +23,16 @@ const RetentionPolicyForm = ({ form, isLoading }: RetentionPolicyFormProps) => {
             <FormControl>
               <Input
                 type="number"
-                min={1}
-                max={365}
+                min="1"
+                max="365"
                 {...field}
+                onChange={(e) => field.onChange(parseInt(e.target.value) || 30)}
                 disabled={isLoading}
               />
             </FormControl>
             <FormDescription>
               Number of days to keep recordings before automatic deletion
             </FormDescription>
-            <FormMessage />
           </FormItem>
         )}
       />

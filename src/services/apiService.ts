@@ -110,16 +110,111 @@ export const validateStorageAccess = async (settings: StorageSettings): Promise<
           details: `Path: ${settings.path}`
         });
         return true;
+      
+      case 'dropbox':
+        // Validate Dropbox configuration
+        if (!settings.dropboxToken) {
+          await addLog({
+            level: "error",
+            source: "storage",
+            message: "Dropbox configuration validation failed: Missing access token",
+            details: "Dropbox access token is required"
+          });
+          return false;
+        }
+        await addLog({
+          level: "info",
+          source: "storage",
+          message: "Dropbox storage configuration validated successfully",
+          details: `Folder path: ${settings.dropboxFolder || "Root"}`
+        });
+        return true;
+        
+      case 'google_drive':
+        // Validate Google Drive configuration
+        if (!settings.googleDriveToken) {
+          await addLog({
+            level: "error",
+            source: "storage",
+            message: "Google Drive configuration validation failed: Missing OAuth token",
+            details: "Google Drive OAuth token is required"
+          });
+          return false;
+        }
+        await addLog({
+          level: "info",
+          source: "storage",
+          message: "Google Drive storage configuration validated successfully",
+          details: `Folder ID: ${settings.googleDriveFolderId || "Root"}`
+        });
+        return true;
+        
+      case 'onedrive':
+        // Validate OneDrive configuration
+        if (!settings.oneDriveToken) {
+          await addLog({
+            level: "error",
+            source: "storage",
+            message: "OneDrive configuration validation failed: Missing OAuth token",
+            details: "OneDrive OAuth token is required"
+          });
+          return false;
+        }
+        await addLog({
+          level: "info",
+          source: "storage",
+          message: "OneDrive storage configuration validated successfully",
+          details: `Folder ID: ${settings.oneDriveFolderId || "Root"}`
+        });
+        return true;
+        
+      case 'azure_blob':
+        // Validate Azure Blob Storage configuration
+        if (!settings.azureConnectionString || !settings.azureContainer) {
+          await addLog({
+            level: "error",
+            source: "storage",
+            message: "Azure Blob Storage configuration validation failed: Missing required fields",
+            details: "Connection string or container name is missing"
+          });
+          return false;
+        }
+        await addLog({
+          level: "info",
+          source: "storage",
+          message: "Azure Blob Storage configuration validated successfully",
+          details: `Container: ${settings.azureContainer}`
+        });
+        return true;
+        
+      case 'backblaze':
+        // Validate Backblaze B2 configuration
+        if (!settings.backblazeKeyId || !settings.backblazeApplicationKey || !settings.backblazeBucket) {
+          await addLog({
+            level: "error",
+            source: "storage",
+            message: "Backblaze B2 configuration validation failed: Missing required fields",
+            details: "Key ID, Application Key or Bucket name is missing"
+          });
+          return false;
+        }
+        await addLog({
+          level: "info",
+          source: "storage",
+          message: "Backblaze B2 storage configuration validated successfully",
+          details: `Bucket: ${settings.backblazeBucket}`
+        });
+        return true;
         
       default:
-        // For other storage types
+        // For unknown storage types
         await addLog({
           level: "warning",
           source: "storage",
           message: `Validation for ${settings.type} storage type not implemented`,
           details: "Assuming valid configuration"
         });
-        return true;
+        return false;
     }
   } catch (error) {
     // Log the error

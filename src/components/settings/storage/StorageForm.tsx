@@ -186,6 +186,13 @@ const StorageForm = ({ initialSettings, isLoading, isSaving, onSave }: StorageFo
           </Alert>
         )}
         
+        {validationStatus.status === 'success' && (
+          <Alert variant="default" className="bg-green-50 border-green-200">
+            <AlertCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-600">{validationStatus.message}</AlertDescription>
+          </Alert>
+        )}
+        
         <Card>
           <CardHeader>
             <CardTitle>Storage Provider</CardTitle>
@@ -215,9 +222,19 @@ const StorageForm = ({ initialSettings, isLoading, isSaving, onSave }: StorageFo
           </CardContent>
         </Card>
 
-        <Button type="submit" className="w-full" disabled={isLoading || isSaving || validationStatus.status === 'validating'}>
+        <Button 
+          type="submit" 
+          className="w-full" 
+          disabled={isLoading || isSaving || validationStatus.status === 'validating'}
+        >
           {isSaving || validationStatus.status === 'validating' ? (
-            validationStatus.status === 'validating' ? "Validating..." : "Saving..."
+            <div className="flex items-center">
+              <span className="animate-spin mr-2">
+                <span className="sr-only">Loading...</span>
+                ◌
+              </span>
+              {validationStatus.status === 'validating' ? "Validating..." : "Saving..."}
+            </div>
           ) : (
             <>
               <Settings className="mr-2 h-4 w-4" /> Save Storage Settings

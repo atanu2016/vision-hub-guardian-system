@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { StorageSettings as StorageSettingsType } from '@/types/camera';
 import { getStorageSettings, saveStorageSettings, validateStorageAccess } from '@/services/apiService';
@@ -109,7 +108,7 @@ export const useStorageSettings = () => {
           }
           // In a real implementation, we would check if the NAS is accessible
           // For now, we'll validate that required fields are provided
-          return true;
+          return await validateStorageAccess(settings);
           
         case 's3':
           // For S3, we need more validation
@@ -119,20 +118,46 @@ export const useStorageSettings = () => {
           }
           
           // Call the API to validate S3 access
-          try {
-            // This would be an actual validation call in a real implementation
-            // For now, we'll simulate with a delay
-            const isValid = await validateStorageAccess(settings);
-            return isValid;
-          } catch (error) {
-            console.error("S3 validation error:", error);
+          return await validateStorageAccess(settings);
+          
+        case 'dropbox':
+          // Validate Dropbox configuration
+          if (!settings.dropboxToken) {
             return false;
           }
+          return await validateStorageAccess(settings);
+          
+        case 'google_drive':
+          // Validate Google Drive configuration
+          if (!settings.googleDriveToken) {
+            return false;
+          }
+          return await validateStorageAccess(settings);
+          
+        case 'onedrive':
+          // Validate OneDrive configuration
+          if (!settings.oneDriveToken) {
+            return false;
+          }
+          return await validateStorageAccess(settings);
+          
+        case 'azure_blob':
+          // Validate Azure Blob Storage configuration
+          if (!settings.azureConnectionString || !settings.azureContainer) {
+            return false;
+          }
+          return await validateStorageAccess(settings);
+          
+        case 'backblaze':
+          // Validate Backblaze B2 configuration
+          if (!settings.backblazeKeyId || !settings.backblazeApplicationKey || !settings.backblazeBucket) {
+            return false;
+          }
+          return await validateStorageAccess(settings);
           
         default:
-          // For other storage types, we'd need specific validation
-          // For now, we'll return true as a placeholder
-          return true;
+          // For unknown storage types, return false as not supported
+          return false;
       }
     } catch (error) {
       console.error("Storage validation error:", error);
