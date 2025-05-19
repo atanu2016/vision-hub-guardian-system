@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth';
 import { fetchAllUsers } from '@/services/userManagement/userFetchService';
@@ -120,10 +119,9 @@ export function useUserManagement() {
     if (!userToDelete) return;
     
     const isSuperadmin = userToDelete.role === 'superadmin';
-    const isAdmin = userToDelete.role === 'admin';
     
-    // Only superadmins can delete superadmins or admins
-    if ((isSuperadmin || isAdmin) && role !== 'superadmin') {
+    // Only superadmins can delete superadmins
+    if (isSuperadmin && role !== 'superadmin') {
       toast.error("Only superadmins can delete admin users");
       return;
     }

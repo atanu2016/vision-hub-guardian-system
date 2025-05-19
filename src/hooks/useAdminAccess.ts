@@ -27,7 +27,7 @@ export function useAdminAccess() {
         }
         
         // Second check - via role (if available)
-        if (role === 'admin' || role === 'superadmin') {
+        if (role === 'superadmin') {
           console.log("Access granted via role:", role);
           setHasAccess(true);
           setLoading(false);

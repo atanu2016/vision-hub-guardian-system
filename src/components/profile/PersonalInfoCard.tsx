@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +11,6 @@ import { UserRole } from "@/types/admin";
 const getRoleDisplayName = (role: UserRole): string => {
   switch (role) {
     case 'superadmin': return 'Superadmin';
-    case 'admin': return 'Admin';
     case 'observer': return 'Observer';
     case 'user': return 'User';
     default: return 'User';

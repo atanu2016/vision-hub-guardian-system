@@ -81,8 +81,6 @@ export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole 
     switch (role) {
       case 'superadmin': 
         return <Shield className="h-5 w-5 text-red-500" />;
-      case 'admin': 
-        return <ShieldCheck className="h-5 w-5 text-amber-500" />;
       case 'observer': 
         return <Eye className="h-5 w-5 text-blue-500" />;
       default: 
@@ -121,7 +119,6 @@ export function RoleSelector({ userId, currentRole, currentUserId, onUpdateRole 
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="superadmin" disabled={currentUserRole !== 'superadmin'}>Superadmin</SelectItem>
-          <SelectItem value="admin" disabled={currentUserRole !== 'superadmin'}>Admin</SelectItem>
           <SelectItem value="observer" disabled={!canManageUser}>Observer</SelectItem>
           <SelectItem value="user" disabled={!canManageUser}>User</SelectItem>
         </SelectContent>

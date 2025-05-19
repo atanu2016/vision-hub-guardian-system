@@ -1,4 +1,3 @@
-
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme/theme-provider"
@@ -184,7 +183,7 @@ const RoleBasedRedirect = () => {
   console.log("RoleBasedRedirect - isSuperAdmin:", isSuperAdmin);
   
   // Directly check admin/superadmin status first, since that's our primary condition
-  if (isAdmin || isSuperAdmin || role === 'admin' || role === 'superadmin') {
+  if (isAdmin || isSuperAdmin || role === 'superadmin') {
     console.log("RoleBasedRedirect - Redirecting admin/superadmin to dashboard");
     return <Navigate to="/dashboard" replace />;
   }

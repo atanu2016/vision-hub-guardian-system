@@ -1,3 +1,4 @@
+
 /**
  * Optimized database queries for user roles
  */
@@ -70,7 +71,7 @@ export async function fetchUserRole(userId: string): Promise<UserRole> {
     }
     
     // Validate and process result
-    const validRoles: UserRole[] = ['user', 'admin', 'superadmin', 'observer'];
+    const validRoles: UserRole[] = ['user', 'superadmin', 'observer'];
     const role = data?.role as UserRole;
     
     // Default to 'user' if role is invalid or not found

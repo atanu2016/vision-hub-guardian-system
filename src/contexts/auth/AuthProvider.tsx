@@ -70,8 +70,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const requiresMFA = !!(profile?.mfa_required && !profile?.mfa_enrolled);
   
   // Check both profile.is_admin and role for admin status - more explicitly check roles
-  const isAdmin = role === 'admin' || role === 'superadmin' || !!profile?.is_admin;
-  const isSuperAdmin = role === 'superadmin' || (!!profile?.is_admin && role === 'admin');
+  const isAdmin = role === 'superadmin' || !!profile?.is_admin;
+  const isSuperAdmin = role === 'superadmin' || (!!profile?.is_admin && role === 'superadmin');
 
   const contextValue: AuthContextType = {
     session,

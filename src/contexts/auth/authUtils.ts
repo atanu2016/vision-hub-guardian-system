@@ -125,7 +125,7 @@ export async function fetchUserRole(userId: string, user: User | null): Promise<
           
         if (profileData?.is_admin) {
           console.log("User is admin in profile");
-          return 'admin';
+          return 'superadmin';
         }
       }
     } catch (queryError) {

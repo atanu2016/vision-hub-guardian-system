@@ -1,4 +1,3 @@
-
 /**
  * User role management services - main entry point
  */
@@ -43,7 +42,7 @@ export async function updateUserRole(userId: string, newRole: UserRole, currentU
     }
 
     // Validate the role is a valid UserRole type
-    const validRoles: UserRole[] = ['user', 'admin', 'superadmin', 'observer'];
+    const validRoles: UserRole[] = ['user', 'superadmin', 'observer'];
     if (!validRoles.includes(newRole)) {
       console.error(`[Role Service] Invalid role specified: ${newRole}`);
       toast.error(`Invalid role: ${newRole}`);

@@ -20,8 +20,7 @@ export function useOperatorPermissions(role: UserRole, authRole: UserRole) {
         'view-profile',
         'view-footage:assigned'
       ],
-      'admin': [],
-      'superadmin': [],
+      'superadmin': []
     };
 
     // Check if this permission is critical for the current role
