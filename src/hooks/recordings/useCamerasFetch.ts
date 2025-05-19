@@ -27,8 +27,8 @@ export const useCamerasFetch = () => {
         const camerasFormatted: Camera[] = data.map(cam => ({
           id: cam.id,
           name: cam.name,
-          status: (cam.status as CameraStatus) || 'offline', // Ensure status is always defined
-          location: cam.location,
+          status: (cam.status as CameraStatus) || 'offline',
+          location: cam.location || 'Unknown',
           ipAddress: cam.ipaddress,
           lastSeen: cam.lastseen,
           recording: cam.recording || false

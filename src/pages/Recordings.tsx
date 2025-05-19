@@ -3,7 +3,6 @@ import { useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import RecordingsSidebar from "@/components/recordings/RecordingsSidebar";
 import RecordingsList from "@/components/recordings/RecordingsList";
-import RecordingCalendar from "@/components/recordings/RecordingCalendar";
 import { useRecordings } from "@/hooks/useRecordings";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon, ListFilter } from "lucide-react";
@@ -11,9 +10,7 @@ import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { useSearchParams } from "react-router-dom";
-import { Camera } from "@/hooks/recordings/types";
+import { DatePicker } from "@/components/recordings/DatePicker";
 
 const Recordings = () => {
   const {
@@ -30,27 +27,13 @@ const Recordings = () => {
     setDateFilter
   } = useRecordings();
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [viewMode, setViewMode] = useState<string>(searchParams.get("view") || "list");
-
-  const handleViewChange = (value: string) => {
-    if (value) {
-      setViewMode(value);
-      setSearchParams({ view: value });
-    }
-  };
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const handleDeleteRecording = async (recordingId: string) => {
     const success = await deleteRecording(recordingId);
     if (success) {
       toast.success("Recording deleted successfully");
     }
-  };
-
-  // Helper function to find camera ID from name
-  const findCameraId = (cameraName: string): string | undefined => {
-    const camera = cameras.find(c => c.name === cameraName);
-    return camera?.id;
   };
 
   return (
@@ -65,16 +48,7 @@ const Recordings = () => {
           </div>
           
           <div className="flex items-center gap-4">
-            <ToggleGroup type="single" value={viewMode} onValueChange={handleViewChange}>
-              <ToggleGroupItem value="list" aria-label="Toggle list view">
-                <ListFilter className="h-4 w-4" />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="calendar" aria-label="Toggle calendar view">
-                <CalendarIcon className="h-4 w-4" />
-              </ToggleGroupItem>
-            </ToggleGroup>
-            
-            <Popover>
+            <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -88,12 +62,26 @@ const Recordings = () => {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
-                <button
-                  className="w-full text-left p-2 hover:bg-accent"
-                  onClick={() => setDateFilter(null)}
-                >
-                  Clear filter
-                </button>
+                <DatePicker
+                  selectedDate={dateFilter}
+                  onSelect={(date) => {
+                    setDateFilter(date || null);
+                    setIsDatePickerOpen(false);
+                  }}
+                />
+                <div className="p-2 border-t">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-center"
+                    onClick={() => {
+                      setDateFilter(null);
+                      setIsDatePickerOpen(false);
+                    }}
+                  >
+                    Clear date filter
+                  </Button>
+                </div>
               </PopoverContent>
             </Popover>
           </div>
@@ -113,18 +101,12 @@ const Recordings = () => {
           />
 
           {/* Main content area */}
-          {viewMode === "calendar" ? (
-            <RecordingCalendar 
-              cameraId={selectedCamera !== "all" ? findCameraId(selectedCamera) : undefined} 
-            />
-          ) : (
-            <RecordingsList 
-              recordings={filteredRecordings}
-              loading={loading}
-              onDeleteRecording={handleDeleteRecording}
-              dateFilter={dateFilter}
-            />
-          )}
+          <RecordingsList 
+            recordings={filteredRecordings}
+            loading={loading}
+            onDeleteRecording={handleDeleteRecording}
+            dateFilter={dateFilter}
+          />
         </div>
       </div>
     </AppLayout>

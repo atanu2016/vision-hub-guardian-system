@@ -14,12 +14,11 @@ export interface Recording {
   dateTime: string;
 }
 
-// Simplified Camera interface with required status field
 export interface Camera {
   id: string;
   name: string;
-  status: CameraStatus; // Now required to match type in @/types/camera
-  location?: string;
+  status: CameraStatus; // Required to match type in @/types/camera
+  location: string;     // Required to match type in @/types/camera
   ipAddress?: string;
   lastSeen?: string;
   recording?: boolean;
