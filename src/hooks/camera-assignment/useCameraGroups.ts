@@ -2,16 +2,17 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Camera, GroupedCameras } from '@/types/camera';
+import { GroupedCameras } from '@/types/camera';
+import { Camera as AssignmentCamera } from '@/components/admin/camera-assignment/types';
 
-export function useCameraGroups(cameras: Camera[]) {
-  const [groupedCameras, setGroupedCameras] = useState<GroupedCameras>({});
+export function useCameraGroups(cameras: AssignmentCamera[]) {
+  const [groupedCameras, setGroupedCameras] = useState<Record<string, AssignmentCamera[]>>({});
   
   // Group cameras by their group property
   useEffect(() => {
     if (!cameras || cameras.length === 0) return;
     
-    const grouped: GroupedCameras = {};
+    const grouped: Record<string, AssignmentCamera[]> = {};
     
     // First add "All Cameras" group
     grouped['All Cameras'] = [...cameras];
@@ -36,7 +37,7 @@ export function useCameraGroups(cameras: Camera[]) {
   };
 
   // Function to get cameras by group
-  const getCamerasByGroup = (groupName: string): Camera[] => {
+  const getCamerasByGroup = (groupName: string): AssignmentCamera[] => {
     if (groupName === 'All Cameras') {
       return cameras;
     }

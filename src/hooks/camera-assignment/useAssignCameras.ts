@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useCameraGroups } from './useCameraGroups';
+import { Camera as AssignmentCamera } from '@/components/admin/camera-assignment/types';
 
 export function useAssignCameras(userId: string, isOpen: boolean): UseCameraAssignmentReturn {
   const { canAssignCameras } = useAdminPermission();

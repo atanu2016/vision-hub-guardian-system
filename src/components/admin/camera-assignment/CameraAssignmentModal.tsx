@@ -10,8 +10,8 @@ import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useCameraGroups } from '@/hooks/camera-assignment/useCameraGroups';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Camera as AssignmentCamera } from './types';
 
 interface CameraAssignmentModalProps {
   isOpen: boolean;
@@ -34,14 +34,11 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
     isAuthenticated: hookIsAuthenticated,
     handleCameraToggle, 
     handleSave,
-    loadCamerasAndAssignments
-  } = useAssignCameras(userId, isOpen);
-  
-  const { 
+    loadCamerasAndAssignments,
     getAvailableGroups,
     getCamerasByGroup
-  } = useCameraGroups(cameras);
-
+  } = useAssignCameras(userId, isOpen);
+  
   // Check authentication status when modal opens and periodically
   useEffect(() => {
     const checkAuth = async () => {
@@ -141,7 +138,9 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
   const combinedIsAuthenticated = isAuthenticated && hookIsAuthenticated;
 
   // Get cameras for the currently selected group
-  const filteredCameras = selectedGroup ? getCamerasByGroup(selectedGroup) : cameras;
+  const filteredCameras: AssignmentCamera[] = selectedGroup && getCamerasByGroup ? 
+    getCamerasByGroup(selectedGroup) : 
+    cameras;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -194,24 +193,26 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
           )}
           
           {/* Camera Group Selection */}
-          <div className="mb-4">
-            <Select
-              value={selectedGroup}
-              onValueChange={setSelectedGroup}
-              disabled={loading || saving}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select Camera Group" />
-              </SelectTrigger>
-              <SelectContent>
-                {getAvailableGroups().map((group) => (
-                  <SelectItem key={group} value={group}>
-                    {group} ({getCamerasByGroup(group).length})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {getAvailableGroups && (
+            <div className="mb-4">
+              <Select
+                value={selectedGroup}
+                onValueChange={setSelectedGroup}
+                disabled={loading || saving}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Camera Group" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getAvailableGroups().map((group) => (
+                    <SelectItem key={group} value={group}>
+                      {group} ({getCamerasByGroup && getCamerasByGroup(group).length})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           
           <CameraList 
             cameras={filteredCameras}

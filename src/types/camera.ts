@@ -1,3 +1,4 @@
+
 // Camera types
 export type CameraConnectionType = "ip" | "rtsp" | "rtmp" | "onvif";
 export type CameraStatus = "online" | "offline" | "error";
