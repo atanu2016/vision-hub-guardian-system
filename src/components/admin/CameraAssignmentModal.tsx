@@ -55,24 +55,7 @@ export default function CameraAssignmentModal({
           return;
         }
         
-        // Try using the new security definer function that bypasses RLS
-        try {
-          const { data: isAdmin, error: rpcError } = await supabase
-            .rpc('check_admin_status_safe', { 
-              _user_id: sessionData?.session?.user?.id 
-            });
-            
-          if (!rpcError && isAdmin === true) {
-            console.log("Admin status confirmed via RPC function");
-            setCanAssignCameras(true);
-            return;
-          }
-        } catch (rpcErr) {
-          console.warn("Error checking admin status via RPC:", rpcErr);
-          // Continue checking other methods
-        }
-        
-        // Check admin flag in profile directly as fallback
+        // Check admin flag in profile directly
         try {
           const { data: profileData } = await supabase
             .from('profiles')

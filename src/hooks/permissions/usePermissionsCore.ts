@@ -1,4 +1,3 @@
-
 import { useMemo, useCallback } from 'react';
 import { hasPermission as checkPermission, canManageRole } from '@/utils/permissionUtils';
 import { useRoleSubscription } from './useRoleSubscription';
@@ -33,26 +32,25 @@ export function usePermissionsCore(): UsePermissionsReturn {
           }
         }
         
-        // Using our new security definer function that doesn't use RLS
-        try {
-          const { data: isAdmin, error: rpcError } = await supabase
-            .rpc('check_admin_status_safe', { _user_id: sessionData?.session?.user?.id });
-            
-          if (!rpcError && isAdmin === true) {
-            return true;
-          }
-        } catch (rpcErr) {
-          console.error("Error checking admin status via RPC:", rpcErr);
-        }
-        
         // Check if user has admin flag in profiles directly
         const { data: profileData } = await supabase
           .from('profiles')
           .select('is_admin')
-          .eq('id', sessionData?.session?.user?.id)
+          .eq('id', sessionData?.session?.user?.id || '')
           .maybeSingle();
           
         if (profileData?.is_admin) {
+          return true;
+        }
+        
+        // Check user roles directly as final fallback
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', sessionData?.session?.user?.id || '')
+          .maybeSingle();
+          
+        if (roleData?.role === 'admin' || roleData?.role === 'superadmin') {
           return true;
         }
       } catch (err) {

@@ -4,6 +4,7 @@ import { Session, User } from '@supabase/supabase-js';
 import { Profile, UserRole, AuthState } from './types';
 import { fetchUserProfile, fetchUserRole } from './authUtils';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 // Helper for handling auth errors
 export const handleAuthError = (error: any, defaultMessage = 'Authentication error') => {
@@ -42,8 +43,9 @@ export function useAuthState() {
         console.log("[AUTH] Profile data fetched:", results[0].value);
         setProfile(results[0].value);
       } else if (results[0].status === 'rejected') {
-        console.error("[AUTH] Error fetching profile:", results[0].reason);
-        setErrors(prev => [...prev, `Profile fetch error: ${results[0].reason}`]);
+        const error = results[0] as PromiseRejectedResult;
+        console.error("[AUTH] Error fetching profile:", error.reason);
+        setErrors(prev => [...prev, `Profile fetch error: ${error.reason}`]);
         
         // Attempt fallback direct fetch
         try {
@@ -51,7 +53,7 @@ export function useAuthState() {
             .from('profiles')
             .select('*')
             .eq('id', userId)
-            .single();
+            .maybeSingle();
           
           if (data) {
             setProfile(data as Profile);
@@ -67,8 +69,9 @@ export function useAuthState() {
         console.log("[AUTH] Role data fetched:", results[1].value);
         setRole(results[1].value);
       } else {
-        console.error("[AUTH] Error fetching role:", results[1].reason);
-        setErrors(prev => [...prev, `Role fetch error: ${results[1].reason}`]);
+        const error = results[1] as PromiseRejectedResult;
+        console.error("[AUTH] Error fetching role:", error.reason);
+        setErrors(prev => [...prev, `Role fetch error: ${error.reason}`]);
         
         // Default to user role for safety
         setRole('user');
@@ -79,7 +82,7 @@ export function useAuthState() {
             .from('user_roles')
             .select('role')
             .eq('user_id', userId)
-            .single();
+            .maybeSingle();
             
           if (data?.role) {
             setRole(data.role as UserRole);
@@ -131,5 +134,3 @@ export function useAuthState() {
     errors
   };
 }
-
-import { supabase } from '@/integrations/supabase/client';
