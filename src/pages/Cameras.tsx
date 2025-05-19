@@ -1,270 +1,76 @@
 
-import { useState, useMemo, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { PlusCircle, Search, SlidersHorizontal } from "lucide-react";
+import { useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
-import CameraGrid from "@/components/cameras/CameraGrid";
 import AddCameraModal from "@/components/cameras/AddCameraModal";
-import { Camera } from "@/types/camera";
-import { useToast } from "@/hooks/use-toast";
-import { getCameras, saveCamera, deleteCamera } from "@/services/apiService";
-import { checkDatabaseSetup } from "@/services/database";
-
-// Sample HLS camera for consistency with LiveView
-const sampleHLSCamera: Camera = {
-  id: "sample-hls-1",
-  name: "Sample HLS Stream",
-  status: "online",
-  location: "Demo Location",
-  ipAddress: "",
-  lastSeen: new Date().toISOString(),
-  recording: false,
-  connectionType: "hls",
-  hlsUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", // Public HLS test stream
-  group: "Demo"
-};
+import CameraPageHeader from "@/components/cameras/page/CameraPageHeader";
+import SampleCameraToggle from "@/components/cameras/page/SampleCameraToggle";
+import CameraLoadingState from "@/components/cameras/page/CameraLoadingState";
+import NoCamerasFound from "@/components/cameras/page/NoCamerasFound";
+import CameraGroups from "@/components/cameras/page/CameraGroups";
+import { useCameraData } from "@/hooks/useCameraData";
+import { useFilteredCameras } from "@/hooks/useFilteredCameras";
 
 const Cameras = () => {
-  const { toast } = useToast();
-  const [cameras, setCameras] = useState<Camera[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [includeSampleCamera, setIncludeSampleCamera] = useState(true);
   
-  // Initialize system and load cameras from API on component mount
-  useEffect(() => {
-    const initialize = async () => {
-      // Initialize the system first to ensure the database is set up
-      try {
-        await checkDatabaseSetup();
-      } catch (error) {
-        console.error('Error initializing system:', error);
-        toast.error("Could not initialize the system. Using fallback data.");
-      }
-      
-      // Then fetch cameras
-      fetchCameras();
-    };
-    
-    initialize();
-  }, []);
-
-  const fetchCameras = async () => {
-    setLoading(true);
-    try {
-      const camerasData = await getCameras();
-      
-      // Add sample HLS camera if enabled
-      if (includeSampleCamera) {
-        // Check if sample camera already exists in the database
-        const sampleExists = camerasData.some(camera => 
-          camera.id === sampleHLSCamera.id || 
-          (camera.hlsUrl === sampleHLSCamera.hlsUrl && camera.connectionType === 'hls')
-        );
-        
-        if (!sampleExists) {
-          setCameras([...camerasData, sampleHLSCamera]);
-        } else {
-          setCameras(camerasData);
-        }
-      } else {
-        setCameras(camerasData);
-      }
-    } catch (error) {
-      console.error('Error fetching cameras:', error);
-      toast.error("Could not load cameras from the server. Using cached data.");
-      
-      // Still show the sample camera if there's an error
-      if (includeSampleCamera) {
-        setCameras([sampleHLSCamera]);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  // Generate groups dynamically based on camera data
-  const cameraGroups = useMemo(() => {
-    // Create an empty array of groups
-    const groups: { id: string; name: string; cameras: Camera[] }[] = [];
-    
-    // Group cameras by their group property
-    const groupMap: Record<string, Camera[]> = {};
-    cameras.forEach(camera => {
-      const groupName = camera.group || "Ungrouped";
-      if (!groupMap[groupName]) {
-        groupMap[groupName] = [];
-      }
-      groupMap[groupName].push(camera);
-    });
-    
-    // Convert the map to an array of group objects
-    Object.entries(groupMap).forEach(([name, groupCameras]) => {
-      groups.push({
-        id: name.toLowerCase().replace(/\s+/g, '-'),
-        name,
-        cameras: groupCameras
-      });
-    });
-    
-    return groups;
-  }, [cameras]);
-  
-  // Get unique group names for the dropdown
-  const existingGroups = useMemo(() => {
-    return Array.from(new Set(cameras.map(c => c.group || "Ungrouped")))
-      .filter(group => group !== "Ungrouped");
-  }, [cameras]);
+  const {
+    cameras,
+    loading,
+    includeSampleCamera,
+    toggleSampleCamera,
+    cameraGroups,
+    existingGroups,
+    addCamera,
+    handleDeleteCamera
+  } = useCameraData();
 
   // Filter cameras based on search query
-  const filteredCameraGroups = useMemo(() => {
-    if (!searchQuery) return cameraGroups;
-    
-    return cameraGroups.map(group => ({
-      ...group,
-      cameras: group.cameras.filter(camera => 
-        camera.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        camera.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (camera.ipAddress && camera.ipAddress.includes(searchQuery)) ||
-        (camera.manufacturer && camera.manufacturer.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (camera.model && camera.model.toLowerCase().includes(searchQuery.toLowerCase()))
-      )
-    })).filter(group => group.cameras.length > 0);
-  }, [cameraGroups, searchQuery]);
-
-  // Helper function to toggle the sample camera
-  const toggleSampleCamera = () => {
-    setIncludeSampleCamera(prev => !prev);
-  };
-
-  const handleAddCamera = async (newCamera: Omit<Camera, "id" | "lastSeen">) => {
-    try {
-      // Add to cameras list with temporary ID and current timestamp
-      const camera: Camera = {
-        ...newCamera,
-        id: `cam-${Date.now()}`, // Temporary ID that will be replaced by the API
-        lastSeen: new Date().toISOString()
-      };
-      
-      // Call API to save the camera
-      const savedCamera = await saveCamera(camera);
-      
-      // Update the local state with the saved camera
-      setCameras(prev => [...prev, savedCamera]);
-      
-      toast.success(`${savedCamera.name} has been added successfully`);
-    } catch (error) {
-      console.error('Error adding camera:', error);
-      toast.error("Could not add camera. Please try again.");
-    }
-  };
-
-  const handleDeleteCamera = async (cameraId: string) => {
-    // Don't allow deletion of the sample camera
-    if (cameraId === sampleHLSCamera.id) {
-      toast.error("Cannot delete sample camera. Use the toggle instead.");
-      return;
-    }
-    
-    try {
-      await deleteCamera(cameraId);
-      
-      // Update local state by removing the deleted camera
-      setCameras(prev => prev.filter(camera => camera.id !== cameraId));
-      
-      toast.success("Camera has been removed successfully");
-    } catch (error) {
-      console.error('Error deleting camera:', error);
-      toast.error("Could not delete camera. Please try again.");
-    }
-  };
+  const filteredCameraGroups = useFilteredCameras(cameraGroups, searchQuery);
 
   return (
     <AppLayout>
       <div className="space-y-6 max-w-full">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-2 md:space-y-0">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Cameras</h1>
-            <p className="text-muted-foreground">
-              Manage and configure your camera system
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search
-                className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <Input
-                type="search"
-                placeholder="Search cameras..."
-                className="w-full md:w-64 pl-8 bg-secondary/50"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <Button variant="outline" size="icon">
-              <SlidersHorizontal className="h-4 w-4" />
-            </Button>
-            <Button onClick={() => setIsAddModalOpen(true)}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Camera
-            </Button>
-          </div>
-        </div>
+        {/* Header with search and add camera button */}
+        <CameraPageHeader 
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          openAddModal={() => setIsAddModalOpen(true)}
+        />
         
-        <div className="flex justify-end mb-4">
-          <Button
-            onClick={toggleSampleCamera}
-            className="px-4 py-2 text-sm bg-secondary hover:bg-secondary/90 rounded-md"
-          >
-            {includeSampleCamera ? "Hide Sample Stream" : "Show Sample Stream"}
-          </Button>
-        </div>
+        {/* Sample camera toggle button */}
+        <SampleCameraToggle 
+          includeSampleCamera={includeSampleCamera}
+          toggleSampleCamera={toggleSampleCamera}
+        />
         
+        {/* Loading state */}
         {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <p>Loading cameras...</p>
-          </div>
+          <CameraLoadingState />
         ) : (
           <div className="space-y-8">
-            {filteredCameraGroups.map((group) => (
-              <CameraGrid
-                key={group.id}
-                cameras={group.cameras}
-                title={group.name}
-                onDeleteCamera={handleDeleteCamera}
-              />
-            ))}
+            {/* Camera groups display */}
+            <CameraGroups 
+              groups={filteredCameraGroups} 
+              onDeleteCamera={handleDeleteCamera} 
+            />
             
+            {/* Empty state when no cameras are found */}
             {filteredCameraGroups.length === 0 && (
-              <div className="text-center py-12">
-                <h3 className="text-lg font-medium">No cameras found</h3>
-                <p className="text-muted-foreground mt-2">
-                  {cameras.length === 0 
-                    ? "Add a camera to get started" 
-                    : "Try adjusting your search or add a new camera"}
-                </p>
-                <Button 
-                  className="mt-4"
-                  onClick={() => setIsAddModalOpen(true)}
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Camera
-                </Button>
-              </div>
+              <NoCamerasFound 
+                camerasExist={cameras.length > 0}
+                onAddCamera={() => setIsAddModalOpen(true)}
+              />
             )}
           </div>
         )}
       </div>
       
+      {/* Add camera modal */}
       <AddCameraModal 
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onAdd={handleAddCamera}
+        onAdd={addCamera}
         existingGroups={existingGroups}
       />
     </AppLayout>
