@@ -94,34 +94,28 @@ export const useRecordingCalendar = (cameraId?: string) => {
     }
   };
 
-  // Create a string representation of a date for consistent lookup
-  const formatDateKey = useCallback((date: Date): string => {
-    return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-  }, []);
-
-  // Store recording dates in a Set for fast O(1) lookups
-  const recordingDateKeys = useMemo(() => {
-    const dateSet = new Set<string>();
-    
-    // Only process valid dates
-    for (const date of recordingDates) {
+  // Instead of using a complex Map that could cause excessive type instantiation,
+  // let's create a simpler approach with a Set and explicit date formatting
+  const dateKeySet = useMemo(() => {
+    const keys = new Set<string>();
+    recordingDates.forEach(date => {
       if (date instanceof Date && !isNaN(date.getTime())) {
-        dateSet.add(formatDateKey(date));
+        const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+        keys.add(key);
       }
-    }
-    
-    return dateSet;
-  }, [recordingDates, formatDateKey]);
-  
-  // Simplified check for recording dates
+    });
+    return keys;
+  }, [recordingDates]);
+
+  // Simple check function that doesn't use complex type instantiation
   const isRecordingDate = useCallback((dateToCheck: Date): boolean => {
     if (!dateToCheck || !(dateToCheck instanceof Date) || isNaN(dateToCheck.getTime())) {
       return false;
     }
     
-    const key = formatDateKey(dateToCheck);
-    return recordingDateKeys.has(key);
-  }, [formatDateKey, recordingDateKeys]);
+    const key = `${dateToCheck.getFullYear()}-${dateToCheck.getMonth()}-${dateToCheck.getDate()}`;
+    return dateKeySet.has(key);
+  }, [dateKeySet]);
 
   return {
     date,

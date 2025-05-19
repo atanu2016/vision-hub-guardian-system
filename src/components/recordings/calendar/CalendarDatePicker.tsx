@@ -64,22 +64,11 @@ export default function CalendarDatePicker({ date, onSelect, hasRecordings }: Ca
             hasRecording: (day) => hasRecordings?.(day) || false
           }}
           components={{
-            // Fix: Only use props that are part of DayProps
-            Day: (props: DayProps) => {
-              // Only apply custom class if we have a date
-              if (props.date) {
-                return (
-                  <div
-                    {...props}
-                    className={cn(
-                      // Safe access of className
-                      typeof props.className === 'string' ? props.className : "",
-                      getDayClassNames(props.date)
-                    )}
-                  />
-                );
-              }
-              // If no date, just render the default
+            // Instead of trying to modify the Day component with className,
+            // we'll use the standard modifier approach of react-day-picker
+            Day: (props) => {
+              // Create a consistent structure that just passes props through
+              // without trying to modify className directly
               return <div {...props} />;
             }
           }}
