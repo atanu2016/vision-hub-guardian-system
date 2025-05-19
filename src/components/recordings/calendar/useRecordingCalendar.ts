@@ -94,28 +94,25 @@ export const useRecordingCalendar = (cameraId?: string) => {
     }
   };
 
-  // Helper function to check if a date has recordings
-  // Completely rewritten to avoid recursive type checking issues
+  // Simplified helper function to check if a date has recordings
+  // Approach: Manual date comparison to avoid complex type inference
   const isRecordingDate = (dateToCheck: Date | undefined): boolean => {
-    // Early return for invalid inputs
     if (!dateToCheck) return false;
     if (!recordingDates || recordingDates.length === 0) return false;
     
+    // Extract date components for comparison
     const day = dateToCheck.getDate();
     const month = dateToCheck.getMonth();
     const year = dateToCheck.getFullYear();
     
-    // Use a traditional for loop to avoid potential recursive type checking issues
-    let i = 0;
-    const len = recordingDates.length;
-    
-    for (; i < len; i++) {
+    // Simple loop with explicit index management to avoid type recursion
+    for (let i = 0; i < recordingDates.length; i++) {
       const recordedDate = recordingDates[i];
-      if (
-        recordedDate.getDate() === day && 
-        recordedDate.getMonth() === month && 
-        recordedDate.getFullYear() === year
-      ) {
+      
+      // Simple comparison of date components
+      if (recordedDate.getDate() === day && 
+          recordedDate.getMonth() === month && 
+          recordedDate.getFullYear() === year) {
         return true;
       }
     }
