@@ -1,3 +1,4 @@
+
 import AppLayout from "@/components/layout/AppLayout";
 import { PersonalInfoCard } from "@/components/profile/PersonalInfoCard";
 import { SecuritySettingsCard } from "@/components/profile/SecuritySettingsCard";
@@ -7,32 +8,20 @@ import { useAuth } from '@/contexts/auth';
 import { RoleDiagnosticTool } from "@/components/admin/RoleDiagnosticTool";
 import { Button } from "@/components/ui/button";
 import { useProfileSettings } from '@/hooks/useProfileSettings';
-import { useAvatarManagement } from '@/hooks/profile/useAvatarManagement';
-import { usePasswordUpdate } from '@/hooks/profile/usePasswordUpdate';
 
 const ProfileSettings = () => {
   const { user } = useAuth();
   const {
-    fullName,
-    email,
-    userRole,
-    isLoading,
-    isSaving,
-    setFullName,
-    handleSaveChanges
+    loading,
+    formData,
+    avatarPreview,
+    role,
+    getInitials,
+    handleInputChange,
+    handleAvatarChange,
+    handleProfileUpdate,
+    handlePasswordUpdate
   } = useProfileSettings();
-  
-  const { avatarPreview, handleAvatarChange, getInitials } = useAvatarManagement();
-  const { handlePasswordUpdate: updatePassword } = usePasswordUpdate();
-
-  // Create formData object to match what the components expect
-  const formData = {
-    fullName,
-    email,
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  };
   
   // Debug tools state
   const [showDebugTools, setShowDebugTools] = useState(true);
@@ -40,31 +29,8 @@ const ProfileSettings = () => {
   const toggleDebugTools = () => {
     setShowDebugTools(prev => !prev);
   };
-  
-  // Create handlers that will work with our components
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    if (name === 'fullName') {
-      setFullName(value);
-    }
-    // Other fields would be handled here
-  };
-  
-  const handleProfileUpdate = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleSaveChanges();
-  };
-  
-  const handlePasswordUpdate = (e: React.FormEvent) => {
-    e.preventDefault();
-    updatePassword(e, {
-      currentPassword: formData.currentPassword,
-      newPassword: formData.newPassword,
-      confirmPassword: formData.confirmPassword
-    });
-  };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <AppLayout>
         <div className="flex justify-center items-center h-64">
@@ -116,7 +82,7 @@ const ProfileSettings = () => {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <PersonalInfoCard
             formData={formData}
-            role={userRole}
+            role={role}
             avatarPreview={avatarPreview}
             getInitials={getInitials}
             handleInputChange={handleInputChange}

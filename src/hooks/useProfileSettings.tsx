@@ -40,7 +40,7 @@ export function useProfileSettings() {
     setFullName,
     handleSaveChanges,
     
-    // For backwards compatibility with current ProfileSettings.tsx
+    // For backward compatibility with current ProfileSettings.tsx
     loading: isLoading,
     formData,
     avatarPreview,

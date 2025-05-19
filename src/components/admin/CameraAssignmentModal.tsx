@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Loader2, Camera } from "lucide-react";
+import { Loader2, Camera, AlertCircle } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { Camera as CameraType, CameraStatus } from '@/types/camera';
 import { assignCamerasToUser, getUserAssignedCameras } from '@/services/userManagement/cameraAssignmentService';
@@ -34,6 +34,7 @@ export default function CameraAssignmentModal({
   const [selectedCameraIds, setSelectedCameraIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch all cameras and user assignments
   useEffect(() => {
@@ -44,6 +45,7 @@ export default function CameraAssignmentModal({
 
   const loadData = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       console.log("Loading camera assignments for user:", userId);
       
@@ -54,6 +56,7 @@ export default function CameraAssignmentModal({
 
       if (camerasError) {
         console.error("Error fetching cameras:", camerasError);
+        setError("Failed to load cameras. Please try again.");
         throw camerasError;
       }
 
@@ -85,8 +88,9 @@ export default function CameraAssignmentModal({
       
       setCameras(typedCameras);
       setSelectedCameraIds(assignedCameraIds);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading camera assignment data:", error);
+      setError(error?.message || "Failed to load cameras. Please try again.");
       toast.error("Failed to load cameras");
     } finally {
       setIsLoading(false);
@@ -110,6 +114,7 @@ export default function CameraAssignmentModal({
     }
     
     setIsSaving(true);
+    setError(null);
     try {
       console.log("Saving camera assignments for user:", userId);
       console.log("Selected camera IDs:", selectedCameraIds);
@@ -117,8 +122,9 @@ export default function CameraAssignmentModal({
       await assignCamerasToUser(userId, selectedCameraIds);
       toast.success(`Camera assignments updated for ${userName}`);
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving camera assignments:", error);
+      setError(error?.message || "Failed to update camera assignments. Please try again.");
       toast.error("Failed to update camera assignments");
     } finally {
       setIsSaving(false);
@@ -134,6 +140,13 @@ export default function CameraAssignmentModal({
             Select which cameras this user should have access to view. Users can only view cameras assigned to them.
           </DialogDescription>
         </DialogHeader>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-3 flex items-start gap-2 mb-4">
+            <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
+            <div className="text-sm text-red-800">{error}</div>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="flex justify-center py-8">

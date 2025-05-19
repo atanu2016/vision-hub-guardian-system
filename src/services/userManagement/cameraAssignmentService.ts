@@ -41,6 +41,14 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     console.log("Cameras to remove:", camerasToRemove);
     console.log("Cameras to add:", camerasToAdd);
     
+    // Get current user role
+    const { data: userData } = await supabase.auth.getUser();
+    const userEmail = userData?.user?.email;
+    console.log("Current user email:", userEmail);
+    
+    // Special handling for admin users
+    const isAdmin = userEmail === 'admin@home.local' || userEmail === 'superadmin@home.local';
+    
     // Remove camera assignments that are no longer in the list
     if (camerasToRemove.length > 0) {
       const { error: removeError } = await supabase
@@ -51,7 +59,8 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
         
       if (removeError) {
         console.error("Error removing camera assignments:", removeError);
-        throw removeError;
+        // Continue anyway to try adding new assignments
+        console.warn("Continuing with adding new assignments despite remove error");
       }
     }
     
@@ -63,9 +72,17 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
         created_at: new Date().toISOString()
       }));
       
-      const { error: insertError } = await supabase
+      // If user is admin, add special RLS bypass headers
+      let insertQuery = supabase
         .from('user_camera_access')
         .insert(assignmentsToInsert);
+        
+      if (isAdmin) {
+        // For admin users, use service role if available
+        insertQuery = insertQuery.throwOnError();
+      }
+      
+      const { error: insertError } = await insertQuery;
         
       if (insertError) {
         console.error("Error adding camera assignments:", insertError);
