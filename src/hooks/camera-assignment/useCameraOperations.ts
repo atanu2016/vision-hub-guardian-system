@@ -4,23 +4,19 @@ import { assignCamerasToUser } from '@/services/userManagement/cameraAssignment'
 import { Camera } from '@/components/admin/camera-assignment/types';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
 
 export function useCameraOperations(userId: string, cameras: Camera[], setCameras: (cameras: Camera[]) => void) {
   const [saving, setSaving] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const navigate = useNavigate();
 
-  // Check authentication status on init
+  // Check authentication status on init and periodically
   useEffect(() => {
     const checkAuth = async () => {
       const { data, error } = await supabase.auth.getSession();
+      setIsAuthenticated(!!data.session);
       
       if (error || !data.session) {
         console.warn("Camera operations attempted without valid authentication");
-        setIsAuthenticated(false);
-      } else {
-        setIsAuthenticated(true);
       }
     };
     
@@ -29,9 +25,6 @@ export function useCameraOperations(userId: string, cameras: Camera[], setCamera
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthenticated(!!session);
-      if (!session && event === 'SIGNED_OUT') {
-        console.log("User signed out during camera operations");
-      }
     });
     
     return () => {
@@ -41,12 +34,6 @@ export function useCameraOperations(userId: string, cameras: Camera[], setCamera
 
   // Handle checkbox change
   const handleCameraToggle = (cameraId: string, checked: boolean) => {
-    if (!isAuthenticated) {
-      toast.error("You need to be logged in to assign cameras");
-      setTimeout(() => navigate('/auth'), 1000);
-      return;
-    }
-    
     setCameras(cameras.map(camera => 
       camera.id === cameraId ? { ...camera, assigned: checked } : camera
     ));
@@ -63,7 +50,6 @@ export function useCameraOperations(userId: string, cameras: Camera[], setCamera
     const { data } = await supabase.auth.getSession();
     if (!data.session) {
       toast.error("Authentication required. Please log in again.");
-      setTimeout(() => navigate('/auth'), 1000);
       return false;
     }
     

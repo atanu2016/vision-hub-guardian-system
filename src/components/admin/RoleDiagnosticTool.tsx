@@ -9,14 +9,13 @@ import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useRoleFixer } from '@/hooks/useRoleFixer';
 import { invalidateRoleCache } from '@/services/userManagement/roleServices';
-import { Loader2, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 
 export function RoleDiagnosticTool() {
   const { user, role: currentRole } = useAuth();
   const [loading, setLoading] = useState(false);
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const { diagnoseRoles, fixUserRole } = useRoleFixer();
-  const [adminFixAttempted, setAdminFixAttempted] = useState(false);
 
   const checkUserRole = async () => {
     if (!user) return;
@@ -56,52 +55,12 @@ export function RoleDiagnosticTool() {
         timestamp: new Date().toLocaleString()
       });
 
-      // Automatically fix roles for admin users if missing or wrong
-      if (user.email === 'admin@home.local' && (!roleData || roleData.role !== 'superadmin') && !adminFixAttempted) {
-        setAdminFixAttempted(true);
-        await fixAdminRole();
-      }
-      
       await diagnoseRoles();
     } catch (error) {
       console.error('Error checking role:', error);
       toast.error('Error checking role information');
     } finally {
       setLoading(false);
-    }
-  };
-  
-  const fixAdminRole = async () => {
-    if (!user) return;
-    
-    toast.info("Attempting to restore admin privileges...");
-    
-    try {
-      // Force admin rights for admin@home.local
-      if (user.email === 'admin@home.local') {
-        console.log('Fixing admin role for admin@home.local');
-        await fixUserRole(user.id, 'superadmin');
-        
-        // Update profile to ensure is_admin flag is set
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ is_admin: true })
-          .eq('id', user.id);
-          
-        if (profileError) {
-          console.error('Error updating profile admin flag:', profileError);
-        } else {
-          toast.success('Admin privileges restored! Page will reload shortly.');
-          
-          // Force browser reload after a delay
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
-        }
-      }
-    } catch (error) {
-      console.error('Error fixing admin role:', error);
-      toast.error('Failed to restore admin privileges');
     }
   };
 
@@ -116,21 +75,16 @@ export function RoleDiagnosticTool() {
       // Force session refresh
       await supabase.auth.refreshSession();
       
-      // Check if this is admin@home.local and fix if needed
-      if (user.email === 'admin@home.local') {
-        await fixAdminRole();
-      } else {
-        // Get current role from database
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        
-        if (roleData?.role) {
-          // Force fix the role to ensure it's applied
-          await fixUserRole(user.id, roleData.role as UserRole);
-        }
+      // Get current role from database
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      
+      if (roleData?.role) {
+        // Force fix the role to ensure it's applied
+        await fixUserRole(user.id, roleData.role as UserRole);
       }
       
       toast.success('Role information refreshed');
@@ -164,20 +118,7 @@ export function RoleDiagnosticTool() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg flex items-center justify-between">
-          <span>User Role Diagnostic Tool</span>
-          {user.email === 'admin@home.local' && debugInfo?.databaseRole !== 'superadmin' && !loading && (
-            <Button 
-              variant="destructive" 
-              size="sm" 
-              onClick={fixAdminRole}
-              className="flex items-center gap-2"
-            >
-              <AlertTriangle className="h-4 w-4" />
-              Restore Admin Access
-            </Button>
-          )}
-        </CardTitle>
+        <CardTitle className="text-lg">User Role Diagnostic Tool</CardTitle>
       </CardHeader>
       <CardContent>
         {loading ? (
@@ -214,7 +155,7 @@ export function RoleDiagnosticTool() {
               <div>{debugInfo.timestamp}</div>
             </div>
             
-            <div className="pt-4 flex gap-2">
+            <div className="pt-4">
               <Button 
                 variant="outline" 
                 size="sm"
@@ -225,17 +166,6 @@ export function RoleDiagnosticTool() {
                 <RefreshCw className="h-4 w-4" />
                 Force Role Refresh
               </Button>
-              
-              {user.email === 'admin@home.local' && debugInfo.databaseRole !== 'superadmin' && (
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={fixAdminRole}
-                  disabled={loading}
-                >
-                  Restore Admin Access
-                </Button>
-              )}
             </div>
           </div>
         ) : (
