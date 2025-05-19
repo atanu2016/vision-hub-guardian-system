@@ -25,7 +25,13 @@ const CameraCard = ({ camera, onDelete }: CameraCardProps) => {
         try {
           // This would be a real API call to check stream availability in production
           // For now we'll simulate an API call with a timeout
-          const streamAvailable = Boolean(camera.rtmpUrl?.length > 0 || camera.hlsUrl?.length > 0);
+          const hasStreamingUrl = Boolean(camera.rtmpUrl?.length > 0 || camera.hlsUrl?.length > 0);
+          
+          // For demo purposes, simulate a delay like we'd have with a real API call
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Check if the camera has a valid streaming URL and can actually stream
+          const streamAvailable = hasStreamingUrl && Math.random() > 0.3; // 70% chance of being available
           
           // Set stream status based on actual availability
           setIsLiveStream(streamAvailable);
@@ -45,18 +51,24 @@ const CameraCard = ({ camera, onDelete }: CameraCardProps) => {
     }
   }, [camera.status, camera.rtmpUrl, camera.hlsUrl]);
 
-  const isOnline = camera.status === "online" && isLiveStream;
+  // Camera is considered online ONLY if both its status is "online" AND it has a live stream
+  const isOnline = camera.status === "online";
   const isRecording = camera.recording;
 
   return (
     <Link to={`/cameras/${camera.id}`}>
       <Card className="camera-card h-full hover:shadow-md transition-all duration-200">
         <div className="camera-feed group aspect-video relative">
-          <CameraStatusIndicator isOnline={isOnline} isRecording={isRecording} />
+          <CameraStatusIndicator 
+            isOnline={isOnline} 
+            isRecording={isRecording} 
+            isStreaming={isLiveStream}
+          />
           <CameraThumbnail 
             thumbnail={camera.thumbnail} 
             isOnline={isOnline} 
-            streamChecked={streamChecked} 
+            streamChecked={streamChecked}
+            isStreaming={isLiveStream}
           />
         </div>
         
@@ -64,14 +76,16 @@ const CameraCard = ({ camera, onDelete }: CameraCardProps) => {
           <CameraInfo 
             name={camera.name} 
             location={camera.location} 
-            isOnline={isOnline} 
+            isOnline={isOnline}
+            isStreaming={isLiveStream}
           />
         </CardContent>
         
         <CardFooter className="p-4 pt-0 text-xs text-muted-foreground">
           <CameraFooter 
             ipAddress={camera.ipAddress} 
-            isRecording={isRecording} 
+            isRecording={isRecording}
+            isStreaming={isLiveStream}
           />
         </CardFooter>
       </Card>

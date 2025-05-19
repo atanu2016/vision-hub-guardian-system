@@ -2,13 +2,17 @@
 import React from "react";
 import { Camera } from "@/types/camera";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Info } from "lucide-react";
+import { Info, WifiOff } from "lucide-react";
 
 interface CameraDetailsProps {
   camera: Camera;
+  isStreaming?: boolean;
 }
 
-const CameraDetails: React.FC<CameraDetailsProps> = ({ camera }) => {
+const CameraDetails: React.FC<CameraDetailsProps> = ({ camera, isStreaming = false }) => {
+  // A camera is truly online only if both its status is "online" AND the stream is available
+  const isTrulyOnline = camera.status === "online" && isStreaming;
+  
   return (
     <Card>
       <CardHeader>
@@ -22,10 +26,12 @@ const CameraDetails: React.FC<CameraDetailsProps> = ({ camera }) => {
           <div>
             <p className="text-sm text-muted-foreground">Status</p>
             <p className="font-medium">
-              {camera.status === "online" ? (
+              {isTrulyOnline ? (
                 <span className="text-green-500">Online</span>
               ) : (
-                <span className="text-red-500">Offline</span>
+                <span className="text-red-500 flex items-center gap-1">
+                  <WifiOff size={12} /> {camera.status === "online" ? "Stream Unavailable" : "Offline"}
+                </span>
               )}
             </p>
           </div>

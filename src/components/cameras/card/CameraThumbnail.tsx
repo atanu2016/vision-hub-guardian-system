@@ -1,17 +1,19 @@
 
 import React from "react";
-import { CameraOff } from "lucide-react";
+import { CameraOff, WifiOff } from "lucide-react";
 
 interface CameraThumbnailProps {
   thumbnail?: string;
   isOnline: boolean;
   streamChecked: boolean;
+  isStreaming: boolean;
 }
 
 const CameraThumbnail: React.FC<CameraThumbnailProps> = ({ 
   thumbnail, 
   isOnline, 
-  streamChecked 
+  streamChecked,
+  isStreaming
 }) => {
   if (!streamChecked) {
     return (
@@ -27,6 +29,17 @@ const CameraThumbnail: React.FC<CameraThumbnailProps> = ({
         <div className="flex flex-col items-center">
           <CameraOff size={32} className="mb-2" />
           <span>Camera offline</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isStreaming) {
+    return (
+      <div className="camera-feed-offline w-full h-full bg-vision-dark-800 flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <WifiOff size={32} className="mb-2" />
+          <span>Stream unavailable</span>
         </div>
       </div>
     );
