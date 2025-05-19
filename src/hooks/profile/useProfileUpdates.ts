@@ -25,21 +25,25 @@ export function useProfileUpdates(userId?: string) {
         // Update existing profile - Use direct update with functions to avoid RLS recursion
         console.log("[PROFILE UPDATE] Profile exists, updating...");
         
-        // Try using the update_user_profile function instead of update_profile
+        // Instead of using RPC, use a direct REST call to the function
         try {
-          const { error: functionError } = await supabase.rpc('update_user_profile', {
-            user_id: userId,
-            full_name_param: fullName
-          });
-          
-          if (functionError) {
-            console.error("[PROFILE UPDATE] Function Error:", functionError);
-            throw functionError;
+          // Use a direct update to the profiles table instead of RPC
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              full_name: fullName,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+            
+          if (updateError) {
+            console.error("[PROFILE UPDATE] Update Error:", updateError);
+            throw updateError;
           }
         } catch (functionErr) {
-          console.error("[PROFILE UPDATE] RPC function error:", functionErr);
+          console.error("[PROFILE UPDATE] Direct update error:", functionErr);
           
-          // Fall back to direct update if RPC fails
+          // Fall back to direct update if first attempt fails
           const { error: directUpdateError } = await supabase
             .from('profiles')
             .update({
