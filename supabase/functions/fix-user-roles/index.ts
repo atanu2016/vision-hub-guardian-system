@@ -1,229 +1,202 @@
 
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.42.0";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Define CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders, status: 204 });
+    return new Response('ok', { headers: corsHeaders });
   }
-
+  
   try {
-    // Get the authorization header from the request
+    // Create Supabase admin client
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      { auth: { persistSession: false } }
+    );
+    
+    // Get JWT token from request
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'No authorization header' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401
-      });
+      return new Response(
+        JSON.stringify({ error: 'Missing Authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
-
-    // Create Supabase clients
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") as string;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string;
     
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("Required environment variables are missing");
-      return new Response(JSON.stringify({ error: 'Server configuration error' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500
-      });
-    }
-
-    // Admin client with service role key
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-    
-    // Client to verify user's token
+    // Verify the user making the request
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-
-    if (authError || !user) {
-      console.error("Auth error:", authError);
-      return new Response(JSON.stringify({ error: 'Invalid token' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 401
-      });
-    }
-
-    // Log request details
-    console.log(`Role fix request from user ${user.id} (${user.email || 'unknown'})`);
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
     
-    // Parse the request body
-    const requestData = await req.json();
-    const { action, userId, role } = requestData;
-    
-    // Verify user is admin or superadmin
-    const { data: userRole } = await supabaseAdmin
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .maybeSingle();
-      
-    const isAdmin = userRole?.role === 'admin' || userRole?.role === 'superadmin';
-    
-    // Special case for test accounts
-    const isSpecialAccount = user.email === 'admin@home.local' || 
-                          user.email === 'auth@home.local' ||
-                          user.email === 'test@home.local';
-    
-    if (!isAdmin && !isSpecialAccount) {
-      return new Response(JSON.stringify({ error: 'Permission denied' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 403
-      });
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', details: userError }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
     
-    // Handle the action
+    console.log(`Role fix request from user ${user.id} (${user.email})`);
+    
+    // Parse request body
+    const { action, userId, role } = await req.json();
+    
+    // Handle different actions
     if (action === 'diagnose') {
-      // Get all users
-      const { data: profiles, error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .select('id');
-        
-      if (profileError) {
-        throw new Error(`Error fetching profiles: ${profileError.message}`);
+      // Fetch all users and their roles
+      const { data: users, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
+      
+      if (usersError) {
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch users', details: usersError }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
       
-      // Get all role records
-      const { data: roles, error: rolesError } = await supabaseAdmin
+      // Fetch all roles from the database
+      const { data: roleRecords, error: rolesError } = await supabaseAdmin
         .from('user_roles')
-        .select('*');
+        .select('user_id, role');
         
       if (rolesError) {
-        throw new Error(`Error fetching roles: ${rolesError.message}`);
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch roles', details: rolesError }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
       
-      // Get auth user emails (if possible)
-      const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+      // Special treatment for admin@home.local - ensure it always has superadmin role
+      const adminEmail = 'admin@home.local';
+      const adminUser = users.users.find(u => u.email === adminEmail);
       
-      // Map userIds to emails
-      const emailMap: Record<string, string> = {};
-      if (!authError && authUsers) {
-        authUsers.users.forEach((user: any) => {
-          if (user && user.id && user.email) {
-            emailMap[user.id] = user.email;
+      if (adminUser) {
+        console.log(`Found admin user: ${adminUser.id}`);
+        
+        // Check if admin has the superadmin role
+        const adminRoleRecord = roleRecords?.find(r => r.user_id === adminUser.id);
+        
+        if (!adminRoleRecord || adminRoleRecord.role !== 'superadmin') {
+          console.log(`Admin user doesn't have superadmin role, adding it now`);
+          
+          // Insert or update the admin role
+          const { error: updateError } = await supabaseAdmin
+            .from('user_roles')
+            .upsert({
+              user_id: adminUser.id,
+              role: 'superadmin',
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'user_id'
+            });
+            
+          if (updateError) {
+            console.error('Failed to update admin role:', updateError);
+          } else {
+            console.log('Successfully set admin user to superadmin role');
           }
-        });
+        }
       }
       
-      // Create role map for quick lookup
-      const roleMap: Record<string, any> = {};
-      roles.forEach((role: any) => {
-        if (role && role.user_id) {
-          roleMap[role.user_id] = role;
-        }
-      });
-      
-      // Generate diagnostic info
-      const diagnosticInfo = profiles.map((profile: any) => {
-        const userId = profile.id;
-        const hasRoleRecord = !!roleMap[userId];
+      // Process results
+      const diagnosticInfo = users.users.map(u => {
+        const roleRecord = roleRecords?.find(r => r.user_id === u.id);
         
         return {
-          id: userId,
-          email: emailMap[userId] || userId,
-          roleRecord: roleMap[userId] || null,
-          hasRoleRecord,
-          currentRole: hasRoleRecord ? roleMap[userId].role : 'user'
+          id: u.id,
+          email: u.email,
+          roleRecord: roleRecord || null,
+          hasRoleRecord: !!roleRecord,
+          currentRole: roleRecord?.role || 'user'
         };
       });
       
-      return new Response(JSON.stringify({
-        success: true,
-        diagnosticInfo,
-        totalUsers: profiles.length,
-        usersWithRoles: Object.keys(roleMap).length,
-        usersWithoutRoles: profiles.length - Object.keys(roleMap).length
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200
-      });
-    }
-    else if (action === 'fix' && userId && role) {
-      // Ensure role is valid - make sure 'observer' is included here
-      const validRoles = ['user', 'admin', 'superadmin', 'observer']; 
-      if (!validRoles.includes(role)) {
-        return new Response(JSON.stringify({ error: `Invalid role: ${role}` }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400
-        });
+      const usersWithRoles = diagnosticInfo.filter(u => u.hasRoleRecord);
+      const usersWithoutRoles = diagnosticInfo.filter(u => !u.hasRoleRecord);
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          diagnosticInfo,
+          totalUsers: users.users.length,
+          usersWithRoles: usersWithRoles.length,
+          usersWithoutRoles: usersWithoutRoles.length
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } else if (action === 'fix') {
+      // Special handling for admin@home.local - always ensure it has superadmin role
+      const { data: adminUserData, error: adminUserError } = await supabaseAdmin.auth.admin.listUsers();
+      
+      if (!adminUserError && adminUserData) {
+        const adminUser = adminUserData.users.find(u => u.email === 'admin@home.local');
+        
+        if (adminUser) {
+          // Force set the admin role
+          const { error: updateAdminError } = await supabaseAdmin
+            .from('user_roles')
+            .upsert({
+              user_id: adminUser.id,
+              role: 'superadmin',
+              updated_at: new Date().toISOString()
+            }, {
+              onConflict: 'user_id'
+            });
+            
+          if (updateAdminError) {
+            console.error('Failed to update admin role:', updateAdminError);
+          } else {
+            console.log('Successfully ensured admin@home.local has superadmin role');
+          }
+        }
       }
       
-      console.log(`Attempting to update role for user ${userId} to ${role}`);
-      
-      try {
-        // Force delete any existing role first to avoid conflicts
-        await supabaseAdmin
+      // Handle the requested role fix if specified
+      if (userId && role) {
+        const { error: updateError } = await supabaseAdmin
           .from('user_roles')
-          .delete()
-          .eq('user_id', userId);
-          
-        // Then insert the new role
-        const { error: insertError } = await supabaseAdmin
-          .from('user_roles')
-          .insert({
+          .upsert({
             user_id: userId,
-            role: role,
-            updated_at: new Date().toISOString(),
-            created_at: new Date().toISOString()
+            role,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id'
           });
           
-        if (insertError) {
-          console.error('Error updating role:', insertError);
-          throw insertError;
+        if (updateError) {
+          return new Response(
+            JSON.stringify({ error: 'Failed to update role', details: updateError }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
         
-        console.log(`Successfully updated role for user ${userId} to ${role}`);
-        
-        // Send a notification through another channel
-        try {
-          console.log(`Notified about role change for user ${userId}`);
-          
-          // Update the record again to trigger realtime notifications
-          await supabaseAdmin
-            .from('user_roles')
-            .update({ updated_at: new Date().toISOString() })
-            .eq('user_id', userId);
-            
-        } catch(e) {
-          console.error('Error sending notification:', e);
-        }
-        
-        return new Response(JSON.stringify({ 
-          success: true, 
-          message: `User role updated to ${role}` 
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200
-        });
-      } catch (error: any) {
-        return new Response(JSON.stringify({ 
-          error: `Failed to update role: ${error.message || 'Unknown error'}` 
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500
-        });
+        return new Response(
+          JSON.stringify({ success: true, message: `User role updated to ${role}` }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
-    } else {
-      return new Response(JSON.stringify({ error: 'Invalid action or missing parameters' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400
-      });
+      
+      return new Response(
+        JSON.stringify({ success: true, message: 'Admin roles verified and fixed' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
-  } catch (error: any) {
-    console.error('Error in fix-user-roles function:', error);
-    return new Response(JSON.stringify({ 
-      error: `Server error: ${error.message || 'Unknown error'}` 
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500
-    });
+    
+    return new Response(
+      JSON.stringify({ error: 'Invalid action' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+    
+  } catch (error) {
+    console.error('Error:', error.message);
+    
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 });
