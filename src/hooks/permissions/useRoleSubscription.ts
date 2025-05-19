@@ -69,26 +69,43 @@ export function useRoleSubscription() {
     
     try {
       console.log('[ROLE SUBSCRIPTION] Fetching role directly using SQL function');
-      const { data: roleData, error: roleError } = await supabase.rpc('get_user_role', { _user_id: userId });
       
+      // First check email directly for admin accounts
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userEmail = sessionData?.session?.user?.email;
+      
+      if (userEmail === 'admin@home.local' || userEmail === 'superadmin@home.local') {
+        console.log('[ROLE SUBSCRIPTION] Special admin email detected, returning superadmin role');
+        return 'superadmin' as UserRole;
+      }
+      
+      // Then check profiles table for is_admin flag
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (!profileError && profileData?.is_admin) {
+        console.log('[ROLE SUBSCRIPTION] Admin flag found in profile, returning admin role');
+        return 'admin' as UserRole;
+      }
+      
+      // Try using the function
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
+        
       if (roleError) {
-        console.error('[ROLE SUBSCRIPTION] Error fetching role via function:', roleError);
-        
-        // Fallback to fetching by email for special accounts
-        const { data: sessionData } = await supabase.auth.getSession();
-        const userEmail = sessionData?.session?.user?.email;
-        
-        if (userEmail === 'admin@home.local' || userEmail === 'superadmin@home.local') {
-          console.log('[ROLE SUBSCRIPTION] Special admin email detected, returning superadmin role');
-          return 'superadmin' as UserRole;
-        }
-        
+        console.error('[ROLE SUBSCRIPTION] Error fetching role from table:', roleError);
         return authRole;
       }
       
       if (roleData) {
-        console.log('[ROLE SUBSCRIPTION] Role from SQL function:', roleData);
-        return roleData as UserRole;
+        console.log('[ROLE SUBSCRIPTION] Role from table:', roleData.role);
+        return roleData.role as UserRole;
       }
       
       return authRole;

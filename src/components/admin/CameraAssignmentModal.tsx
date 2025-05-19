@@ -16,7 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Camera as CameraType, CameraStatus } from '@/types/camera';
 import { assignCamerasToUser, getUserAssignedCameras } from '@/services/userManagement/cameraAssignmentService';
 import { toast } from 'sonner';
-import { usePermissions } from '@/hooks/permissions';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface CameraAssignmentModalProps {
   isOpen: boolean;
@@ -36,9 +36,9 @@ export default function CameraAssignmentModal({
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { hasPermission } = usePermissions();
+  const { hasPermission, role } = usePermissions();
   
-  const canAssignCameras = hasPermission('assign-cameras');
+  const canAssignCameras = role === 'superadmin' || role === 'admin' || hasPermission('assign-cameras');
 
   // Fetch all cameras and user assignments
   useEffect(() => {
@@ -52,6 +52,7 @@ export default function CameraAssignmentModal({
     setError(null);
     try {
       console.log("Loading camera assignments for user:", userId);
+      console.log("Current user role:", role);
       
       if (!canAssignCameras) {
         throw new Error("You don't have permission to assign cameras");

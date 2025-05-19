@@ -1,9 +1,7 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Camera, CameraStatus } from '@/types/camera';
 import { logUserActivity } from '../activityLoggingService';
-import { usePermissions } from '@/hooks/permissions';
 
 /**
  * Assigns cameras to a specific user
@@ -34,6 +32,7 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     // Get actor information for logging
     const { data: sessionData } = await supabase.auth.getSession();
     const actorEmail = sessionData?.session?.user?.email;
+    const actorId = sessionData?.session?.user?.id;
     
     // Determine cameras to add and remove
     const camerasToRemove = currentCameraIds.filter(id => !cameraIds.includes(id));
@@ -42,9 +41,48 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     console.log("Cameras to remove:", camerasToRemove);
     console.log("Cameras to add:", camerasToAdd);
     
-    // Check if current user has admin role using the role service
-    const { data: adminCheckData } = await supabase.rpc('check_admin_status');
-    const isAdmin = !!adminCheckData;
+    // Check admin status multiple ways for reliability
+    let isAdmin = false;
+    
+    try {
+      // Direct check for admin/superadmin roles
+      const { data: userRoleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', actorId)
+        .maybeSingle();
+        
+      if (!roleError && userRoleData) {
+        isAdmin = userRoleData.role === 'admin' || userRoleData.role === 'superadmin';
+        console.log("Admin check via user_roles:", isAdmin);
+      }
+    } catch (e) {
+      console.warn("Error checking user role:", e);
+    }
+    
+    // If not admin yet, check via profiles table
+    if (!isAdmin) {
+      try {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', actorId)
+          .single();
+          
+        if (!profileError && profileData) {
+          isAdmin = !!profileData.is_admin;
+          console.log("Admin check via profiles table:", isAdmin);
+        }
+      } catch (e) {
+        console.warn("Error checking profile is_admin:", e);
+      }
+    }
+    
+    // Final check using special emails
+    if (!isAdmin && actorEmail) {
+      isAdmin = actorEmail === 'admin@home.local' || actorEmail === 'superadmin@home.local';
+      console.log("Admin check via special email:", isAdmin, actorEmail);
+    }
     
     console.log("Current user has admin status:", isAdmin);
     
