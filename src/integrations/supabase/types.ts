@@ -575,6 +575,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      is_admin_bypass_rls: {
+        Args: { user_id?: string }
+        Returns: boolean
+      }
       notify_role_change: {
         Args: { user_id: string }
         Returns: undefined

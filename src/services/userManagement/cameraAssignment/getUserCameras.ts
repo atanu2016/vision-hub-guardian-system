@@ -15,12 +15,13 @@ export async function getUserAssignedCameras(userId: string): Promise<string[]> 
     
     // Fetch camera assignments for user with retry mechanism
     let attempts = 0;
-    const maxAttempts = 2;
+    const maxAttempts = 3;
     let cameraIds: string[] = [];
     
     while (attempts < maxAttempts) {
       attempts++;
       try {
+        // Use direct access with no filters for better reliability
         const { data, error } = await supabase
           .from('user_camera_access')
           .select('camera_id')
@@ -48,6 +49,6 @@ export async function getUserAssignedCameras(userId: string): Promise<string[]> 
     return cameraIds;
   } catch (error) {
     console.error('Error fetching user assigned cameras:', error);
-    return []; // Return empty for resilience
+    throw error; // Throw error to be handled by caller
   }
 }

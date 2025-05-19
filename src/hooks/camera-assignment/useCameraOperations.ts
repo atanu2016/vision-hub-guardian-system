@@ -29,11 +29,12 @@ export function useCameraOperations(userId: string, cameras: Camera[], setCamera
         .filter(camera => camera.assigned)
         .map(camera => camera.id);
       
-      console.log(`Saving assignments for ${camerasToAssign.length} cameras to user ${userId}`);
+      console.log(`Saving ${camerasToAssign.length} camera assignments for user ${userId}`);
       
       // Use the service function to assign cameras
       await assignCamerasToUser(userId, camerasToAssign);
       
+      toast.success("Camera assignments saved successfully");
       return true;
     } catch (error: any) {
       console.error("Error in camera assignment process:", error);

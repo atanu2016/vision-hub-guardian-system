@@ -29,30 +29,35 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
     
     // For regular users, get their assigned camera IDs
     console.log("User is not admin, fetching assigned cameras");
-    const assignedCameraIds = await getUserAssignedCameras(userId);
-    
-    if (assignedCameraIds.length === 0) {
-      console.log("No camera assignments found for user");
-      return [];
-    }
-    
-    console.log(`User has ${assignedCameraIds.length} assigned cameras, fetching details`);
-    
-    // Fetch the actual camera details for the assigned IDs
-    const { data, error } = await supabase
-      .from('cameras')
-      .select('*')
-      .in('id', assignedCameraIds);
+    try {
+      const assignedCameraIds = await getUserAssignedCameras(userId);
       
-    if (error) {
-      console.error("Error fetching assigned cameras:", error);
+      if (assignedCameraIds.length === 0) {
+        console.log("No camera assignments found for user");
+        return [];
+      }
+      
+      console.log(`User has ${assignedCameraIds.length} assigned cameras, fetching details`);
+      
+      // Fetch the actual camera details for the assigned IDs
+      const { data, error } = await supabase
+        .from('cameras')
+        .select('*')
+        .in('id', assignedCameraIds);
+        
+      if (error) {
+        console.error("Error fetching assigned cameras:", error);
+        return [];
+      }
+      
+      console.log(`Found ${data?.length || 0} accessible cameras for user`);
+      
+      // Transform database fields to match Camera type
+      return transformCameraData(data || []);
+    } catch (assignmentError) {
+      console.error("Error in assignment retrieval:", assignmentError);
       return [];
     }
-    
-    console.log(`Found ${data?.length || 0} accessible cameras for user`);
-    
-    // Transform database fields to match Camera type
-    return transformCameraData(data || []);
   } catch (error) {
     console.error('Error fetching accessible cameras:', error);
     return [];

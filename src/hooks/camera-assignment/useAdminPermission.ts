@@ -27,20 +27,21 @@ export function useAdminPermission() {
           return;
         }
         
-        // SIMPLE CHECK 2: Try is_admin_by_email function
+        // Use our new security definer function that bypasses RLS
         try {
-          const { data: isAdmin, error: funcError } = await supabase.rpc('is_admin_by_email');
+          const { data: isAdmin, error: funcError } = await supabase.rpc('is_admin_bypass_rls');
           
           if (!funcError && isAdmin) {
-            console.log("Admin status confirmed via email check function");
+            console.log("Admin status confirmed via bypass function");
             setCanAssignCameras(true);
             return;
           }
         } catch (funcErr) {
-          console.warn("Admin email check failed:", funcErr);
+          console.warn("Admin check function failed:", funcErr);
+          // Continue with fallback checks
         }
         
-        // SIMPLE CHECK 3: Check user_roles directly 
+        // SIMPLE CHECK 3: Check user_roles directly without using profiles
         try {
           const { data: roleData } = await supabase
             .from('user_roles')
