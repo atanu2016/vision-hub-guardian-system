@@ -10,7 +10,10 @@ export function useAdminPermission() {
     const checkAdminStatus = async () => {
       try {
         // Use our new security definer function that bypasses RLS
-        const { data: isAdmin, error: funcError } = await supabase.rpc('check_if_user_is_admin');
+        // Use type assertion to bypass the TypeScript error
+        const { data: isAdmin, error: funcError } = await supabase.rpc(
+          'check_if_user_is_admin' as any
+        );
         
         if (!funcError && isAdmin === true) {
           console.log("Admin status confirmed via bypass function");
