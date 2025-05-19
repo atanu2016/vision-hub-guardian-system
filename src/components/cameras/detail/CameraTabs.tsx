@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
-// Define a simple record type instead of a deep nested type
+// Define a simple record type that doesn't rely on nested types
 type SimpleRecording = {
   id: string;
   time: string;
@@ -28,7 +28,7 @@ const CameraTabs = ({ cameraId }: { cameraId?: string }) => {
   const loadRecordings = async (cameraId: string) => {
     setIsLoading(true);
     try {
-      // Query only the specific fields we need
+      // Query only specific fields to avoid deep type issues
       const { data, error } = await supabase
         .from('recordings')
         .select('id, time, duration, type, file_size, date')
@@ -38,17 +38,18 @@ const CameraTabs = ({ cameraId }: { cameraId?: string }) => {
 
       if (error) throw error;
       
-      // Use explicit type casting to avoid type instantiation issues
-      const typedData = data ? data.map(item => ({
-        id: item.id,
-        time: item.time,
-        duration: item.duration,
-        type: item.type,
-        file_size: item.file_size,
-        date: item.date
-      })) : [];
+      // Explicitly cast data to our simple type
+      const formattedData: SimpleRecording[] = data ? 
+        data.map(item => ({
+          id: item.id,
+          time: item.time,
+          duration: item.duration,
+          type: item.type,
+          file_size: item.file_size,
+          date: item.date
+        })) : [];
       
-      setRecordings(typedData);
+      setRecordings(formattedData);
     } catch (error) {
       console.error('Error loading camera recordings:', error);
     } finally {
