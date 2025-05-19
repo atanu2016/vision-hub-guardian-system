@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, RefreshCcw, AlertCircle } from 'lucide-react';
+import { Loader2, RefreshCcw, AlertCircle, Check } from 'lucide-react';
 import { useAssignCameras } from '@/hooks/camera-assignment';
 import CameraList from './CameraList';
 import { toast } from 'sonner';
@@ -323,7 +324,7 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
                   {savingComplete && (
                     <div className="text-center py-2">
                       <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 text-green-500 mb-4">
-                        <CheckIcon className="h-6 w-6" />
+                        <Check className="h-6 w-6" />
                       </div>
                       <h3 className="text-lg font-medium">Cameras assigned successfully!</h3>
                     </div>
