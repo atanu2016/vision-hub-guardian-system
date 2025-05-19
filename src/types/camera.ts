@@ -1,6 +1,6 @@
 
 // Camera types
-export type CameraConnectionType = "ip" | "rtsp" | "rtmp" | "onvif";
+export type CameraConnectionType = "ip" | "rtsp" | "rtmp" | "onvif" | "hls";
 export type CameraStatus = "online" | "offline" | "error";
 export type StorageProviderType = "local" | "nas" | "s3" | "dropbox" | "google_drive" | "onedrive" | "azure_blob" | "backblaze";
 export type QualityType = 'low' | 'medium' | 'high' | 'ultra';
@@ -23,6 +23,7 @@ export interface Camera {
   group?: string;
   connectionType?: CameraConnectionType;
   rtmpUrl?: string;
+  hlsUrl?: string; // Added HLS URL field
   onvifPath?: string;
   motionDetection?: boolean;
   

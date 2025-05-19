@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,7 @@ const AddCameraModal = ({ isOpen, onClose, onAdd, existingGroups }: AddCameraMod
   const [manufacturer, setManufacturer] = useState("");
   const [connectionType, setConnectionType] = useState<CameraConnectionType>("ip");
   const [rtmpUrl, setRtmpUrl] = useState("");
+  const [hlsUrl, setHlsUrl] = useState("");
   const [onvifPath, setOnvifPath] = useState("/onvif/device_service");
   const [isVerifying, setIsVerifying] = useState(false);
   const [connectionTab, setConnectionTab] = useState("ip");
@@ -80,6 +82,17 @@ const AddCameraModal = ({ isOpen, onClose, onAdd, existingGroups }: AddCameraMod
         toast.error("RTMP URL should start with rtmp://");
         return;
       }
+    } else if (connectionType === "hls") {
+      if (!hlsUrl) {
+        toast.error("HLS URL is required");
+        return;
+      }
+      
+      // Basic HLS URL validation
+      if (!hlsUrl.includes(".m3u8")) {
+        toast.error("HLS URL should include .m3u8 format");
+        return;
+      }
     } else if (connectionType === "onvif") {
       if (!ipAddress || !port) {
         toast.error("IP address and port are required for ONVIF");
@@ -111,8 +124,8 @@ const AddCameraModal = ({ isOpen, onClose, onAdd, existingGroups }: AddCameraMod
       const newCamera: Omit<Camera, "id"> = {
         name,
         location,
-        ipAddress: connectionType === "rtmp" ? "" : ipAddress,
-        port: connectionType === "rtmp" ? 0 : parseInt(port),
+        ipAddress: ['rtmp', 'hls'].includes(connectionType) ? "" : ipAddress,
+        port: ['rtmp', 'hls'].includes(connectionType) ? 0 : parseInt(port),
         username,
         password,
         status: "online", // Assuming successful verification sets it to online
@@ -123,6 +136,7 @@ const AddCameraModal = ({ isOpen, onClose, onAdd, existingGroups }: AddCameraMod
         group: finalGroup,
         connectionType,
         rtmpUrl: connectionType === "rtmp" ? rtmpUrl : undefined,
+        hlsUrl: connectionType === "hls" ? hlsUrl : undefined,
         onvifPath: connectionType === "onvif" ? onvifPath : undefined,
       };
 
@@ -164,6 +178,7 @@ const AddCameraModal = ({ isOpen, onClose, onAdd, existingGroups }: AddCameraMod
     setManufacturer("");
     setConnectionType("ip");
     setRtmpUrl("");
+    setHlsUrl("");
     setOnvifPath("/onvif/device_service");
     setConnectionTab("ip");
   };
@@ -210,10 +225,11 @@ const AddCameraModal = ({ isOpen, onClose, onAdd, existingGroups }: AddCameraMod
                 setConnectionType(tab as CameraConnectionType);
               }}
             >
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="ip">IP Camera</TabsTrigger>
                 <TabsTrigger value="onvif">ONVIF</TabsTrigger>
                 <TabsTrigger value="rtmp">RTMP</TabsTrigger>
+                <TabsTrigger value="hls">HLS</TabsTrigger>
               </TabsList>
               
               <TabsContent value="ip" className="space-y-4 pt-2">
@@ -333,6 +349,22 @@ const AddCameraModal = ({ isOpen, onClose, onAdd, existingGroups }: AddCameraMod
                     placeholder="rtmp://server:1935/live/stream"
                     required
                   />
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="hls" className="space-y-4 pt-2">
+                <div className="space-y-2">
+                  <Label htmlFor="hlsUrl">HLS URL*</Label>
+                  <Input
+                    id="hlsUrl"
+                    value={hlsUrl}
+                    onChange={(e) => setHlsUrl(e.target.value)}
+                    placeholder="https://server/stream.m3u8"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Example: https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8
+                  </p>
                 </div>
               </TabsContent>
             </Tabs>

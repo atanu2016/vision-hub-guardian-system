@@ -10,12 +10,27 @@ import LiveViewSkeleton from "@/components/cameras/live/LiveViewSkeleton";
 import EmptyLiveView from "@/components/cameras/live/EmptyLiveView";
 import LiveViewGrid from "@/components/cameras/live/LiveViewGrid";
 
+// Sample HLS camera for testing
+const sampleHLSCamera: Camera = {
+  id: "sample-hls-1",
+  name: "Sample HLS Stream",
+  status: "online",
+  location: "Demo Location",
+  ipAddress: "",
+  lastSeen: new Date().toISOString(),
+  recording: false,
+  connectionType: "hls",
+  hlsUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", // Public HLS test stream
+  group: "Demo"
+};
+
 const LiveView = () => {
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [layout, setLayout] = useState<"grid-2" | "grid-4" | "grid-9">("grid-4");
   const { user, role } = useAuth();
+  const [includeSampleCamera, setIncludeSampleCamera] = useState(true);
 
   const fetchCameras = useCallback(async () => {
     try {
@@ -26,7 +41,8 @@ const LiveView = () => {
       // If user is not authenticated yet, return
       if (!user) {
         console.log("No user authenticated, not fetching cameras");
-        setCameras([]);
+        // Still show the sample camera for demo purposes
+        setCameras(includeSampleCamera ? [sampleHLSCamera] : []);
         setLoading(false);
         return;
       }
@@ -37,25 +53,35 @@ const LiveView = () => {
       const camerasData = await getAccessibleCameras(user.id, role || 'user');
       
       console.log(`Fetched ${camerasData.length} cameras for live view`);
-      setCameras(camerasData);
+      
+      // Add the sample HLS camera for testing
+      if (includeSampleCamera) {
+        setCameras([...camerasData, sampleHLSCamera]);
+      } else {
+        setCameras(camerasData);
+      }
     } catch (error: any) {
       console.error('Error fetching cameras for live view:', error);
       setError(error.message || "Failed to fetch cameras");
       toast.error("Failed to fetch cameras");
+      
+      // Still show the sample camera if there's an error
+      if (includeSampleCamera) {
+        setCameras([sampleHLSCamera]);
+      }
     } finally {
       setLoading(false);
     }
-  }, [user, role]);
+  }, [user, role, includeSampleCamera]);
 
   useEffect(() => {
-    if (user) {
-      fetchCameras();
-    } else {
-      // Clear cameras if no user is authenticated
-      setCameras([]);
-      setLoading(false);
-    }
-  }, [user, fetchCameras]);
+    fetchCameras();
+  }, [fetchCameras]);
+
+  // Helper function to toggle the sample camera
+  const toggleSampleCamera = () => {
+    setIncludeSampleCamera(prev => !prev);
+  };
 
   return (
     <AppLayout fullWidth>
@@ -63,8 +89,17 @@ const LiveView = () => {
         <LiveViewHeader 
           layout={layout} 
           setLayout={setLayout} 
-          onRefresh={fetchCameras} 
+          onRefresh={fetchCameras}
         />
+
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={toggleSampleCamera}
+            className="px-4 py-2 text-sm bg-secondary hover:bg-secondary/90 rounded-md"
+          >
+            {includeSampleCamera ? "Hide Sample Stream" : "Show Sample Stream"}
+          </button>
+        </div>
 
         {loading ? (
           <LiveViewSkeleton />

@@ -31,6 +31,7 @@ export const saveCameraToDB = async (camera: Camera): Promise<Camera> => {
       group: camera.group,
       connectiontype: camera.connectionType,
       rtmpurl: camera.rtmpUrl,
+      hlsurl: camera.hlsUrl, // Added HLS URL field
       onvifpath: camera.onvifPath,
       motiondetection: camera.motionDetection
     };
@@ -76,8 +77,9 @@ export const saveCameraToDB = async (camera: Camera): Promise<Camera> => {
       recording: data.recording || false,
       thumbnail: data.thumbnail || undefined,
       group: data.group || undefined,
-      connectionType: (data.connectiontype as "ip" | "rtsp" | "rtmp" | "onvif") || "ip",
+      connectionType: (data.connectiontype as "ip" | "rtsp" | "rtmp" | "onvif" | "hls") || "ip",
       rtmpUrl: data.rtmpurl || undefined,
+      hlsUrl: data.hlsurl || undefined,
       onvifPath: data.onvifpath || undefined,
       motionDetection: data.motiondetection || false
     };

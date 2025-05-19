@@ -35,10 +35,12 @@ export function useStreamSetup({
         
         try {
           const videoElement = videoRef.current;
-          const streamUrl = camera.rtmpUrl || '';
+          const streamUrl = camera.connectionType === 'hls' 
+            ? camera.hlsUrl 
+            : camera.rtmpUrl || '';
           
           // If the URL is an HLS stream and browser supports HLS.js
-          if (streamUrl && (streamUrl.includes('.m3u8') || streamUrl.includes('.flv')) && Hls.isSupported()) {
+          if (streamUrl && (streamUrl.includes('.m3u8') || camera.connectionType === 'hls') && Hls.isSupported()) {
             // Destroy any existing HLS instance
             if (hlsRef.current) {
               hlsRef.current.destroy();

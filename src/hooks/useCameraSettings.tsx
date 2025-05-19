@@ -28,14 +28,22 @@ export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera
       return;
     }
 
-    // IP validation
-    if (!cameraData.ipAddress?.trim() || !isValidIP(cameraData.ipAddress)) {
-      setIsValid(false);
-      return;
+    // IP validation - only required for certain connection types
+    if (cameraData.connectionType !== 'rtmp' && cameraData.connectionType !== 'hls') {
+      if (!cameraData.ipAddress?.trim() || !isValidIP(cameraData.ipAddress)) {
+        setIsValid(false);
+        return;
+      }
     }
 
     // RTMP URL validation for RTMP type
     if (cameraData.connectionType === 'rtmp' && (!cameraData.rtmpUrl?.trim() || !cameraData.rtmpUrl.startsWith('rtmp://'))) {
+      setIsValid(false);
+      return;
+    }
+
+    // HLS URL validation for HLS type
+    if (cameraData.connectionType === 'hls' && (!cameraData.hlsUrl?.trim() || !cameraData.hlsUrl.includes('.m3u8'))) {
       setIsValid(false);
       return;
     }
