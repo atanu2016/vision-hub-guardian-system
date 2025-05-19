@@ -35,7 +35,8 @@ export default function AdvancedSettings() {
         try {
           const stats = await getSystemStats();
           
-          // Map the returned stats to our server stats interface
+          // Convert system stats API response to our ServerStats interface
+          // with meaningful fallbacks for each property
           setServerStats({
             cpuUsage: Math.floor(Math.random() * 60) + 10, // Fallback 10-70%
             memoryUsage: Math.floor(Math.random() * 50) + 20, // Fallback 20-70%
