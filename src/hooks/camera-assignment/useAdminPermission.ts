@@ -9,7 +9,7 @@ export function useAdminPermission() {
   useEffect(() => {
     const checkAdminStatus = async () => {
       try {
-        // Use our new security definer function that bypasses RLS
+        // Use our security definer function that bypasses RLS
         // Use type assertion to bypass the TypeScript error
         const { data: isAdmin, error: funcError } = await supabase.rpc(
           'check_if_user_is_admin' as any
@@ -23,7 +23,7 @@ export function useAdminPermission() {
         
         // If function fails, fall back to email check
         if (funcError) {
-          console.warn("Admin check function failed:", funcError);
+          console.log("Admin check function failed:", funcError);
           
           // Get current user email
           const { data: { session } } = await supabase.auth.getSession();
