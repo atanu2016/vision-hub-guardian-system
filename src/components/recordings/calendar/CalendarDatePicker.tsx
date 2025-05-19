@@ -6,6 +6,7 @@ import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, subYears, addYears } from "date-fns";
 import { useState } from "react";
+import { DayProps } from "react-day-picker";
 
 interface CalendarDatePickerProps {
   date: Date | undefined;
@@ -63,10 +64,11 @@ export default function CalendarDatePicker({ date, onSelect, hasRecordings }: Ca
             hasRecording: (day) => hasRecordings?.(day) || false
           }}
           components={{
-            Day: ({ day, ...props }: React.ComponentProps<typeof Calendar.Day> & { day: Date }) => (
+            // Fix: Use DayProps from react-day-picker for proper typing
+            Day: ({ date: dayDate, ...props }: DayProps) => (
               <div
                 {...props}
-                className={cn(props.className || "", getDayClassNames(day))}
+                className={cn(props.className || "", dayDate ? getDayClassNames(dayDate) : "")}
               />
             )
           }}

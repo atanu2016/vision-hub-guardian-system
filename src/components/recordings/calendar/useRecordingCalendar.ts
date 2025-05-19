@@ -94,29 +94,32 @@ export const useRecordingCalendar = (cameraId?: string) => {
     }
   };
 
-  // Create a memoized lookup table for recordings dates to avoid deep instantiation
-  const recordingDatesLookup = useMemo(() => {
-    const lookup: Record<string, boolean> = {};
+  // Create a simple string representation of dates for efficient lookup
+  const recordingDatesMap = useMemo(() => {
+    const dateMap = new Map<string, boolean>();
     
-    if (recordingDates && recordingDates.length > 0) {
-      recordingDates.forEach(recordDate => {
-        const dateKey = `${recordDate.getFullYear()}-${recordDate.getMonth()}-${recordDate.getDate()}`;
-        lookup[dateKey] = true;
-      });
-    }
+    recordingDates.forEach(date => {
+      if (date) {
+        const dateKey = formatDateKey(date);
+        dateMap.set(dateKey, true);
+      }
+    });
     
-    return lookup;
+    return dateMap;
   }, [recordingDates]);
   
-  // Simplified and memoized isRecordingDate implementation
+  // Helper function to generate consistent date keys
+  const formatDateKey = (date: Date): string => {
+    return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+  };
+  
+  // New implementation of isRecordingDate using the Map
   const isRecordingDate = useCallback((dateToCheck: Date): boolean => {
-    if (!dateToCheck || !recordingDatesLookup) {
-      return false;
-    }
+    if (!dateToCheck) return false;
     
-    const dateKey = `${dateToCheck.getFullYear()}-${dateToCheck.getMonth()}-${dateToCheck.getDate()}`;
-    return !!recordingDatesLookup[dateKey];
-  }, [recordingDatesLookup]);
+    const dateKey = formatDateKey(dateToCheck);
+    return recordingDatesMap.has(dateKey);
+  }, [recordingDatesMap]);
 
   return {
     date,
