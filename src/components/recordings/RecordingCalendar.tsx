@@ -1,151 +1,21 @@
 
-import { useState, useEffect } from "react";
-import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, CalendarIcon, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
-import type { DayClickEventHandler } from "react-day-picker";
-
-// Define the props
-interface RecordingCalendarProps {
-  cameraId?: string;
-}
-
-interface RecordingDayData {
-  id: string;
-  time: string;
-  duration: string;
-  motion: boolean;
-  size: string;
-}
+import { RecordingCalendarProps } from "./calendar/types";
+import { useRecordingCalendar } from "./calendar/useRecordingCalendar";
+import CalendarDatePicker from "./calendar/CalendarDatePicker";
+import TimeframeSelector from "./calendar/TimeframeSelector";
+import RecordingsByDate from "./calendar/RecordingsByDate";
 
 export default function RecordingCalendar({ cameraId }: RecordingCalendarProps) {
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  const [recordingDates, setRecordingDates] = useState<Date[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedDateRecordings, setSelectedDateRecordings] = useState<RecordingDayData[]>([]);
-  const [selectedTimeframe, setSelectedTimeframe] = useState<string | null>(null);
-  
-  // Fetch recording dates on initial load
-  useEffect(() => {
-    fetchRecordingDates();
-  }, []);
-  
-  const fetchRecordingDates = async () => {
-    setIsLoading(true);
-    try {
-      let query = supabase
-        .from('recordings')
-        .select('date_time');
-        
-      if (cameraId) {
-        query = query.eq('camera_id', cameraId);
-      }
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        throw error;
-      }
-      
-      if (data) {
-        const dates = data.map(item => new Date(item.date_time));
-        setRecordingDates(dates);
-      }
-    } catch (error) {
-      console.error('Error loading recording dates:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDateSelect = async (selectedDate: Date | undefined) => {
-    setDate(selectedDate);
-    if (!selectedDate) return;
-    
-    setIsLoading(true);
-    try {
-      // Format date for database comparison
-      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
-      
-      // Query recordings for this date
-      let query = supabase
-        .from('recordings')
-        .select('*')
-        .like('date', `${formattedDate}%`);
-        
-      if (cameraId) {
-        query = query.eq('camera_id', cameraId);
-      }
-      
-      const { data, error } = await query;
-      
-      if (error) {
-        throw error;
-      }
-      
-      if (data && data.length > 0) {
-        // Transform database records to UI format
-        const recordingsData = data.map(rec => ({
-          id: rec.id,
-          time: rec.time,
-          duration: `${rec.duration} minutes`,
-          motion: rec.type === 'Motion',
-          size: rec.file_size
-        }));
-        
-        setSelectedDateRecordings(recordingsData);
-      } else {
-        setSelectedDateRecordings([]);
-      }
-      
-      // In a real implementation, log this action
-      await supabase.from('system_logs').insert({
-        level: 'info',
-        source: 'recordings',
-        message: `Accessed recordings for date: ${format(selectedDate, 'yyyy-MM-dd')}`,
-        details: `Accessed recordings ${cameraId ? `for camera ${cameraId} ` : ''}on date ${format(selectedDate, 'yyyy-MM-dd')}`
-      });
-    } catch (error) {
-      console.error('Error loading recordings:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  function isRecordingDate(date: Date) {
-    return recordingDates.some(d => 
-      d.getDate() === date.getDate() && 
-      d.getMonth() === date.getMonth() && 
-      d.getFullYear() === date.getFullYear()
-    );
-  }
-
-  // Use custom renderDay that doesn't cause infinite type recursion
-  const renderDay = (date: Date, selectedDates: Date[] | undefined, dayProps: React.HTMLAttributes<HTMLDivElement>) => {
-    const isRecording = isRecordingDate(date);
-    
-    return (
-      <div {...dayProps} className="relative">
-        <div 
-          className={cn(
-            "flex h-9 w-9 items-center justify-center rounded-md",
-            isRecording && "after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:h-1 after:w-1 after:rounded-full after:bg-primary"
-          )}
-        >
-          {date.getDate()}
-          {isRecording && (
-            <Check className="absolute right-1 bottom-1 h-3 w-3 text-primary" />
-          )}
-        </div>
-      </div>
-    );
-  };
+  const {
+    date,
+    isLoading,
+    selectedDateRecordings,
+    selectedTimeframe,
+    setSelectedTimeframe,
+    handleDateSelect
+  } = useRecordingCalendar(cameraId);
 
   return (
     <Card className="border rounded-md">
@@ -155,114 +25,23 @@ export default function RecordingCalendar({ cameraId }: RecordingCalendarProps) 
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={"outline"}
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, "PPP") : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={handleDateSelect}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+          <CalendarDatePicker 
+            date={date} 
+            onSelect={handleDateSelect} 
+          />
           
           <div>
-            <div className="mb-2 flex items-center">
-              <h4 className="text-sm font-semibold">Timeframe</h4>
-              <div className="ml-2 flex gap-1">
-                <Badge 
-                  variant={selectedTimeframe === 'morning' ? "default" : "outline"} 
-                  className="cursor-pointer"
-                  onClick={() => setSelectedTimeframe('morning')}
-                >
-                  Morning
-                </Badge>
-                <Badge 
-                  variant={selectedTimeframe === 'afternoon' ? "default" : "outline"} 
-                  className="cursor-pointer"
-                  onClick={() => setSelectedTimeframe('afternoon')}
-                >
-                  Afternoon
-                </Badge>
-                <Badge 
-                  variant={selectedTimeframe === 'evening' ? "default" : "outline"} 
-                  className="cursor-pointer"
-                  onClick={() => setSelectedTimeframe('evening')}
-                >
-                  Evening
-                </Badge>
-              </div>
-            </div>
+            <TimeframeSelector 
+              selectedTimeframe={selectedTimeframe}
+              setSelectedTimeframe={setSelectedTimeframe}
+            />
             
-            {isLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : selectedDateRecordings.length > 0 ? (
-              <div className="space-y-2">
-                {selectedDateRecordings
-                  .filter(recording => {
-                    if (!selectedTimeframe) return true;
-                    const hour = parseInt(recording.time.split(':')[0]);
-                    switch (selectedTimeframe) {
-                      case 'morning': return hour >= 5 && hour < 12;
-                      case 'afternoon': return hour >= 12 && hour < 18;
-                      case 'evening': return hour >= 18 || hour < 5;
-                      default: return true;
-                    }
-                  })
-                  .map(recording => (
-                    <div 
-                      key={recording.id} 
-                      className="flex items-center justify-between p-2 hover:bg-accent rounded-md cursor-pointer"
-                    >
-                      <div>
-                        <p className="text-sm font-medium">{recording.time}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Duration: {recording.duration} · Size: {recording.size}
-                        </p>
-                      </div>
-                      <div className="flex items-center">
-                        {recording.motion && (
-                          <Badge variant="outline" className="mr-2">Motion</Badge>
-                        )}
-                        <Button variant="ghost" size="icon">
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                
-                {selectedTimeframe && 
-                  selectedDateRecordings.filter(recording => {
-                    const hour = parseInt(recording.time.split(':')[0]);
-                    switch (selectedTimeframe) {
-                      case 'morning': return hour >= 5 && hour < 12;
-                      case 'afternoon': return hour >= 12 && hour < 18;
-                      case 'evening': return hour >= 18 || hour < 5;
-                      default: return true;
-                    }
-                  }).length === 0 && (
-                    <div className="text-center py-4 text-muted-foreground">
-                      No recordings found for this timeframe
-                    </div>
-                  )}
-              </div>
-            ) : date ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No recordings available for this date
-              </div>
+            {date ? (
+              <RecordingsByDate 
+                isLoading={isLoading}
+                selectedDateRecordings={selectedDateRecordings}
+                selectedTimeframe={selectedTimeframe}
+              />
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 Select a date to view recordings
