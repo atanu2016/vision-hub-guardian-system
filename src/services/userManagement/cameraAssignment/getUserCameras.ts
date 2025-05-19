@@ -9,6 +9,13 @@ export async function getUserAssignedCameras(userId: string): Promise<string[]> 
   try {
     console.log("Fetching assigned cameras for user:", userId);
     
+    // Check for valid session before making the request
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      console.warn("No active session found when fetching camera assignments");
+      return [];
+    }
+    
     if (!userId) {
       console.warn("No user ID provided to getUserAssignedCameras");
       return [];
@@ -31,7 +38,7 @@ export async function getUserAssignedCameras(userId: string): Promise<string[]> 
     return cameraIds;
   } catch (error) {
     console.error('Error fetching user assigned cameras:', error);
-    toast.error('Could not load assigned cameras');
+    // Don't show toast here - let the calling component handle the error display
     // Return empty array instead of throwing to prevent UI crashes
     return [];
   }

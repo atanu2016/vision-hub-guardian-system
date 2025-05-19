@@ -9,6 +9,14 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
   try {
     console.log(`Assigning cameras to user ${userId}. Camera IDs:`, cameraIds);
     
+    // Check for valid session before making any requests
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      console.error("No active session when attempting to assign cameras");
+      toast.error("Authentication required. Please log in again.");
+      return false;
+    }
+    
     if (!userId) {
       throw new Error("User ID is required");
     }

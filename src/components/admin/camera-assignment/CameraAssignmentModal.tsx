@@ -6,6 +6,8 @@ import { Loader2, RefreshCcw } from 'lucide-react';
 import { useAssignCameras } from '@/hooks/camera-assignment';
 import CameraList from './CameraList';
 import { toast } from 'sonner';
+import { AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface CameraAssignmentModalProps {
   isOpen: boolean;
@@ -44,6 +46,7 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
     
     const success = await handleSave();
     if (success) {
+      toast.success("Camera assignments saved successfully");
       onClose();
     }
   };
@@ -70,7 +73,7 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
               variant="outline" 
               size="sm" 
               onClick={handleRefresh} 
-              disabled={loading || isRefreshing}
+              disabled={loading || isRefreshing || saving}
               className="ml-auto"
             >
               {isRefreshing ? (
@@ -85,9 +88,20 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
         
         <div className="py-4">
           {error && (
-            <div className="bg-destructive/10 p-3 rounded-md mb-4 text-destructive text-sm">
-              {error}
-            </div>
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {error}
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto ml-2 text-destructive underline" 
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                >
+                  Try refreshing
+                </Button>
+              </AlertDescription>
+            </Alert>
           )}
           
           <CameraList 

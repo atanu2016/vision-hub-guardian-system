@@ -22,6 +22,15 @@ export function useFetchCameras(userId: string, isOpen: boolean) {
       setLoading(true);
       setError(null);
       
+      // Check for valid session before making any requests
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        setError("Authentication required. Please log in again.");
+        toast.error("Please log in to access camera assignments");
+        setLoading(false);
+        return;
+      }
+      
       // Step 1: Get all cameras - direct approach
       const { data: allCameras, error: camerasError } = await supabase
         .from('cameras')
@@ -46,9 +55,11 @@ export function useFetchCameras(userId: string, isOpen: boolean) {
       let assignedCameraIds: string[] = [];
       try {
         assignedCameraIds = await getUserAssignedCameras(userId);
-      } catch (assignmentError) {
+      } catch (assignmentError: any) {
         console.error("Error fetching camera assignments:", assignmentError);
-        toast.error("Could not load current assignments");
+        setError("Could not load current assignments");
+        toast.error("Could not load current assignments. Please try refreshing.");
+        // Continue with empty assignments instead of returning
       }
       
       // Step 3: Mark cameras as assigned or not
