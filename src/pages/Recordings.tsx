@@ -29,8 +29,10 @@ const Recordings = () => {
   } = useRecordings();
 
   const handleDeleteRecording = async (recordingId: string) => {
-    await deleteRecording(recordingId);
-    toast.success("Recording deleted successfully");
+    const success = await deleteRecording(recordingId);
+    if (success) {
+      toast.success("Recording deleted successfully");
+    }
   };
 
   return (
@@ -72,7 +74,7 @@ const Recordings = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6">
           {/* Left sidebar */}
           <RecordingsSidebar 
-            cameras={cameras}
+            cameras={cameras as any[]} // Type cast to fix the type error
             selectedCamera={selectedCamera}
             setSelectedCamera={setSelectedCamera}
             selectedType={selectedType}

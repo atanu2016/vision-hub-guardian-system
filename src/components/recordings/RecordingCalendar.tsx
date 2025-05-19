@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { DayProps } from "react-day-picker";
+import type { DayClickEventHandler } from "react-day-picker";
 
 // Define the props
 interface RecordingCalendarProps {
@@ -125,27 +126,26 @@ export default function RecordingCalendar({ cameraId }: RecordingCalendarProps) 
     );
   }
 
-  // Fixed: Updated the renderDay function to accept DayProps instead of Date
-  function renderDay(props: DayProps) {
-    const { date: day, ...dayProps } = props;
-    const isRecording = isRecordingDate(day);
+  // Use custom renderDay that doesn't cause infinite type recursion
+  const renderDay = (date: Date, selectedDates: Date[] | undefined, dayProps: React.HTMLAttributes<HTMLDivElement>) => {
+    const isRecording = isRecordingDate(date);
     
     return (
-      <div className="relative">
+      <div {...dayProps} className="relative">
         <div 
           className={cn(
             "flex h-9 w-9 items-center justify-center rounded-md",
             isRecording && "after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:h-1 after:w-1 after:rounded-full after:bg-primary"
           )}
         >
-          {day.getDate()}
+          {date.getDate()}
           {isRecording && (
             <Check className="absolute right-1 bottom-1 h-3 w-3 text-primary" />
           )}
         </div>
       </div>
     );
-  }
+  };
 
   return (
     <Card className="border rounded-md">
@@ -173,9 +173,6 @@ export default function RecordingCalendar({ cameraId }: RecordingCalendarProps) 
                 selected={date}
                 onSelect={handleDateSelect}
                 initialFocus
-                components={{
-                  Day: renderDay  // Using Day with proper DayProps
-                }}
               />
             </PopoverContent>
           </Popover>
@@ -233,7 +230,7 @@ export default function RecordingCalendar({ cameraId }: RecordingCalendarProps) 
                       <div>
                         <p className="text-sm font-medium">{recording.time}</p>
                         <p className="text-xs text-muted-foreground">
-                          Duration: {recording.duration} �� Size: {recording.size}
+                          Duration: {recording.duration} · Size: {recording.size}
                         </p>
                       </div>
                       <div className="flex items-center">

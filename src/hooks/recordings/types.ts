@@ -4,17 +4,22 @@ export interface Recording {
   cameraName: string;
   date: string;
   time: string;
-  duration: number; // Changed to number to match expectations
+  duration: number;
   fileSize: string;
   type: "Scheduled" | "Motion" | "Manual";
   important: boolean;
   thumbnailUrl?: string;
-  dateTime: string; // Added to match storage type
+  dateTime: string;
 }
 
 export interface Camera {
   id: string;
   name: string;
+  status?: string;
+  location?: string;
+  ipAddress?: string;
+  lastSeen?: string;
+  recording?: boolean;
 }
 
 export interface StorageInfo {
@@ -33,7 +38,8 @@ export interface UseRecordingsReturn {
   cameras: Camera[];
   storageUsed: StorageInfo;
   deleteRecording: (id: string) => Promise<boolean>;
-  filterRecordingsByDate: (date: Date | null) => Recording[];
+  filterRecordingsByDate: (date: Date | null) => void;
   dateFilter: Date | null;
   setDateFilter: (date: Date | null) => void;
+  fetchActualStorageUsage: () => Promise<void>;
 }

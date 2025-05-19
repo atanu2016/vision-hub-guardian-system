@@ -1,83 +1,36 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { Camera } from "@/hooks/recordings/types"; // Using type import
-import { useRecordingsStorage } from "@/hooks/storage";
+import { toast } from "sonner";
 import { formatDuration } from "@/hooks/recordings/utils";
-import type { Recording, StorageInfo } from "@/hooks/recordings/types"; // Using type import
+import { useCamerasFetch } from "@/hooks/recordings/useCamerasFetch";
+import { useRecordingsFilter } from "@/hooks/recordings/useRecordingsFilter";
+import { useRecordingsStorage } from "@/hooks/storage";
+import type { Recording, StorageInfo, UseRecordingsReturn } from "@/hooks/recordings/types";
 
 export { formatDuration };
-export type { Camera, Recording, StorageInfo }; // Using type exports for re-exports
+export type { Recording, StorageInfo };
 
-export interface RecordingsHookResult {
-  recordings: Recording[];
-  filteredRecordings: Recording[];
-  selectedCamera: string;
-  setSelectedCamera: (camera: string) => void;
-  selectedType: string;
-  setSelectedType: (type: string) => void;
-  loading: boolean;
-  cameras: Camera[];
-  storageUsed: StorageInfo;
-  deleteRecording: (recordingId: string) => Promise<void>;
-  filterRecordingsByDate: (date: Date | null) => void;
-  dateFilter: Date | null;
-  setDateFilter: (date: Date | null) => void;
-  fetchActualStorageUsage: () => Promise<void>;
-}
-
-export const useRecordings = (): RecordingsHookResult => {
+export const useRecordings = (): UseRecordingsReturn => {
   const [recordings, setRecordings] = useState<Recording[]>([]);
-  const [filteredRecordings, setFilteredRecordings] = useState<Recording[]>([]);
-  const [selectedCamera, setSelectedCamera] = useState<string>("all");
-  const [selectedType, setSelectedType] = useState<string>("all");
   const [loading, setLoading] = useState<boolean>(true);
-  const [cameras, setCameras] = useState<Camera[]>([]);
-  const [dateFilter, setDateFilter] = useState<Date | null>(null);
+  
+  // Use the new hooks
+  const { cameras, loading: camerasLoading } = useCamerasFetch();
+  const { 
+    filteredRecordings, 
+    selectedCamera, 
+    setSelectedCamera, 
+    selectedType, 
+    setSelectedType,
+    dateFilter,
+    setDateFilter,
+    filterRecordingsByDate
+  } = useRecordingsFilter(recordings);
 
   useEffect(() => {
-    fetchCameras();
     fetchRecordings();
   }, []);
-
-  useEffect(() => {
-    applyFilters();
-  }, [recordings, selectedCamera, selectedType, dateFilter]);
-
-  const fetchCameras = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('cameras')
-        .select('*');
-
-      if (error) {
-        console.error("Error fetching cameras:", error);
-      }
-
-      if (data) {
-        const camerasFormatted: Camera[] = data.map(cam => ({
-          id: cam.id,
-          name: cam.name,
-          status: cam.status as "online" | "offline" | "error",
-          location: cam.location,
-          ipAddress: cam.ipaddress,
-          port: cam.port || 80,
-          username: cam.username || undefined,
-          password: cam.password || undefined,
-          model: cam.model || undefined,
-          manufacturer: cam.manufacturer || undefined,
-          lastSeen: cam.lastseen,
-          recording: cam.recording || false,
-          thumbnail: cam.thumbnail || undefined,
-          group: cam.group || undefined,
-          connectionType: (cam.connectiontype as "ip" | "rtsp" | "rtmp" | "onvif" | "hls") || "ip"
-        }));
-        setCameras(camerasFormatted);
-      }
-    } catch (error) {
-      console.error("Failed to fetch cameras:", error);
-    }
-  };
 
   const fetchRecordings = async () => {
     setLoading(true);
@@ -111,42 +64,13 @@ export const useRecordings = (): RecordingsHookResult => {
       }
     } catch (error) {
       console.error("Failed to fetch recordings:", error);
+      toast.error("Failed to fetch recordings");
     } finally {
       setLoading(false);
     }
   };
 
-  const applyFilters = () => {
-    let filtered = [...recordings];
-
-    if (selectedCamera !== "all") {
-      filtered = filtered.filter(
-        (recording) => recording.cameraName === selectedCamera
-      );
-    }
-
-    if (selectedType !== "all") {
-      filtered = filtered.filter(
-        (recording) => recording.type.toLowerCase() === selectedType.toLowerCase()
-      );
-    }
-    
-    if (dateFilter) {
-      filtered = filtered.filter(recording => {
-        const recordingDate = new Date(recording.dateTime).toDateString();
-        const filterDate = dateFilter.toDateString();
-        return recordingDate === filterDate;
-      });
-    }
-
-    setFilteredRecordings(filtered);
-  };
-  
-  const filterRecordingsByDate = (date: Date | null) => {
-    setDateFilter(date);
-  };
-
-  const deleteRecording = async (recordingId: string) => {
+  const deleteRecording = async (recordingId: string): Promise<boolean> => {
     try {
       const { error } = await supabase
         .from('recordings')
@@ -161,14 +85,15 @@ export const useRecordings = (): RecordingsHookResult => {
       setRecordings(prevRecordings => 
         prevRecordings.filter(recording => recording.id !== recordingId)
       );
-      setFilteredRecordings(prevRecordings => 
-        prevRecordings.filter(recording => recording.id !== recordingId)
-      );
       
       // Update storage calculations
-      updateStorageAfterDelete(recordings as any, recordingId);
+      updateStorageAfterDelete(recordings, recordingId);
+      toast.success("Recording deleted successfully");
+      return true;
     } catch (error) {
       console.error("Failed to delete recording:", error);
+      toast.error("Failed to delete recording");
+      return false;
     }
   };
 
@@ -176,7 +101,7 @@ export const useRecordings = (): RecordingsHookResult => {
     storageUsed,
     updateStorageAfterDelete,
     fetchActualStorageUsage
-  } = useRecordingsStorage(recordings as any);
+  } = useRecordingsStorage(recordings);
 
   return {
     recordings,
@@ -185,7 +110,7 @@ export const useRecordings = (): RecordingsHookResult => {
     setSelectedCamera,
     selectedType,
     setSelectedType,
-    loading,
+    loading: loading || camerasLoading,
     cameras,
     storageUsed,
     deleteRecording,
