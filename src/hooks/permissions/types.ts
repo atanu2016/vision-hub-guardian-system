@@ -10,3 +10,11 @@ export interface UsePermissionsReturn {
   isLoading: boolean;
   error?: string | null;
 }
+
+// Adding the missing PermissionCache interface
+export interface PermissionCache {
+  [key: string]: {
+    timestamp: number;
+    result: boolean;
+  };
+}
