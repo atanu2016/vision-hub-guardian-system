@@ -30,17 +30,27 @@ export function useProfileUpdates(userId?: string) {
       if (existingProfile) {
         console.log("[PROFILE UPDATE] Updating existing profile");
         // Update existing profile
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            full_name: fullName,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', userId);
+        const { error } = await supabase.rpc('update_user_profile', {
+          user_id: userId,
+          full_name_param: fullName
+        });
 
         if (error) {
-          console.error("[PROFILE UPDATE] Error updating profile:", error);
-          throw error;
+          console.error("[PROFILE UPDATE] Error using RPC to update profile:", error);
+          
+          // Fallback to direct update as the user's own profile
+          const directUpdateResult = await supabase
+            .from('profiles')
+            .update({
+              full_name: fullName,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+            
+          if (directUpdateResult.error) {
+            console.error("[PROFILE UPDATE] Error with direct update:", directUpdateResult.error);
+            throw directUpdateResult.error;
+          }
         }
       } else {
         console.log("[PROFILE UPDATE] Creating new profile");

@@ -73,6 +73,16 @@ export function useRoleSubscription() {
       
       if (roleError) {
         console.error('[ROLE SUBSCRIPTION] Error fetching role via function:', roleError);
+        
+        // Fallback to fetching by email for special accounts
+        const { data: sessionData } = await supabase.auth.getSession();
+        const userEmail = sessionData?.session?.user?.email;
+        
+        if (userEmail === 'admin@home.local' || userEmail === 'superadmin@home.local') {
+          console.log('[ROLE SUBSCRIPTION] Special admin email detected, returning superadmin role');
+          return 'superadmin' as UserRole;
+        }
+        
         return authRole;
       }
       

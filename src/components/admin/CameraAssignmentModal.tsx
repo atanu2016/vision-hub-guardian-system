@@ -16,7 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Camera as CameraType, CameraStatus } from '@/types/camera';
 import { assignCamerasToUser, getUserAssignedCameras } from '@/services/userManagement/cameraAssignmentService';
 import { toast } from 'sonner';
-import { usePermissions } from '@/hooks/usePermissions';
+import { usePermissions } from '@/hooks/permissions';
 
 interface CameraAssignmentModalProps {
   isOpen: boolean;
