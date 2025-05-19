@@ -25,6 +25,7 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<string>('All Cameras');
+  const [savingStep, setSavingStep] = useState<string>('');
   
   const { 
     cameras, 
@@ -40,10 +41,13 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
     getCamerasByGroup
   } = useAssignCameras(userId, isOpen);
   
-  // Check authentication status when modal opens - optimized to run only once
+  // Optimized authentication check - only runs once when modal opens
   useEffect(() => {
+    if (!isOpen || authChecked) return;
+    
     const checkAuth = async () => {
       try {
+        // Use cached session when available to avoid network request
         const { data, error } = await supabase.auth.getSession();
         
         if (error || !data.session) {
@@ -51,13 +55,11 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
           setIsAuthenticated(false);
           toast.error("You must be logged in to manage camera assignments");
           
-          // Delay redirect slightly to let the toast be visible
           setTimeout(() => {
             onClose();
-            window.location.href = '/auth'; // Redirect to auth page
+            window.location.href = '/auth';
           }, 1500);
         } else {
-          console.log("User authenticated successfully");
           setIsAuthenticated(true);
         }
         
@@ -69,19 +71,18 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
       }
     };
     
-    if (isOpen && !authChecked) {
-      checkAuth();
-    }
+    checkAuth();
   }, [isOpen, onClose, authChecked]);
 
-  // Subscribe to auth state changes - kept for security
+  // Auth state subscription
   useEffect(() => {
+    if (!isOpen) return;
+    
     const { data: { subscription }} = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false);
         onClose();
-        // Redirect to auth page
-        window.location.href = '/auth'; 
+        window.location.href = '/auth';
       } else if (session) {
         setIsAuthenticated(true);
       }
@@ -90,7 +91,7 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
     return () => {
       subscription.unsubscribe();
     };
-  }, [onClose]);
+  }, [isOpen, onClose]);
 
   const handleClose = () => {
     if (saving) {
@@ -101,9 +102,9 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
   };
 
   const handleSubmit = async () => {
-    // Simplified authentication check - rely on handleSave to perform the check
+    // Combined auth check
     if (!isAuthenticated || !hookIsAuthenticated) {
-      toast.error("Authentication required. Please log in again.");
+      toast.error("Authentication required. Please login again");
       onClose();
       window.location.href = '/auth';
       return;
@@ -115,28 +116,34 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
     }
     
     try {
-      // Show a loading toast to indicate progress
-      const toastId = toast.loading("Saving camera assignments...");
+      // Improved progress feedback
+      const toastId = toast.loading("Processing camera assignments...");
       
+      // Display steps to improve user experience during long operations
+      setSavingStep('Preparing camera assignments...');
+      await new Promise(resolve => setTimeout(resolve, 100)); // Small delay to update UI
+      
+      setSavingStep('Saving to database...');
       const success = await handleSave();
       
-      // Dismiss the loading toast and show success/error
+      setSavingStep('Finalizing...');
       toast.dismiss(toastId);
       
       if (success) {
         toast.success("Camera assignments saved successfully");
+        setSavingStep('');
         onClose();
       }
     } catch (error: any) {
       console.error("Error saving camera assignments:", error);
       toast.error(error?.message || "Failed to save camera assignments");
+      setSavingStep('');
     }
   };
   
   const handleRefresh = async () => {
-    // Simplified authentication check
     if (!isAuthenticated || !hookIsAuthenticated) {
-      toast.error("Authentication required. Please log in again.");
+      toast.error("Authentication required. Please login again");
       onClose();
       window.location.href = '/auth';
       return;
@@ -206,7 +213,7 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Authentication required. Please log in again.
+                Authentication required. Please login again.
               </AlertDescription>
             </Alert>
           )}
@@ -260,6 +267,13 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
             canAssignCameras={canAssignCameras && isTrulyAuthenticated}
             onToggle={handleCameraToggle}
           />
+          
+          {saving && savingStep && (
+            <div className="flex items-center mt-4 px-4 py-2 bg-muted rounded-md">
+              <Loader2 className="animate-spin h-4 w-4 mr-2" />
+              <span className="text-sm">{savingStep}</span>
+            </div>
+          )}
         </div>
         
         <div className="flex justify-end gap-2">
@@ -269,15 +283,15 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
           <Button 
             onClick={handleSubmit} 
             disabled={loading || saving || !!error || !canAssignCameras || !isTrulyAuthenticated}
-            className="relative"
           >
-            {saving && (
+            {saving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 <span>Saving...</span>
               </>
+            ) : (
+              "Save Changes"
             )}
-            {!saving && "Save Changes"}
           </Button>
         </div>
       </DialogContent>
