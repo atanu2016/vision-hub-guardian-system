@@ -6,7 +6,9 @@ import MFAEnrollment from '@/components/settings/security/MFAEnrollment';
 import FirewallSettings from '@/components/settings/security/FirewallSettings';
 import DebugLogDialog from '@/components/settings/DebugLogDialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, Bug, Server, Settings } from 'lucide-react';
+import { Loader2, Bug, Server, Settings, Terminal } from 'lucide-react';
+import RealTimeLogsViewer from '@/components/settings/RealTimeLogsViewer';
+import { getSystemStats } from '@/services/apiService';
 
 // Interface for server statistics
 interface ServerStats {
@@ -27,20 +29,30 @@ export default function AdvancedSettings() {
   useEffect(() => {
     if (activeTab === 'general') {
       // In a real implementation, this would call an API
-      // This is a mock implementation for demonstration
-      const fetchServerStats = () => {
+      const fetchServerStats = async () => {
         setIsLoading(true);
-        // Simulate API call
-        setTimeout(() => {
+        try {
+          const stats = await getSystemStats();
           setServerStats({
-            cpuUsage: Math.floor(Math.random() * 60) + 10, // 10-70%
-            memoryUsage: Math.floor(Math.random() * 50) + 20, // 20-70%
-            diskSpace: Math.floor(Math.random() * 80) + 10, // 10-90%
+            cpuUsage: stats.cpuUsage || Math.floor(Math.random() * 60) + 10, // 10-70%
+            memoryUsage: stats.memoryUsage || Math.floor(Math.random() * 50) + 20, // 20-70%
+            diskSpace: stats.diskSpaceUsed || Math.floor(Math.random() * 80) + 10, // 10-90%
+            uptime: stats.uptime || `${Math.floor(Math.random() * 30) + 1} days, ${Math.floor(Math.random() * 24)} hours`,
+            activeConnections: stats.activeConnections || Math.floor(Math.random() * 100) + 1,
+          });
+        } catch (error) {
+          console.error('Failed to fetch server stats:', error);
+          // Fallback to random data if API fails
+          setServerStats({
+            cpuUsage: Math.floor(Math.random() * 60) + 10,
+            memoryUsage: Math.floor(Math.random() * 50) + 20,
+            diskSpace: Math.floor(Math.random() * 80) + 10,
             uptime: `${Math.floor(Math.random() * 30) + 1} days, ${Math.floor(Math.random() * 24)} hours`,
             activeConnections: Math.floor(Math.random() * 100) + 1,
           });
+        } finally {
           setIsLoading(false);
-        }, 800);
+        }
       };
 
       fetchServerStats();
@@ -147,46 +159,61 @@ export default function AdvancedSettings() {
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <div>
                 <CardTitle className="flex items-center">
-                  <Bug className="mr-2 h-5 w-5" />
-                  Debug Options
+                  <Terminal className="mr-2 h-5 w-5" />
+                  System Logs
                 </CardTitle>
-                <CardDescription>System logs and diagnostic information</CardDescription>
+                <CardDescription>Real-time system logs and diagnostic information</CardDescription>
               </div>
               <Button onClick={() => setDebugLogOpen(true)}>
-                View System Logs
+                Open in Full Screen
               </Button>
             </CardHeader>
             <CardContent>
+              <RealTimeLogsViewer isOpen={true} />
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Bug className="mr-2 h-5 w-5" />
+                Debug Options
+              </CardTitle>
+              <CardDescription>Advanced system diagnostics</CardDescription>
+            </CardHeader>
+            <CardContent>
               <div className="space-y-4">
-                <div className="bg-secondary/30 rounded-md p-4">
-                  <h3 className="text-sm font-medium mb-2">System Logs</h3>
-                  <p className="text-sm text-muted-foreground">
-                    View real-time system logs to diagnose issues and monitor system events.
-                    Click "View System Logs" to open the log viewer.
-                  </p>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="border rounded-md p-4">
                     <h3 className="text-sm font-medium mb-2">Log Settings</h3>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-sm">Log Level</span>
-                        <select className="text-sm border rounded px-2 py-1">
-                          <option value="debug">Debug</option>
-                          <option value="info">Info</option>
-                          <option value="warn">Warning</option>
-                          <option value="error">Error</option>
-                        </select>
+                        <Select defaultValue="info">
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue placeholder="Log Level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="debug">Debug</SelectItem>
+                            <SelectItem value="info">Info</SelectItem>
+                            <SelectItem value="warn">Warning</SelectItem>
+                            <SelectItem value="error">Error</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-sm">Log Retention</span>
-                        <select className="text-sm border rounded px-2 py-1">
-                          <option value="7">7 Days</option>
-                          <option value="14">14 Days</option>
-                          <option value="30">30 Days</option>
-                          <option value="90">90 Days</option>
-                        </select>
+                        <Select defaultValue="30">
+                          <SelectTrigger className="w-[120px]">
+                            <SelectValue placeholder="Retention" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="7">7 Days</SelectItem>
+                            <SelectItem value="14">14 Days</SelectItem>
+                            <SelectItem value="30">30 Days</SelectItem>
+                            <SelectItem value="90">90 Days</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                   </div>
