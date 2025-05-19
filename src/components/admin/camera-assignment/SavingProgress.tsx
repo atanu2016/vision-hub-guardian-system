@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { CheckCircle, Loader2 } from 'lucide-react';
 
@@ -16,14 +16,6 @@ export function SavingProgress({
   savingProgress,
   savingComplete
 }: SavingProgressProps) {
-  // Immediately jump to 100% when complete
-  useEffect(() => {
-    if (savingComplete) {
-      // No timeout needed, update immediately
-      return;
-    }
-  }, [savingComplete]);
-  
   return (
     <div className="py-4 space-y-4">
       <div className="flex items-center justify-between mb-2">
