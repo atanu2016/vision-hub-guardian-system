@@ -36,6 +36,13 @@ export function useProfileSettings() {
   // Create wrapper functions that match the expected signatures in the ProfileSettings component
   const handleProfileUpdateWrapper = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user?.id) {
+      console.error("Cannot update profile: No user ID available");
+      toast.error("Unable to update profile");
+      return;
+    }
+    
+    console.log("Handling profile update for:", formData.fullName);
     return handleProfileUpdate(e, formData.fullName);
   };
   
@@ -46,6 +53,7 @@ export function useProfileSettings() {
       newPassword: formData.newPassword || '',
       confirmPassword: formData.confirmPassword || ''
     };
+    console.log("Handling password update");
     return handlePasswordUpdate(e, passwordData);
   };
 
@@ -71,3 +79,6 @@ export function useProfileSettings() {
     getInitials
   };
 }
+
+// Import toast at the top - adding it here for clarity
+import { toast } from 'sonner';
