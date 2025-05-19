@@ -157,7 +157,18 @@ export const saveAdvancedSettings = saveAdvancedSettingsToDB;
 
 // Logs API
 export const getLogs = fetchLogsFromDB;
-export const addLog = addLogToDB;
+
+// Helper function for adding logs with proper type
+interface LogEntry {
+  level: string;
+  source: string;
+  message: string;
+  details?: string;
+}
+
+export const addLog = (logEntry: LogEntry) => {
+  return addLogToDB(logEntry.level, logEntry.source, logEntry.message, logEntry.details);
+};
 
 // System initialization
 export const initializeSystem = checkDatabaseSetup;
