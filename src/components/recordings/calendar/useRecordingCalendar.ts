@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { RecordingDayData } from "./types";
@@ -94,15 +94,17 @@ export const useRecordingCalendar = (cameraId?: string) => {
     }
   };
 
-  // Custom isRecordingDate implementation using a standard for loop approach
-  const isRecordingDate = (dateToCheck: Date): boolean => {
-    if (!dateToCheck) return false;
-    if (!recordingDates || recordingDates.length === 0) return false;
+  // Memoized isRecordingDate implementation to avoid excessive type instantiation
+  const isRecordingDate = useCallback((dateToCheck: Date): boolean => {
+    if (!dateToCheck || !recordingDates || recordingDates.length === 0) {
+      return false;
+    }
     
     const checkYear = dateToCheck.getFullYear();
     const checkMonth = dateToCheck.getMonth();
     const checkDay = dateToCheck.getDate();
     
+    // Use standard for loop to avoid recursive type instantiation
     for (let i = 0; i < recordingDates.length; i++) {
       const recordDate = recordingDates[i];
       if (
@@ -115,7 +117,7 @@ export const useRecordingCalendar = (cameraId?: string) => {
     }
     
     return false;
-  };
+  }, [recordingDates]);
 
   return {
     date,

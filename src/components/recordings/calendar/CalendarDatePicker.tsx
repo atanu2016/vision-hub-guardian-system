@@ -65,8 +65,8 @@ export default function CalendarDatePicker({ date, onSelect, hasRecordings }: Ca
           components={{
             Day: ({ date: dayDate, ...props }) => (
               <div
-                className={cn(props.className, getDayClassNames(dayDate))}
                 {...props}
+                className={cn(props.className || "", getDayClassNames(dayDate))}
               />
             )
           }}
