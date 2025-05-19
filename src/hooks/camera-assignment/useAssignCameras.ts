@@ -6,7 +6,7 @@ import { UseCameraAssignmentReturn } from './types';
 
 export function useAssignCameras(userId: string, isOpen: boolean): UseCameraAssignmentReturn {
   const { canAssignCameras } = useAdminPermission();
-  const { cameras, setCameras, loading, error } = useFetchCameras(userId, isOpen);
+  const { cameras, setCameras, loading, error, loadCamerasAndAssignments } = useFetchCameras(userId, isOpen);
   const { saving, handleCameraToggle, handleSave: operationsSave } = useCameraOperations(userId, cameras, setCameras);
 
   // Create a wrapper for handleSave that includes the permission check
@@ -25,6 +25,7 @@ export function useAssignCameras(userId: string, isOpen: boolean): UseCameraAssi
     canAssignCameras,
     error,
     handleCameraToggle,
-    handleSave
+    handleSave,
+    loadCamerasAndAssignments
   };
 }

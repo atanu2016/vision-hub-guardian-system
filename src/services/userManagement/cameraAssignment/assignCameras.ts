@@ -21,7 +21,7 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
       
     if (deleteError) {
       console.error("Error removing existing camera assignments:", deleteError);
-      throw deleteError;
+      throw new Error("Could not update camera assignments. Please try again.");
     }
     
     // If there are no cameras to assign, we're done (we already removed all assignments)
@@ -44,13 +44,18 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
       
     if (insertError) {
       console.error("Error adding camera assignments:", insertError);
-      throw insertError;
+      if (insertError.message.includes('foreign key constraint')) {
+        throw new Error("One or more cameras do not exist in the system.");
+      } else {
+        throw new Error("Could not update camera assignments. Please try again.");
+      }
     }
     
     console.log(`Successfully assigned ${cameraIds.length} cameras to user ${userId}`);
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error assigning cameras to user:', error);
-    throw error; // Propagate error to be handled by caller
+    toast.error(error?.message || "Could not update camera assignments");
+    return false;
   }
 }

@@ -1,5 +1,5 @@
 
-import { Camera } from "@/components/admin/camera-assignment/types";
+import { Camera } from '@/components/admin/camera-assignment/types';
 
 export interface UseCameraAssignmentReturn {
   cameras: Camera[];
@@ -9,4 +9,5 @@ export interface UseCameraAssignmentReturn {
   error: string | null;
   handleCameraToggle: (cameraId: string, checked: boolean) => void;
   handleSave: () => Promise<boolean>;
+  loadCamerasAndAssignments: () => Promise<void>;
 }

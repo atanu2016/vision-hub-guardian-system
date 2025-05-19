@@ -1,11 +1,11 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCcw } from 'lucide-react';
 import { useAssignCameras } from '@/hooks/camera-assignment';
+import CameraList from './CameraList';
+import { toast } from 'sonner';
 
 interface CameraAssignmentModalProps {
   isOpen: boolean;
@@ -15,23 +15,48 @@ interface CameraAssignmentModalProps {
 }
 
 const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssignmentModalProps) => {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
   const { 
     cameras, 
     loading, 
     saving, 
-    error, 
+    error,
+    canAssignCameras,
     handleCameraToggle, 
-    handleSave 
+    handleSave,
+    loadCamerasAndAssignments
   } = useAssignCameras(userId, isOpen);
 
   const handleClose = () => {
+    if (saving) {
+      toast.error("Please wait until the save operation completes");
+      return;
+    }
     onClose();
   };
 
   const handleSubmit = async () => {
+    if (!canAssignCameras) {
+      toast.error("You don't have permission to assign cameras");
+      return;
+    }
+    
     const success = await handleSave();
     if (success) {
       onClose();
+    }
+  };
+  
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadCamerasAndAssignments();
+      toast.success("Camera assignments refreshed");
+    } catch (error) {
+      toast.error("Failed to refresh cameras");
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -39,52 +64,59 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md md:max-w-xl">
         <DialogHeader>
-          <DialogTitle>Assign Cameras to {userName}</DialogTitle>
+          <DialogTitle className="flex items-center justify-between">
+            <span>Assign Cameras to {userName}</span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefresh} 
+              disabled={loading || isRefreshing}
+              className="ml-auto"
+            >
+              {isRefreshing ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <RefreshCcw className="h-4 w-4 mr-2" />
+              )}
+              Refresh
+            </Button>
+          </DialogTitle>
         </DialogHeader>
         
         <div className="py-4">
-          {loading ? (
-            <div className="flex items-center justify-center p-6">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : error ? (
-            <div className="text-center p-4 text-destructive">{error}</div>
-          ) : cameras.length === 0 ? (
-            <div className="text-center p-4 text-muted-foreground">No cameras found in the system.</div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {cameras.map((camera) => (
-                <div key={camera.id} className="flex items-start space-x-2 border p-3 rounded-md">
-                  <Checkbox 
-                    id={`camera-${camera.id}`}
-                    checked={camera.assigned}
-                    onCheckedChange={(checked) => handleCameraToggle(camera.id, !!checked)}
-                  />
-                  <div className="space-y-1">
-                    <Label 
-                      htmlFor={`camera-${camera.id}`}
-                      className="font-medium cursor-pointer"
-                    >
-                      {camera.name}
-                    </Label>
-                    <p className="text-xs text-muted-foreground">{camera.location}</p>
-                  </div>
-                </div>
-              ))}
+          {error && (
+            <div className="bg-destructive/10 p-3 rounded-md mb-4 text-destructive text-sm">
+              {error}
             </div>
           )}
+          
+          <CameraList 
+            cameras={cameras}
+            loading={loading}
+            saving={saving}
+            canAssignCameras={canAssignCameras}
+            onToggle={handleCameraToggle}
+          />
         </div>
         
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={handleClose}>Cancel</Button>
+          <Button variant="outline" onClick={handleClose} disabled={saving}>
+            Cancel
+          </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={loading || saving || !!error}
+            disabled={loading || saving || !!error || !canAssignCameras}
           >
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {saving ? "Saving..." : "Save Changes"}
           </Button>
         </div>
+        
+        {!canAssignCameras && !loading && (
+          <div className="bg-yellow-100 dark:bg-yellow-950 p-3 rounded-md text-yellow-800 dark:text-yellow-300 text-sm">
+            You don't have permission to assign cameras. Please contact an administrator.
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

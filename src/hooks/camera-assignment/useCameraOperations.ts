@@ -32,10 +32,12 @@ export function useCameraOperations(userId: string, cameras: Camera[], setCamera
       console.log(`Saving ${camerasToAssign.length} camera assignments for user ${userId}`);
       
       // Use the service function to assign cameras
-      await assignCamerasToUser(userId, camerasToAssign);
+      const success = await assignCamerasToUser(userId, camerasToAssign);
       
-      toast.success("Camera assignments saved successfully");
-      return true;
+      if (success) {
+        toast.success("Camera assignments saved successfully");
+      }
+      return success;
     } catch (error: any) {
       console.error("Error in camera assignment process:", error);
       toast.error(error?.message || "Failed to update camera assignments");

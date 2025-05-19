@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 /**
  * Get cameras assigned to a specific user
@@ -13,42 +14,25 @@ export async function getUserAssignedCameras(userId: string): Promise<string[]> 
       return [];
     }
     
-    // Fetch camera assignments for user with retry mechanism
-    let attempts = 0;
-    const maxAttempts = 3;
-    let cameraIds: string[] = [];
-    
-    while (attempts < maxAttempts) {
-      attempts++;
-      try {
-        // Use direct access with no filters for better reliability
-        const { data, error } = await supabase
-          .from('user_camera_access')
-          .select('camera_id')
-          .eq('user_id', userId);
-          
-        if (error) {
-          console.warn(`Attempt ${attempts} - Error fetching camera assignments:`, error);
-          if (attempts === maxAttempts) throw error;
-          // Wait briefly before retry
-          await new Promise(r => setTimeout(r, 500));
-          continue;
-        }
-        
-        cameraIds = data?.map(item => item.camera_id) || [];
-        console.log(`User ${userId} has ${cameraIds.length} assigned cameras:`, cameraIds);
-        break;
-      } catch (fetchError) {
-        if (attempts === maxAttempts) throw fetchError;
-        console.warn(`Attempt ${attempts} - Error:`, fetchError);
-        // Wait briefly before retry
-        await new Promise(r => setTimeout(r, 500));
-      }
+    // Direct query with simplified approach
+    const { data, error } = await supabase
+      .from('user_camera_access')
+      .select('camera_id')
+      .eq('user_id', userId);
+      
+    if (error) {
+      console.error("Error fetching camera assignments:", error);
+      throw error;
     }
+    
+    const cameraIds = data?.map(item => item.camera_id) || [];
+    console.log(`User ${userId} has ${cameraIds.length} assigned cameras:`, cameraIds);
     
     return cameraIds;
   } catch (error) {
     console.error('Error fetching user assigned cameras:', error);
-    throw error; // Throw error to be handled by caller
+    toast.error('Could not load assigned cameras');
+    // Return empty array instead of throwing to prevent UI crashes
+    return [];
   }
 }
