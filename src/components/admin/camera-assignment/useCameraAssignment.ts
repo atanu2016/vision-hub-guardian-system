@@ -33,33 +33,20 @@ export function useCameraAssignment(userId: string, isOpen: boolean) {
           return;
         }
         
-        // Use the safe function to check admin status without recursion
-        const { data: adminCheckData, error: adminCheckError } = await supabase
-          .rpc('check_admin_status_safe');
+        // If email doesn't match special admin emails, bypass RLS checks by directly checking the profile
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', sessionData.session.user?.id)
+          .maybeSingle();
           
-        if (adminCheckError) {
-          console.error("Error checking admin status:", adminCheckError);
-          
-          // Fallback to profile check
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('is_admin')
-            .eq('id', sessionData.session.user?.id)
-            .maybeSingle();
-            
-          if (profileData?.is_admin) {
-            console.log("Admin flag detected in profile, granting camera assignment permission");
-            setCanAssignCameras(true);
-            return;
-          }
-        } else if (adminCheckData) {
-          console.log("Admin check successful, granting camera assignment permission");
+        if (profileData?.is_admin) {
+          console.log("Admin flag found in profile, granting permission");
           setCanAssignCameras(true);
           return;
         }
         
-        // If we get here, user is not an admin
-        console.log("User does not have camera assignment permission");
+        // Default to false if no admin status detected
         setCanAssignCameras(false);
       } catch (error) {
         console.error("Error checking admin status:", error);
@@ -99,27 +86,42 @@ export function useCameraAssignment(userId: string, isOpen: boolean) {
           return;
         }
         
-        // Fetch all cameras - bypass RLS with direct SQL
+        // Direct query for all cameras to avoid RLS issues
         const { data: allCameras, error: camerasError } = await supabase
           .from('cameras')
           .select('id, name, location');
         
         if (camerasError) {
+          if (camerasError.message?.includes('infinite recursion')) {
+            setError("Permission error: There's an RLS policy conflict. Please contact system administrator.");
+            console.error("RLS recursion error:", camerasError);
+            setCameras([]);
+            return;
+          }
+          
           console.error("Error fetching cameras:", camerasError);
           throw camerasError;
         }
         
         console.log("All cameras fetched:", allCameras?.length || 0);
         
-        // Fetch user's assigned cameras
-        const { data: userCameras, error: assignmentError } = await supabase
-          .from('user_camera_access')
-          .select('camera_id')
-          .eq('user_id', userId);
-          
-        if (assignmentError) {
-          console.error("Error fetching user camera assignments:", assignmentError);
-          throw assignmentError;
+        // Fetch user's assigned cameras with error handling for RLS
+        let userCameras = [];
+        try {
+          const { data: accessData, error: accessError } = await supabase
+            .from('user_camera_access')
+            .select('camera_id')
+            .eq('user_id', userId);
+            
+          if (accessError) {
+            console.warn("Error fetching user camera assignments:", accessError);
+            // Continue with empty assignments rather than failing completely
+          } else {
+            userCameras = accessData || [];
+          }
+        } catch (assignmentError) {
+          console.warn("Failed to get camera assignments:", assignmentError);
+          // Continue with empty assignments
         }
         
         console.log("User camera assignments fetched:", userCameras?.length || 0);
@@ -137,7 +139,14 @@ export function useCameraAssignment(userId: string, isOpen: boolean) {
         setCameras(camerasWithAssignments);
       } catch (error: any) {
         console.error("Error fetching cameras:", error);
-        setError(error?.message || "Failed to load cameras");
+        
+        // Special handling for known errors
+        if (error.message?.includes('infinite recursion')) {
+          setError("Database permission error. Please contact your system administrator.");
+        } else {
+          setError(error?.message || "Failed to load cameras");
+        }
+        
         toast.error("Failed to load cameras");
       } finally {
         setLoading(false);
