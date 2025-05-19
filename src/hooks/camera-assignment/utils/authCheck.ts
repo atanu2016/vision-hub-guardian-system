@@ -3,74 +3,76 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 /**
- * More robust authentication check that handles various edge cases
+ * Fast authentication check with reduced overhead
  * @returns true if authenticated, false otherwise
  */
 export const checkAuthentication = async (): Promise<boolean> => {
   try {
-    // First try getting the current session
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    // Simplified session check with less overhead
+    const { data, error } = await supabase.auth.getSession();
     
-    if (sessionError) {
-      console.error("Authentication error:", sessionError);
-      toast.error("Authentication error: " + sessionError.message);
+    if (error) {
+      console.error("Authentication error:", error);
+      toast.error("Please log in again");
       
-      // If we have a session error, attempt to redirect to auth page and return false
+      // If we have a session error, attempt to redirect to auth page
       setTimeout(() => window.location.href = '/auth', 500);
       return false;
     }
     
-    // No session found
-    if (!sessionData.session) {
+    // Check if session exists and is not expired
+    if (!data.session) {
       console.error("No active session found");
       toast.error("Your session has expired. Please login again.");
       
       // Save current path for redirect after login
-      const currentPath = window.location.pathname;
-      // Navigate to auth page while preserving the return path
-      setTimeout(() => {
-        window.location.href = `/auth?returnTo=${encodeURIComponent(currentPath)}`;
-      }, 500);
+      setTimeout(() => window.location.href = '/auth', 500);
       return false;
     }
     
-    // We have a session, let's try to refresh it
-    try {
-      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+    // Quick validation check - verify session is not expired
+    const expiresAt = data.session.expires_at;
+    const currentTime = Math.floor(Date.now() / 1000);
+    
+    // If session is about to expire, try to refresh it silently
+    if (expiresAt - currentTime < 300) { // less than 5 minutes left
+      console.log("Session about to expire, refreshing token");
       
-      if (refreshError) {
-        console.error("Failed to refresh session:", refreshError);
-        
-        // If refresh fails, check if the original session is still valid
-        if (sessionData.session && new Date(sessionData.session.expires_at * 1000) > new Date()) {
-          console.log("Using existing valid session despite refresh failure");
-          // Continue with existing token
-          return true;
-        }
-        
-        toast.error("Session refresh failed. Please login again.");
-        setTimeout(() => window.location.href = '/auth', 500);
-        return false;
-      }
-      
-      if (!refreshData.session) {
-        console.error("Refresh succeeded but no session returned");
-        toast.error("Session error. Please login again.");
-        setTimeout(() => window.location.href = '/auth', 500);
-        return false;
-      }
-      
-      console.log("Session refreshed successfully");
-      return true;
-    } catch (refreshError) {
-      console.error("Error refreshing token:", refreshError);
-      // Continue with existing token as a fallback
-      return true;
+      // Don't await this - let it happen in background
+      supabase.auth.refreshSession().catch(err => 
+        console.warn("Background refresh failed:", err)
+      );
     }
+    
+    return true;
   } catch (error: any) {
     console.error("Error in authentication check:", error);
-    toast.error("Authentication error: " + (error?.message || "Unknown error"));
-    setTimeout(() => window.location.href = '/auth', 500);
+    toast.error("Authentication error");
+    
+    // Don't redirect immediately, but prompt the user to try again
+    return false;
+  }
+};
+
+/**
+ * Verify session is valid and connected to Supabase
+ */
+export const verifyDatabaseConnection = async (): Promise<boolean> => {
+  try {
+    // Try a simple query as a connectivity test
+    const { data, error } = await supabase
+      .from('cameras')
+      .select('id')
+      .limit(1);
+    
+    if (error) {
+      console.error("Database connectivity error:", error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Failed to verify database connection:", error);
     return false;
   }
 };

@@ -25,6 +25,7 @@ export function useModalActions({
   const [savingComplete, setSavingComplete] = useState(false);
   const [saveAttempts, setSaveAttempts] = useState(0);
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [showSlowWarning, setShowSlowWarning] = useState(false);
 
   const handleClose = () => {
     if (isSaving && !savingComplete) {
@@ -41,6 +42,7 @@ export function useModalActions({
     setSavingStep('');
     setSavingComplete(false);
     setSaveAttempts(0);
+    setShowSlowWarning(false);
     if (saveTimeout) clearTimeout(saveTimeout);
   };
 
@@ -68,29 +70,49 @@ export function useModalActions({
       // Track save attempts
       setSaveAttempts(prev => prev + 1);
       
-      // Optimized feedback - show immediate progress
-      const toastId = toast.loading("Processing camera assignments...");
-      setIsSaving(true);
+      // Clear any existing timeouts
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+      }
       
       // Start feedback immediately
-      setSavingStep('Saving to database...');
+      const toastId = toast.loading("Saving camera assignments...");
+      setIsSaving(true);
+      setSavingStep('Saving camera assignment...');
       setSavingProgress(25);
+      setShowSlowWarning(false);
       
-      // Set a timeout to show error if operation takes too long
-      const timeout = setTimeout(() => {
+      // Set timeouts for the slow warning and operation timeout
+      const slowWarningTimeout = setTimeout(() => {
+        if (isSaving && !savingComplete) {
+          setShowSlowWarning(true);
+        }
+      }, 3000);
+      
+      const operationTimeout = setTimeout(() => {
         if (isSaving && !savingComplete) {
           toast.dismiss(toastId);
-          toast.error("Operation is taking longer than expected. You can wait or try again later.");
-          setSavingStep('Operation is taking longer than expected...');
+          toast.error("Operation timed out. Please try again.");
+          setIsSaving(false);
+          setSavingStep('');
+          setSavingProgress(0);
         }
-      }, 8000);
+      }, 15000); // 15 seconds timeout
       
-      setSaveTimeout(timeout);
+      setSaveTimeout(operationTimeout);
       
-      const success = await handleSave();
+      // Execute save operation with a timeout wrapper
+      const savePromise = handleSave();
+      const timeoutPromise = new Promise<boolean>((resolve) => {
+        setTimeout(() => resolve(false), 10000); // 10 second timeout
+      });
       
-      // Clear timeout since operation completed
-      clearTimeout(timeout);
+      // Race between the actual save and the timeout
+      const success = await Promise.race([savePromise, timeoutPromise]);
+      
+      // Clear timeouts
+      clearTimeout(slowWarningTimeout);
+      clearTimeout(operationTimeout);
       setSaveTimeout(null);
       
       if (success) {
@@ -98,6 +120,7 @@ export function useModalActions({
         setSavingProgress(100);
         setSavingStep('Assignment completed!');
         setSavingComplete(true);
+        setShowSlowWarning(false);
         toast.dismiss(toastId);
         toast.success("Camera assignments saved successfully");
         
@@ -111,14 +134,13 @@ export function useModalActions({
         setSavingProgress(0);
         setSavingStep('');
         setIsSaving(false);
+        setShowSlowWarning(false);
         toast.dismiss(toastId);
         
-        // If we've tried multiple times, suggest a session refresh
         if (saveAttempts >= 2) {
-          toast.error(
-            "Persistent error saving camera assignments. Try refreshing your browser or logging in again.",
-            { duration: 5000 }
-          );
+          toast.error("Persistent error saving camera assignments. Try refreshing your browser or logging in again.");
+        } else {
+          toast.error("Failed to save camera assignments. Please try again.");
         }
       }
     } catch (error: any) {
@@ -127,6 +149,7 @@ export function useModalActions({
       setSavingStep('');
       setSavingProgress(0);
       setIsSaving(false);
+      setShowSlowWarning(false);
       
       // Clear any pending timeout
       if (saveTimeout) {
@@ -161,6 +184,7 @@ export function useModalActions({
     savingStep,
     savingProgress,
     savingComplete,
+    showSlowWarning,
     handleClose,
     handleSubmit,
     handleRefresh

@@ -8,59 +8,121 @@ import { addLogToDB } from '@/services/database/logsService';
  */
 export async function assignCamerasToUser(userId: string, cameraIds: string[]): Promise<boolean> {
   try {
-    console.log(`Assigning cameras to user ${userId}. Camera count:`, cameraIds.length);
+    console.log(`Assigning ${cameraIds.length} camera(s) to user ${userId}`);
     
-    // First, ensure we have a valid session
+    // First, check if session is valid before proceeding
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    if (sessionError || !sessionData.session) {
-      console.error("No valid session for camera assignment:", sessionError);
-      throw new Error("Authentication required. Please login again.");
+    if (sessionError) {
+      console.error("Session error:", sessionError);
+      throw new Error("Session error: Please log in again");
     }
     
-    // Start a PostgreSQL transaction manually since RPC might not be available
-    // First, delete all existing assignments for this user
-    const { error: deleteError } = await supabase
-      .from('user_camera_access')
-      .delete()
-      .eq('user_id', userId);
-    
-    if (deleteError) {
-      console.error("Error deleting existing camera assignments:", deleteError);
-      throw deleteError;
+    if (!sessionData.session) {
+      console.error("No active session found");
+      throw new Error("No active session found. Please log in again.");
     }
     
-    // If there are cameras to assign, insert them
-    if (cameraIds.length > 0) {
-      // Prepare array of records to insert
-      const accessRecords = cameraIds.map(cameraId => ({
-        user_id: userId,
-        camera_id: cameraId,
-        created_at: new Date().toISOString()
-      }));
+    // For a single camera, use a simpler approach to avoid potential function call issues
+    if (cameraIds.length === 1) {
+      console.log("Using optimized single camera assignment flow");
       
-      // Insert all camera assignments in one operation
+      // First delete existing assignments
+      const { error: deleteError } = await supabase
+        .from('user_camera_access')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (deleteError) {
+        console.error("Error deleting existing camera assignments:", deleteError);
+        throw deleteError;
+      }
+      
+      // Then insert the single camera assignment
       const { error: insertError } = await supabase
         .from('user_camera_access')
-        .insert(accessRecords);
+        .insert({
+          user_id: userId,
+          camera_id: cameraIds[0],
+          created_at: new Date().toISOString()
+        });
       
       if (insertError) {
-        console.error("Error inserting new camera assignments:", insertError);
+        console.error("Error inserting camera assignment:", insertError);
         throw insertError;
       }
+      
+      console.log(`Successfully assigned camera to user ${userId}`);
+      
+      // Log success
+      addLogToDB('info', `Completed camera assignment for user ${userId}`, 'camera-assignment', 
+        'Successfully assigned 1 camera');
+      
+      return true;
+    } 
+    
+    // For multiple cameras, try to use the RPC function with fallback
+    else {
+      console.log("Using bulk camera assignment flow");
+      try {
+        // Try to use the database function for multiple cameras
+        const { error } = await supabase.rpc(
+          'assign_cameras_transaction',
+          { 
+            p_user_id: userId, 
+            p_camera_ids: cameraIds 
+          } as any // Type assertion to avoid TypeScript error
+        );
+        
+        if (error) {
+          console.error("Error in assign_cameras_transaction RPC:", error);
+          throw error;
+        }
+      } catch (rpcError) {
+        console.error("RPC failed, falling back to direct database operations:", rpcError);
+        
+        // Fallback to direct database operations
+        // First, delete all existing assignments for this user
+        const { error: deleteError } = await supabase
+          .from('user_camera_access')
+          .delete()
+          .eq('user_id', userId);
+        
+        if (deleteError) {
+          console.error("Error deleting existing camera assignments:", deleteError);
+          throw deleteError;
+        }
+        
+        // Prepare array of records to insert
+        const accessRecords = cameraIds.map(cameraId => ({
+          user_id: userId,
+          camera_id: cameraId,
+          created_at: new Date().toISOString()
+        }));
+        
+        // Insert all camera assignments in one operation
+        const { error: insertError } = await supabase
+          .from('user_camera_access')
+          .insert(accessRecords);
+        
+        if (insertError) {
+          console.error("Error inserting new camera assignments:", insertError);
+          throw insertError;
+        }
+      }
+      
+      console.log(`Successfully assigned ${cameraIds.length} cameras to user ${userId}`);
+      
+      // Log success
+      addLogToDB('info', `Completed camera assignment for user ${userId}`, 'camera-assignment', 
+        `Successfully assigned ${cameraIds.length} cameras`);
+      
+      return true;
     }
-    
-    console.log(`Successfully assigned ${cameraIds.length} cameras to user ${userId}`);
-    
-    // Log success in background
-    addLogToDB('info', `Completed camera assignment for user ${userId}`, 'camera-assignment', 
-      `Successfully assigned ${cameraIds.length} cameras using direct database operations`);
-    
-    return true;
   } catch (error: any) {
     console.error('Error assigning cameras to user:', error);
     toast.error(error?.message || "Failed to update camera assignments");
     
-    // Log exception in background
+    // Log exception
     addLogToDB('error', `Exception in camera assignment for user ${userId}`, 'camera-assignment', 
       `Error: ${error?.message || "Unknown error"}`);
       
