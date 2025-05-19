@@ -144,7 +144,7 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
           }
           return prev + 5;
         });
-      }, 1000);
+      }, 500); // Faster progress updates
       
       const success = await handleSave();
       clearInterval(progressInterval);
