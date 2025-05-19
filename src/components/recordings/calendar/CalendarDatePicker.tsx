@@ -118,6 +118,7 @@ export default function CalendarDatePicker({ date, onSelect, hasRecordings }: Ca
             {daysInMonth.map((day) => {
               const isSelected = date && day.toDateString() === date.toDateString();
               const isToday = day.toDateString() === today.toDateString();
+              // Safely check if hasRecordings is provided and use it
               const hasRecording = hasRecordings ? hasRecordings(day) : false;
               
               return (

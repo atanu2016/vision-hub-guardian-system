@@ -5,16 +5,15 @@ import { format } from "date-fns";
 import { RecordingDayData } from "./types";
 import { logRecordingAccess } from "./loggingUtils";
 
-// Simple date helper that doesn't rely on complex types
+// Separate utility function outside of component to avoid type recursion
 const formatDateKey = (date: Date): string => {
-  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
 
-// Use plain JavaScript object to avoid TypeScript complexity
 export const useRecordingCalendar = (cameraId?: string) => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [recordingDates, setRecordingDates] = useState<Date[]>([]);
-  const [recordingDatesObject, setRecordingDatesObject] = useState<{[key: string]: boolean}>({});
+  const [recordingDatesMap, setRecordingDatesMap] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [selectedDateRecordings, setSelectedDateRecordings] = useState<RecordingDayData[]>([]);
   const [selectedTimeframe, setSelectedTimeframe] = useState<string | null>(null);
@@ -24,21 +23,23 @@ export const useRecordingCalendar = (cameraId?: string) => {
     fetchRecordingDates();
   }, []);
   
-  // Update the dates object whenever recording dates change - separate from complex type calculations
+  // Create a separate effect to update the recording dates map
   useEffect(() => {
-    const obj: {[key: string]: boolean} = {};
+    const newMap: Record<string, boolean> = {};
     
+    // Use for loop instead of forEach or map to minimize type inference issues
     for (let i = 0; i < recordingDates.length; i++) {
-      const date = recordingDates[i];
-      if (date instanceof Date && !isNaN(date.getTime())) {
-        const key = formatDateKey(date);
-        obj[key] = true;
+      const recordingDate = recordingDates[i];
+      if (recordingDate instanceof Date && !isNaN(recordingDate.getTime())) {
+        const key = formatDateKey(recordingDate);
+        newMap[key] = true;
       }
     }
     
-    setRecordingDatesObject(obj);
+    setRecordingDatesMap(newMap);
   }, [recordingDates]);
   
+  // Plain function to fetch recording dates
   const fetchRecordingDates = async () => {
     setIsLoading(true);
     try {
@@ -53,12 +54,15 @@ export const useRecordingCalendar = (cameraId?: string) => {
       const { data, error } = await query;
       
       if (error) {
-        throw error;
+        console.error('Error loading recording dates:', error);
+        return;
       }
       
-      if (data) {
+      if (data && data.length > 0) {
         const dates = data.map(item => new Date(item.date_time));
         setRecordingDates(dates);
+      } else {
+        setRecordingDates([]);
       }
     } catch (error) {
       console.error('Error loading recording dates:', error);
@@ -67,11 +71,17 @@ export const useRecordingCalendar = (cameraId?: string) => {
     }
   };
 
+  // Plain function to handle date selection with minimal type dependencies
   const handleDateSelect = async (selectedDate: Date | undefined) => {
     setDate(selectedDate);
-    if (!selectedDate) return;
+    
+    if (!selectedDate) {
+      setSelectedDateRecordings([]);
+      return;
+    }
     
     setIsLoading(true);
+    
     try {
       // Format date for database comparison
       const formattedDate = format(selectedDate, 'yyyy-MM-dd');
@@ -89,12 +99,13 @@ export const useRecordingCalendar = (cameraId?: string) => {
       const { data, error } = await query;
       
       if (error) {
-        throw error;
+        console.error('Error loading recordings:', error);
+        return;
       }
       
       if (data && data.length > 0) {
-        // Transform database records to UI format
-        const recordingsData = data.map(rec => ({
+        // Transform database records to UI format with explicit type
+        const recordingsData: RecordingDayData[] = data.map(rec => ({
           id: rec.id,
           time: rec.time,
           duration: `${rec.duration} minutes`,
@@ -107,23 +118,25 @@ export const useRecordingCalendar = (cameraId?: string) => {
         setSelectedDateRecordings([]);
       }
       
-      // Log this action using our separated logging utility
+      // Log this action
       await logRecordingAccess(selectedDate, cameraId);
+      
     } catch (error) {
       console.error('Error loading recordings:', error);
+      setSelectedDateRecordings([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Using plain function instead of useCallback to avoid TypeScript complexities
+  // Plain function to check if a date has recordings
   const isRecordingDate = (date: Date): boolean => {
     if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
       return false;
     }
     
     const key = formatDateKey(date);
-    return !!recordingDatesObject[key];
+    return !!recordingDatesMap[key];
   };
 
   return {
