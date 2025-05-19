@@ -5,6 +5,14 @@ import { useAvatarManagement } from './profile/useAvatarManagement';
 import { useProfileUpdates } from './profile/useProfileUpdates';
 import { usePasswordUpdate } from './profile/usePasswordUpdate';
 import { useRoleManagement } from './profile/useRoleManagement';
+import { UserRole } from '@/types/admin';
+
+// Define interfaces for password data to ensure type safety
+export interface PasswordData {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
 
 export function useProfileSettings() {
   const { user, loading: isLoading, formData, role: userRole, handleInputChange } = useProfileData();
@@ -18,7 +26,9 @@ export function useProfileSettings() {
     if (!user?.id) return;
     setIsSaving(true);
     try {
-      await handleProfileUpdate(new Event('submit') as unknown as React.FormEvent, formData.fullName);
+      // Create a synthetic event since we don't need the actual event data
+      const syntheticEvent = { preventDefault: () => {} } as React.FormEvent;
+      await handleProfileUpdate(syntheticEvent, formData.fullName);
     } finally {
       setIsSaving(false);
     }
@@ -28,6 +38,22 @@ export function useProfileSettings() {
     handleInputChange({
       target: { name: 'fullName', value: name }
     } as React.ChangeEvent<HTMLInputElement>);
+  };
+
+  // Create wrapper functions that match the expected signatures
+  const handleProfileUpdateWrapper = (e: React.FormEvent) => {
+    e.preventDefault();
+    return handleProfileUpdate(e, formData.fullName);
+  };
+  
+  const handlePasswordUpdateWrapper = (e: React.FormEvent) => {
+    e.preventDefault();
+    const passwordData = {
+      currentPassword: formData.currentPassword || '',
+      newPassword: formData.newPassword || '',
+      confirmPassword: formData.confirmPassword || ''
+    };
+    return handlePasswordUpdate(e, passwordData);
   };
 
   return {
@@ -47,8 +73,8 @@ export function useProfileSettings() {
     role: userRole,
     handleInputChange,
     handleAvatarChange,
-    handleProfileUpdate,
-    handlePasswordUpdate,
+    handleProfileUpdate: handleProfileUpdateWrapper,
+    handlePasswordUpdate: handlePasswordUpdateWrapper,
     getInitials
   };
 }

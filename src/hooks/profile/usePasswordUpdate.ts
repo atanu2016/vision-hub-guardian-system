@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-interface PasswordData {
+export interface PasswordData {
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
@@ -18,12 +18,12 @@ export function usePasswordUpdate() {
     // Simple validation
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       toast.error("New passwords don't match");
-      return;
+      return passwordData;
     }
     
     if (passwordData.newPassword.length < 6) {
       toast.error("Password must be at least 6 characters");
-      return;
+      return passwordData;
     }
 
     setUpdateInProgress(true);
