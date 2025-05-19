@@ -4,7 +4,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { UseFormReturn } from "react-hook-form";
 import { StorageFormSchemaType } from "./StorageForm";
-import { HardDrive, Database, Dropbox, Folder, Cloud, Microsoft, Archive } from "lucide-react";
+import { HardDrive, Database, Box, Folder, Cloud, ExternalLink, Archive } from "lucide-react";
 
 interface StorageProviderSelectorProps {
   form: UseFormReturn<StorageFormSchemaType>;
@@ -55,7 +55,7 @@ const StorageProviderSelector = ({ form, isLoading }: StorageProviderSelectorPro
               <div className="flex items-center space-x-2 border rounded-md p-3 cursor-pointer hover:bg-accent/50">
                 <RadioGroupItem value="dropbox" id="dropbox" />
                 <Label htmlFor="dropbox" className="flex items-center cursor-pointer">
-                  <Dropbox className="h-4 w-4 mr-2" />
+                  <Box className="h-4 w-4 mr-2" />
                   Dropbox
                 </Label>
               </div>
@@ -71,7 +71,7 @@ const StorageProviderSelector = ({ form, isLoading }: StorageProviderSelectorPro
               <div className="flex items-center space-x-2 border rounded-md p-3 cursor-pointer hover:bg-accent/50">
                 <RadioGroupItem value="onedrive" id="onedrive" />
                 <Label htmlFor="onedrive" className="flex items-center cursor-pointer">
-                  <Microsoft className="h-4 w-4 mr-2" />
+                  <ExternalLink className="h-4 w-4 mr-2" />
                   OneDrive
                 </Label>
               </div>
