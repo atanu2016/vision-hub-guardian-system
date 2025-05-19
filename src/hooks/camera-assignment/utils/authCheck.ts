@@ -31,9 +31,10 @@ export const checkAuthentication = async (): Promise<boolean> => {
       return false;
     }
     
-    // Verify session is still valid with backend check
+    // Verify session is still valid with backend check - using type assertion to bypass TypeScript error
     try {
-      const { data: validCheck, error: validError } = await supabase.rpc('check_session_valid');
+      // Use type assertion to work around TypeScript error for RPC function
+      const { data: validCheck, error: validError } = await (supabase.rpc as any)('check_session_valid');
       
       if (validError || validCheck !== true) {
         console.error("Session validation failed:", validError || "Backend check returned false");

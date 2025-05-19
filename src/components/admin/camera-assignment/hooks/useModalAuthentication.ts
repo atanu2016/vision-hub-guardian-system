@@ -38,8 +38,8 @@ export function useModalAuthentication(isOpen: boolean) {
         } else {
           // We have a session, now verify it's still valid with a backend check
           try {
-            // Use RPC function if available - fallback gracefully if not
-            const { data: validCheck, error: validError } = await supabase.rpc('check_session_valid');
+            // Use type assertion to work around TypeScript error for RPC function
+            const { data: validCheck, error: validError } = await (supabase.rpc as any)('check_session_valid');
             
             if (validError) {
               console.warn("Session validation RPC failed (may not exist yet):", validError);

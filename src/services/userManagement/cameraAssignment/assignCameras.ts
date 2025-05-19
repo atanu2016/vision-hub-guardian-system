@@ -71,7 +71,7 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     
     // First try the optimized database function
     try {
-      // Using 'as any' to bypass TypeScript type checking for the RPC function name
+      // Using type assertion to bypass TypeScript type checking for the RPC function name
       const { error } = await (supabase.rpc as any)('assign_cameras_transaction', {
         p_user_id: userId,
         p_camera_ids: cameraIds
