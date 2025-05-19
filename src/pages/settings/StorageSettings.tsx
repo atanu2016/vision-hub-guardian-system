@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StorageSettings as StorageSettingsType } from "@/types/camera";
-import { useStorageSettings } from "@/hooks/useStorageSettings";
+import { useStorageSettings } from "@/hooks/storage";
 import StorageUsageDisplay from "@/components/settings/storage/StorageUsageDisplay";
 import StorageForm from "@/components/settings/storage/StorageForm";
 import { RefreshCw } from "lucide-react";
