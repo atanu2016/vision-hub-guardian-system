@@ -118,7 +118,7 @@ export default function CalendarDatePicker({ date, onSelect, hasRecordings }: Ca
             {daysInMonth.map((day) => {
               const isSelected = date && day.toDateString() === date.toDateString();
               const isToday = day.toDateString() === today.toDateString();
-              const hasRecording = hasRecordings?.(day) || false;
+              const hasRecording = hasRecordings ? hasRecordings(day) : false;
               
               return (
                 <Button

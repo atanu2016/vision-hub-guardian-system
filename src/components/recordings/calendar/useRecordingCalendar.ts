@@ -1,22 +1,20 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { RecordingDayData } from "./types";
 import { logRecordingAccess } from "./loggingUtils";
 
-// Helper function to format a date to a simple string key (outside of component to avoid deep type instantiation)
+// Simple date helper that doesn't rely on complex types
 const formatDateKey = (date: Date): string => {
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
 };
 
-// Simple type for our recordings map
-type RecordingDatesMap = {[key: string]: boolean};
-
+// Use plain JavaScript object to avoid TypeScript complexity
 export const useRecordingCalendar = (cameraId?: string) => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [recordingDates, setRecordingDates] = useState<Date[]>([]);
-  const [recordingDatesMap, setRecordingDatesMap] = useState<RecordingDatesMap>({});
+  const [recordingDatesObject, setRecordingDatesObject] = useState<{[key: string]: boolean}>({});
   const [isLoading, setIsLoading] = useState(false);
   const [selectedDateRecordings, setSelectedDateRecordings] = useState<RecordingDayData[]>([]);
   const [selectedTimeframe, setSelectedTimeframe] = useState<string | null>(null);
@@ -26,18 +24,19 @@ export const useRecordingCalendar = (cameraId?: string) => {
     fetchRecordingDates();
   }, []);
   
-  // Update the dates map whenever recording dates change
+  // Update the dates object whenever recording dates change - separate from complex type calculations
   useEffect(() => {
-    const map: RecordingDatesMap = {};
+    const obj: {[key: string]: boolean} = {};
     
-    recordingDates.forEach(date => {
+    for (let i = 0; i < recordingDates.length; i++) {
+      const date = recordingDates[i];
       if (date instanceof Date && !isNaN(date.getTime())) {
         const key = formatDateKey(date);
-        map[key] = true;
+        obj[key] = true;
       }
-    });
+    }
     
-    setRecordingDatesMap(map);
+    setRecordingDatesObject(obj);
   }, [recordingDates]);
   
   const fetchRecordingDates = async () => {
@@ -117,15 +116,15 @@ export const useRecordingCalendar = (cameraId?: string) => {
     }
   };
 
-  // Simple check function that uses the string-based lookup
-  const isRecordingDate = useCallback((date: Date): boolean => {
+  // Using plain function instead of useCallback to avoid TypeScript complexities
+  const isRecordingDate = (date: Date): boolean => {
     if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
       return false;
     }
     
     const key = formatDateKey(date);
-    return !!recordingDatesMap[key];
-  }, [recordingDatesMap]);
+    return !!recordingDatesObject[key];
+  };
 
   return {
     date,
