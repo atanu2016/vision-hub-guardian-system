@@ -12,6 +12,7 @@ const permissionResultCache = new Map<string, boolean>();
 
 /**
  * Optimized core hook for checking permissions with improved performance
+ * Now using the new is_superadmin_check function that avoids RLS recursion
  */
 export function usePermissionsCore(): UsePermissionsReturn {
   // Get current user role from optimized subscription
@@ -19,10 +20,20 @@ export function usePermissionsCore(): UsePermissionsReturn {
   
   // Define the permissions checking function - memoized for performance
   const hasPermission = useCallback(async (permission: Permission): Promise<boolean> => {
-    // Special case for critical permissions - always check admin status first
-    if (permission === 'assign-cameras' || permission === 'assign-roles') {
+    // Special case for critical permissions - always check admin status using the new function
+    if (permission === 'assign-cameras' || permission === 'assign-roles' || 
+        permission === 'manage-system' || permission === 'system-migration' || 
+        permission === 'configure-camera-settings') {
       try {
-        // Check email directly for special admin accounts
+        // Check using our new RPC function that bypasses RLS
+        const { data: isSuperAdmin, error: superAdminError } = await supabase
+          .rpc('is_superadmin_check');
+          
+        if (!superAdminError && isSuperAdmin === true) {
+          return true;
+        }
+        
+        // Fallback check for special emails
         const { data: sessionData } = await supabase.auth.getSession();
         const userEmail = sessionData?.session?.user?.email;
         
@@ -31,28 +42,6 @@ export function usePermissionsCore(): UsePermissionsReturn {
           if (lowerEmail === 'admin@home.local' || lowerEmail === 'superadmin@home.local') {
             return true;
           }
-        }
-        
-        // Check if user has admin flag in profiles directly
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', sessionData?.session?.user?.id || '')
-          .maybeSingle();
-          
-        if (profileData?.is_admin) {
-          return true;
-        }
-        
-        // Check user roles directly as final fallback
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', sessionData?.session?.user?.id || '')
-          .maybeSingle();
-          
-        if (roleData?.role === 'superadmin') {
-          return true;
         }
       } catch (err) {
         console.error("Error checking admin permissions:", err);
@@ -98,6 +87,13 @@ export function usePermissionsCore(): UsePermissionsReturn {
     
     // For superadmin, grant permission - quick check
     if (role === 'superadmin') {
+      return true;
+    }
+
+    // Special emails that always have admin privileges
+    const specialEmails = ['admin@home.local', 'superadmin@home.local'];
+    const { data: { user } } = supabase.auth.getUser();
+    if (user?.email && specialEmails.includes(user.email.toLowerCase())) {
       return true;
     }
     

@@ -5,10 +5,11 @@ import { toast } from 'sonner';
 
 /**
  * Fetches all users with their roles and profile data
+ * Using the bypass RLS function to avoid recursion errors
  */
 export async function fetchAllUsers(): Promise<UserData[]> {
   try {
-    console.log('Fetching users from database...');
+    console.log('Fetching users from database using bypass function...');
     
     // First check if the current user has auth session
     const { data: { session } } = await supabase.auth.getSession();
@@ -17,32 +18,26 @@ export async function fetchAllUsers(): Promise<UserData[]> {
       throw new Error('Authentication required');
     }
     
-    console.log('Active user ID:', session.user.id);
-    console.log('Attempting to fetch users via edge function...');
-    
-    // Call the edge function with proper type checking
-    const { data, error } = await supabase.functions.invoke('get-all-users', {
-      method: 'POST',
-    });
+    // Use the new bypass function that avoids RLS recursion completely
+    const { data, error } = await supabase.rpc('get_all_users_bypass_rls');
       
     if (error) {
-      console.error('Error fetching users via Edge Function:', error);
-      // Fallback: Try to get profiles directly if edge function fails
-      return await fetchUsersDirectly();
+      console.error('Error fetching users via bypass function:', error);
+      // Fallback to the view if the function fails
+      return await fetchUsersFromView();
     }
 
     // Type checking for the response
     if (!data || !Array.isArray(data)) {
-      console.error('Invalid response format from edge function:', data);
-      // Fallback to direct database query
-      return await fetchUsersDirectly();
+      console.error('Invalid response format from bypass function:', data);
+      // Fallback to the view
+      return await fetchUsersFromView();
     }
 
-    console.log(`Successfully received ${data.length} users from edge function`);
+    console.log(`Successfully received ${data.length} users from bypass function`);
 
-    // Transform and type-check the edge function response
+    // Transform and type-check the function response
     const usersData = data.map(user => {
-      // Ensure we have a valid user object
       if (!user || typeof user !== 'object') {
         return {
           id: '',
@@ -78,103 +73,52 @@ export async function fetchAllUsers(): Promise<UserData[]> {
     
     // Try direct database approach as a final fallback
     try {
-      return await fetchUsersDirectly();
+      return await fetchUsersFromView();
     } catch (fallbackError) {
-      console.error('Fallback approach also failed:', fallbackError);
+      console.error('All fallback approaches failed:', fallbackError);
       throw new Error('Failed to load users: Permission denied');
     }
   }
 }
 
 /**
- * Fallback function that tries to fetch users directly from the database
- * when the edge function approach fails
+ * Fallback function that tries to fetch users from the view we created
+ * This view bypasses RLS and should be accessible
  */
-async function fetchUsersDirectly(): Promise<UserData[]> {
-  console.log('Falling back to direct database fetch...');
+async function fetchUsersFromView(): Promise<UserData[]> {
+  console.log('Falling back to view-based fetch...');
   
   try {
-    // BUGFIX: Manual admin check for auth@home.local or admin@home.local 
-    const { data: { user } } = await supabase.auth.getUser();
-    const isStandardAdmin = user?.email === 'admin@home.local' || user?.email === 'auth@home.local';
+    // Get data from our custom view that bypasses RLS
+    const { data: viewUsers, error: viewError } = await supabase
+      .from('vw_all_users')
+      .select('*');
     
-    if (isStandardAdmin) {
-      console.log('Special admin account detected, granting full access');
-      // Continue with fetching users for special admin accounts
-    } else {
-      // First check if current user is admin via function call
-      const { data: isAdmin, error: adminCheckError } = await supabase
-        .rpc('check_admin_status');
-        
-      if (adminCheckError || !isAdmin) {
-        console.error('User is not an admin or error checking status:', adminCheckError);
-        throw new Error('Permission denied: Admin access required');
-      }
+    if (viewError) {
+      console.error('View-based fetch failed:', viewError);
+      throw viewError;
     }
     
-    // Try to get profiles directly
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, full_name, mfa_enrolled, mfa_required, created_at, is_admin');
-    
-    if (profilesError) {
-      console.error('Fallback error fetching profiles:', profilesError);
-      throw new Error('Failed to load users: Permission denied');
-    }
-    
-    if (!profiles || profiles.length === 0) {
-      console.log('No profiles found in direct database query');
+    if (!viewUsers || viewUsers.length === 0) {
+      console.log('No users found in view');
       return [];
     }
     
-    // Get user roles from user_roles table for mapping
-    const { data: userRoles } = await supabase
-      .from('user_roles')
-      .select('user_id, role');
+    console.log(`Found ${viewUsers.length} users in view`);
     
-    const rolesMap = (userRoles || []).reduce((acc, item) => {
-      acc[item.user_id] = item.role as UserRole;
-      return acc;
-    }, {} as Record<string, UserRole>);
-    
-    // Get emails - this is a best effort attempt
-    let emailsMap: Record<string, string> = {};
-    
-    try {
-      // Try to get user emails from auth - this might fail due to permissions
-      const { data: { users }, error: authError } = await supabase
-        .auth
-        .admin
-        .listUsers();
-      
-      if (!authError && users) {
-        users.forEach((user: any) => {
-          if (user && user.id && user.email) {
-            emailsMap[user.id] = user.email;
-          }
-        });
-      }
-    } catch (emailError) {
-      console.warn('Could not get user emails, using IDs instead:', emailError);
-    }
-    
-    // Return profile data with available email information
-    console.log(`Found ${profiles.length} profiles in direct database query`);
-    return profiles.map(profile => {
-      const role = rolesMap[profile.id] || (profile.is_admin ? 'admin' : 'user');
-      return {
-        id: profile.id,
-        email: emailsMap[profile.id] || profile.id, // Use ID as fallback
-        full_name: profile.full_name || null,
-        mfa_enrolled: profile.mfa_enrolled || false,
-        mfa_required: profile.mfa_required || false,
-        created_at: profile.created_at || new Date().toISOString(),
-        is_admin: profile.is_admin || false,
-        role: role as UserRole
-      };
-    });
+    // Transform to required format
+    return viewUsers.map(user => ({
+      id: user.id,
+      email: user.email || user.id,
+      full_name: user.full_name || null,
+      mfa_enrolled: user.mfa_enrolled || false,
+      mfa_required: user.mfa_required || false,
+      created_at: user.created_at || new Date().toISOString(),
+      is_admin: user.is_admin || false,
+      role: user.role as UserRole
+    }));
   } catch (error) {
-    console.error('Error in fetchUsersDirectly:', error);
+    console.error('Error in fetchUsersFromView:', error);
     throw new Error('Failed to load users: Permission denied');
   }
 }

@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.42.0";
 
@@ -64,67 +63,18 @@ serve(async (req) => {
     const specialEmails = ['admin@home.local', 'auth@home.local', 'operator@home.local'];
     if (user.email && specialEmails.includes(user.email.toLowerCase())) {
       console.log(`Special account detected: ${user.email}. Granting admin access.`);
-      // For special accounts, give admin role if they don't have it yet
-      try {
-        const { data: existingRole } = await supabaseAdmin
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
-          
-        if (!existingRole) {
-          // Determine which special role to assign based on email
-          let specialRole = 'admin';
-          if (user.email.startsWith('operator')) {
-            specialRole = 'operator';
-          } else if (user.email.startsWith('admin') || user.email.startsWith('auth')) {
-            specialRole = 'superadmin';
-          }
-          
-          // Insert role for special account
-          await supabaseAdmin
-            .from('user_roles')
-            .upsert({
-              user_id: user.id,
-              role: specialRole,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            });
-            
-          console.log(`Assigned role ${specialRole} to ${user.email}`);
-        }
-      } catch (roleError) {
-        console.log('Error checking/setting special role, continuing anyway:', roleError);
-      }
-      
-      // Continue with admin access for special accounts
     } else {
-      // For regular accounts, check if user has admin privileges
-      // Check if user has admin privileges - first check user_roles
-      const { data: userRole, error: roleError1 } = await supabaseAdmin
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
-
+      // For regular accounts, check if user has admin privileges via the view
+      const { data: viewUser, error: viewError } = await supabaseAdmin
+        .from('vw_all_users')
+        .select('role, is_admin')
+        .eq('id', user.id)
+        .maybeSingle();
+      
       let isAdmin = false;
       
-      // Check if user has admin role from user_roles
-      if (!roleError1 && userRole && (userRole.role === 'admin' || userRole.role === 'superadmin')) {
-        isAdmin = true;
-        console.log(`User ${user.id} has admin role: ${userRole.role}`);
-      } else {
-        // If no role or error, check is_admin flag in profiles
-        const { data: profile, error: profileError } = await supabaseAdmin
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', user.id)
-          .maybeSingle();
-          
-        if (!profileError && profile && profile.is_admin) {
-          isAdmin = true;
-          console.log(`User ${user.id} has is_admin flag in profile`);
-        }
+      if (!viewError && viewUser) {
+        isAdmin = viewUser.is_admin === true || viewUser.role === 'superadmin' || viewUser.role === 'admin';
       }
       
       if (!isAdmin) {
@@ -301,89 +251,39 @@ serve(async (req) => {
 
     // Default GET method to fetch all users
     if (req.method === 'GET' || req.method === 'POST') {
-      // Get user profiles
-      const { data: profiles, error: profilesError } = await supabaseAdmin
-        .from('profiles')
-        .select('id, full_name, mfa_enrolled, mfa_required, created_at, is_admin');
-
-      if (profilesError) {
-        console.error("Error fetching profiles:", profilesError);
-        throw profilesError;
-      }
-
-      // Fetch user roles
-      const { data: userRoles, error: rolesError } = await supabaseAdmin
-        .from('user_roles')
-        .select('user_id, role');
-
-      if (rolesError) {
-        console.error("Error fetching user roles:", rolesError);
-      }
-
-      // Create a map of roles by user ID
-      const rolesMap = (userRoles || []).reduce((acc, item) => {
-        acc[item.user_id] = item.role;
-        return acc;
-      }, {} as Record<string, string>);
-
-      // Get user emails from auth.users using admin API
-      let emails: Record<string, string> = {};
-      
       try {
-        // Get all auth users
-        const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
-        
-        if (authError) {
-          console.error("Error fetching auth users:", authError);
-          // Still continue with what we have
-        } else if (authUsers && authUsers.users && Array.isArray(authUsers.users)) {
-          console.log(`Found ${authUsers.users.length} users in auth table`);
+        // Call our new function that bypasses RLS
+        const { data: usersData, error: funcError } = await supabaseAdmin
+          .rpc('get_all_users_bypass_rls');
           
-          // Map emails by user ID
-          authUsers.users.forEach((authUser) => {
-            if (authUser && authUser.id && authUser.email) {
-              emails[authUser.id] = authUser.email;
-            }
+        if (funcError) {
+          console.error("Error using bypass function:", funcError);
+          // Fallback to the view
+          const { data: viewUsers, error: viewError } = await supabaseAdmin
+            .from('vw_all_users')
+            .select('*');
+            
+          if (viewError) {
+            throw viewError;
+          }
+          
+          console.log(`Successfully returning ${viewUsers.length} users from view`);
+          return new Response(JSON.stringify(viewUsers), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200
           });
-        } else {
-          console.log("No users found or invalid response format");
         }
-      } catch (err) {
-        console.error("Could not fetch emails:", err);
-        // Continue anyway, we'll use IDs as fallback
+
+        console.log(`Successfully returning ${usersData.length} users with roles`);
+        
+        return new Response(JSON.stringify(usersData), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        });
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        throw error;
       }
-
-      // Map the data to include roles and emails
-      const usersData = profiles.map(profile => {
-        // Determine role from either role table or is_admin flag
-        let role = 'user';
-        if (rolesMap[profile.id]) {
-          role = rolesMap[profile.id];
-        } else if (profile.is_admin) {
-          role = 'admin';
-        }
-
-        // Always use email if available, fallback to ID for display
-        const email = emails[profile.id] || profile.id;
-
-        return {
-          id: profile.id,
-          email: email,  // Use email address if available, otherwise use ID
-          full_name: profile.full_name || 'User',
-          mfa_enrolled: profile.mfa_enrolled || false,
-          mfa_required: profile.mfa_required || false,
-          created_at: profile.created_at || new Date().toISOString(),
-          is_admin: profile.is_admin || false,
-          role: role
-        };
-      });
-
-      console.log(`Successfully returning ${usersData.length} users with roles`);
-      
-      return new Response(JSON.stringify(usersData), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200
-      });
     }
 
     // Handle unsupported methods

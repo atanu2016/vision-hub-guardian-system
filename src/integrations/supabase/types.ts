@@ -246,7 +246,15 @@ export type Database = {
           mfa_secret?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "vw_all_users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       recording_settings: {
         Row: {
@@ -467,6 +475,13 @@ export type Database = {
             referencedRelation: "cameras"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_camera_access_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "vw_all_users"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_roles: {
@@ -491,7 +506,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "vw_all_users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       webhooks: {
         Row: {
@@ -525,7 +548,19 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vw_all_users: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string | null
+          is_admin: boolean | null
+          mfa_enrolled: boolean | null
+          mfa_required: boolean | null
+          role: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       check_admin_status: {
@@ -539,6 +574,10 @@ export type Database = {
       check_if_user_is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      get_all_users_bypass_rls: {
+        Args: Record<PropertyKey, never>
+        Returns: Json[]
       }
       get_user_role: {
         Args: { _user_id?: string }
