@@ -9,6 +9,7 @@ export function useCameraAssignment(userId: string, isOpen: boolean) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [canAssignCameras, setCanAssignCameras] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Check if current user can assign cameras (admin check)
   useEffect(() => {
@@ -77,8 +78,26 @@ export function useCameraAssignment(userId: string, isOpen: boolean) {
     
     const fetchCamerasAndAssignments = async () => {
       setLoading(true);
+      setError(null);
       try {
         console.log("Fetching cameras and assignments for user:", userId);
+        
+        // First check if we have any cameras in the system at all
+        const { count: cameraCount, error: countError } = await supabase
+          .from('cameras')
+          .select('*', { count: 'exact', head: true });
+          
+        if (countError) {
+          console.error("Error checking camera count:", countError);
+          throw countError;
+        }
+        
+        if (cameraCount === 0) {
+          console.log("No cameras found in the system");
+          setCameras([]);
+          setLoading(false);
+          return;
+        }
         
         // Fetch all cameras - bypass RLS with direct SQL
         const { data: allCameras, error: camerasError } = await supabase
@@ -116,8 +135,9 @@ export function useCameraAssignment(userId: string, isOpen: boolean) {
         
         console.log("Combined cameras with assignments:", camerasWithAssignments.length);
         setCameras(camerasWithAssignments);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching cameras:", error);
+        setError(error?.message || "Failed to load cameras");
         toast.error("Failed to load cameras");
       } finally {
         setLoading(false);
@@ -138,7 +158,7 @@ export function useCameraAssignment(userId: string, isOpen: boolean) {
   const handleSave = async () => {
     if (!canAssignCameras) {
       toast.error("You don't have permission to assign cameras");
-      return;
+      return false;
     }
     
     setSaving(true);
@@ -214,6 +234,7 @@ export function useCameraAssignment(userId: string, isOpen: boolean) {
     loading,
     saving,
     canAssignCameras,
+    error,
     handleCameraToggle,
     handleSave
   };

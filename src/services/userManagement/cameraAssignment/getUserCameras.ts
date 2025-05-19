@@ -20,7 +20,7 @@ export async function getUserAssignedCameras(userId: string): Promise<string[]> 
       
     if (error) {
       console.error("Error fetching user camera assignments:", error);
-      return []; // Return empty array instead of throwing
+      throw error; // Let the calling function handle this error
     }
     
     const cameraIds = data?.map(item => item.camera_id) || [];
@@ -29,6 +29,6 @@ export async function getUserAssignedCameras(userId: string): Promise<string[]> 
     return cameraIds;
   } catch (error) {
     console.error('Error fetching user assigned cameras:', error);
-    return [];
+    throw error; // Propagate the error to be handled by the caller
   }
 }

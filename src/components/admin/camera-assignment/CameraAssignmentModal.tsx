@@ -13,6 +13,7 @@ import { useCameraAssignment } from './useCameraAssignment';
 import CameraList from './CameraList';
 import PermissionAlert from './PermissionAlert';
 import { CameraAssignmentModalProps } from './types';
+import { AlertCircle } from 'lucide-react';
 
 export default function CameraAssignmentModal({ 
   isOpen, 
@@ -25,6 +26,7 @@ export default function CameraAssignmentModal({
     loading,
     saving,
     canAssignCameras,
+    error,
     handleCameraToggle,
     handleSave
   } = useCameraAssignment(userId, isOpen);
@@ -49,6 +51,20 @@ export default function CameraAssignmentModal({
         <div className="py-4">
           <PermissionAlert hasPermission={canAssignCameras} />
           
+          {error && (
+            <div className="bg-destructive/15 text-destructive border border-destructive/50 p-3 rounded-md mb-4 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              <span>{error}</span>
+            </div>
+          )}
+          
+          {cameras.length === 0 && !loading && !error && (
+            <div className="text-center py-6 text-muted-foreground border rounded-md">
+              <p className="mb-2">No cameras available to assign</p>
+              <p className="text-sm">Add cameras to the system first before assigning them to users.</p>
+            </div>
+          )}
+          
           <CameraList
             cameras={cameras}
             loading={loading}
@@ -64,7 +80,7 @@ export default function CameraAssignmentModal({
           </Button>
           <Button 
             onClick={onSave} 
-            disabled={!canAssignCameras || saving || loading}
+            disabled={!canAssignCameras || saving || loading || cameras.length === 0}
           >
             {saving ? "Saving..." : "Save Changes"}
           </Button>
