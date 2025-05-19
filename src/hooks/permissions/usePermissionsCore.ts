@@ -109,6 +109,7 @@ export function usePermissionsCore(): UsePermissionsReturn {
   }, [role, error]);
 
   // Return memoized values to prevent unnecessary re-renders
+  // Convert Error to string to match the expected type in UsePermissionsReturn
   return useMemo(() => ({
     hasPermission: hasPermissionSync,
     canManageRole: canManageRoleFunc,
@@ -116,6 +117,7 @@ export function usePermissionsCore(): UsePermissionsReturn {
     currentRole: role as UserRole,
     authRole: authRole as UserRole,
     isLoading,
-    error
+    error: error ? (error instanceof Error ? error.message : error) : null
   }), [hasPermissionSync, canManageRoleFunc, role, authRole, error, isLoading]);
 }
+
