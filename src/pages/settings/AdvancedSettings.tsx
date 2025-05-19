@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Bug, Server, Settings, Terminal } from 'lucide-react';
 import RealTimeLogsViewer from '@/components/settings/RealTimeLogsViewer';
 import { getSystemStats } from '@/services/apiService';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Interface for server statistics
 interface ServerStats {
@@ -36,7 +37,7 @@ export default function AdvancedSettings() {
           setServerStats({
             cpuUsage: stats.cpuUsage || Math.floor(Math.random() * 60) + 10, // 10-70%
             memoryUsage: stats.memoryUsage || Math.floor(Math.random() * 50) + 20, // 20-70%
-            diskSpace: stats.diskSpaceUsed || Math.floor(Math.random() * 80) + 10, // 10-90%
+            diskSpace: stats.storagePercentage || Math.floor(Math.random() * 80) + 10, // 10-90%
             uptime: stats.uptime || `${Math.floor(Math.random() * 30) + 1} days, ${Math.floor(Math.random() * 24)} hours`,
             activeConnections: stats.activeConnections || Math.floor(Math.random() * 100) + 1,
           });
@@ -242,3 +243,4 @@ export default function AdvancedSettings() {
     </div>
   );
 }
+
