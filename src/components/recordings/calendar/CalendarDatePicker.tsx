@@ -63,10 +63,10 @@ export default function CalendarDatePicker({ date, onSelect, hasRecordings }: Ca
             hasRecording: (day) => hasRecordings?.(day) || false
           }}
           components={{
-            Day: ({ date: dayDate, ...props }) => (
+            Day: ({ day, ...props }: React.ComponentProps<typeof Calendar.Day> & { day: Date }) => (
               <div
                 {...props}
-                className={cn(props.className || "", getDayClassNames(dayDate))}
+                className={cn(props.className || "", getDayClassNames(day))}
               />
             )
           }}

@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { RecordingDayData } from "./types";
@@ -94,30 +94,29 @@ export const useRecordingCalendar = (cameraId?: string) => {
     }
   };
 
-  // Memoized isRecordingDate implementation to avoid excessive type instantiation
+  // Create a memoized lookup table for recordings dates to avoid deep instantiation
+  const recordingDatesLookup = useMemo(() => {
+    const lookup: Record<string, boolean> = {};
+    
+    if (recordingDates && recordingDates.length > 0) {
+      recordingDates.forEach(recordDate => {
+        const dateKey = `${recordDate.getFullYear()}-${recordDate.getMonth()}-${recordDate.getDate()}`;
+        lookup[dateKey] = true;
+      });
+    }
+    
+    return lookup;
+  }, [recordingDates]);
+  
+  // Simplified and memoized isRecordingDate implementation
   const isRecordingDate = useCallback((dateToCheck: Date): boolean => {
-    if (!dateToCheck || !recordingDates || recordingDates.length === 0) {
+    if (!dateToCheck || !recordingDatesLookup) {
       return false;
     }
     
-    const checkYear = dateToCheck.getFullYear();
-    const checkMonth = dateToCheck.getMonth();
-    const checkDay = dateToCheck.getDate();
-    
-    // Use standard for loop to avoid recursive type instantiation
-    for (let i = 0; i < recordingDates.length; i++) {
-      const recordDate = recordingDates[i];
-      if (
-        recordDate.getFullYear() === checkYear &&
-        recordDate.getMonth() === checkMonth &&
-        recordDate.getDate() === checkDay
-      ) {
-        return true;
-      }
-    }
-    
-    return false;
-  }, [recordingDates]);
+    const dateKey = `${dateToCheck.getFullYear()}-${dateToCheck.getMonth()}-${dateToCheck.getDate()}`;
+    return !!recordingDatesLookup[dateKey];
+  }, [recordingDatesLookup]);
 
   return {
     date,
