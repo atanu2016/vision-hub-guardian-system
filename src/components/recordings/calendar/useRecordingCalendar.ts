@@ -5,18 +5,18 @@ import { format } from "date-fns";
 import { RecordingDayData } from "./types";
 import { logRecordingAccess } from "./loggingUtils";
 
+// Simple date key formatter to avoid type issues
+const formatDateKey = (date: Date): string => {
+  return format(date, 'yyyy-MM-dd');
+};
+
 export const useRecordingCalendar = (cameraId?: string) => {
   const [date, setDate] = useState<Date | undefined>(new Date());
-  const [recordingDatesMap, setRecordingDatesMap] = useState<Record<string, boolean>>({});
+  const [recordingDates, setRecordingDates] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [selectedDateRecordings, setSelectedDateRecordings] = useState<RecordingDayData[]>([]);
   const [selectedTimeframe, setSelectedTimeframe] = useState<string | null>(null);
   
-  // Simple function to format date for map key - extracted to avoid type issues
-  const formatDateKey = (date: Date): string => {
-    return format(date, 'yyyy-MM-dd');
-  };
-
   // Fetch recording dates from the database
   const fetchRecordingDates = useCallback(async () => {
     setIsLoading(true);
@@ -36,20 +36,20 @@ export const useRecordingCalendar = (cameraId?: string) => {
         return;
       }
       
-      // Create a simple map of date strings to boolean values
-      const datesMap: Record<string, boolean> = {};
+      // Create a set of date strings
+      const datesSet = new Set<string>();
       
       if (data && data.length > 0) {
         data.forEach(item => {
           const recordingDate = new Date(item.date_time);
           if (!isNaN(recordingDate.getTime())) {
-            const key = format(recordingDate, 'yyyy-MM-dd');
-            datesMap[key] = true;
+            const key = formatDateKey(recordingDate);
+            datesSet.add(key);
           }
         });
       }
       
-      setRecordingDatesMap(datesMap);
+      setRecordingDates(datesSet);
     } catch (error) {
       console.error('Error loading recording dates:', error);
     } finally {
@@ -62,7 +62,7 @@ export const useRecordingCalendar = (cameraId?: string) => {
     fetchRecordingDates();
   }, [fetchRecordingDates]);
   
-  // Handle date selection
+  // Handle date selection without nested callback
   const handleDateSelect = useCallback(async (selectedDate: Date | undefined) => {
     setDate(selectedDate);
     
@@ -75,7 +75,7 @@ export const useRecordingCalendar = (cameraId?: string) => {
     
     try {
       // Format date for database comparison
-      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
+      const formattedDate = formatDateKey(selectedDate);
       
       // Query recordings for this date
       let query = supabase
@@ -120,15 +120,15 @@ export const useRecordingCalendar = (cameraId?: string) => {
     }
   }, [cameraId]);
 
-  // Simple function to check if a date has recordings
+  // Simple predicate function to check if a date has recordings
   const isRecordingDate = useCallback((date: Date): boolean => {
     if (!date || isNaN(date.getTime())) {
       return false;
     }
     
     const key = formatDateKey(date);
-    return !!recordingDatesMap[key];
-  }, [recordingDatesMap]);
+    return recordingDates.has(key);
+  }, [recordingDates]);
 
   return {
     date,
