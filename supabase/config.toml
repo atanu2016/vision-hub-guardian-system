@@ -8,3 +8,5 @@ modules = []
 [functions.admin-delete-user]
 verify_jwt = true
 
+[functions.repair-permissions]
+verify_jwt = true
