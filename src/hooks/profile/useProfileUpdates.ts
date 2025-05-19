@@ -17,12 +17,16 @@ export function useProfileUpdates(userId?: string) {
     try {
       console.log("[PROFILE UPDATE] Updating profile for user:", userId, "with name:", fullName);
       
-      // First check if profile exists
-      const { data: existingProfile } = await supabase
+      // First check if profile exists using direct query
+      const { data: existingProfile, error: checkError } = await supabase
         .from('profiles')
         .select('id')
         .eq('id', userId)
         .maybeSingle();
+      
+      if (checkError) {
+        console.error("[PROFILE UPDATE] Error checking profile:", checkError);
+      }
       
       let success = false;
       

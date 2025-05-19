@@ -43,7 +43,7 @@ export function useAuthState() {
         console.log("[AUTH] Profile data fetched:", results[0].value);
         setProfile(results[0].value);
       } else if (results[0].status === 'rejected') {
-        const error = results[0] as PromiseRejectedResult;
+        const error = results[0];
         console.error("[AUTH] Error fetching profile:", error.reason);
         setErrors(prev => [...prev, `Profile fetch error: ${error.reason}`]);
         
@@ -69,7 +69,7 @@ export function useAuthState() {
         console.log("[AUTH] Role data fetched:", results[1].value);
         setRole(results[1].value);
       } else {
-        const error = results[1] as PromiseRejectedResult;
+        const error = results[1];
         console.error("[AUTH] Error fetching role:", error.reason);
         setErrors(prev => [...prev, `Role fetch error: ${error.reason}`]);
         

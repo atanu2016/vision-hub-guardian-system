@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -48,7 +49,7 @@ export default function CameraAssignmentModal({
         
         const userEmail = sessionData?.session?.user?.email?.toLowerCase();
         
-        // Check for special admin emails first - fastest path
+        // Special case for admin emails first - fastest path
         if (userEmail === 'admin@home.local' || userEmail === 'superadmin@home.local') {
           console.log("Admin email detected, granting camera assignment permission");
           setCanAssignCameras(true);
