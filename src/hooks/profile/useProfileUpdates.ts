@@ -30,7 +30,7 @@ export function useProfileUpdates(userId?: string) {
       if (existingProfile) {
         console.log("[PROFILE UPDATE] Updating existing profile");
         
-        // Update the profile directly
+        // Update the profile directly using from() instead of rpc()
         const { error } = await supabase
           .from('profiles')
           .update({

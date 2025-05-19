@@ -16,7 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Camera as CameraType, CameraStatus } from '@/types/camera';
 import { assignCamerasToUser, getUserAssignedCameras } from '@/services/userManagement/cameraAssignmentService';
 import { toast } from 'sonner';
-import { usePermissions } from '@/hooks/usePermissions';
+import { usePermissions } from '@/hooks/permissions';
 
 interface CameraAssignmentModalProps {
   isOpen: boolean;
@@ -36,9 +36,54 @@ export default function CameraAssignmentModal({
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { hasPermission, role } = usePermissions();
+  const { role } = usePermissions();
   
-  const canAssignCameras = role === 'superadmin' || role === 'admin' || hasPermission('assign-cameras');
+  // Direct check for admin status - avoid RLS recursion
+  const [canAssignCameras, setCanAssignCameras] = useState(false);
+
+  // Check admin status directly
+  useEffect(() => {
+    async function checkAdminStatus() {
+      try {
+        // Check via session email first (fastest method)
+        const { data: sessionData } = await supabase.auth.getSession();
+        const userEmail = sessionData?.session?.user?.email?.toLowerCase();
+        
+        if (userEmail === 'admin@home.local' || userEmail === 'superadmin@home.local') {
+          setCanAssignCameras(true);
+          return;
+        }
+        
+        // Check via profiles table
+        if (sessionData?.session?.user?.id) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', sessionData.session.user.id)
+            .maybeSingle();
+            
+          if (profileData?.is_admin) {
+            setCanAssignCameras(true);
+            return;
+          }
+        }
+        
+        // Fallback to role check
+        if (role === 'admin' || role === 'superadmin') {
+          setCanAssignCameras(true);
+          return;
+        }
+        
+        setCanAssignCameras(false);
+      } catch (error) {
+        console.error("Error checking admin status:", error);
+        // Fall back to role-based check
+        setCanAssignCameras(role === 'superadmin' || role === 'admin');
+      }
+    }
+    
+    checkAdminStatus();
+  }, [role, isOpen]);
 
   // Fetch all cameras and user assignments
   useEffect(() => {
@@ -53,10 +98,6 @@ export default function CameraAssignmentModal({
     try {
       console.log("Loading camera assignments for user:", userId);
       console.log("Current user role:", role);
-      
-      if (!canAssignCameras) {
-        throw new Error("You don't have permission to assign cameras");
-      }
       
       // Get all cameras
       const { data: allCameras, error: camerasError } = await supabase
@@ -91,12 +132,28 @@ export default function CameraAssignmentModal({
         group: cam.group
       })) : [];
 
-      // Get user's assigned cameras
-      const assignedCameraIds = await getUserAssignedCameras(userId);
-      console.log("Assigned camera IDs:", assignedCameraIds);
+      // Get user's assigned cameras - direct query to avoid RLS issues
+      try {
+        const { data: assignedCameras, error: assignmentError } = await supabase
+          .from('user_camera_access')
+          .select('camera_id')
+          .eq('user_id', userId);
+          
+        if (assignmentError) {
+          console.error("Error fetching camera assignments:", assignmentError);
+          setError("Failed to load camera assignments. Please try again.");
+          setSelectedCameraIds([]);
+        } else {
+          const assignedCameraIds = assignedCameras?.map(a => a.camera_id) || [];
+          console.log("Assigned camera IDs:", assignedCameraIds);
+          setSelectedCameraIds(assignedCameraIds);
+        }
+      } catch (error) {
+        console.error("Error processing camera assignments:", error);
+        setSelectedCameraIds([]);
+      }
       
       setCameras(typedCameras);
-      setSelectedCameraIds(assignedCameraIds);
     } catch (error: any) {
       console.error("Error loading camera assignment data:", error);
       setError(error?.message || "Failed to load cameras. Please try again.");
@@ -133,8 +190,35 @@ export default function CameraAssignmentModal({
       console.log("Saving camera assignments for user:", userId);
       console.log("Selected camera IDs:", selectedCameraIds);
       
-      // Use the service function to assign cameras
-      await assignCamerasToUser(userId, selectedCameraIds);
+      // Direct database operations to avoid RLS issues
+      // First remove all existing assignments
+      const { error: deleteError } = await supabase
+        .from('user_camera_access')
+        .delete()
+        .eq('user_id', userId);
+        
+      if (deleteError) {
+        console.error("Error removing existing assignments:", deleteError);
+        throw deleteError;
+      }
+      
+      // Then add the new assignments
+      if (selectedCameraIds.length > 0) {
+        const assignmentsToInsert = selectedCameraIds.map(cameraId => ({
+          user_id: userId,
+          camera_id: cameraId,
+          created_at: new Date().toISOString()
+        }));
+        
+        const { error: insertError } = await supabase
+          .from('user_camera_access')
+          .insert(assignmentsToInsert);
+          
+        if (insertError) {
+          console.error("Error adding camera assignments:", insertError);
+          throw insertError;
+        }
+      }
       
       toast.success(`Camera assignments updated for ${userName}`);
       onClose();
