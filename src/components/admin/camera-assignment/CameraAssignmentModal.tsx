@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -26,6 +25,9 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
   const [authChecked, setAuthChecked] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<string>('All Cameras');
   const [savingStep, setSavingStep] = useState<string>('');
+  const [savingProgress, setSavingProgress] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [savingComplete, setSavingComplete] = useState(false);
   
   const { 
     cameras, 
@@ -94,11 +96,15 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
   }, [isOpen, onClose]);
 
   const handleClose = () => {
-    if (saving) {
+    if (isSaving) {
       toast.error("Please wait until the save operation completes");
       return;
     }
     onClose();
+    // Reset states when closing
+    setSavingProgress(0);
+    setSavingStep('');
+    setSavingComplete(false);
   };
 
   const handleSubmit = async () => {
@@ -118,26 +124,51 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
     try {
       // Improved progress feedback
       const toastId = toast.loading("Processing camera assignments...");
+      setIsSaving(true);
       
       // Display steps to improve user experience during long operations
       setSavingStep('Preparing camera assignments...');
+      setSavingProgress(10);
       await new Promise(resolve => setTimeout(resolve, 100)); // Small delay to update UI
       
       setSavingStep('Saving to database...');
-      const success = await handleSave();
+      setSavingProgress(30);
       
-      setSavingStep('Finalizing...');
+      // Simulate progress updates during the save operation
+      const progressInterval = setInterval(() => {
+        setSavingProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 5;
+        });
+      }, 1000);
+      
+      const success = await handleSave();
+      clearInterval(progressInterval);
+      
+      setSavingStep(success ? 'Assignment completed!' : 'Assignment failed');
+      setSavingProgress(100);
+      setSavingComplete(true);
       toast.dismiss(toastId);
       
       if (success) {
         toast.success("Camera assignments saved successfully");
-        setSavingStep('');
-        onClose();
+        // Give user a moment to see the success message
+        setTimeout(() => {
+          setIsSaving(false);
+          setSavingStep('');
+          onClose();
+        }, 1500);
+      } else {
+        setIsSaving(false);
       }
     } catch (error: any) {
       console.error("Error saving camera assignments:", error);
       toast.error(error?.message || "Failed to save camera assignments");
       setSavingStep('');
+      setIsSaving(false);
     }
   };
   
@@ -195,7 +226,7 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
               variant="outline" 
               size="sm" 
               onClick={handleRefresh} 
-              disabled={loading || isRefreshing || saving || !isTrulyAuthenticated}
+              disabled={loading || isRefreshing || isSaving || !isTrulyAuthenticated}
               className="ml-auto"
             >
               {isRefreshing ? (
@@ -243,7 +274,7 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
               <Select
                 value={selectedGroup}
                 onValueChange={setSelectedGroup}
-                disabled={loading || saving || !isTrulyAuthenticated}
+                disabled={loading || isSaving || !isTrulyAuthenticated}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Camera Group" />
@@ -260,39 +291,68 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
             </div>
           )}
           
-          <CameraList 
-            cameras={filteredCameras}
-            loading={loading}
-            saving={saving}
-            canAssignCameras={canAssignCameras && isTrulyAuthenticated}
-            onToggle={handleCameraToggle}
-          />
-          
-          {saving && savingStep && (
-            <div className="flex items-center mt-4 px-4 py-2 bg-muted rounded-md">
-              <Loader2 className="animate-spin h-4 w-4 mr-2" />
-              <span className="text-sm">{savingStep}</span>
+          {/* Only show the camera list when not saving */}
+          {!isSaving ? (
+            <CameraList 
+              cameras={filteredCameras}
+              loading={loading}
+              saving={isSaving}
+              canAssignCameras={canAssignCameras && isTrulyAuthenticated}
+              onToggle={handleCameraToggle}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-8 space-y-4">
+              {!savingComplete ? (
+                <>
+                  <Loader2 className="animate-spin h-8 w-8 mb-2" />
+                  <p className="text-center text-lg font-medium">{savingStep}</p>
+                  <div className="w-full max-w-md">
+                    <div className="h-2 w-full bg-secondary rounded-full">
+                      <div 
+                        className="h-2 bg-primary rounded-full transition-all duration-300" 
+                        style={{ width: `${savingProgress}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-muted-foreground text-right mt-1">
+                      {savingProgress}%
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center">
+                  {savingComplete && (
+                    <div className="text-center py-2">
+                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 text-green-500 mb-4">
+                        <CheckIcon className="h-6 w-6" />
+                      </div>
+                      <h3 className="text-lg font-medium">Cameras assigned successfully!</h3>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
         
         <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={handleClose} disabled={saving}>
-            Cancel
+          <Button variant="outline" onClick={handleClose} disabled={isSaving && !savingComplete}>
+            {savingComplete ? "Close" : "Cancel"}
           </Button>
-          <Button 
-            onClick={handleSubmit} 
-            disabled={loading || saving || !!error || !canAssignCameras || !isTrulyAuthenticated}
-          >
-            {saving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                <span>Saving...</span>
-              </>
-            ) : (
-              "Save Changes"
-            )}
-          </Button>
+          {!savingComplete && (
+            <Button 
+              onClick={handleSubmit} 
+              disabled={loading || isSaving || !!error || !canAssignCameras || !isTrulyAuthenticated}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

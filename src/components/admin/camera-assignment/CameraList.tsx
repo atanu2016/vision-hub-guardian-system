@@ -2,6 +2,7 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Camera } from "./types";
+import { CheckIcon, Loader2 } from "lucide-react";
 
 interface CameraListProps {
   cameras: Camera[];
@@ -21,7 +22,7 @@ export default function CameraList({
   if (loading) {
     return (
       <div className="flex justify-center py-8">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }

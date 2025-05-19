@@ -33,8 +33,11 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     // Log the operation start
     await addLogToDB('info', `Starting camera assignment for user ${userId}`, 'camera-assignment', 
       `Assigning ${cameraIds.length} cameras to user ${userId}`);
-      
-    // Start a database transaction manually for atomic operations
+    
+    // Use batch processing with smaller chunks to prevent timeouts
+    const BATCH_SIZE = 100;
+    let allSuccessful = true;
+    
     // First delete existing assignments
     const { error: deleteError } = await supabase
       .from('user_camera_access')
@@ -52,30 +55,40 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
       return false;
     }
     
-    // Only insert new assignments if we have camera IDs
+    // Process in batches to prevent timeouts
     if (cameraIds.length > 0) {
-      // Prepare data for bulk insert
-      const assignmentsToInsert = cameraIds.map(cameraId => ({
-        user_id: userId,
-        camera_id: cameraId,
-        created_at: new Date().toISOString()
-      }));
-      
-      // Insert all new assignments in a single batch
-      const { error: insertError } = await supabase
-        .from('user_camera_access')
-        .insert(assignmentsToInsert);
+      for (let i = 0; i < cameraIds.length; i += BATCH_SIZE) {
+        const batch = cameraIds.slice(i, i + BATCH_SIZE);
         
-      if (insertError) {
-        console.error("Error inserting new camera assignments:", insertError);
-        toast.error("Failed to update camera assignments");
+        // Prepare data for bulk insert
+        const assignmentsToInsert = batch.map(cameraId => ({
+          user_id: userId,
+          camera_id: cameraId,
+          created_at: new Date().toISOString()
+        }));
         
-        // Log the failure
-        await addLogToDB('error', `Failed camera assignment for user ${userId}`, 'camera-assignment', 
-          `Error inserting new assignments: ${insertError.message}`);
+        // Insert batch
+        const { error: insertError } = await supabase
+          .from('user_camera_access')
+          .insert(assignmentsToInsert);
           
-        return false;
+        if (insertError) {
+          console.error(`Error inserting batch ${i / BATCH_SIZE + 1}:`, insertError);
+          
+          // Log the failure but continue with other batches
+          await addLogToDB('error', `Failed batch ${i / BATCH_SIZE + 1} for user ${userId}`, 'camera-assignment', 
+            `Error: ${insertError.message}`);
+            
+          allSuccessful = false;
+        } else {
+          console.log(`Successfully assigned batch ${i / BATCH_SIZE + 1} (${batch.length} cameras) to user ${userId}`);
+        }
       }
+    }
+    
+    if (!allSuccessful) {
+      toast.error("Some camera assignments may not have been saved");
+      return false;
     }
     
     console.log(`Successfully assigned ${cameraIds.length} cameras to user ${userId}`);

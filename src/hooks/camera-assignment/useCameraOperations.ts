@@ -2,6 +2,7 @@
 import { useState, useCallback } from 'react';
 import { assignCamerasToUser } from '@/services/userManagement/cameraAssignment';
 import { Camera } from '@/components/admin/camera-assignment/types';
+import { toast } from 'sonner';
 
 export function useCameraOperations(
   userId: string, 
@@ -23,7 +24,7 @@ export function useCameraOperations(
     );
   }, [saving, setCameras]);
 
-  // Optimized save function that only sends selected camera IDs
+  // Optimized save function with batch processing
   const handleSave = useCallback(async () => {
     if (!userId) {
       console.error("Cannot save camera assignments: No user ID provided");
@@ -38,10 +39,16 @@ export function useCameraOperations(
         .filter(camera => camera.assigned)
         .map(camera => camera.id);
       
-      console.log(`Saving ${assignedCameraIds.length} camera assignments for user ${userId}`);
+      const totalCount = assignedCameraIds.length;
+      console.log(`Saving ${totalCount} camera assignments for user ${userId}`);
       
       // Send only the IDs to the backend
       const success = await assignCamerasToUser(userId, assignedCameraIds);
+      
+      if (!success) {
+        console.error("Camera assignment failed");
+        toast.error("Failed to save camera assignments. Please try again.");
+      }
       
       return success;
     } catch (error) {
