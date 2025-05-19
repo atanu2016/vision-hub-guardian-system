@@ -1,9 +1,6 @@
 
 import { Camera as BaseCamera } from '@/types/camera';
 
-export interface Camera extends Partial<BaseCamera> {
-  id: string;
-  name: string;
-  location: string;
+export interface Camera extends Pick<BaseCamera, 'id' | 'name' | 'location' | 'group'> {
   assigned: boolean;
 }

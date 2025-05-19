@@ -51,30 +51,30 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
       }
     }
     
-    // First, delete all existing user-camera assignments to avoid stale data
-    const { error: deleteError } = await supabase
-      .from('user_camera_access')
-      .delete()
-      .eq('user_id', userId);
-      
-    if (deleteError) {
-      console.error("Error removing existing camera assignments:", deleteError);
-      if (deleteError.code === 'PGRST301') {
-        toast.error("Not authorized. Please log in with admin privileges.");
-      } else {
-        toast.error("Could not update camera assignments. Database error occurred.");
-      }
-      return false;
-    }
-    
-    // If there are no cameras to assign, we're done (we already removed all assignments)
-    if (cameraIds.length === 0) {
-      console.log("No cameras to assign, all assignments cleared");
-      toast.success("Camera assignments cleared successfully");
-      return true;
-    }
-    
     try {
+      // First, delete all existing user-camera assignments to avoid stale data
+      const { error: deleteError } = await supabase
+        .from('user_camera_access')
+        .delete()
+        .eq('user_id', userId);
+        
+      if (deleteError) {
+        console.error("Error removing existing camera assignments:", deleteError);
+        if (deleteError.code === 'PGRST301') {
+          toast.error("Not authorized. Please log in with admin privileges.");
+        } else {
+          toast.error("Could not update camera assignments. Database error occurred.");
+        }
+        return false;
+      }
+      
+      // If there are no cameras to assign, we're done (we already removed all assignments)
+      if (cameraIds.length === 0) {
+        console.log("No cameras to assign, all assignments cleared");
+        toast.success("Camera assignments cleared successfully");
+        return true;
+      }
+      
       // Prepare batch of assignments to insert
       const assignmentsToInsert = cameraIds.map(cameraId => ({
         user_id: userId,
@@ -105,9 +105,7 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
           const validCameraIds = validCameras?.map(cam => cam.id) || [];
           const invalidCameraIds = cameraIds.filter(id => !validCameraIds.includes(id));
           
-          if (invalidCameraIds.length > 0) {
-            console.error("Invalid camera IDs:", invalidCameraIds);
-          }
+          console.error("Invalid camera IDs:", invalidCameraIds);
         } else if (insertError.code === '23505') { // Unique violation
           toast.error("Duplicate camera assignments detected.");
         } else {

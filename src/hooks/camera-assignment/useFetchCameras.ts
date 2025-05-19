@@ -34,7 +34,7 @@ export function useFetchCameras(userId: string, isOpen: boolean) {
       // Step 1: Get all cameras - direct approach
       const { data: allCameras, error: camerasError } = await supabase
         .from('cameras')
-        .select('id, name, location');
+        .select('id, name, location, group');
       
       if (camerasError) {
         console.error("Error fetching cameras:", camerasError);
@@ -67,6 +67,7 @@ export function useFetchCameras(userId: string, isOpen: boolean) {
         id: camera.id,
         name: camera.name,
         location: camera.location || 'Unknown',
+        group: camera.group,
         assigned: assignedCameraIds.includes(camera.id)
       }));
       
