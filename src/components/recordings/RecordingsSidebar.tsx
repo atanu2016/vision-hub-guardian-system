@@ -1,9 +1,11 @@
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Camera, StorageInfo } from "@/hooks/useRecordings";
+import { Separator } from "@/components/ui/separator";
+import { format } from "date-fns";
+import { CalendarX } from "lucide-react";
 
 interface RecordingsSidebarProps {
   cameras: Camera[];
@@ -12,6 +14,8 @@ interface RecordingsSidebarProps {
   selectedType: string;
   setSelectedType: (type: string) => void;
   storageUsed: StorageInfo;
+  dateFilter?: Date | null;
+  onClearDateFilter?: () => void;
 }
 
 export default function RecordingsSidebar({
@@ -20,93 +24,124 @@ export default function RecordingsSidebar({
   setSelectedCamera,
   selectedType,
   setSelectedType,
-  storageUsed
+  storageUsed,
+  dateFilter,
+  onClearDateFilter,
 }: RecordingsSidebarProps) {
+  const recordingTypes = [
+    { id: "all", name: "All Types" },
+    { id: "scheduled", name: "Scheduled" },
+    { id: "manual", name: "Manual" },
+    { id: "motion", name: "Motion" }
+  ];
+
+  const usedPercentage = (storageUsed.used / storageUsed.total) * 100;
+
   return (
     <div className="space-y-6">
       {/* Camera selection */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Cameras</h2>
-        <div className="space-y-1">
-          <Button 
-            variant={selectedCamera === "all" ? "secondary" : "ghost"} 
-            className="w-full justify-start"
-            onClick={() => setSelectedCamera("all")}
-          >
-            All Cameras
-          </Button>
-          
-          {cameras.map(camera => (
-            <Button 
-              key={camera.id}
-              variant={selectedCamera === camera.name ? "secondary" : "ghost"} 
-              className="w-full justify-start"
-              onClick={() => setSelectedCamera(camera.name)}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-medium">Cameras</CardTitle>
+          <CardDescription>
+            Filter recordings by camera
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-1.5 pt-1">
+          <div className="grid grid-cols-1 gap-1">
+            <Button
+              variant={selectedCamera === "all" ? "default" : "ghost"}
+              className="justify-start font-normal"
+              onClick={() => setSelectedCamera("all")}
             >
-              <span className={`h-2 w-2 rounded-full mr-2 ${camera.name.includes('Parking') ? 'bg-green-500' : 'bg-red-500'}`}></span>
-              {camera.name}
+              All Cameras
             </Button>
-          ))}
-        </div>
-      </div>
-      
-      {/* Recording type selection */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Recording Type</h2>
-        <div className="space-y-1">
-          <Button 
-            variant={selectedType === "all" ? "secondary" : "ghost"} 
-            className="w-full justify-start"
-            onClick={() => setSelectedType("all")}
-          >
-            All Types
-          </Button>
-          <Button 
-            variant={selectedType === "scheduled" ? "secondary" : "ghost"} 
-            className="w-full justify-start"
-            onClick={() => setSelectedType("scheduled")}
-          >
-            Scheduled
-          </Button>
-          <Button 
-            variant={selectedType === "manual" ? "secondary" : "ghost"} 
-            className="w-full justify-start"
-            onClick={() => setSelectedType("manual")}
-          >
-            Manual
-          </Button>
-          <Button 
-            variant={selectedType === "motion" ? "secondary" : "ghost"} 
-            className="w-full justify-start"
-            onClick={() => setSelectedType("motion")}
-          >
-            Motion
-          </Button>
-        </div>
-      </div>
+            {cameras.map((camera) => (
+              <Button
+                key={camera.id}
+                variant={selectedCamera === camera.name ? "default" : "ghost"}
+                className="justify-start font-normal"
+                onClick={() => setSelectedCamera(camera.name)}
+              >
+                {camera.name}
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Storage section */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Storage</h2>
+      {/* Recording type selection */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-medium">Recording Type</CardTitle>
+          <CardDescription>
+            Filter by recording trigger
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-1.5 pt-1">
+          <div className="grid grid-cols-1 gap-1">
+            {recordingTypes.map((type) => (
+              <Button
+                key={type.id}
+                variant={selectedType === type.id ? "default" : "ghost"}
+                className="justify-start font-normal"
+                onClick={() => setSelectedType(type.id)}
+              >
+                {type.name}
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Date filter display */}
+      {dateFilter && (
         <Card>
-          <CardContent className="pt-6">
-            <p className="flex justify-between text-sm">
-              <span>Used Space</span>
-              <span className="font-medium">{storageUsed.used} GB / {storageUsed.total} GB</span>
-            </p>
-            <Progress className="h-2 mt-2" value={(storageUsed.used / storageUsed.total) * 100} />
-            
-            <Button 
-              variant="outline"
-              className="w-full mt-4"
-              size="sm"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Cleanup Old Recordings
-            </Button>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-medium">Date Filter</CardTitle>
+            <CardDescription>
+              Showing recordings from selected date
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-1">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-medium">{format(dateFilter, "MMMM d, yyyy")}</p>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={onClearDateFilter}
+                className="h-8 px-2"
+              >
+                <CalendarX className="h-4 w-4 mr-1" />
+                Clear
+              </Button>
+            </div>
           </CardContent>
         </Card>
-      </div>
+      )}
+
+      {/* Storage usage card */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-medium">Storage</CardTitle>
+          <CardDescription>
+            Recording storage usage
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-1">
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Used</span>
+              <span>{storageUsed.used.toFixed(1)} GB / {storageUsed.total} GB</span>
+            </div>
+            <Progress value={usedPercentage} className="h-2" />
+          </div>
+          <Separator className="my-4" />
+          <Button variant="outline" className="w-full">
+            Cleanup Old Recordings
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

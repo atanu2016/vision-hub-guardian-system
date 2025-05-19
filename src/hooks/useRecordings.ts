@@ -1,8 +1,9 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from "@/contexts/auth";
 import { getUserAssignedCameras } from '@/services/userManagement/cameraAssignment';
+import { toast } from "sonner";
 
 // Recording interface from the original file
 interface Recording {
@@ -120,7 +121,51 @@ export const useRecordings = () => {
   const [loading, setLoading] = useState(true);
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [storageUsed, setStorageUsed] = useState<StorageInfo>({ used: 134.5, total: 500 });
+  const [dateFilter, setDateFilter] = useState<Date | null>(null);
   const { role, user } = useAuth();
+
+  // Function to delete a recording
+  const deleteRecording = useCallback(async (id: string) => {
+    try {
+      // In a real implementation, this would send a request to your server
+      setRecordings((prev) => prev.filter((recording) => recording.id !== id));
+      
+      // Simulating a deletion request
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      
+      // In a production environment, you would make an API call here
+      // const { error } = await supabase.from('recordings').delete().eq('id', id);
+      // if (error) throw error;
+      
+      // Update storage used
+      setStorageUsed((prev) => {
+        const deletedRecording = recordings.find((r) => r.id === id);
+        if (deletedRecording) {
+          const sizeInMB = parseFloat(deletedRecording.fileSize.replace(' MB', ''));
+          const sizeInGB = sizeInMB / 1000;
+          return {
+            ...prev,
+            used: Math.max(0, prev.used - sizeInGB)
+          };
+        }
+        return prev;
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting recording:', error);
+      toast.error('Failed to delete recording');
+      return false;
+    }
+  }, [recordings]);
+
+  // Filter recordings by date
+  const filterRecordingsByDate = useCallback((date: Date | null) => {
+    if (!date) return recordings;
+    
+    const dateStr = date.toISOString().split('T')[0];
+    return recordings.filter((recording) => recording.date === dateStr);
+  }, [recordings]);
 
   useEffect(() => {
     // Immediate authentication check
@@ -190,11 +235,12 @@ export const useRecordings = () => {
     loadCamerasAndRecordings();
   }, [role, user?.id]);
 
-  // Filter recordings based on selected camera and type
+  // Filter recordings based on selected camera, type, and date
   const filteredRecordings = recordings.filter(recording => {
     const matchesCamera = selectedCamera === "all" || recording.cameraName === selectedCamera;
     const matchesType = selectedType === "all" || recording.type.toLowerCase() === selectedType.toLowerCase();
-    return matchesCamera && matchesType;
+    const matchesDate = !dateFilter || recording.date === dateFilter.toISOString().split('T')[0];
+    return matchesCamera && matchesType && matchesDate;
   });
 
   return {
@@ -206,6 +252,10 @@ export const useRecordings = () => {
     setSelectedType,
     loading,
     cameras,
-    storageUsed
+    storageUsed,
+    deleteRecording,
+    filterRecordingsByDate,
+    dateFilter,
+    setDateFilter
   };
 };
