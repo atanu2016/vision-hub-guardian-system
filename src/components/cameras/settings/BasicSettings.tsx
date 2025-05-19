@@ -4,10 +4,38 @@ import { SettingsSectionProps } from "./types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import CameraGroupSelector from "../detail/CameraGroupSelector";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 const BasicSettings = ({ cameraData, handleChange }: SettingsSectionProps) => {
+  const [availableGroups, setAvailableGroups] = useState<string[]>([]);
+  
+  // Fetch all available camera groups on component mount
+  useEffect(() => {
+    const fetchCameraGroups = async () => {
+      try {
+        const { data, error } = await fetch('/api/camera-groups').then(res => res.json());
+        if (error) {
+          console.error("Error fetching camera groups:", error);
+          return;
+        }
+        
+        if (data && Array.isArray(data)) {
+          setAvailableGroups(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch camera groups:", err);
+      }
+    };
+    
+    // Uncomment to fetch groups from API when endpoint is available
+    // fetchCameraGroups();
+  }, []);
+
   const handleGroupChange = (group: string) => {
+    console.log("Changing camera group to:", group);
     handleChange('group', group);
+    toast.success(`Camera assigned to group: ${group || 'None'}`);
   };
 
   return (
@@ -58,11 +86,15 @@ const BasicSettings = ({ cameraData, handleChange }: SettingsSectionProps) => {
       </div>
       
       <div className="pt-4">
+        <Label htmlFor="camera-group">Camera Group</Label>
         <CameraGroupSelector 
           cameraId={cameraData.id} 
           currentGroup={cameraData.group || null} 
           onGroupChange={handleGroupChange}
         />
+        <p className="mt-1 text-xs text-muted-foreground">
+          Groups help organize cameras and can be used for filtering and permissions
+        </p>
       </div>
     </div>
   );

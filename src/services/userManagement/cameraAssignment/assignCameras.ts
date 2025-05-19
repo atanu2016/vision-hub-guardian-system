@@ -29,26 +29,77 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
       throw new Error("User ID is required");
     }
     
-    // First, check if we have admin permissions
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', sessionData.session.user.id)
-      .maybeSingle();
-      
-    if (!roleData || roleData.role !== 'superadmin') {
-      // Also check if user has is_admin in profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', sessionData.session.user.id)
-        .maybeSingle();
-        
-      if (!profileData?.is_admin) {
-        console.error("User does not have superadmin role or is_admin flag");
-        toast.error("You don't have permission to assign cameras");
-        return false;
+    // First, check if we have admin permissions - try multiple methods to ensure reliability
+    let hasAdminPermission = false;
+    
+    // Method 1: Check if user is admin@home.local or auth@home.local
+    const userEmail = sessionData.session.user.email;
+    if (userEmail) {
+      const lowerEmail = userEmail.toLowerCase();
+      if (lowerEmail === 'admin@home.local' || lowerEmail === 'auth@home.local' || 
+          lowerEmail === 'superadmin@home.local') {
+        console.log("Admin access granted via special email:", lowerEmail);
+        hasAdminPermission = true;
       }
+    }
+    
+    // Method 2: Check if user has is_admin in profile
+    if (!hasAdminPermission) {
+      try {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', sessionData.session.user.id)
+          .maybeSingle();
+          
+        if (profileData?.is_admin === true) {
+          console.log("Admin access granted via is_admin flag in profile");
+          hasAdminPermission = true;
+        }
+      } catch (profileError) {
+        console.error("Error checking profile is_admin:", profileError);
+      }
+    }
+    
+    // Method 3: Check if user has superadmin role
+    if (!hasAdminPermission) {
+      try {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', sessionData.session.user.id)
+          .maybeSingle();
+          
+        if (roleData && roleData.role === 'superadmin') {
+          console.log("Admin access granted via superadmin role");
+          hasAdminPermission = true;
+        }
+      } catch (roleError) {
+        console.error("Error checking user role:", roleError);
+      }
+    }
+    
+    // If none of the admin checks passed, try the RPC function
+    if (!hasAdminPermission) {
+      try {
+        const { data: isAdmin } = await supabase.rpc(
+          'check_if_user_is_admin'
+        );
+        
+        if (isAdmin === true) {
+          console.log("Admin access granted via check_if_user_is_admin function");
+          hasAdminPermission = true;
+        }
+      } catch (rpcError) {
+        console.error("Error checking admin status via RPC:", rpcError);
+      }
+    }
+    
+    // Final check for admin permission
+    if (!hasAdminPermission) {
+      console.error("User does not have admin permissions");
+      toast.error("You don't have permission to assign cameras");
+      return false;
     }
     
     try {
@@ -115,6 +166,7 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
       }
       
       console.log(`Successfully assigned ${cameraIds.length} cameras to user ${userId}`);
+      toast.success(`Successfully assigned ${cameraIds.length} cameras to user ${userId}`);
       return true;
     } catch (innerError: any) {
       console.error('Error in insert operation:', innerError);

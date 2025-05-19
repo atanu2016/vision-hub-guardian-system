@@ -67,7 +67,7 @@ export function useFetchCameras(userId: string, isOpen: boolean) {
         id: camera.id,
         name: camera.name,
         location: camera.location || 'Unknown',
-        group: camera.group,
+        group: camera.group || 'Uncategorized',
         assigned: assignedCameraIds.includes(camera.id)
       }));
       

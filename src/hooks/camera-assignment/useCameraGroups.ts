@@ -1,95 +1,64 @@
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { GroupedCameras } from '@/types/camera';
-import { Camera as AssignmentCamera } from '@/components/admin/camera-assignment/types';
+import { useMemo } from 'react';
+import { Camera } from '@/components/admin/camera-assignment/types';
 
-export function useCameraGroups(cameras: AssignmentCamera[]) {
-  const [groupedCameras, setGroupedCameras] = useState<Record<string, AssignmentCamera[]>>({});
-  
-  // Group cameras by their group property
-  useEffect(() => {
-    if (!cameras || cameras.length === 0) return;
-    
-    const grouped: Record<string, AssignmentCamera[]> = {};
-    
-    // First add "All Cameras" group
-    grouped['All Cameras'] = [...cameras];
-    
-    // Then group by camera.group property
-    cameras.forEach(camera => {
-      const groupName = camera.group || 'Ungrouped';
+export function useCameraGroups(cameras: Camera[]) {
+  // Get all available camera groups
+  const getAvailableGroups = useMemo(() => {
+    return () => {
+      const groups = ['All Cameras'];
       
-      if (!grouped[groupName]) {
-        grouped[groupName] = [];
-      }
-      
-      grouped[groupName].push(camera);
-    });
-    
-    setGroupedCameras(grouped);
-  }, [cameras]);
-
-  // Function to get all available groups
-  const getAvailableGroups = (): string[] => {
-    return Object.keys(groupedCameras);
-  };
-
-  // Function to get cameras by group
-  const getCamerasByGroup = (groupName: string): AssignmentCamera[] => {
-    if (groupName === 'All Cameras') {
-      return cameras;
-    }
-    return groupedCameras[groupName] || [];
-  };
-
-  // Function to update camera group
-  const updateCameraGroup = async (cameraId: string, groupName: string) => {
-    try {
-      const { error } = await supabase
-        .from('cameras')
-        .update({ group: groupName })
-        .eq('id', cameraId);
-        
-      if (error) throw error;
-      
-      // Update local state
-      setGroupedCameras(prev => {
-        const newGrouped = { ...prev };
-        
-        // Find the camera in all groups and update its group
-        Object.keys(newGrouped).forEach(group => {
-          const cameraIndex = newGrouped[group].findIndex(cam => cam.id === cameraId);
-          if (cameraIndex >= 0) {
-            const camera = { ...newGrouped[group][cameraIndex], group: groupName };
-            
-            // Remove from current group
-            newGrouped[group] = newGrouped[group].filter(cam => cam.id !== cameraId);
-            
-            // Add to new group
-            if (!newGrouped[groupName]) {
-              newGrouped[groupName] = [];
-            }
-            newGrouped[groupName].push(camera);
-          }
-        });
-        
-        return newGrouped;
+      // Add unique group names
+      cameras.forEach(camera => {
+        const groupName = camera.group || 'Uncategorized';
+        if (!groups.includes(groupName)) {
+          groups.push(groupName);
+        }
       });
       
-      return true;
-    } catch (error: any) {
-      console.error("Error updating camera group:", error);
-      toast.error("Failed to update camera group");
-      return false;
-    }
-  };
+      return groups;
+    };
+  }, [cameras]);
+
+  // Get cameras by group name
+  const getCamerasByGroup = useMemo(() => {
+    return (groupName: string) => {
+      if (groupName === 'All Cameras') {
+        return cameras;
+      }
+      
+      return cameras.filter(camera => {
+        const cameraGroup = camera.group || 'Uncategorized';
+        return cameraGroup === groupName;
+      });
+    };
+  }, [cameras]);
+
+  // Group cameras by their groups
+  const groupedCameras = useMemo(() => {
+    const groups: Record<string, Camera[]> = {};
+    
+    // Initialize with empty arrays for each unique group
+    const uniqueGroups = getAvailableGroups().filter(group => group !== 'All Cameras');
+    uniqueGroups.forEach(group => {
+      groups[group] = [];
+    });
+    
+    // Populate groups with cameras
+    cameras.forEach(camera => {
+      const groupName = camera.group || 'Uncategorized';
+      if (!groups[groupName]) {
+        groups[groupName] = [];
+      }
+      groups[groupName].push(camera);
+    });
+    
+    return groups;
+  }, [cameras, getAvailableGroups]);
 
   return {
-    groupedCameras,
     getAvailableGroups,
     getCamerasByGroup,
-    updateCameraGroup
+    groupedCameras
   };
 }

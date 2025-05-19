@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Camera as AssignmentCamera } from './types';
+import PermissionAlert from './PermissionAlert';
 
 interface CameraAssignmentModalProps {
   isOpen: boolean;
@@ -138,9 +139,9 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
   const combinedIsAuthenticated = isAuthenticated && hookIsAuthenticated;
 
   // Get cameras for the currently selected group
-  const filteredCameras: AssignmentCamera[] = selectedGroup && getCamerasByGroup ? 
-    getCamerasByGroup(selectedGroup) : 
-    cameras;
+  const filteredCameras: AssignmentCamera[] = selectedGroup === 'All Cameras' ? 
+    cameras : 
+    (getCamerasByGroup ? getCamerasByGroup(selectedGroup) : []);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -175,6 +176,8 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
             </Alert>
           )}
           
+          <PermissionAlert hasPermission={canAssignCameras} />
+          
           {error && (
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
@@ -204,7 +207,8 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
                   <SelectValue placeholder="Select Camera Group" />
                 </SelectTrigger>
                 <SelectContent>
-                  {getAvailableGroups().map((group) => (
+                  <SelectItem value="All Cameras">All Cameras</SelectItem>
+                  {getAvailableGroups().filter(group => group !== 'All Cameras').map((group) => (
                     <SelectItem key={group} value={group}>
                       {group} ({getCamerasByGroup && getCamerasByGroup(group).length})
                     </SelectItem>
@@ -235,18 +239,6 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
             {saving ? "Saving..." : "Save Changes"}
           </Button>
         </div>
-        
-        {!combinedIsAuthenticated && (
-          <div className="bg-red-100 dark:bg-red-950 p-3 rounded-md text-red-800 dark:text-red-300 text-sm">
-            You must be logged in to manage camera assignments. Please log in again.
-          </div>
-        )}
-        
-        {combinedIsAuthenticated && !canAssignCameras && !loading && (
-          <div className="bg-yellow-100 dark:bg-yellow-950 p-3 rounded-md text-yellow-800 dark:text-yellow-300 text-sm">
-            You don't have permission to assign cameras. Please contact an administrator.
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );
