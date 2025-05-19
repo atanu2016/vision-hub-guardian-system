@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Recording } from "./types";
-import { mockRecordings } from "./mockData";
+import { supabase } from "@/integrations/supabase/client";
 import { useAssignedCameras } from "./camera/useAssignedCameras";
 import { useRecordingsStorage } from "../storage/useRecordingsStorage";
 import { useRecordingOperations } from "./operations/useRecordingOperations";
@@ -41,18 +41,41 @@ export const useRecordingsData = (userId?: string, userRole?: string) => {
           setLoading(false);
           return;
         }
-        
-        if (userRole === 'observer') {
-          // Filter mock recordings to only show those from assigned cameras
-          const cameraNames = cameras.map(cam => cam.name);
-          const filteredRecordings = mockRecordings.filter(
-            rec => cameraNames.includes(rec.cameraName)
-          );
+
+        let query = supabase
+          .from('recordings')
+          .select('*')
+          .order('date_time', { ascending: false });
           
-          setRecordings(filteredRecordings);
+        if (userRole === 'observer') {
+          // Filter recordings to only show those from assigned cameras
+          const cameraNames = cameras.map(cam => cam.name);
+          query = query.in('camera_name', cameraNames);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          const formattedRecordings: Recording[] = data.map(rec => ({
+            id: rec.id,
+            cameraName: rec.camera_name,
+            date: rec.date,
+            time: rec.time,
+            duration: rec.duration,
+            fileSize: rec.file_size,
+            type: rec.type as "Scheduled" | "Motion" | "Manual",
+            important: rec.important,
+            thumbnailUrl: rec.thumbnail_url || "/placeholder.svg",
+            dateTime: rec.date_time
+          }));
+          
+          setRecordings(formattedRecordings);
         } else {
-          // For non-observers (admin, etc.), show all recordings
-          setRecordings(mockRecordings);
+          setRecordings([]);
         }
       } catch (error) {
         console.error("Error loading recordings data:", error);

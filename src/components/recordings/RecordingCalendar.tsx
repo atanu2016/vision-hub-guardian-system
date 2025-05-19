@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, CalendarIcon, Download } from "lucide-react";
@@ -16,23 +15,53 @@ interface RecordingCalendarProps {
   cameraId?: string;
 }
 
+interface RecordingDayData {
+  id: string;
+  time: string;
+  duration: string;
+  motion: boolean;
+  size: string;
+}
+
 export default function RecordingCalendar({ cameraId }: RecordingCalendarProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
-  const [recordingDates, setRecordingDates] = useState<Date[]>([
-    // Sample data for demonstration
-    // In a real app, these would be loaded from the database
-    new Date(2025, 4, 1),
-    new Date(2025, 4, 3),
-    new Date(2025, 4, 5),
-    new Date(2025, 4, 7),
-    new Date(2025, 4, 10),
-    new Date(2025, 4, 12),
-    new Date(2025, 4, 15),
-  ]);
-  
+  const [recordingDates, setRecordingDates] = useState<Date[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedDateRecordings, setSelectedDateRecordings] = useState<any[]>([]);
+  const [selectedDateRecordings, setSelectedDateRecordings] = useState<RecordingDayData[]>([]);
   const [selectedTimeframe, setSelectedTimeframe] = useState<string | null>(null);
+  
+  // Fetch recording dates on initial load
+  useEffect(() => {
+    fetchRecordingDates();
+  }, []);
+  
+  const fetchRecordingDates = async () => {
+    setIsLoading(true);
+    try {
+      let query = supabase
+        .from('recordings')
+        .select('date_time');
+        
+      if (cameraId) {
+        query = query.eq('camera_id', cameraId);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        const dates = data.map(item => new Date(item.date_time));
+        setRecordingDates(dates);
+      }
+    } catch (error) {
+      console.error('Error loading recording dates:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleDateSelect = async (selectedDate: Date | undefined) => {
     setDate(selectedDate);
@@ -40,41 +69,47 @@ export default function RecordingCalendar({ cameraId }: RecordingCalendarProps) 
     
     setIsLoading(true);
     try {
-      // In a real implementation, fetch recordings for this date from the database
-      // For demonstration, we'll simulate a request
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Format date for database comparison
+      const formattedDate = format(selectedDate, 'yyyy-MM-dd');
       
-      // Check if the selected date is in our recording dates
-      const hasRecordings = recordingDates.some(d => 
-        d.getDate() === selectedDate.getDate() && 
-        d.getMonth() === selectedDate.getMonth() && 
-        d.getFullYear() === selectedDate.getFullYear()
-      );
-      
-      if (hasRecordings) {
-        // Generate mock recordings data
-        const mockRecordings = [
-          { id: '1', time: '08:30:00', duration: '00:15:32', motion: true, size: '45.2 MB' },
-          { id: '2', time: '10:15:45', duration: '00:05:12', motion: true, size: '18.7 MB' },
-          { id: '3', time: '13:45:22', duration: '00:30:00', motion: false, size: '87.3 MB' },
-          { id: '4', time: '16:20:18', duration: '00:12:45', motion: true, size: '32.1 MB' },
-          { id: '5', time: '19:10:05', duration: '00:08:33', motion: true, size: '24.8 MB' },
-        ];
+      // Query recordings for this date
+      let query = supabase
+        .from('recordings')
+        .select('*')
+        .like('date', `${formattedDate}%`);
         
-        setSelectedDateRecordings(mockRecordings);
+      if (cameraId) {
+        query = query.eq('camera_id', cameraId);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data && data.length > 0) {
+        // Transform database records to UI format
+        const recordingsData = data.map(rec => ({
+          id: rec.id,
+          time: rec.time,
+          duration: `${rec.duration} minutes`,
+          motion: rec.type === 'Motion',
+          size: rec.file_size
+        }));
+        
+        setSelectedDateRecordings(recordingsData);
       } else {
         setSelectedDateRecordings([]);
       }
       
       // In a real implementation, log this action
-      if (cameraId) {
-        await supabase.from('system_logs').insert({
-          level: 'info',
-          source: 'recordings',
-          message: `Accessed recordings for date: ${format(selectedDate, 'yyyy-MM-dd')}`,
-          details: `Accessed recordings for camera ${cameraId} on date ${format(selectedDate, 'yyyy-MM-dd')}`
-        });
-      }
+      await supabase.from('system_logs').insert({
+        level: 'info',
+        source: 'recordings',
+        message: `Accessed recordings for date: ${format(selectedDate, 'yyyy-MM-dd')}`,
+        details: `Accessed recordings ${cameraId ? `for camera ${cameraId} ` : ''}on date ${format(selectedDate, 'yyyy-MM-dd')}`
+      });
     } catch (error) {
       console.error('Error loading recordings:', error);
     } finally {
@@ -198,7 +233,7 @@ export default function RecordingCalendar({ cameraId }: RecordingCalendarProps) 
                       <div>
                         <p className="text-sm font-medium">{recording.time}</p>
                         <p className="text-xs text-muted-foreground">
-                          Duration: {recording.duration} • Size: {recording.size}
+                          Duration: {recording.duration} �� Size: {recording.size}
                         </p>
                       </div>
                       <div className="flex items-center">

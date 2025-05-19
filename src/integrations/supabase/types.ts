@@ -292,6 +292,48 @@ export type Database = {
         }
         Relationships: []
       }
+      recordings: {
+        Row: {
+          camera_name: string
+          created_at: string | null
+          date: string
+          date_time: string
+          duration: number
+          file_size: string
+          id: string
+          important: boolean | null
+          thumbnail_url: string | null
+          time: string
+          type: string
+        }
+        Insert: {
+          camera_name: string
+          created_at?: string | null
+          date: string
+          date_time: string
+          duration: number
+          file_size: string
+          id?: string
+          important?: boolean | null
+          thumbnail_url?: string | null
+          time: string
+          type: string
+        }
+        Update: {
+          camera_name?: string
+          created_at?: string | null
+          date?: string
+          date_time?: string
+          duration?: number
+          file_size?: string
+          id?: string
+          important?: boolean | null
+          thumbnail_url?: string | null
+          time?: string
+          type?: string
+        }
+        Relationships: []
+      }
       smtp_config: {
         Row: {
           enabled: boolean | null

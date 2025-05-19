@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { Camera } from "@/types/camera"; // Using type import
+import type { Camera } from "@/hooks/recordings/types"; // Using type import
 import { useRecordingsStorage } from "@/hooks/storage";
 import { formatDuration } from "@/hooks/recordings/utils";
 import type { Recording, StorageInfo } from "@/hooks/recordings/types"; // Using type import
@@ -82,60 +82,33 @@ export const useRecordings = (): RecordingsHookResult => {
   const fetchRecordings = async () => {
     setLoading(true);
     try {
-      // Since 'recordings' table might not exist in the database yet,
-      // let's use mock data for now
-      const mockData: Recording[] = [
-        {
-          id: "1",
-          cameraName: "Front Door",
-          date: "2025-05-19",
-          time: "08:30:00",
-          duration: 15, // Changed to number
-          fileSize: "45 MB",
-          type: "Motion",
-          important: true,
-          thumbnailUrl: "/placeholder.svg",
-          dateTime: "2025-05-19T08:30:00"
-        },
-        {
-          id: "2",
-          cameraName: "Backyard",
-          date: "2025-05-19",
-          time: "10:15:00",
-          duration: 30, // Changed to number
-          fileSize: "90 MB",
-          type: "Scheduled",
-          important: false,
-          thumbnailUrl: "/placeholder.svg",
-          dateTime: "2025-05-19T10:15:00"
-        },
-        {
-          id: "3",
-          cameraName: "Living Room",
-          date: "2025-05-18",
-          time: "14:45:00",
-          duration: 10, // Changed to number
-          fileSize: "30 MB",
-          type: "Manual",
-          important: false,
-          thumbnailUrl: "/placeholder.svg",
-          dateTime: "2025-05-18T14:45:00"
-        },
-        {
-          id: "4",
-          cameraName: "Garage",
-          date: "2025-05-18",
-          time: "20:00:00",
-          duration: 25, // Changed to number
-          fileSize: "75 MB",
-          type: "Motion",
-          important: true,
-          thumbnailUrl: "/placeholder.svg",
-          dateTime: "2025-05-18T20:00:00"
-        }
-      ];
+      const { data, error } = await supabase
+        .from('recordings')
+        .select('*')
+        .order('date_time', { ascending: false });
+        
+      if (error) {
+        throw error;
+      }
       
-      setRecordings(mockData);
+      if (data) {
+        const formattedRecordings: Recording[] = data.map(rec => ({
+          id: rec.id,
+          cameraName: rec.camera_name,
+          date: rec.date,
+          time: rec.time,
+          duration: rec.duration,
+          fileSize: rec.file_size,
+          type: rec.type as "Scheduled" | "Motion" | "Manual",
+          important: rec.important,
+          thumbnailUrl: rec.thumbnail_url || "/placeholder.svg",
+          dateTime: rec.date_time
+        }));
+        
+        setRecordings(formattedRecordings);
+      } else {
+        setRecordings([]);
+      }
     } catch (error) {
       console.error("Failed to fetch recordings:", error);
     } finally {
@@ -175,8 +148,16 @@ export const useRecordings = (): RecordingsHookResult => {
 
   const deleteRecording = async (recordingId: string) => {
     try {
-      // In a real implementation, this would send a request to your server
-      // For now, just update the local state
+      const { error } = await supabase
+        .from('recordings')
+        .delete()
+        .eq('id', recordingId);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state after successful deletion
       setRecordings(prevRecordings => 
         prevRecordings.filter(recording => recording.id !== recordingId)
       );

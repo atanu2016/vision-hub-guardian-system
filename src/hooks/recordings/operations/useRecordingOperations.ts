@@ -2,6 +2,7 @@
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { Recording } from "../types";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Hook to handle recording operations like delete
@@ -20,15 +21,16 @@ export const useRecordingOperations = (
     try {
       setIsOperationInProgress(true);
       
-      // In a real implementation, this would send a request to your server
+      // Delete from database
+      const { error } = await supabase
+        .from('recordings')
+        .delete()
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      // Update local state
       setRecordings((prev) => prev.filter((recording) => recording.id !== id));
-      
-      // Simulating a deletion request
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      
-      // In a production environment, you would make an API call here
-      // const { error } = await supabase.from('recordings').delete().eq('id', id);
-      // if (error) throw error;
       
       // Update storage used
       updateStorageAfterDelete(recordings, id);
