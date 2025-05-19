@@ -38,8 +38,17 @@ const CameraTabs = ({ cameraId }: { cameraId?: string }) => {
 
       if (error) throw error;
       
-      // Use type assertion with a simple type to avoid deep instantiation
-      setRecordings(data || []);
+      // Use explicit type casting to avoid type instantiation issues
+      const typedData = data ? data.map(item => ({
+        id: item.id,
+        time: item.time,
+        duration: item.duration,
+        type: item.type,
+        file_size: item.file_size,
+        date: item.date
+      })) : [];
+      
+      setRecordings(typedData);
     } catch (error) {
       console.error('Error loading camera recordings:', error);
     } finally {

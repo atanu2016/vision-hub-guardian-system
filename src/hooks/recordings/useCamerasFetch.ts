@@ -31,7 +31,7 @@ export const useCamerasFetch = () => {
           location: cam.location || 'Unknown',
           ipAddress: cam.ipaddress || '', // Ensure it's never undefined
           lastSeen: cam.lastseen || new Date().toISOString(), // Ensure it's never undefined
-          recording: cam.recording || false
+          recording: cam.recording === true // Ensure it's always a boolean
         }));
         setCameras(camerasFormatted);
       }

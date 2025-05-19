@@ -17,11 +17,11 @@ export interface Recording {
 export interface Camera {
   id: string;
   name: string;
-  status: CameraStatus;  // Required to match type in @/types/camera
-  location: string;      // Required to match type in @/types/camera
-  ipAddress: string;     // Changed from optional to required
-  lastSeen: string;      // Changed from optional to required
-  recording?: boolean;
+  status: CameraStatus;
+  location: string;
+  ipAddress: string;
+  lastSeen: string;
+  recording: boolean;  // Changed from optional to required to match type in @/types/camera
 }
 
 export interface StorageInfo {
