@@ -23,7 +23,7 @@ export const useRecordingCalendar = (cameraId?: string) => {
     try {
       const query = supabase
         .from('recordings')
-        .select('date_time');
+        .select('date, date_time');
         
       if (cameraId) {
         query.eq('camera_id', cameraId);
@@ -41,10 +41,14 @@ export const useRecordingCalendar = (cameraId?: string) => {
       
       if (data && data.length > 0) {
         data.forEach(item => {
-          const recordingDate = new Date(item.date_time);
-          if (!isNaN(recordingDate.getTime())) {
-            const key = formatDateKey(recordingDate);
-            datesSet.add(key);
+          if (item.date) {
+            datesSet.add(item.date);
+          } else if (item.date_time) {
+            const recordingDate = new Date(item.date_time);
+            if (!isNaN(recordingDate.getTime())) {
+              const key = formatDateKey(recordingDate);
+              datesSet.add(key);
+            }
           }
         });
       }
@@ -62,7 +66,7 @@ export const useRecordingCalendar = (cameraId?: string) => {
     fetchRecordingDates();
   }, [fetchRecordingDates]);
   
-  // Handle date selection without nested callback
+  // Handle date selection
   const handleDateSelect = useCallback(async (selectedDate: Date | undefined) => {
     setDate(selectedDate);
     
@@ -81,7 +85,7 @@ export const useRecordingCalendar = (cameraId?: string) => {
       let query = supabase
         .from('recordings')
         .select('*')
-        .like('date', `${formattedDate}%`);
+        .eq('date', formattedDate);
         
       if (cameraId) {
         query = query.eq('camera_id', cameraId);
@@ -99,7 +103,7 @@ export const useRecordingCalendar = (cameraId?: string) => {
         const recordingsData = data.map(rec => ({
           id: rec.id,
           time: rec.time,
-          duration: `${rec.duration} minutes`,
+          duration: rec.duration ? `${rec.duration} minutes` : '0 minutes',
           motion: rec.type === 'Motion',
           size: rec.file_size
         }));

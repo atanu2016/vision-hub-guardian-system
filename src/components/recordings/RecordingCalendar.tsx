@@ -20,9 +20,9 @@ export default function RecordingCalendar({ cameraId }: RecordingCalendarProps) 
 
   return (
     <Card className="border rounded-md shadow-sm">
-      <CardHeader className="pb-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40">
-        <CardTitle className="text-xl text-blue-800 dark:text-blue-300">Recording History</CardTitle>
-        <CardDescription>View and manage your security footage</CardDescription>
+      <CardHeader className="pb-3">
+        <CardTitle>Recording Calendar</CardTitle>
+        <CardDescription>Browse recordings by date</CardDescription>
       </CardHeader>
       <CardContent className="pt-5">
         <div className="space-y-4">
@@ -52,7 +52,7 @@ export default function RecordingCalendar({ cameraId }: RecordingCalendarProps) 
           </div>
         </div>
       </CardContent>
-      <CardFooter className="flex justify-between bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40">
+      <CardFooter className="flex justify-between">
         <Button variant="outline" size="sm">Filter</Button>
         <Button variant="outline" size="sm">Export Recordings</Button>
       </CardFooter>

@@ -1,7 +1,8 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import RecordingCalendar from "@/components/recordings/RecordingCalendar";
 
-const CameraTabs = () => {
+const CameraTabs = ({ cameraId }: { cameraId?: string }) => {
   return (
     <Tabs defaultValue="recordings" className="w-full">
       <TabsList className="grid w-full grid-cols-3">
@@ -10,10 +11,14 @@ const CameraTabs = () => {
         <TabsTrigger value="analytics">Analytics</TabsTrigger>
       </TabsList>
       <TabsContent value="recordings" className="border rounded-md p-4 mt-2">
-        <div className="text-center p-8">
-          <h3 className="text-lg font-medium mb-2">No recordings available</h3>
-          <p className="text-muted-foreground">Recordings will appear here when available</p>
-        </div>
+        {cameraId ? (
+          <RecordingCalendar cameraId={cameraId} />
+        ) : (
+          <div className="text-center p-8">
+            <h3 className="text-lg font-medium mb-2">No camera selected</h3>
+            <p className="text-muted-foreground">Select a camera to view recordings</p>
+          </div>
+        )}
       </TabsContent>
       <TabsContent value="events" className="border rounded-md p-4 mt-2">
         <div className="text-center p-8">

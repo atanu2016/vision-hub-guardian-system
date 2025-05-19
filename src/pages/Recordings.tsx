@@ -3,14 +3,16 @@ import { useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import RecordingsSidebar from "@/components/recordings/RecordingsSidebar";
 import RecordingsList from "@/components/recordings/RecordingsList";
+import RecordingCalendar from "@/components/recordings/RecordingCalendar";
 import { useRecordings } from "@/hooks/useRecordings";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon, ListFilter } from "lucide-react";
 import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useSearchParams } from "react-router-dom";
 
 const Recordings = () => {
   const {
@@ -23,10 +25,19 @@ const Recordings = () => {
     cameras,
     storageUsed,
     deleteRecording,
-    filterRecordingsByDate,
     dateFilter,
     setDateFilter
   } = useRecordings();
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [viewMode, setViewMode] = useState<string>(searchParams.get("view") || "list");
+
+  const handleViewChange = (value: string) => {
+    if (value) {
+      setViewMode(value);
+      setSearchParams({ view: value });
+    }
+  };
 
   const handleDeleteRecording = async (recordingId: string) => {
     const success = await deleteRecording(recordingId);
@@ -46,35 +57,45 @@ const Recordings = () => {
             </p>
           </div>
           
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-[200px] justify-start text-left font-normal",
-                  !dateFilter && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateFilter ? format(dateFilter, "PPP") : <span>Select date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                mode="single"
-                selected={dateFilter}
-                onSelect={setDateFilter}
-                initialFocus
-                className="pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
+          <div className="flex items-center gap-4">
+            <ToggleGroup type="single" value={viewMode} onValueChange={handleViewChange}>
+              <ToggleGroupItem value="list" aria-label="Toggle list view">
+                <ListFilter className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="calendar" aria-label="Toggle calendar view">
+                <CalendarIcon className="h-4 w-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-[200px] justify-start text-left font-normal",
+                    !dateFilter && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateFilter ? format(dateFilter, "PPP") : <span>Select date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <button
+                  className="w-full text-left p-2 hover:bg-accent"
+                  onClick={() => setDateFilter(null)}
+                >
+                  Clear filter
+                </button>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6">
           {/* Left sidebar */}
           <RecordingsSidebar 
-            cameras={cameras as any[]} // Type cast to fix the type error
+            cameras={cameras}
             selectedCamera={selectedCamera}
             setSelectedCamera={setSelectedCamera}
             selectedType={selectedType}
@@ -85,12 +106,20 @@ const Recordings = () => {
           />
 
           {/* Main content area */}
-          <RecordingsList 
-            recordings={filteredRecordings}
-            loading={loading}
-            onDeleteRecording={handleDeleteRecording}
-            dateFilter={dateFilter}
-          />
+          {viewMode === "calendar" ? (
+            <RecordingCalendar 
+              cameraId={selectedCamera !== "all" ? 
+                cameras.find(c => c.name === selectedCamera)?.id : 
+                undefined} 
+            />
+          ) : (
+            <RecordingsList 
+              recordings={filteredRecordings}
+              loading={loading}
+              onDeleteRecording={handleDeleteRecording}
+              dateFilter={dateFilter}
+            />
+          )}
         </div>
       </div>
     </AppLayout>
