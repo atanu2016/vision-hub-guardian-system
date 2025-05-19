@@ -1,11 +1,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import AppLayout from "@/components/layout/AppLayout";
-import { fetchCamerasFromDB } from "@/services/database/camera/fetchCameras";
 import { Camera } from "@/types/camera";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth";
-import { getAccessibleCameras } from "@/services/userManagement/cameraAssignmentService";
+import { getAccessibleCameras } from "@/services/userManagement/cameraAssignment";
 import LiveViewHeader from "@/components/cameras/live/LiveViewHeader";
 import LiveViewSkeleton from "@/components/cameras/live/LiveViewSkeleton";
 import EmptyLiveView from "@/components/cameras/live/EmptyLiveView";
@@ -32,43 +31,10 @@ const LiveView = () => {
         return;
       }
 
-      // Determine user access level
-      let isAdmin = false;
+      console.log("Fetching cameras for user", user.id);
       
-      // Special case for admin email
-      const userEmail = user.email?.toLowerCase();
-      if (userEmail === 'admin@home.local' || userEmail === 'superadmin@home.local') {
-        isAdmin = true;
-      } else {
-        isAdmin = role === 'admin' || role === 'superadmin';
-      }
-      
-      // Fetch cameras based on access level
-      let camerasData: Camera[] = [];
-      
-      if (isAdmin) {
-        console.log("User is admin/superadmin, fetching all cameras");
-        try {
-          const allCameras = await fetchCamerasFromDB();
-          camerasData = allCameras;
-        } catch (adminErr) {
-          console.error("Error fetching all cameras:", adminErr);
-          setError("Failed to fetch cameras. Please try again.");
-          setCameras([]);
-          return;
-        }
-      } else {
-        // For users and operators, directly fetch only assigned cameras
-        console.log("User is normal user/operator, fetching assigned cameras");
-        try {
-          camerasData = await getAccessibleCameras(user.id, 'user'); // Force user role for fetching
-        } catch (err) {
-          console.error("Error fetching assigned cameras:", err);
-          setError("Failed to fetch cameras. Please try again.");
-          setCameras([]);
-          return;
-        }
-      }
+      // Get user's accessible cameras
+      const camerasData = await getAccessibleCameras(user.id, role || 'user');
       
       console.log(`Fetched ${camerasData.length} cameras for live view`);
       setCameras(camerasData);
@@ -76,11 +42,10 @@ const LiveView = () => {
       console.error('Error fetching cameras for live view:', error);
       setError(error.message || "Failed to fetch cameras");
       toast.error("Failed to fetch cameras");
-      setCameras([]);
     } finally {
       setLoading(false);
     }
-  }, [user, role]); 
+  }, [user, role]);
 
   useEffect(() => {
     if (user) {
@@ -90,7 +55,7 @@ const LiveView = () => {
       setCameras([]);
       setLoading(false);
     }
-  }, [user, role, fetchCameras]);
+  }, [user, fetchCameras]);
 
   return (
     <AppLayout fullWidth>

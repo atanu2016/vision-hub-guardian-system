@@ -22,13 +22,14 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
       }
       
       // Transform database fields to match Camera type
-      return transformCameraData(data);
+      return transformCameraData(data || []);
     }
     
     // For users and operators, first get assigned cameras from user_camera_access
     console.log("User is not admin, fetching assigned cameras");
     
-    // Direct query to get camera assignments
+    // Direct query to get camera assignments - add extensive logging to debug the issue
+    console.log(`Querying user_camera_access for userId: ${userId}`);
     const { data: accessData, error: accessError } = await supabase
       .from('user_camera_access')
       .select('camera_id')
@@ -36,17 +37,21 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
       
     if (accessError) {
       console.error("Error fetching camera assignments:", accessError);
+      // Return empty array instead of throwing for resilience
       return [];
     }
     
-    const assignedCameraIds = accessData?.map(item => item.camera_id) || [];
+    console.log("Camera access data received:", accessData);
     
-    if (assignedCameraIds.length === 0) {
-      console.log("User has no assigned cameras");
+    if (!accessData || accessData.length === 0) {
+      console.log("No camera assignments found for user");
       return [];
     }
     
-    console.log(`Fetching ${assignedCameraIds.length} assigned cameras`);
+    const assignedCameraIds = accessData.map(item => item.camera_id);
+    console.log(`Found ${assignedCameraIds.length} assigned camera IDs:`, assignedCameraIds);
+    
+    // Fetch the actual camera details for the assigned IDs
     const { data, error } = await supabase
       .from('cameras')
       .select('*')
@@ -54,13 +59,13 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
       
     if (error) {
       console.error("Error fetching assigned cameras:", error);
-      throw error;
+      return [];
     }
     
-    console.log(`Found ${data.length} cameras for user`);
+    console.log(`Found ${data?.length || 0} cameras for user`);
     
     // Transform database fields to match Camera type
-    return transformCameraData(data);
+    return transformCameraData(data || []);
   } catch (error) {
     console.error('Error fetching accessible cameras:', error);
     return [];
@@ -76,7 +81,7 @@ function transformCameraData(data: any[]): Camera[] {
     name: cam.name,
     location: cam.location,
     ipAddress: cam.ipaddress,
-    port: cam.port,
+    port: cam.port || 80,
     username: cam.username,
     password: cam.password,
     rtmpUrl: cam.rtmpurl,
