@@ -2,11 +2,10 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, RefreshCcw } from 'lucide-react';
+import { Loader2, RefreshCcw, AlertCircle } from 'lucide-react';
 import { useAssignCameras } from '@/hooks/camera-assignment';
 import CameraList from './CameraList';
 import { toast } from 'sonner';
-import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -24,6 +23,7 @@ interface CameraAssignmentModalProps {
 const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssignmentModalProps) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<string>('All Cameras');
   
   const { 
@@ -40,20 +40,32 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
     getCamerasByGroup
   } = useAssignCameras(userId, isOpen);
   
-  // Check authentication status when modal opens and periodically
+  // Check authentication status when modal opens
   useEffect(() => {
     const checkAuth = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (error || !data.session) {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error || !data.session) {
+          console.error("Authentication check failed:", error || "No session found");
+          setIsAuthenticated(false);
+          toast.error("You must be logged in to manage camera assignments");
+          
+          // Delay redirect slightly to let the toast be visible
+          setTimeout(() => {
+            onClose();
+            window.location.href = '/auth'; // Redirect to auth page
+          }, 1500);
+        } else {
+          console.log("User authenticated successfully");
+          setIsAuthenticated(true);
+        }
+        
+        setAuthChecked(true);
+      } catch (err) {
+        console.error("Authentication check error:", err);
         setIsAuthenticated(false);
-        toast.error("You must be logged in to manage camera assignments");
-        setTimeout(() => {
-          onClose();
-          // Redirect to auth page
-          window.location.href = '/auth';
-        }, 1500);
-      } else {
-        setIsAuthenticated(true);
+        setAuthChecked(true);
       }
     };
     
@@ -69,7 +81,7 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
         setIsAuthenticated(false);
         onClose();
         // Redirect to auth page
-        window.location.href = '/auth';
+        window.location.href = '/auth'; 
       } else if (session) {
         setIsAuthenticated(true);
       }
@@ -89,13 +101,12 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
   };
 
   const handleSubmit = async () => {
-    // Check authentication status directly before performing the save
+    // Check authentication status before saving
     const { data } = await supabase.auth.getSession();
     
     if (!data.session) {
-      toast.error("You must be logged in to save camera assignments");
+      toast.error("Authentication required. Please log in again.");
       onClose();
-      // Redirect to auth page
       window.location.href = '/auth';
       return;
     }
@@ -105,21 +116,25 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
       return;
     }
     
-    const success = await handleSave();
-    if (success) {
-      toast.success("Camera assignments saved successfully");
-      onClose();
+    try {
+      const success = await handleSave();
+      if (success) {
+        toast.success("Camera assignments saved successfully");
+        onClose();
+      }
+    } catch (error: any) {
+      console.error("Error saving camera assignments:", error);
+      toast.error(error?.message || "Failed to save camera assignments");
     }
   };
   
   const handleRefresh = async () => {
-    // Check authentication status directly before refreshing
+    // Check authentication status before refreshing
     const { data } = await supabase.auth.getSession();
     
     if (!data.session) {
-      toast.error("You must be logged in to view camera assignments");
+      toast.error("Authentication required. Please log in again.");
       onClose();
-      // Redirect to auth page
       window.location.href = '/auth';
       return;
     }
@@ -127,21 +142,38 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
     setIsRefreshing(true);
     try {
       await loadCamerasAndAssignments();
-      toast.success("Camera assignments refreshed");
+      toast.success("Camera list refreshed");
     } catch (error) {
+      console.error("Error refreshing cameras:", error);
       toast.error("Failed to refresh cameras");
     } finally {
       setIsRefreshing(false);
     }
   };
 
-  // Check if the user is truly authenticated by combining all auth checks
-  const combinedIsAuthenticated = isAuthenticated && hookIsAuthenticated;
+  // Combined auth check from both component and hook
+  const isTrulyAuthenticated = isAuthenticated && hookIsAuthenticated;
 
   // Get cameras for the currently selected group
   const filteredCameras: AssignmentCamera[] = selectedGroup === 'All Cameras' ? 
     cameras : 
     (getCamerasByGroup ? getCamerasByGroup(selectedGroup) : []);
+
+  // Show loading state while checking auth
+  if (!authChecked) {
+    return (
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-md md:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Checking authentication...</DialogTitle>
+          </DialogHeader>
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -153,7 +185,7 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
               variant="outline" 
               size="sm" 
               onClick={handleRefresh} 
-              disabled={loading || isRefreshing || saving}
+              disabled={loading || isRefreshing || saving || !isTrulyAuthenticated}
               className="ml-auto"
             >
               {isRefreshing ? (
@@ -167,11 +199,11 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
         </DialogHeader>
         
         <div className="py-4">
-          {!combinedIsAuthenticated && (
+          {!isTrulyAuthenticated && (
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                You must be logged in to manage camera assignments
+                Authentication required. Please log in again.
               </AlertDescription>
             </Alert>
           )}
@@ -201,7 +233,7 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
               <Select
                 value={selectedGroup}
                 onValueChange={setSelectedGroup}
-                disabled={loading || saving}
+                disabled={loading || saving || !isTrulyAuthenticated}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Camera Group" />
@@ -222,7 +254,7 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
             cameras={filteredCameras}
             loading={loading}
             saving={saving}
-            canAssignCameras={canAssignCameras && combinedIsAuthenticated}
+            canAssignCameras={canAssignCameras && isTrulyAuthenticated}
             onToggle={handleCameraToggle}
           />
         </div>
@@ -233,7 +265,7 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
           </Button>
           <Button 
             onClick={handleSubmit} 
-            disabled={loading || saving || !!error || !canAssignCameras || !combinedIsAuthenticated}
+            disabled={loading || saving || !!error || !canAssignCameras || !isTrulyAuthenticated}
           >
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {saving ? "Saving..." : "Save Changes"}

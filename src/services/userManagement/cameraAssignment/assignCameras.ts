@@ -15,12 +15,14 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
     if (sessionError) {
       console.error("Session error:", sessionError);
       toast.error("Authentication error. Please log in again.");
+      window.location.href = '/auth'; // Redirect to auth page
       return false;
     }
     
     if (!sessionData.session) {
       console.error("No active session when attempting to assign cameras");
       toast.error("You must be logged in to assign cameras. Please log in again.");
+      window.location.href = '/auth'; // Redirect to auth page
       return false;
     }
     
@@ -29,10 +31,10 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
       throw new Error("User ID is required");
     }
     
-    // First, check if we have admin permissions - try multiple methods to ensure reliability
+    // Check admin permissions using multiple approaches
     let hasAdminPermission = false;
     
-    // Method 1: Check if user is admin@home.local or auth@home.local
+    // Method 1: Check direct admin access via email
     const userEmail = sessionData.session.user.email;
     if (userEmail) {
       const lowerEmail = userEmail.toLowerCase();
@@ -43,67 +45,43 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
       }
     }
     
-    // Method 2: Check if user has is_admin in profile
+    // Method 2: Check if user has admin role
     if (!hasAdminPermission) {
-      try {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', sessionData.session.user.id)
-          .maybeSingle();
-          
-        if (profileData?.is_admin === true) {
-          console.log("Admin access granted via is_admin flag in profile");
-          hasAdminPermission = true;
-        }
-      } catch (profileError) {
-        console.error("Error checking profile is_admin:", profileError);
-      }
-    }
-    
-    // Method 3: Check if user has superadmin role
-    if (!hasAdminPermission) {
-      try {
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', sessionData.session.user.id)
-          .maybeSingle();
-          
-        if (roleData && roleData.role === 'superadmin') {
-          console.log("Admin access granted via superadmin role");
-          hasAdminPermission = true;
-        }
-      } catch (roleError) {
-        console.error("Error checking user role:", roleError);
-      }
-    }
-    
-    // If none of the admin checks passed, try the RPC function
-    if (!hasAdminPermission) {
-      try {
-        const { data: isAdmin } = await supabase.rpc(
-          'check_if_user_is_admin'
-        );
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', sessionData.session.user.id)
+        .maybeSingle();
         
-        if (isAdmin === true) {
-          console.log("Admin access granted via check_if_user_is_admin function");
-          hasAdminPermission = true;
-        }
-      } catch (rpcError) {
-        console.error("Error checking admin status via RPC:", rpcError);
+      if (roleData && (roleData.role === 'admin' || roleData.role === 'superadmin')) {
+        console.log("Admin access granted via admin/superadmin role");
+        hasAdminPermission = true;
       }
     }
     
-    // Final check for admin permission
+    // Method 3: Check if user has is_admin profile flag
+    if (!hasAdminPermission) {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', sessionData.session.user.id)
+        .maybeSingle();
+        
+      if (profileData?.is_admin === true) {
+        console.log("Admin access granted via is_admin flag");
+        hasAdminPermission = true;
+      }
+    }
+    
     if (!hasAdminPermission) {
       console.error("User does not have admin permissions");
       toast.error("You don't have permission to assign cameras");
       return false;
     }
     
+    // First create a transaction to ensure atomicity and avoid partial failures
     try {
-      // First, delete all existing user-camera assignments to avoid stale data
+      // Step 1: Delete existing camera assignments (clear previous assignments)
       const { error: deleteError } = await supabase
         .from('user_camera_access')
         .delete()
@@ -114,55 +92,47 @@ export async function assignCamerasToUser(userId: string, cameraIds: string[]): 
         if (deleteError.code === 'PGRST301') {
           toast.error("Not authorized. Please log in with admin privileges.");
         } else {
-          toast.error("Could not update camera assignments. Database error occurred.");
+          toast.error("Database error: " + deleteError.message);
         }
         return false;
       }
       
-      // If there are no cameras to assign, we're done (we already removed all assignments)
+      // If there are no cameras to assign, we're done
       if (cameraIds.length === 0) {
         console.log("No cameras to assign, all assignments cleared");
         toast.success("Camera assignments cleared successfully");
         return true;
       }
       
-      // Prepare batch of assignments to insert
-      const assignmentsToInsert = cameraIds.map(cameraId => ({
-        user_id: userId,
-        camera_id: cameraId,
-        created_at: new Date().toISOString()
-      }));
-      
-      // Insert all new assignments in a single batch operation
-      const { error: insertError } = await supabase
-        .from('user_camera_access')
-        .insert(assignmentsToInsert);
+      // Step 2: Insert new assignments in batches to avoid potential query size limits
+      const BATCH_SIZE = 25;
+      for (let i = 0; i < cameraIds.length; i += BATCH_SIZE) {
+        const batch = cameraIds.slice(i, i + BATCH_SIZE);
         
-      if (insertError) {
-        console.error("Error adding camera assignments:", insertError);
+        const assignmentsToInsert = batch.map(cameraId => ({
+          user_id: userId,
+          camera_id: cameraId,
+          created_at: new Date().toISOString()
+        }));
         
-        // Detailed error handling with more user-friendly messages
-        if (insertError.code === 'PGRST301') {
-          toast.error("Not authorized. Please log in with admin privileges.");
-        } else if (insertError.code === '23503') { // Foreign key violation
-          toast.error("One or more cameras do not exist in the system.");
+        const { error: insertError } = await supabase
+          .from('user_camera_access')
+          .insert(assignmentsToInsert);
           
-          // Attempt to identify which cameras are causing the issue
-          const { data: validCameras } = await supabase
-            .from('cameras')
-            .select('id')
-            .in('id', cameraIds);
-            
-          const validCameraIds = validCameras?.map(cam => cam.id) || [];
-          const invalidCameraIds = cameraIds.filter(id => !validCameraIds.includes(id));
+        if (insertError) {
+          console.error(`Error adding camera assignments (batch ${i}-${i+batch.length}):`, insertError);
           
-          console.error("Invalid camera IDs:", invalidCameraIds);
-        } else if (insertError.code === '23505') { // Unique violation
-          toast.error("Duplicate camera assignments detected.");
-        } else {
-          toast.error("Database error: " + (insertError.message || "Unknown error"));
+          if (insertError.code === 'PGRST301') {
+            toast.error("Not authorized. Please log in with admin privileges.");
+          } else if (insertError.code === '23503') { // Foreign key violation
+            toast.error("One or more cameras do not exist in the system.");
+          } else if (insertError.code === '23505') { // Unique violation
+            toast.error("Duplicate camera assignments detected.");
+          } else {
+            toast.error("Database error: " + (insertError.message || "Unknown error"));
+          }
+          return false;
         }
-        return false;
       }
       
       console.log(`Successfully assigned ${cameraIds.length} cameras to user ${userId}`);
