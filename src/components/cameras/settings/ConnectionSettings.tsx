@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { SettingsSectionProps } from "./types";
@@ -22,9 +21,20 @@ const ConnectionSettings = ({ cameraData, handleChange, disabled = false }: Sett
   const [previousConnectionType, setPreviousConnectionType] = useState(cameraData.connectionType);
   const [suggestedUrls, setSuggestedUrls] = useState<string[]>([]);
   
+  // Log initial camera data for debugging
+  useEffect(() => {
+    console.log("ConnectionSettings mounted with camera data:", {
+      connectionType: cameraData.connectionType,
+      rtspUrl: cameraData.rtspUrl,
+      rtmpUrl: cameraData.rtmpUrl
+    });
+  }, []);
+  
   // When connection type changes, offer helpful migration suggestions
   useEffect(() => {
     if (previousConnectionType !== cameraData.connectionType) {
+      console.log(`Connection type changed from ${previousConnectionType} to ${cameraData.connectionType}`);
+      
       // If changing from ONVIF to RTSP, generate possible RTSP URLs
       if (previousConnectionType === 'onvif' && cameraData.connectionType === 'rtsp') {
         const urls = suggestRtspUrls(
@@ -44,6 +54,8 @@ const ConnectionSettings = ({ cameraData, handleChange, disabled = false }: Sett
   }, [cameraData.connectionType, previousConnectionType]);
 
   const handleFieldChange = (field: keyof typeof cameraData, value: string | number) => {
+    console.log(`Changing field ${String(field)} to:`, value);
+    
     const fieldErrors = validateConnectionSettings(
       { ...cameraData, [field]: value }, 
       cameraData.connectionType || 'ip'
@@ -67,18 +79,19 @@ const ConnectionSettings = ({ cameraData, handleChange, disabled = false }: Sett
   };
 
   const handleConnectionTypeChange = (type: CameraConnectionType) => {
+    console.log(`Setting connection type to: ${type}`);
     handleChange('connectionType', type);
     
     // Clear any previous connection-specific fields when changing types
     if (type === 'rtsp') {
-      // Clear RTMP URL if it exists
-      if (cameraData.rtmpUrl) {
-        handleChange('rtmpUrl', '');
+      // Keep rtspUrl if it exists, otherwise initialize from rtmpUrl for backward compatibility
+      if (!cameraData.rtspUrl && cameraData.rtmpUrl && previousConnectionType === 'rtmp') {
+        handleChange('rtspUrl', cameraData.rtmpUrl);
       }
     } else if (type === 'rtmp') {
-      // Clear RTSP URL if it exists
-      if (cameraData.rtspUrl) {
-        handleChange('rtspUrl', '');
+      // Clear RTSP URL if switching away from RTSP
+      if (cameraData.connectionType === 'rtsp' && cameraData.rtspUrl) {
+        handleChange('rtmpUrl', '');
       }
     }
   };
@@ -110,7 +123,7 @@ const ConnectionSettings = ({ cameraData, handleChange, disabled = false }: Sett
           />
           
           {/* Show IP fields for non-streaming connection types */}
-          {cameraData.connectionType !== 'rtmp' && cameraData.connectionType !== 'hls' && (
+          {cameraData.connectionType !== 'rtmp' && cameraData.connectionType !== 'hls' && cameraData.connectionType !== 'rtsp' && (
             <IPConnectionForm
               cameraData={cameraData}
               handleChange={handleFieldChange}
@@ -151,7 +164,7 @@ const ConnectionSettings = ({ cameraData, handleChange, disabled = false }: Sett
         )}
         
         {/* Credentials form for non-streaming connection types */}
-        {cameraData.connectionType !== 'rtmp' && cameraData.connectionType !== 'hls' && (
+        {cameraData.connectionType !== 'rtmp' && cameraData.connectionType !== 'hls' && cameraData.connectionType !== 'rtsp' && (
           <CredentialsForm
             cameraData={cameraData}
             handleChange={handleChange}

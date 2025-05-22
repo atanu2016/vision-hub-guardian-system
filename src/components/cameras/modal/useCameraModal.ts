@@ -7,7 +7,7 @@ import { simulateCameraConnection } from "./utils/connectionTester";
 import { mapFormValuesToCamera } from "./utils/cameraMapper";
 import { useCameraForm } from "./hooks/useCameraForm";
 
-export function useCameraModal({ isOpen, onClose, onAdd }: UseCameraModalProps): UseCameraModalReturn {
+export function useCameraModal({ isOpen, onClose, onAdd, existingGroups }: UseCameraModalProps): UseCameraModalReturn {
   const { toast } = useToast();
   const { formState, formActions } = useCameraForm();
   
@@ -16,7 +16,7 @@ export function useCameraModal({ isOpen, onClose, onAdd }: UseCameraModalProps):
     if (isOpen) {
       formActions.resetForm();
     }
-  }, [isOpen]);
+  }, [isOpen, formActions]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +24,11 @@ export function useCameraModal({ isOpen, onClose, onAdd }: UseCameraModalProps):
     // Validate form
     const { isValid, errorMessage } = validateCameraForm(formState);
     if (!isValid) {
-      toast.error(errorMessage || "Please fix the form errors");
+      toast({
+        title: "Error",
+        description: errorMessage || "Please fix the form errors",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -40,15 +44,36 @@ export function useCameraModal({ isOpen, onClose, onAdd }: UseCameraModalProps):
     try {
       await simulateCameraConnection();
       
+      // Log the form values especially related to RTSP
+      console.log("Form values before mapping:", {
+        connectionType: formState.connectionType,
+        rtspUrl: formState.rtspUrl,
+        rtmpUrl: formState.rtmpUrl
+      });
+      
       // Map form values to camera object
       const newCamera = mapFormValuesToCamera(formState, finalGroup);
+      
+      // Log the mapped camera to check RTSP values
+      console.log("Mapped camera object:", {
+        connectionType: newCamera.connectionType,
+        rtspUrl: newCamera.rtspUrl,
+        rtmpUrl: newCamera.rtmpUrl
+      });
 
       onAdd(newCamera);
-      toast.success(`${formState.name} has been added to ${finalGroup}`);
+      toast({
+        title: "Success",
+        description: `${formState.name} has been added to ${finalGroup}`,
+      });
       formActions.resetForm();
       onClose();
     } catch (error) {
-      toast.error("Could not connect to camera. Check credentials and try again.");
+      toast({
+        title: "Connection Error",
+        description: "Could not connect to camera. Check credentials and try again.",
+        variant: "destructive"
+      });
     } finally {
       formActions.setIsVerifying(false);
     }

@@ -43,7 +43,6 @@ export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera
         }
         break;
       case 'rtsp':
-        // Fix: Use rtspUrl instead of rtmpUrl for RTSP validation
         if (!cameraData.rtspUrl?.trim() || !cameraData.rtspUrl.startsWith('rtsp://')) {
           setIsValid(false);
           return;
@@ -72,6 +71,14 @@ export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera
   };
 
   const handleChange = (field: keyof Camera, value: string | boolean | number | string[]) => {
+    console.log(`Changing ${String(field)} to:`, value);
+    
+    // Special handling for connectionType changes
+    if (field === 'connectionType') {
+      const newConnectionType = value as string;
+      console.log(`Connection type changed to: ${newConnectionType}`);
+    }
+    
     setCameraData({
       ...cameraData,
       [field]: value
@@ -90,11 +97,22 @@ export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera
 
     setIsLoading(true);
     try {
+      // Ensure rtspUrl is properly set for RTSP camera types
+      if (cameraData.connectionType === 'rtsp' && !cameraData.rtspUrl && cameraData.rtmpUrl) {
+        cameraData.rtspUrl = cameraData.rtmpUrl;
+      }
+      
       // Update camera status to ensure it's marked as processing the update
       const updatedCamera = {
         ...cameraData,
         lastSeen: new Date().toISOString() // Update last seen timestamp
       };
+      
+      console.log("Saving camera with data:", {
+        connectionType: updatedCamera.connectionType,
+        rtspUrl: updatedCamera.rtspUrl,
+        rtmpUrl: updatedCamera.rtmpUrl
+      });
       
       onSave(updatedCamera);
       

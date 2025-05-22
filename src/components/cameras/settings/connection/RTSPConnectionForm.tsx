@@ -68,9 +68,10 @@ const RTSPConnectionForm = ({
   };
   
   const useExample = (exampleUrl: string) => {
-    // Fix: Use rtspUrl instead of rtmpUrl for RTSP connections
     handleChange('rtspUrl', exampleUrl);
   };
+
+  console.log("RTSPConnectionForm rendered with rtspUrl:", cameraData.rtspUrl);
 
   return (
     <div className="space-y-2">
@@ -98,7 +99,6 @@ const RTSPConnectionForm = ({
       
       <Input
         id="streamUrl"
-        // Fix: Use rtspUrl instead of rtmpUrl for RTSP streams
         value={cameraData.rtspUrl || ''}
         onChange={(e) => handleChange('rtspUrl', e.target.value)}
         placeholder="rtsp://ipaddress:port/path"
@@ -121,7 +121,6 @@ const RTSPConnectionForm = ({
           variant="outline" 
           size="sm" 
           onClick={testConnection} 
-          // Fix: Use rtspUrl instead of rtmpUrl for RTSP streams
           disabled={testing || disabled || !cameraData.rtspUrl}
         >
           {testing ? "Testing..." : "Test RTSP URL"}

@@ -9,6 +9,8 @@ interface RTSPCameraFormProps {
 }
 
 const RTSPCameraForm = ({ rtspUrl, onChange }: RTSPCameraFormProps) => {
+  console.log("RTSPCameraForm rendered with rtspUrl:", rtspUrl);
+  
   return (
     <div className="space-y-4">
       <div>

@@ -18,7 +18,7 @@ export function useCameraForm() {
     manufacturer: '',
     connectionType: 'ip',
     rtmpUrl: '',
-    rtspUrl: '', // Initialize rtspUrl field
+    rtspUrl: '',
     hlsUrl: '',
     onvifPath: '/onvif/device_service',
     connectionTab: 'ip',

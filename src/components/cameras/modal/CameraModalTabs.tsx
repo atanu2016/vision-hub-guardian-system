@@ -4,7 +4,7 @@ import IPCameraForm from "./IPCameraForm";
 import ONVIFCameraForm from "./ONVIFCameraForm";
 import RTMPCameraForm from "./RTMPCameraForm";
 import HLSCameraForm from "./HLSCameraForm";
-import RTSPCameraForm from "./RTSPCameraForm"; // Add import for RTSP form
+import RTSPCameraForm from "./RTSPCameraForm";
 import { CameraConnectionType } from "@/types/camera";
 
 interface CameraModalTabsProps {
@@ -17,7 +17,7 @@ interface CameraModalTabsProps {
     username: string;
     password: string;
     rtmpUrl: string;
-    rtspUrl: string; // Add rtspUrl to formValues
+    rtspUrl: string;
     hlsUrl: string;
     onvifPath: string;
   };
@@ -30,6 +30,11 @@ const CameraModalTabs = ({
   formValues,
   onChange,
 }: CameraModalTabsProps) => {
+  console.log("CameraModalTabs rendered with formValues:", {
+    rtspUrl: formValues.rtspUrl,
+    connectionTab,
+  });
+
   return (
     <div className="space-y-2">
       <Tabs 
@@ -67,7 +72,7 @@ const CameraModalTabs = ({
         
         <TabsContent value="rtsp" className="space-y-4 pt-2">
           <RTSPCameraForm 
-            rtspUrl={formValues.rtspUrl}
+            rtspUrl={formValues.rtspUrl || ''}
             onChange={onChange}
           />
         </TabsContent>

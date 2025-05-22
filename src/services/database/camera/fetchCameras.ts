@@ -17,30 +17,36 @@ export const fetchCamerasFromDB = async (): Promise<Camera[]> => {
     }
     
     // Transform the data to match our Camera type
-    const cameras: Camera[] = data.map(cam => ({
-      id: cam.id,
-      name: cam.name,
-      status: cam.status as "online" | "offline" | "error",
-      location: cam.location,
-      ipAddress: cam.ipaddress,
-      port: cam.port || 80,
-      username: cam.username || undefined,
-      password: cam.password || undefined,
-      model: cam.model || undefined,
-      manufacturer: cam.manufacturer || undefined,
-      lastSeen: cam.lastseen,
-      recording: cam.recording || false,
-      thumbnail: cam.thumbnail || undefined,
-      group: cam.group || undefined,
-      connectionType: (cam.connectiontype as "ip" | "rtsp" | "rtmp" | "onvif") || "ip",
-      rtmpUrl: cam.rtmpurl || undefined,
-      // For rtspUrl, we need to check if the property exists in the database
-      rtspUrl: cam.rtmpurl && cam.connectiontype === 'rtsp' ? cam.rtmpurl : undefined,
-      // For hlsUrl, we need to check if the property exists in the database
-      hlsUrl: cam.rtmpurl && cam.connectiontype === 'hls' ? cam.rtmpurl : undefined,
-      onvifPath: cam.onvifpath || undefined,
-      motionDetection: cam.motiondetection || false
-    }));
+    const cameras: Camera[] = data.map(cam => {
+      // For RTSP connection type, check both rtspurl and rtmpurl for backward compatibility
+      let rtspUrl: string | undefined = undefined;
+      if (cam.connectiontype === 'rtsp') {
+        rtspUrl = cam.rtspurl || cam.rtmpurl;
+      }
+      
+      return {
+        id: cam.id,
+        name: cam.name,
+        status: cam.status as "online" | "offline" | "error",
+        location: cam.location,
+        ipAddress: cam.ipaddress,
+        port: cam.port || 80,
+        username: cam.username || undefined,
+        password: cam.password || undefined,
+        model: cam.model || undefined,
+        manufacturer: cam.manufacturer || undefined,
+        lastSeen: cam.lastseen,
+        recording: cam.recording || false,
+        thumbnail: cam.thumbnail || undefined,
+        group: cam.group || undefined,
+        connectionType: (cam.connectiontype as "ip" | "rtsp" | "rtmp" | "onvif") || "ip",
+        rtmpUrl: cam.connectiontype === 'rtmp' ? cam.rtmpurl : undefined,
+        rtspUrl: rtspUrl,
+        hlsUrl: cam.connectiontype === 'hls' ? (cam.hlsurl || cam.rtmpurl) : undefined,
+        onvifPath: cam.onvifpath || undefined,
+        motionDetection: cam.motiondetection || false
+      };
+    });
     
     return cameras;
   } catch (error) {

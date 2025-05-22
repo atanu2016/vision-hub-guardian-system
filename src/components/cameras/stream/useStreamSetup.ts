@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState, useCallback } from "react";
 import Hls from "hls.js";
 import { setupCameraStream } from "@/services/apiService";
@@ -110,8 +109,9 @@ export function useStreamSetup({
             streamUrl = camera.hlsUrl;
           } else if (camera.connectionType === 'rtmp' && camera.rtmpUrl) {
             streamUrl = camera.rtmpUrl;
-          } else if (camera.connectionType === 'rtsp' && camera.rtmpUrl) {
-            streamUrl = camera.rtmpUrl;
+          } else if (camera.connectionType === 'rtsp' && camera.rtspUrl) {
+            streamUrl = camera.rtspUrl;
+            console.log('Using RTSP URL:', streamUrl);
           }
           
           if (!streamUrl) {
