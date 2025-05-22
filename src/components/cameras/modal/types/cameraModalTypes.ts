@@ -14,6 +14,7 @@ export interface CameraFormValues {
   manufacturer: string;
   connectionType: CameraConnectionType;
   rtmpUrl: string;
+  rtspUrl: string; // Added rtspUrl
   hlsUrl: string;
   onvifPath: string;
   connectionTab: string;

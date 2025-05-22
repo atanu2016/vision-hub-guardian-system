@@ -34,8 +34,10 @@ export const fetchCamerasFromDB = async (): Promise<Camera[]> => {
       group: cam.group || undefined,
       connectionType: (cam.connectiontype as "ip" | "rtsp" | "rtmp" | "onvif") || "ip",
       rtmpUrl: cam.rtmpurl || undefined,
-      rtspUrl: cam.rtspurl || undefined, // Added mapping for rtspUrl
-      hlsUrl: cam.hlsurl || undefined,
+      // For rtspUrl, we need to check if the property exists in the database
+      rtspUrl: cam.rtmpurl && cam.connectiontype === 'rtsp' ? cam.rtmpurl : undefined,
+      // For hlsUrl, we need to check if the property exists in the database
+      hlsUrl: cam.rtmpurl && cam.connectiontype === 'hls' ? cam.rtmpurl : undefined,
       onvifPath: cam.onvifpath || undefined,
       motionDetection: cam.motiondetection || false
     }));

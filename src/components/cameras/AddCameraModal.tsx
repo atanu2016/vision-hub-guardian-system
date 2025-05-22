@@ -53,6 +53,7 @@ const AddCameraModal = ({ isOpen, onClose, onAdd, existingGroups }: AddCameraMod
               username: formValues.username,
               password: formValues.password,
               rtmpUrl: formValues.rtmpUrl,
+              rtspUrl: formValues.rtspUrl,
               hlsUrl: formValues.hlsUrl,
               onvifPath: formValues.onvifPath
             }}
