@@ -1,49 +1,32 @@
 
-import { useState, useMemo } from 'react';
-import { Camera } from '@/types/camera';
-import { toUICamera } from '@/utils/cameraPropertyMapper';
+import { useMemo } from "react";
+import { GroupedCameras } from "@/types/camera";
 
-export function useFilteredCameras(cameras: Camera[]) {
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'online' | 'offline' | 'recording'>('all');
-  const [groupFilter, setGroupFilter] = useState<string | null>(null);
-
-  // Convert search term to lowercase for case-insensitive matching
-  const lowerSearch = search.toLowerCase();
-
-  // Apply filters
-  const filteredCameras = useMemo(() => {
-    if (!cameras) return [];
-
-    return cameras.filter(camera => {
-      // Always convert to UI format for consistent property access
-      const cameraUI = toUICamera(camera);
-      
-      // Search filter
-      const matchesSearch = search === '' || 
-        cameraUI.name.toLowerCase().includes(lowerSearch) || 
-        cameraUI.location.toLowerCase().includes(lowerSearch) || 
-        cameraUI.ipAddress?.toLowerCase().includes(lowerSearch) ||
-        cameraUI.manufacturer?.toLowerCase().includes(lowerSearch) ||
-        cameraUI.model?.toLowerCase().includes(lowerSearch);
-
-      // Status filter
-      const matchesStatus = statusFilter === 'all' || cameraUI.status === statusFilter;
-
-      // Group filter
-      const matchesGroup = !groupFilter || cameraUI.group === groupFilter;
-
-      return matchesSearch && matchesStatus && matchesGroup;
-    });
-  }, [cameras, search, statusFilter, groupFilter, lowerSearch]);
-
-  return {
-    filteredCameras,
-    search,
-    setSearch,
-    statusFilter,
-    setStatusFilter,
-    groupFilter,
-    setGroupFilter
-  };
+export function useFilteredCameras(cameraGroups: GroupedCameras[], searchQuery: string = "") {
+  // Filter cameras based on search query
+  const filteredGroups = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return cameraGroups;
+    }
+    
+    const query = searchQuery.toLowerCase();
+    
+    return cameraGroups
+      .map(group => {
+        // Filter cameras within the group by name or location
+        const filteredCameras = group.cameras.filter(camera => 
+          camera.name.toLowerCase().includes(query) || 
+          (camera.location && camera.location.toLowerCase().includes(query))
+        );
+        
+        // Return a new group object with only matching cameras
+        return {
+          ...group,
+          cameras: filteredCameras
+        };
+      })
+      .filter(group => group.cameras.length > 0); // Remove empty groups
+  }, [cameraGroups, searchQuery]);
+  
+  return filteredGroups;
 }

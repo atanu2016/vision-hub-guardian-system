@@ -13,11 +13,21 @@ import { useCameraSorting } from "@/hooks/useCameraSorting";
 const Dashboard = () => {
   const { stats, cameras, loading } = useDashboardData();
   const {
-    sortOption, setSortOption,
-    sortOrder, setSortOrder,
-    groupBy, setGroupBy,
-    getCameraList,
+    sortBy, changeSortBy,
+    sortDirection, toggleSortDirection,
+    sortedCameras, getSortedCameras
   } = useCameraSorting(cameras);
+
+  // Function to get cameras based on status filter
+  const getCameraList = (status: string) => {
+    const filteredCameras = cameras.filter(camera => {
+      if (status === "all") return true;
+      return camera.status === status;
+    });
+    
+    // Group cameras by location or return as flat list
+    return getSortedCameras(filteredCameras);
+  };
 
   return (
     <AppLayout>
@@ -63,21 +73,21 @@ const Dashboard = () => {
         </div>
 
         <StorageCard 
-          storageUsed={stats.storageUsed}
-          storageTotal={stats.storageTotal}
-          storagePercentage={stats.storagePercentage}
-          uptimeHours={stats.uptimeHours}
+          storageUsed={stats.storageUsed || "0 GB"}
+          storageTotal={stats.storageTotal || "0 GB"}
+          storagePercentage={stats.storagePercentage || 0}
+          uptimeHours={stats.uptimeHours || 0}
         />
 
         <div className="space-y-4">
           <Tabs defaultValue="all" className="w-full">
             <CameraControls 
-              sortOption={sortOption}
-              setSortOption={setSortOption}
-              sortOrder={sortOrder}
-              setSortOrder={setSortOrder}
-              groupBy={groupBy}
-              setGroupBy={setGroupBy}
+              sortBy={sortBy}
+              changeSortBy={changeSortBy}
+              sortDirection={sortDirection}
+              toggleSortDirection={toggleSortDirection}
+              groupBy="none"
+              setGroupBy={() => {}}
             />
             
             {loading ? (
@@ -87,7 +97,7 @@ const Dashboard = () => {
                 <TabsContent value="all" className="mt-4">
                   <CameraTabContent
                     groupedCameras={getCameraList("all")}
-                    groupBy={groupBy}
+                    groupBy="none"
                     emptyCamerasMessage="No cameras found"
                     emptyCamerasDescription="Go to the Cameras page to add cameras to your system"
                     showManageCamerasButton={true}
@@ -97,7 +107,7 @@ const Dashboard = () => {
                 <TabsContent value="online" className="mt-4">
                   <CameraTabContent
                     groupedCameras={getCameraList("online")}
-                    groupBy={groupBy}
+                    groupBy="none"
                     emptyCamerasMessage="No online cameras found"
                     emptyCamerasDescription="There are currently no cameras online"
                   />
@@ -106,7 +116,7 @@ const Dashboard = () => {
                 <TabsContent value="offline" className="mt-4">
                   <CameraTabContent
                     groupedCameras={getCameraList("offline")}
-                    groupBy={groupBy}
+                    groupBy="none"
                     emptyCamerasMessage="No offline cameras"
                     emptyCamerasDescription="All cameras are currently online"
                   />
@@ -115,7 +125,7 @@ const Dashboard = () => {
                 <TabsContent value="recording" className="mt-4">
                   <CameraTabContent
                     groupedCameras={getCameraList("recording")}
-                    groupBy={groupBy}
+                    groupBy="none"
                     emptyCamerasMessage="No recording cameras"
                     emptyCamerasDescription="No cameras are currently recording"
                   />

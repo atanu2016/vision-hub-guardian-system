@@ -29,8 +29,11 @@ export const getStorageSettings = async (): Promise<StorageSettings> => {
     }
     
     // Translate database keys to interface format
+    // Cast the type to ensure it matches the expected enum values
+    const storageType = data.type as 'local' | 'nas' | 's3' | 'dropbox' | 'google_drive' | 'onedrive' | 'azure_blob' | 'backblaze';
+    
     return {
-      type: data.type,
+      type: storageType,
       path: data.path,
       retentionDays: data.retentiondays,
       overwriteOldest: data.overwriteoldest,
@@ -43,17 +46,18 @@ export const getStorageSettings = async (): Promise<StorageSettings> => {
       s3AccessKey: data.s3accesskey,
       s3SecretKey: data.s3secretkey,
       s3Region: data.s3region,
-      dropboxToken: data.dropboxtoken,
-      dropboxFolder: data.dropboxfolder,
-      googleDriveToken: data.googledrivertoken,
-      googleDriveFolderId: data.googledrivefolderid,
-      oneDriveToken: data.onedrivetoken,
-      oneDriveFolderId: data.onedrivefolderid,
-      azureConnectionString: data.azureconnectionstring,
-      azureContainer: data.azurecontainer,
-      backblazeKeyId: data.backblazekeyid,
-      backblazeApplicationKey: data.backblazeapplicationkey,
-      backblazeBucket: data.backblazebucket
+      // Add fallbacks for all optional properties
+      dropboxToken: data.dropboxtoken || undefined,
+      dropboxFolder: data.dropboxfolder || undefined,
+      googleDriveToken: data.googledrivertoken || undefined,
+      googleDriveFolderId: data.googledrivefolderid || undefined,
+      oneDriveToken: data.onedrivetoken || undefined,
+      oneDriveFolderId: data.onedrivefolderid || undefined,
+      azureConnectionString: data.azureconnectionstring || undefined,
+      azureContainer: data.azurecontainer || undefined,
+      backblazeKeyId: data.backblazekeyid || undefined,
+      backblazeApplicationKey: data.backblazeapplicationkey || undefined,
+      backblazeBucket: data.backblazebucket || undefined
     };
   } catch (err) {
     console.error('Error fetching storage settings:', err);

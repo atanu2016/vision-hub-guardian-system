@@ -25,8 +25,8 @@ export interface Camera {
   lastSeen: string;
   recording: boolean;
   // Add these properties to make it compatible with the base Camera type
-  ipaddress?: string;
-  lastseen?: string;
+  ipaddress: string;
+  lastseen: string;
 }
 
 export interface StorageInfo {

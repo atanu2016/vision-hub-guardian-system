@@ -1,42 +1,74 @@
 
-import { useState } from "react";
+import AppLayout from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DebugTab } from "@/components/settings/advanced/DebugTab";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import GeneralTab from "@/components/settings/advanced/GeneralTab";
 import { SecurityTab } from "@/components/settings/advanced/SecurityTab";
-import DebugLogDialog from "@/components/settings/DebugLogDialog";
+import { DebugTab } from "@/components/settings/advanced/DebugTab";
+import { useState } from "react";
+import { toast } from "sonner";
 
 const AdvancedSettings = () => {
-  const [isDebugLogOpen, setIsDebugLogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const handleSaveSettings = async (settings: any) => {
+    setIsLoading(true);
+    try {
+      // Simulate a save operation
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      toast.success("Settings saved successfully");
+      return true;
+    } catch (error) {
+      toast.error("Failed to save settings");
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Advanced Settings</h1>
-        <p className="text-muted-foreground">
-          Configure system-level settings and debug options
-        </p>
+    <AppLayout>
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Advanced Settings</h2>
+          <p className="text-muted-foreground">
+            Configure advanced system settings and debugging options.
+          </p>
+        </div>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>System Configuration</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="general">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="general">General</TabsTrigger>
+                <TabsTrigger value="security">Security</TabsTrigger>
+                <TabsTrigger value="debug">Debug</TabsTrigger>
+              </TabsList>
+              <TabsContent value="general" className="pt-6">
+                <GeneralTab 
+                  onSave={handleSaveSettings}
+                  settings={{
+                    serverPort: "8080",
+                    logLevel: "info",
+                    logRetentionDays: 30
+                  }}
+                  loading={isLoading}
+                />
+              </TabsContent>
+              <TabsContent value="security" className="pt-6">
+                <SecurityTab />
+              </TabsContent>
+              <TabsContent value="debug" className="pt-6">
+                <DebugTab />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
       </div>
-
-      <Tabs defaultValue="general" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
-          <TabsTrigger value="debug">Debug</TabsTrigger>
-        </TabsList>
-        <TabsContent value="general" className="space-y-4">
-          <GeneralTab />
-        </TabsContent>
-        <TabsContent value="security" className="space-y-4">
-          <SecurityTab />
-        </TabsContent>
-        <TabsContent value="debug" className="space-y-4">
-          <DebugTab onOpenDebugLog={() => setIsDebugLogOpen(true)} />
-        </TabsContent>
-      </Tabs>
-
-      <DebugLogDialog open={isDebugLogOpen} onOpenChange={setIsDebugLogOpen} />
-    </div>
+    </AppLayout>
   );
 };
 

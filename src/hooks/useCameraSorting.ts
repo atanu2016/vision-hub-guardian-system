@@ -1,67 +1,113 @@
 
 import { useState, useMemo } from 'react';
-import { Camera } from '@/types/camera';
-import { toUICamera } from '@/utils/cameraPropertyMapper';
+import { Camera, GroupedCameras } from '@/types/camera';
 
-type SortKey = 'name' | 'location' | 'status' | 'lastSeen';
-type SortDirection = 'asc' | 'desc';
+export type SortKey = 'name' | 'status' | 'location' | 'lastSeen';
+export type SortDirection = 'asc' | 'desc';
+export type GroupByOption = 'location' | 'status' | 'none';
 
-export function useCameraSorting(cameras: Camera[]) {
+export const useCameraSorting = (cameras: Camera[]) => {
   const [sortBy, setSortBy] = useState<SortKey>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [groupBy, setGroupBy] = useState<GroupByOption>('location');
 
-  // Toggle sort direction
-  const toggleSortDirection = () => {
-    setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
-  };
-
-  // Change sort key
-  const changeSortBy = (key: SortKey) => {
-    if (sortBy === key) {
-      toggleSortDirection();
-    } else {
-      setSortBy(key);
-      setSortDirection('asc');
-    }
-  };
-
-  // Sorted cameras
+  // Sort cameras based on current sort key and direction
   const sortedCameras = useMemo(() => {
-    if (!cameras || cameras.length === 0) return [];
-    
     return [...cameras].sort((a, b) => {
-      // Convert to UI format for easier property access
-      const aUI = toUICamera(a);
-      const bUI = toUICamera(b);
-      
-      let comparison = 0;
-      
+      let valueA, valueB;
+
       switch (sortBy) {
         case 'name':
-          comparison = aUI.name.localeCompare(bUI.name);
-          break;
-        case 'location':
-          comparison = aUI.location.localeCompare(bUI.location);
+          valueA = a.name.toLowerCase();
+          valueB = b.name.toLowerCase();
           break;
         case 'status':
-          comparison = aUI.status.localeCompare(bUI.status);
+          valueA = a.status;
+          valueB = b.status;
+          break;
+        case 'location':
+          valueA = a.location?.toLowerCase() || '';
+          valueB = b.location?.toLowerCase() || '';
           break;
         case 'lastSeen':
-          comparison = new Date(aUI.lastSeen).getTime() - new Date(bUI.lastSeen).getTime();
+          valueA = new Date(a.lastseen).getTime();
+          valueB = new Date(b.lastseen).getTime();
           break;
         default:
-          comparison = 0;
+          valueA = a.name.toLowerCase();
+          valueB = b.name.toLowerCase();
       }
-      
-      return sortDirection === 'asc' ? comparison : -comparison;
+
+      if (valueA < valueB) return sortDirection === 'asc' ? -1 : 1;
+      if (valueA > valueB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
     });
   }, [cameras, sortBy, sortDirection]);
 
+  // Change sort key
+  const changeSortBy = (key: SortKey) => {
+    if (key === sortBy) {
+      // If clicking the same column, toggle direction
+      toggleSortDirection();
+    } else {
+      // If clicking a different column, set it as the new sort key
+      setSortBy(key);
+      setSortDirection('asc'); // Reset to ascending when changing columns
+    }
+  };
+
+  // Toggle sort direction
+  const toggleSortDirection = () => {
+    setSortDirection(current => (current === 'asc' ? 'desc' : 'asc'));
+  };
+
+  // Group cameras by specified property
+  const getSortedCameras = (filteredCameras = sortedCameras): GroupedCameras[] => {
+    if (groupBy === 'none') {
+      // Return as a single group when no grouping is applied
+      return [
+        {
+          id: 'all-cameras',
+          name: 'All Cameras',
+          cameras: filteredCameras
+        }
+      ];
+    }
+
+    const groups: Record<string, Camera[]> = {};
+
+    // Group cameras by the specified property
+    filteredCameras.forEach(camera => {
+      let groupKey = '';
+      
+      if (groupBy === 'location') {
+        groupKey = camera.location || 'Unknown Location';
+      } else if (groupBy === 'status') {
+        groupKey = camera.status || 'Unknown Status';
+      }
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+      }
+      groups[groupKey].push(camera);
+    });
+
+    // Convert grouped object to array format
+    return Object.entries(groups).map(([name, groupCameras]) => ({
+      id: name.toLowerCase().replace(/\s+/g, '-'),
+      name,
+      cameras: groupCameras
+    }));
+  };
+
   return {
-    sortedCameras,
     sortBy,
     sortDirection,
+    sortedCameras,
     changeSortBy,
-    toggleSortDirection
+    toggleSortDirection,
+    groupBy,
+    setGroupBy,
+    getSortedCameras
   };
-}
+};

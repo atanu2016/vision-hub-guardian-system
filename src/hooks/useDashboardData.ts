@@ -1,76 +1,99 @@
 
-import { useState, useEffect } from "react";
-import { Camera } from "@/types/camera";
-import { getCameras } from "@/services/apiService";
-import { useToast } from "@/hooks/use-toast";
-import { toUICamera } from "@/utils/cameraPropertyMapper";
+import { useState, useEffect } from 'react';
+import { Camera } from '@/types/camera';
+import { getSystemStats, getCameras } from '@/services/apiService';
 
-export function useDashboardData() {
+interface DashboardStats {
+  totalCameras: number;
+  onlineCameras: number;
+  offlineCameras: number;
+  recordingCameras: number;
+  storageUsed: string;
+  storageTotal: string;
+  storagePercentage: number;
+  uptimeHours: number;
+}
+
+export const useDashboardData = () => {
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
+  const [stats, setStats] = useState<DashboardStats>({
+    totalCameras: 0,
+    onlineCameras: 0,
+    offlineCameras: 0,
+    recordingCameras: 0,
+    storageUsed: '0 GB',
+    storageTotal: '0 GB',
+    storagePercentage: 0,
+    uptimeHours: 0
+  });
 
-  // Stats derived from cameras
-  const stats = {
-    totalCameras: cameras.length,
-    onlineCameras: cameras.filter(cam => cam.status === 'online').length,
-    offlineCameras: cameras.filter(cam => cam.status === 'offline').length,
-    recordingCameras: cameras.filter(cam => cam.recording).length
-  };
-
+  // Fetch cameras and system stats
   useEffect(() => {
-    async function fetchDashboardData() {
+    const fetchData = async () => {
       setLoading(true);
-      setError(null);
-      
       try {
-        // Fetch cameras
+        // Get cameras
         const camerasData = await getCameras();
+        setCameras(camerasData);
         
-        // Simulate checking camera streams
-        const updatedCameras = await Promise.all(
-          camerasData.map(async (camera) => {
-            // Convert to UI format for easier use
-            const cameraUI = toUICamera(camera);
-            
-            // For online cameras, check if stream is available
-            if (camera.status === 'online') {
-              const hasStreamUrl = Boolean(cameraUI.rtmpUrl?.length > 0 || cameraUI.hlsUrl?.length > 0);
-              
-              // Simulate a check (in real app, would test the stream)
-              if (!hasStreamUrl) {
-                return {
-                  ...camera,
-                  status: 'offline' as 'online' | 'offline' | 'recording'
-                };
-              }
-            }
-            return camera;
-          })
-        );
+        // Get system stats
+        const statsData = await getSystemStats();
         
-        setCameras(updatedCameras);
-      } catch (err) {
-        console.error("Error fetching dashboard data:", err);
-        setError("Failed to load dashboard data");
-        toast({
-          title: "Error loading dashboard data",
-          description: "Please try refreshing the page",
-          variant: "destructive"
+        // Calculate counts based on camera data if no stats are available
+        if (!statsData) {
+          const online = camerasData.filter(cam => cam.status === 'online').length;
+          const recording = camerasData.filter(cam => cam.status === 'recording').length;
+          const offline = camerasData.filter(cam => cam.status === 'offline').length;
+          
+          setStats({
+            totalCameras: camerasData.length,
+            onlineCameras: online,
+            offlineCameras: offline,
+            recordingCameras: recording,
+            storageUsed: '0 GB',
+            storageTotal: '0 GB',
+            storagePercentage: 0,
+            uptimeHours: 0
+          });
+        } else {
+          // Use stats from the system
+          setStats({
+            totalCameras: statsData.total_cameras || 0,
+            onlineCameras: statsData.online_cameras || 0,
+            offlineCameras: statsData.offline_cameras || 0,
+            recordingCameras: statsData.recording_cameras || 0,
+            storageUsed: statsData.storage_used || '0 GB',
+            storageTotal: statsData.storage_total || '0 GB',
+            storagePercentage: statsData.storage_percentage || 0,
+            uptimeHours: statsData.uptime_hours || 0
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        
+        // Set fallback data based on cameras
+        const online = cameras.filter(cam => cam.status === 'online').length;
+        const recording = cameras.filter(cam => cam.status === 'recording').length;
+        const offline = cameras.filter(cam => cam.status === 'offline').length;
+        
+        setStats({
+          totalCameras: cameras.length,
+          onlineCameras: online,
+          offlineCameras: offline,
+          recordingCameras: recording,
+          storageUsed: '0 GB',
+          storageTotal: '0 GB',
+          storagePercentage: 0,
+          uptimeHours: 0
         });
       } finally {
         setLoading(false);
       }
-    }
-
-    fetchDashboardData();
+    };
+    
+    fetchData();
   }, []);
 
-  return {
-    cameras,
-    stats,
-    loading,
-    error
-  };
-}
+  return { cameras, stats, loading };
+};

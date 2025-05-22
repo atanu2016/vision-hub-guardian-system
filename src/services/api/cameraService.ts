@@ -35,7 +35,16 @@ export const getCameras = async (): Promise<Camera[]> => {
       .select('*');
       
     if (error) throw error;
-    return data || [];
+    
+    // Ensure the status field is a valid CameraStatus
+    const validCameras = (data || []).map(cam => ({
+      ...cam,
+      status: (cam.status === 'online' || cam.status === 'offline' || cam.status === 'recording') 
+        ? cam.status 
+        : 'offline' as 'online' | 'offline' | 'recording'
+    }));
+    
+    return validCameras as Camera[];
   } catch (err) {
     console.error('Error fetching cameras:', err);
     throw err;
