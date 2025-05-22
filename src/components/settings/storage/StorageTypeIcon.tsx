@@ -1,7 +1,7 @@
 
 import { 
   HardDrive, Database, Cloud, Box, ExternalLink, 
-  Archive, Folder, QuestionMark
+  Archive, Folder, HelpCircle
 } from "lucide-react";
 import { StorageProviderType } from "@/types/camera";
 
@@ -30,7 +30,7 @@ const StorageTypeIcon = ({ type, size = 16, className = "" }: StorageTypeIconPro
     case "backblaze":
       return <Archive className={className} size={size} />;
     default:
-      return <QuestionMark className={className} size={size} />;
+      return <HelpCircle className={className} size={size} />;
   }
 };
 
