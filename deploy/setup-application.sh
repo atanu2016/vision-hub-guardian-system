@@ -56,31 +56,101 @@ echo "Building application..."
 # Use the correct build script as defined in package.json
 npm run build
 
-# Create dist directory and a basic server file if build failed or needs fallback
+# Create dist directory and properly serve static files
 mkdir -p dist
-if [ ! -f "dist/index.js" ]; then
-  echo "Creating basic server file in dist directory..."
+if [ ! -f "dist/index.html" ]; then
+  echo "Creating proper server file to serve React application..."
   cat > dist/index.js << EOF
-// Basic Node.js server (ES Module version)
+// Modern ES Module server that serves React app
 import http from 'http';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
-const port = process.env.PORT || 8080;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const PORT = process.env.PORT || 8080;
+const MIME_TYPES = {
+  '.html': 'text/html',
+  '.js': 'text/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon'
+};
 
 const server = http.createServer((req, res) => {
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'text/html');
+  console.log(\`\${new Date().toISOString()} - \${req.method} \${req.url}\`);
   
-  // Add health endpoint for monitoring
+  // Health check endpoint
   if (req.url === '/health') {
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'text/plain');
     res.end('OK');
     return;
   }
   
-  res.end('<html><head><title>Vision Hub</title></head><body><h1>Vision Hub</h1><p>Server is running but application build may be incomplete.</p></body></html>');
+  // Parse URL to get the path
+  let filePath = '.' + req.url;
+  if (filePath === './') {
+    filePath = './index.html';
+  }
+  
+  // Determine content type based on file extension
+  const extname = path.extname(filePath);
+  const contentType = MIME_TYPES[extname] || 'application/octet-stream';
+  
+  // Read the file from disk
+  fs.readFile(path.join(__dirname, filePath), (error, content) => {
+    if (error) {
+      if (error.code === 'ENOENT') {
+        // For client-side routing, serve index.html for all routes
+        fs.readFile(path.join(__dirname, 'index.html'), (err, indexContent) => {
+          if (err) {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'text/plain');
+            res.end('Internal Server Error');
+            return;
+          }
+          
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'text/html');
+          res.end(indexContent);
+        });
+      } else {
+        // Server error
+        res.statusCode = 500;
+        res.setHeader('Content-Type', 'text/plain');
+        res.end('Internal Server Error: ' + error.code);
+      }
+      return;
+    }
+    
+    // Success - serve the file
+    res.statusCode = 200;
+    res.setHeader('Content-Type', contentType);
+    res.end(content);
+  });
 });
 
-server.listen(port, () => {
-  console.log(\`Server running on port \${port}\`);
+server.listen(PORT, () => {
+  console.log(\`Server running on port \${PORT}\`);
+  console.log(\`Server directory: \${__dirname}\`);
+  console.log(\`Available files: \${fs.readdirSync(__dirname).join(', ')}\`);
+});
+
+// Handle termination gracefully
+process.on('SIGINT', () => {
+  console.log('Server shutting down...');
+  server.close(() => {
+    console.log('Server terminated');
+    process.exit(0);
+  });
 });
 EOF
 fi

@@ -16,29 +16,99 @@ IS_ESM=$(grep '"type": "module"' $APP_DIR/package.json || echo "")
 if [ -n "$IS_ESM" ]; then
   echo "Detected ES Module project. Fixing server script..."
   
-  # Fix the fallback server script if it exists
+  # Fix the server script
   echo "Updating dist/index.js to use ES Module syntax..."
   cat > dist/index.js << EOF
-// ES Module compatible server
+// Modern ES Module server that serves React app
 import http from 'http';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
-const port = process.env.PORT || 8080;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const PORT = process.env.PORT || 8080;
+const MIME_TYPES = {
+  '.html': 'text/html',
+  '.js': 'text/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon'
+};
 
 const server = http.createServer((req, res) => {
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'text/html');
+  console.log(\`\${new Date().toISOString()} - \${req.method} \${req.url}\`);
   
-  // Add health endpoint for monitoring
+  // Health check endpoint
   if (req.url === '/health') {
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'text/plain');
     res.end('OK');
     return;
   }
   
-  res.end('<html><head><title>Vision Hub</title></head><body><h1>Vision Hub</h1><p>Server is running. Application served through Nginx.</p></body></html>');
+  // Parse URL to get the path
+  let filePath = '.' + req.url;
+  if (filePath === './') {
+    filePath = './index.html';
+  }
+  
+  // Determine content type based on file extension
+  const extname = path.extname(filePath);
+  const contentType = MIME_TYPES[extname] || 'application/octet-stream';
+  
+  // Read the file from disk
+  fs.readFile(path.join(__dirname, filePath), (error, content) => {
+    if (error) {
+      if (error.code === 'ENOENT') {
+        // For client-side routing, serve index.html for all routes
+        fs.readFile(path.join(__dirname, 'index.html'), (err, indexContent) => {
+          if (err) {
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'text/plain');
+            res.end('Internal Server Error');
+            return;
+          }
+          
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'text/html');
+          res.end(indexContent);
+        });
+      } else {
+        // Server error
+        res.statusCode = 500;
+        res.setHeader('Content-Type', 'text/plain');
+        res.end('Internal Server Error: ' + error.code);
+      }
+      return;
+    }
+    
+    // Success - serve the file
+    res.statusCode = 200;
+    res.setHeader('Content-Type', contentType);
+    res.end(content);
+  });
 });
 
-server.listen(port, () => {
-  console.log(\`Server running on port \${port}\`);
+server.listen(PORT, () => {
+  console.log(\`Server running on port \${PORT}\`);
+  console.log(\`Server directory: \${__dirname}\`);
+  console.log(\`Available files: \${fs.readdirSync(__dirname).join(', ')}\`);
+});
+
+// Handle termination gracefully
+process.on('SIGINT', () => {
+  console.log('Server shutting down...');
+  server.close(() => {
+    console.log('Server terminated');
+    process.exit(0);
+  });
 });
 EOF
   
@@ -97,11 +167,16 @@ fi
 
 # Install required dependencies
 echo "Installing required dependencies..."
-npm install ws utf-8-validate bufferutil --no-save
+npm install ws utf-8-validate bufferutil fs path url --no-save || true
 
 # Create a valid PM2_HOME directory and set proper permissions
 mkdir -p /home/visionhub/.pm2
 chown -R visionhub:visionhub /home/visionhub/.pm2
+
+# Make sure local directories are available
+mkdir -p /var/lib/visionhub/recordings 
+mkdir -p /var/log/visionhub
+chown -R visionhub:visionhub /var/lib/visionhub /var/log/visionhub
 
 # Restart the application using PM2
 echo "Restarting application with PM2..."

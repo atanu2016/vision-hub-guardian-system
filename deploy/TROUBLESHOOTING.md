@@ -1,4 +1,3 @@
-
 # Vision Hub Deployment Troubleshooting Guide
 
 ## Common Issues and Solutions
@@ -72,6 +71,43 @@
    sudo systemctl daemon-reload
    sudo systemctl restart visionhub.service
    ```
+
+### "Server is running" Placeholder Page Shown Instead of Application
+
+**Problem:** Browser shows "Server is running. Application served through Nginx" instead of your actual application.
+
+**Solution:**
+
+1. This happens when the basic fallback server is running instead of your full React application:
+   ```
+   systemctl status visionhub.service
+   ```
+
+2. Check if the React application was properly built:
+   ```
+   ls -la /opt/visionhub/dist/
+   ```
+   Look for index.html and asset files (CSS/JS). If they're missing, the build failed.
+
+3. Fix the server file to properly serve static assets:
+   ```
+   sudo -u visionhub bash -c "cd /opt/visionhub && ./deploy/fix-esm-issues.sh"
+   ```
+
+4. Check if the server correctly identifies your files:
+   ```
+   sudo -u visionhub pm2 logs
+   ```
+   Look for messages showing "Server directory: /opt/visionhub/dist" and "Available files: index.html, ..."
+
+5. If needed, rebuild the application:
+   ```
+   cd /opt/visionhub
+   sudo -u visionhub npm run build
+   sudo -u visionhub pm2 restart all
+   ```
+
+6. Clear browser cache and reload the page
 
 ### Missing Module Error
 
