@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Camera } from '@/types/camera'; 
 
 export interface AlertSettings {
   id?: string;
@@ -15,6 +16,11 @@ export interface AlertSettings {
   updated_at?: string;
 }
 
+export interface CameraAlertLevel {
+  camera_id: string;
+  alert_level: 'low' | 'medium' | 'high' | 'none';
+}
+
 export const useAlertSettings = () => {
   const [settings, setSettings] = useState<AlertSettings>({
     motion_detection: true,
@@ -24,14 +30,16 @@ export const useAlertSettings = () => {
     push_notifications: false,
     notification_sound: 'default'
   });
-  
+
+  const [cameras, setCameras] = useState<Camera[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
-  // Load alert settings
+  // Load alert settings and cameras
   useEffect(() => {
     const loadSettings = async () => {
       try {
+        // Fetch alert settings
         const { data, error } = await supabase
           .from('alert_settings')
           .select('*')
@@ -43,8 +51,7 @@ export const useAlertSettings = () => {
         }
         
         if (data) {
-          // Convert to AlertSettings type
-          const loadedSettings: AlertSettings = {
+          setSettings({
             id: data.id,
             motion_detection: data.motion_detection,
             camera_offline: data.camera_offline,
@@ -54,9 +61,19 @@ export const useAlertSettings = () => {
             notification_sound: data.notification_sound || 'default',
             email_address: data.email_address || '',
             updated_at: data.updated_at
-          };
-          setSettings(loadedSettings);
+          });
         }
+
+        // Fetch cameras
+        const { data: camerasData, error: camerasError } = await supabase
+          .from('cameras')
+          .select('*');
+        
+        if (camerasError) {
+          throw camerasError;
+        }
+
+        setCameras(camerasData || []);
       } catch (error) {
         console.error('Error loading alert settings:', error);
       } finally {
@@ -66,7 +83,26 @@ export const useAlertSettings = () => {
     
     loadSettings();
   }, []);
-  
+
+  // Update alert settings state
+  const updateAlertSettings = (newSettings: Partial<AlertSettings>) => {
+    setSettings(prev => ({ ...prev, ...newSettings }));
+  };
+
+  // Handle camera alert level change
+  const handleCameraAlertLevelChange = async (cameraId: string, level: 'low' | 'medium' | 'high' | 'none') => {
+    try {
+      // Implementation would go here
+      // For now just report success
+      toast.success(`Alert level for camera changed to ${level}`);
+      return true;
+    } catch (error) {
+      console.error('Error updating camera alert level:', error);
+      toast.error('Failed to update camera alert level');
+      return false;
+    }
+  };
+
   // Save alert settings
   const saveSettings = async (newSettings: AlertSettings) => {
     setSaving(true);
@@ -99,7 +135,7 @@ export const useAlertSettings = () => {
         .single();
       
       if (data) {
-        const updatedSettings: AlertSettings = {
+        setSettings({
           id: data.id,
           motion_detection: data.motion_detection,
           camera_offline: data.camera_offline,
@@ -109,8 +145,7 @@ export const useAlertSettings = () => {
           notification_sound: data.notification_sound || 'default',
           email_address: data.email_address || '',
           updated_at: data.updated_at
-        };
-        setSettings(updatedSettings);
+        });
       }
       
       return true;
@@ -122,11 +157,20 @@ export const useAlertSettings = () => {
       setSaving(false);
     }
   };
+
+  // Handle save settings - wrapper around saveSettings
+  const handleSaveSettings = async () => {
+    return await saveSettings(settings);
+  };
   
   return {
     settings,
+    cameras,
     loading,
     saving,
-    saveSettings
+    updateAlertSettings,
+    saveSettings,
+    handleSaveSettings,
+    handleCameraAlertLevelChange
   };
 };

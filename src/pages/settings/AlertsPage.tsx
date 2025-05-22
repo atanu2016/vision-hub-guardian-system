@@ -9,7 +9,7 @@ import AlertHistory from "@/components/settings/alerts/AlertHistory";
 const AlertsPage = () => {
   const [activeTab, setActiveTab] = useState("settings");
   const {
-    alertSettings,
+    settings,
     cameras,
     loading,
     saving,
@@ -45,7 +45,7 @@ const AlertsPage = () => {
         
         <TabsContent value="settings" className="space-y-6 mt-6">
           <AlertSettingsTab 
-            alertSettings={alertSettings}
+            alertSettings={settings}
             cameras={cameras}
             saving={saving}
             onSettingsChange={updateAlertSettings}

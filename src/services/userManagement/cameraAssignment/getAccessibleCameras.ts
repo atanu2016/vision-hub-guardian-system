@@ -40,7 +40,7 @@ export const getAccessibleCameras = async (userId: string): Promise<Camera[]> =>
       return [];
     }
 
-    // Map the raw camera data to Camera objects
+    // Map the raw camera data to Camera objects with all fields properly handled
     return (cameras || []).map(cam => ({
       id: cam.id,
       name: cam.name,
@@ -96,7 +96,12 @@ export const convertToUICameras = (cameras: Camera[]): CameraUIProps[] => {
     model: cam.model,
     manufacturer: cam.manufacturer,
     group: cam.group,
-    thumbnail: cam.thumbnail
+    thumbnail: cam.thumbnail,
+    quality: cam.quality,
+    scheduleType: cam.schedule_type,
+    timeStart: cam.time_start,
+    timeEnd: cam.time_end,
+    daysOfWeek: cam.days_of_week
   }));
 };
 
@@ -124,10 +129,10 @@ export const convertToDatabaseCameras = (uiCameras: CameraUIProps[]): Camera[] =
     manufacturer: cam.manufacturer,
     group: cam.group,
     thumbnail: cam.thumbnail,
-    quality: undefined,
-    schedule_type: undefined,
-    time_start: undefined,
-    time_end: undefined,
-    days_of_week: undefined
+    quality: cam.quality,
+    schedule_type: cam.scheduleType,
+    time_start: cam.timeStart,
+    time_end: cam.timeEnd,
+    days_of_week: cam.daysOfWeek
   }));
 };

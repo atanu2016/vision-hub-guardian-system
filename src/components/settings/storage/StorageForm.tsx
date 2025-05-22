@@ -1,189 +1,85 @@
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form } from "@/components/ui/form";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Settings, AlertCircle } from "lucide-react";
-import { useState, useEffect } from "react";
 import { StorageSettings } from "@/types/camera";
-import StorageProviderSelector from "./StorageProviderSelector";
-import StorageProviderFields from "./StorageProviderFields";
-import RetentionPolicyForm from "./RetentionPolicyForm";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { StorageFormData, useStorageAdapter } from "@/hooks/storage/useStorageAdapter";
 
-// Define form schema for storage settings using the UI-friendly types
-const storageFormSchema = z.object({
-  type: z.enum(["local", "nas", "s3", "dropbox", "google_drive", "onedrive", "azure_blob", "backblaze"]),
-  path: z.string().optional(),
-  retentionDays: z.coerce.number().min(1, "Retention period must be at least 1 day").max(365, "Retention period cannot exceed 365 days"),
-  overwriteOldest: z.boolean(),
-  // NAS fields
-  nasAddress: z.string().optional(),
-  nasPath: z.string().optional(),
-  nasUsername: z.string().optional(),
-  nasPassword: z.string().optional(),
-  // S3 fields
-  s3Endpoint: z.string().optional(),
-  s3Bucket: z.string().optional(),
-  s3AccessKey: z.string().optional(),
-  s3SecretKey: z.string().optional(),
-  s3Region: z.string().optional(),
-  // Cloud storage fields (optional)
-  dropboxToken: z.string().optional(),
-  dropboxFolder: z.string().optional(),
-  googleDriveToken: z.string().optional(),
-  googleDriveFolderId: z.string().optional(),
-  oneDriveToken: z.string().optional(),
-  oneDriveFolderId: z.string().optional(),
-  azureConnectionString: z.string().optional(),
-  azureContainer: z.string().optional(),
-  backblazeKeyId: z.string().optional(),
-  backblazeApplicationKey: z.string().optional(),
-  backblazeBucket: z.string().optional(),
-});
-
-// Extract type from schema
-export type StorageFormSchemaType = z.infer<typeof storageFormSchema>;
-
-interface StorageFormProps {
+export interface StorageFormProps {
   initialSettings: StorageSettings;
+  onSave: (settings: StorageSettings) => Promise<boolean>;
   isLoading: boolean;
   isSaving: boolean;
-  onSave: (settings: StorageSettings) => Promise<boolean>;
 }
 
-const StorageForm = ({ initialSettings, isLoading, isSaving, onSave }: StorageFormProps) => {
-  const [validationStatus, setValidationStatus] = useState<{ status: 'idle' | 'validating' | 'success' | 'error', message: string }>({
-    status: 'idle',
-    message: ''
-  });
-  
-  const { toFormData, toDbFormat } = useStorageAdapter();
+const StorageForm = ({
+  initialSettings,
+  onSave,
+  isLoading,
+  isSaving
+}: StorageFormProps) => {
+  const [settings, setSettings] = useState<StorageSettings>(initialSettings);
 
-  // Convert DB format to form format for initial values
-  const initialFormData = toFormData(initialSettings);
-
-  // Initialize form with proper defaultValues
-  const form = useForm<StorageFormSchemaType>({
-    resolver: zodResolver(storageFormSchema),
-    defaultValues: initialFormData
-  });
-
-  // Update form values when initialSettings changes
-  useEffect(() => {
-    if (initialSettings) {
-      const formData = toFormData(initialSettings);
-      form.reset(formData);
-    }
-    
-    // Reset validation status when form values change
-    setValidationStatus({ status: 'idle', message: '' });
-  }, [initialSettings, form, toFormData]);
-
-  // Get current form values
-  const currentStorageType = form.watch("type");
-
-  // Handle form submission
-  const onSubmit = async (values: StorageFormSchemaType) => {
-    // Reset validation status
-    setValidationStatus({ status: 'validating', message: 'Validating storage configuration...' });
-    
-    // Convert form data to StorageSettings type
-    const settings = toDbFormat(values as StorageFormData);
-
-    try {
-      const success = await onSave(settings);
-      
-      if (success) {
-        setValidationStatus({ 
-          status: 'success', 
-          message: 'Storage configuration validated and saved successfully.'
-        });
-      } else {
-        setValidationStatus({ 
-          status: 'error', 
-          message: 'Failed to validate storage configuration. Please check your settings and try again.'
-        });
-      }
-    } catch (error) {
-      console.error("Error saving storage settings:", error);
-      setValidationStatus({ 
-        status: 'error', 
-        message: 'An error occurred while saving settings.'
-      });
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await onSave(settings);
   };
 
+  if (isLoading) {
+    return <div>Loading settings...</div>;
+  }
+
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {validationStatus.status === 'error' && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{validationStatus.message}</AlertDescription>
-          </Alert>
-        )}
-        
-        {validationStatus.status === 'success' && (
-          <Alert variant="default" className="bg-green-50 border-green-200">
-            <AlertCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-600">{validationStatus.message}</AlertDescription>
-          </Alert>
-        )}
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Storage Provider</CardTitle>
-            <CardDescription>
-              Select where recordings should be stored
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <StorageProviderSelector form={form} isLoading={isLoading} />
-            <StorageProviderFields 
-              form={form} 
-              isLoading={isLoading} 
-              currentStorageType={currentStorageType} 
-            />
-          </CardContent>
-        </Card>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Basic form implementation - expand as needed */}
+      <div className="grid gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">Storage Type</label>
+          <select
+            className="w-full p-2 border rounded"
+            value={settings.type}
+            onChange={(e) => setSettings({...settings, type: e.target.value as any})}
+            disabled={isSaving}
+          >
+            <option value="local">Local Storage</option>
+            <option value="nas">Network Attached Storage (NAS)</option>
+            <option value="s3">Cloud Storage (S3)</option>
+          </select>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Retention Policy</CardTitle>
-            <CardDescription>
-              Configure how long recordings are kept
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <RetentionPolicyForm form={form} isLoading={isLoading} />
-          </CardContent>
-        </Card>
+        <div>
+          <label className="block text-sm font-medium mb-1">Retention Period (days)</label>
+          <input
+            type="number"
+            className="w-full p-2 border rounded"
+            value={settings.retentiondays}
+            onChange={(e) => setSettings({...settings, retentiondays: parseInt(e.target.value)})}
+            min={1}
+            max={365}
+            disabled={isSaving}
+          />
+        </div>
 
-        <Button 
-          type="submit" 
-          className="w-full" 
-          disabled={isLoading || isSaving || validationStatus.status === 'validating'}
-        >
-          {isSaving || validationStatus.status === 'validating' ? (
-            <div className="flex items-center">
-              <span className="animate-spin mr-2">
-                <span className="sr-only">Loading...</span>
-                ◌
-              </span>
-              {validationStatus.status === 'validating' ? "Validating..." : "Saving..."}
-            </div>
-          ) : (
-            <>
-              <Settings className="mr-2 h-4 w-4" /> Save Storage Settings
-            </>
-          )}
-        </Button>
-      </form>
-    </Form>
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="overwrite"
+            checked={settings.overwriteoldest}
+            onChange={(e) => setSettings({...settings, overwriteoldest: e.target.checked})}
+            disabled={isSaving}
+          />
+          <label htmlFor="overwrite" className="text-sm font-medium">
+            Overwrite oldest recordings when storage is full
+          </label>
+        </div>
+      </div>
+
+      <Button 
+        type="submit" 
+        disabled={isSaving}
+        className="w-full md:w-auto"
+      >
+        {isSaving ? "Saving..." : "Save Settings"}
+      </Button>
+    </form>
   );
 };
 

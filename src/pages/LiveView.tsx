@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Camera } from "@/types/camera";
@@ -33,7 +32,7 @@ const LiveView = () => {
       console.log("Fetching cameras for user", user.id);
       
       // Get user's accessible cameras
-      const camerasData = await getAccessibleCameras(user.id, role || 'user');
+      const camerasData = await getAccessibleCameras(user.id);
       console.log(`Fetched ${camerasData.length} cameras for live view`);
       setCameras(camerasData);
     } catch (error: any) {
