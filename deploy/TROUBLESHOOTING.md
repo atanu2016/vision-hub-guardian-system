@@ -38,7 +38,7 @@
 **Error:** `ERR_REQUIRE_ESM`
 
 **Solution:**
-1. This error occurs when PM2 tries to run an ES module with CommonJS:
+1. This error occurs when there's a conflict between ES modules and CommonJS:
    ```
    systemctl status visionhub.service
    ```
@@ -62,7 +62,12 @@
    Change `ExecStart=/usr/bin/pm2 start ecosystem.config.js` to 
    `ExecStart=/usr/bin/pm2 start ecosystem.config.cjs`
 
-5. Restart the service:
+5. For ES modules in index.js, make sure the PM2 configuration includes the correct node arguments:
+   ```
+   node_args: '--experimental-specifier-resolution=node'
+   ```
+
+6. Restart the service:
    ```
    sudo systemctl daemon-reload
    sudo systemctl restart visionhub.service
@@ -89,6 +94,33 @@
    sudo systemctl restart visionhub.service
    ```
 
+### ES Module Issues
+
+**Error:** `ReferenceError: require is not defined in ES module scope`
+
+**Solution:**
+1. This happens when the application is configured as an ES module but uses CommonJS syntax:
+   ```
+   cat /opt/visionhub/package.json | grep \"type\"
+   ```
+
+2. If package.json has `"type": "module"`, update your fallback server to use ES module syntax:
+   ```
+   sudo nano /opt/visionhub/dist/index.js
+   ```
+   Change `const http = require('http')` to `import http from 'http';`
+
+3. Make sure PM2 is configured to handle ES modules:
+   ```
+   sudo nano /opt/visionhub/ecosystem.config.cjs
+   ```
+   Add `node_args: '--experimental-specifier-resolution=node'` to the config
+
+4. Restart the application:
+   ```
+   sudo -u visionhub pm2 restart visionhub
+   ```
+
 ### Script Not Found Errors
 
 **Error:** `Error: Script not found: /opt/visionhub/dist/main.js`
@@ -112,9 +144,10 @@
    nano /opt/visionhub/dist/index.js
    ```
    
-4. Create a basic HTTP server in index.js:
+4. Create a basic HTTP server in index.js using ES module syntax:
    ```javascript
-   const http = require('http');
+   import http from 'http';
+   
    const port = process.env.PORT || 8080;
    
    const server = http.createServer((req, res) => {

@@ -20,6 +20,7 @@ module.exports = {
     cwd: '$APP_DIR/dist',
     instances: 1,
     exec_mode: 'fork',
+    node_args: '--experimental-specifier-resolution=node',
     autorestart: true,
     watch: false,
     max_memory_restart: '1G',
@@ -43,7 +44,7 @@ mkdir -p /var/log/visionhub
 chown -R visionhub:visionhub /var/log/visionhub
 
 # Install missing dependencies if needed
-npm install ws --no-save || true
+npm install ws utf-8-validate bufferutil --no-save || true
 
 # Start the application with PM2
 echo "Starting application with PM2..."

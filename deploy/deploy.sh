@@ -63,10 +63,14 @@ echo "Starting visionhub service..."
 if ! systemctl restart visionhub.service; then
   echo "WARNING: Service failed to start. Will try manual PM2 setup."
   
+  # Try to run the ES module fix script
+  echo "Attempting to fix ES module issues..."
+  sudo -u visionhub $SCRIPT_DIR/fix-esm-issues.sh
+  
   # Try direct PM2 setup as fallback
   cd /opt/visionhub
   sudo -u visionhub pm2 delete all || true
-  sudo -u visionhub npm install ws --no-save || true
+  sudo -u visionhub npm install ws utf-8-validate bufferutil --no-save || true
   sudo -u visionhub pm2 start ecosystem.config.cjs || {
     echo "WARNING: PM2 direct start failed. Check logs for details."
     echo "You may need to run: cd /opt/visionhub && sudo -u visionhub pm2 start ecosystem.config.cjs"
@@ -118,45 +122,8 @@ chmod +x /etc/cron.daily/visionhub-backup
 # 8. Setup health check script
 echo "Setting up health check cron job..."
 
-# Create health check script if not already there
-cat > /opt/visionhub/healthcheck.sh << EOF
-#!/bin/bash
-# Health check script for Vision Hub
-# Can be run from cron to monitor application health
-
-APP_NAME="visionhub"
-SERVICE_URL="http://localhost:8080/health"
-LOG_FILE="/var/log/visionhub/healthcheck.log"
-
-echo "\$(date): Running health check" >> \$LOG_FILE
-
-# Check if PM2 is running
-if ! pgrep -x "pm2" > /dev/null; then
-  echo "\$(date): ERROR - PM2 is not running. Starting PM2..." >> \$LOG_FILE
-  systemctl restart visionhub.service
-  sleep 10
-fi
-
-# Check if the application process is running
-if ! sudo -u visionhub pm2 show \$APP_NAME &>/dev/null; then
-  echo "\$(date): ERROR - \$APP_NAME is not running in PM2. Attempting restart..." >> \$LOG_FILE
-  cd /opt/visionhub
-  sudo -u visionhub pm2 restart \$APP_NAME || sudo -u visionhub pm2 start ecosystem.config.cjs
-  sleep 5
-fi
-
-# Check if the application endpoint is accessible
-response=\$(curl -s -o /dev/null -w "%{http_code}" \$SERVICE_URL || echo "failed")
-
-if [ "\$response" != "200" ]; then
-  echo "\$(date): ERROR - Health check failed with response: \$response. Restarting service..." >> \$LOG_FILE
-  systemctl restart visionhub.service
-  echo "\$(date): Service restart triggered" >> \$LOG_FILE
-else
-  echo "\$(date): Health check passed with response: \$response" >> \$LOG_FILE
-fi
-EOF
-
+# Copy health check script to application directory
+cp ./healthcheck.sh /opt/visionhub/healthcheck.sh
 chmod +x /opt/visionhub/healthcheck.sh
 chown visionhub:visionhub /opt/visionhub/healthcheck.sh
 

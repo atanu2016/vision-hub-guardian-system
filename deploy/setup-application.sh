@@ -56,18 +56,26 @@ echo "Building application..."
 # Use the correct build script as defined in package.json
 npm run build
 
-# Create dist directory and a basic server file if build failed
+# Create dist directory and a basic server file if build failed or needs fallback
 mkdir -p dist
 if [ ! -f "dist/index.js" ]; then
   echo "Creating basic server file in dist directory..."
   cat > dist/index.js << EOF
-// Basic Node.js server
-const http = require('http');
+// Basic Node.js server (ES Module version)
+import http from 'http';
+
 const port = process.env.PORT || 8080;
 
 const server = http.createServer((req, res) => {
   res.statusCode = 200;
   res.setHeader('Content-Type', 'text/html');
+  
+  // Add health endpoint for monitoring
+  if (req.url === '/health') {
+    res.end('OK');
+    return;
+  }
+  
   res.end('<html><head><title>Vision Hub</title></head><body><h1>Vision Hub</h1><p>Server is running but application build may be incomplete.</p></body></html>');
 });
 
@@ -82,4 +90,3 @@ echo "Note: Skipping database migrations. You may need to run them manually late
 
 # Storage directories are now created in the main deployment script
 echo "===== Application setup completed ====="
-
