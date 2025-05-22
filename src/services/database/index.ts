@@ -4,3 +4,4 @@ export { logDatabaseError, checkDatabaseSetup, checkTablesExist } from './baseSe
 export * from './camera';
 export * from './storageService';
 export * from './statsService';
+export * from './alertService';
