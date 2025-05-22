@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { getCameras, saveCamera } from "@/data/mockData";
@@ -11,6 +10,7 @@ import AddCameraButton from "./topbar/AddCameraButton";
 import ThemeToggleButton from "./topbar/ThemeToggleButton";
 import MobileSidebarToggle from "./topbar/MobileSidebarToggle";
 import { getPageTitle } from "@/lib/navigation";
+import { CameraUIProps } from "@/utils/cameraPropertyMapper";
 
 const TopBar = () => {
   const location = useLocation();
@@ -44,19 +44,35 @@ const TopBar = () => {
   const existingGroups = Array.from(new Set(cameras.map(c => c.group || "Ungrouped")))
     .filter(group => group !== "Ungrouped");
 
-  const handleAddCamera = (newCamera: Omit<Camera, "id">) => {
-    // Generate a unique ID
-    const camera: Camera = {
-      ...newCamera,
-      id: `cam-${Date.now()}`,
+  // Adapt the handleAddCamera function to handle CameraUIProps
+  const handleAddCamera = async (newCamera: Omit<CameraUIProps, "id" | "lastSeen">) => {
+    // Convert UI props to database format
+    const camera: Omit<Camera, "id"> = {
+      name: newCamera.name,
+      ipaddress: newCamera.ipAddress,
+      port: newCamera.port,
+      username: newCamera.username,
+      password: newCamera.password,
+      location: newCamera.location,
+      status: newCamera.status,
+      lastseen: new Date().toISOString(),
+      recording: newCamera.recording,
+      motiondetection: newCamera.motionDetection,
+      rtmpurl: newCamera.rtmpUrl,
+      hlsurl: newCamera.hlsUrl,
+      onvifpath: newCamera.onvifPath,
+      connectiontype: newCamera.connectionType,
+      group: newCamera.group,
+      thumbnail: newCamera.thumbnail,
+      manufacturer: newCamera.manufacturer,
+      model: newCamera.model
     };
     
-    // Add to cameras list
-    const updatedCameras = [...cameras, camera];
-    setCameras(updatedCameras);
+    // Save to database
+    const savedCamera = await saveCamera(camera as Camera);
     
-    // Save to storage
-    saveCamera(camera);
+    // Update local state
+    setCameras(prev => [...prev, savedCamera]);
     
     // Add notification
     addNotification({
@@ -64,6 +80,8 @@ const TopBar = () => {
       message: `${camera.name} has been added successfully`,
       type: "success"
     });
+    
+    return savedCamera;
   };
 
   return (

@@ -20,10 +20,10 @@ export interface Camera {
   manufacturer?: string;
   model?: string;
   quality?: string;
-  scheduleType?: string;
-  timeStart?: string;
-  timeEnd?: string;
-  daysOfWeek?: string[];
+  schedule_type?: string;
+  time_start?: string;
+  time_end?: string;
+  days_of_week?: string[];
 }
 
 export type CameraConnectionType = 'ip' | 'rtsp' | 'rtmp' | 'hls' | 'onvif';
@@ -37,30 +37,31 @@ export interface GroupedCameras {
 }
 
 export interface StorageSettings {
+  id?: string;
   type: 'local' | 'nas' | 's3' | 'dropbox' | 'google_drive' | 'onedrive' | 'azure_blob' | 'backblaze';
   path?: string;
-  retentionDays: number;
-  overwriteOldest: boolean;
-  nasAddress?: string;
-  nasPath?: string;
-  nasUsername?: string;
-  nasPassword?: string;
-  s3Endpoint?: string;
-  s3Bucket?: string;
-  s3AccessKey?: string;
-  s3SecretKey?: string;
-  s3Region?: string;
-  dropboxToken?: string;
-  dropboxFolder?: string;
-  googleDriveToken?: string;
-  googleDriveFolderId?: string;
-  oneDriveToken?: string;
-  oneDriveFolderId?: string;
-  azureConnectionString?: string;
-  azureContainer?: string;
-  backblazeKeyId?: string;
-  backblazeApplicationKey?: string;
-  backblazeBucket?: string;
+  retentiondays: number;
+  overwriteoldest: boolean;
+  nasaddress?: string;
+  naspath?: string;
+  nasusername?: string;
+  naspassword?: string;
+  s3endpoint?: string;
+  s3bucket?: string;
+  s3accesskey?: string;
+  s3secretkey?: string;
+  s3region?: string;
+  dropboxtoken?: string;
+  dropboxfolder?: string;
+  googledrivertoken?: string;
+  googledrivefolderid?: string;
+  onedrivetoken?: string;
+  onedrivefolderid?: string;
+  azureconnectionstring?: string;
+  azurecontainer?: string;
+  backblazekeyid?: string;
+  backblazeapplicationkey?: string;
+  backblazebucket?: string;
 }
 
 export interface CameraGroup {

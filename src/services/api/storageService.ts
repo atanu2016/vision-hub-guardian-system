@@ -1,35 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-
-// Define explicit interface for storage settings
-interface StorageSettings {
-  id: string;
-  nasaddress?: string;
-  naspassword?: string;
-  naspath?: string;
-  nasusername?: string;
-  overwriteoldest: boolean;
-  path: string;
-  retentiondays: number;
-  s3accesskey?: string;
-  s3bucket?: string;
-  s3endpoint?: string;
-  s3region?: string;
-  s3secretkey?: string;
-  type: string;
-  // Cloud storage providers
-  dropboxtoken?: string;
-  dropboxfolder?: string;
-  googledrivertoken?: string;
-  googledrivefolderid?: string;
-  onedrivetoken?: string;
-  onedrivefolderid?: string;
-  azureconnectionstring?: string;
-  azurecontainer?: string;
-  backblazekeyid?: string;
-  backblazeapplicationkey?: string;
-  backblazebucket?: string;
-}
+import { StorageSettings } from "@/types/camera";
 
 export const getStorageSettings = async (): Promise<StorageSettings | null> => {
   try {

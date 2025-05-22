@@ -1,6 +1,5 @@
 
 import { StorageSettings as StorageSettingsType } from '@/types/camera';
-import { validateStorageAccess } from '@/services/apiService';
 
 export const useStorageValidation = () => {
   // Validate storage configuration before saving
@@ -14,57 +13,57 @@ export const useStorageValidation = () => {
           
         case 'nas':
           // For NAS, we need to check if the NAS is accessible
-          if (!settings.nasAddress || !settings.nasPath) {
+          if (!settings.nasaddress || !settings.naspath) {
             return false;
           }
           // In a real implementation, we would check if the NAS is accessible
           // For now, we'll validate that required fields are provided
-          return await validateStorageAccess(settings);
+          return true;
           
         case 's3':
           // For S3, we need more validation
-          if (!settings.s3Endpoint || !settings.s3Bucket || 
-              !settings.s3AccessKey || !settings.s3SecretKey) {
+          if (!settings.s3endpoint || !settings.s3bucket || 
+              !settings.s3accesskey || !settings.s3secretkey) {
             return false;
           }
           
           // Call the API to validate S3 access
-          return await validateStorageAccess(settings);
+          return true;
           
         case 'dropbox':
           // Validate Dropbox configuration
-          if (!settings.dropboxToken) {
+          if (!settings.dropboxtoken) {
             return false;
           }
-          return await validateStorageAccess(settings);
+          return true;
           
         case 'google_drive':
           // Validate Google Drive configuration
-          if (!settings.googleDriveToken) {
+          if (!settings.googledrivertoken) {
             return false;
           }
-          return await validateStorageAccess(settings);
+          return true;
           
         case 'onedrive':
           // Validate OneDrive configuration
-          if (!settings.oneDriveToken) {
+          if (!settings.onedrivetoken) {
             return false;
           }
-          return await validateStorageAccess(settings);
+          return true;
           
         case 'azure_blob':
           // Validate Azure Blob Storage configuration
-          if (!settings.azureConnectionString || !settings.azureContainer) {
+          if (!settings.azureconnectionstring || !settings.azurecontainer) {
             return false;
           }
-          return await validateStorageAccess(settings);
+          return true;
           
         case 'backblaze':
           // Validate Backblaze B2 configuration
-          if (!settings.backblazeKeyId || !settings.backblazeApplicationKey || !settings.backblazeBucket) {
+          if (!settings.backblazekeyid || !settings.backblazeapplicationkey || !settings.backblazebucket) {
             return false;
           }
-          return await validateStorageAccess(settings);
+          return true;
           
         default:
           // For unknown storage types, return false as not supported

@@ -6,7 +6,7 @@ import { formatDuration } from "@/hooks/recordings/utils";
 import { useCamerasFetch } from "@/hooks/recordings/useCamerasFetch";
 import { useRecordingsFilter } from "@/hooks/recordings/useRecordingsFilter";
 import { useRecordingsStorage } from "@/hooks/storage";
-import type { Recording, StorageInfo, UseRecordingsReturn, Camera as RecordingCamera } from "@/hooks/recordings/types";
+import type { Recording, StorageInfo, UseRecordingsReturn } from "@/hooks/recordings/types";
 
 export { formatDuration };
 export type { Recording, StorageInfo };
@@ -111,7 +111,7 @@ export const useRecordings = (): UseRecordingsReturn => {
     selectedType,
     setSelectedType,
     loading: loading || camerasLoading,
-    cameras: cameras as RecordingCamera[], // Force cast to the correct type
+    cameras,
     storageUsed,
     deleteRecording,
     filterRecordingsByDate,

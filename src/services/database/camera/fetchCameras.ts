@@ -16,30 +16,7 @@ export const fetchCamerasFromDB = async (): Promise<Camera[]> => {
       throw error;
     }
     
-    // Transform the data to match our Camera type
-    const cameras: Camera[] = data.map(cam => ({
-      id: cam.id,
-      name: cam.name,
-      status: cam.status as "online" | "offline" | "recording",
-      location: cam.location,
-      ipaddress: cam.ipaddress,
-      port: cam.port || 80,
-      username: cam.username || undefined,
-      password: cam.password || undefined,
-      model: cam.model || undefined,
-      manufacturer: cam.manufacturer || undefined,
-      lastseen: cam.lastseen,
-      recording: cam.recording || false,
-      thumbnail: cam.thumbnail || undefined,
-      group: cam.group || undefined,
-      connectiontype: cam.connectiontype as "ip" | "rtsp" | "rtmp" | "onvif" | "hls" || "ip",
-      rtmpurl: cam.rtmpurl || undefined,
-      hlsurl: cam.hlsurl || undefined,
-      onvifpath: cam.onvifpath || undefined,
-      motiondetection: cam.motiondetection || false
-    }));
-    
-    return cameras;
+    return data || [];
   } catch (error) {
     throw logDatabaseError(error, "Failed to fetch cameras");
   }

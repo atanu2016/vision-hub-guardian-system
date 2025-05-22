@@ -1,4 +1,3 @@
-
 import { Camera } from "@/types/camera";
 
 // The UI format of camera properties (camelCase)
@@ -22,7 +21,6 @@ export interface CameraUIProps {
   onvifPath?: string;
   motionDetection?: boolean;
   thumbnail?: string;
-  // Add the missing properties from the Camera type
   quality?: string;
   scheduleType?: string;
   timeStart?: string;
@@ -52,12 +50,11 @@ export function toDatabaseCamera(uiCamera: CameraUIProps): Camera {
     onvifpath: uiCamera.onvifPath,
     motiondetection: uiCamera.motionDetection,
     thumbnail: uiCamera.thumbnail,
-    // Map the additional properties
     quality: uiCamera.quality,
-    scheduleType: uiCamera.scheduleType,
-    timeStart: uiCamera.timeStart,
-    timeEnd: uiCamera.timeEnd,
-    daysOfWeek: uiCamera.daysOfWeek
+    schedule_type: uiCamera.scheduleType,
+    time_start: uiCamera.timeStart,
+    time_end: uiCamera.timeEnd,
+    days_of_week: uiCamera.daysOfWeek
   };
 }
 
@@ -83,12 +80,11 @@ export function toUICamera(dbCamera: Camera): CameraUIProps {
     onvifPath: dbCamera.onvifpath,
     motionDetection: dbCamera.motiondetection,
     thumbnail: dbCamera.thumbnail,
-    // Map additional properties
     quality: dbCamera.quality,
-    scheduleType: dbCamera.scheduleType,
-    timeStart: dbCamera.timeStart,
-    timeEnd: dbCamera.timeEnd,
-    daysOfWeek: dbCamera.daysOfWeek
+    scheduleType: dbCamera.schedule_type,
+    timeStart: dbCamera.time_start,
+    timeEnd: dbCamera.time_end,
+    daysOfWeek: dbCamera.days_of_week
   };
 }
 
@@ -114,7 +110,6 @@ export function toUICameraWithDefault(dbCamera: Partial<Camera> & { id: string }
     onvifPath: dbCamera.onvifpath,
     motionDetection: dbCamera.motiondetection || false,
     thumbnail: dbCamera.thumbnail,
-    // Map additional properties with defaults
     quality: dbCamera.quality || "medium",
     scheduleType: dbCamera.scheduleType || "always",
     timeStart: dbCamera.timeStart || "00:00",

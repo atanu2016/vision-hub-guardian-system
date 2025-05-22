@@ -16,11 +16,8 @@ export interface Recording {
   dateTime: string;
 }
 
-// Make this compatible with the base Camera type
-export interface Camera extends BaseCamera {
-  // Add any additional properties needed for the recordings module
-  // But make sure it extends the base Camera type to ensure compatibility
-}
+// Use the base Camera type directly
+export type Camera = BaseCamera;
 
 export interface StorageInfo {
   used: number;

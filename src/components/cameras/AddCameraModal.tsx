@@ -49,7 +49,7 @@ const AddCameraModal = ({ isOpen, onClose, onAdd, existingGroups = [] }: AddCame
   };
 
   // Handle form field changes
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: keyof typeof values, value: string) => {
     setValue(field, value);
   };
 
@@ -104,15 +104,16 @@ const AddCameraModal = ({ isOpen, onClose, onAdd, existingGroups = [] }: AddCame
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Basic camera details form */}
           <CameraDetailsForm
-            register={register}
-            errors={errors}
-            existingGroups={existingGroups}
+            name={values.name}
+            location={values.location}
+            onChange={handleChange}
           />
           
           {/* Connection settings tabs */}
           <CameraModalTabs
             connectionTab={connectionTab}
             onTabChange={handleConnectionTabChange}
+            connectionType={connectionTab as CameraConnectionType}
             formValues={values}
             onChange={handleChange}
           />

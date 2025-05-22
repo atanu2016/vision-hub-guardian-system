@@ -23,8 +23,7 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
       }
       
       console.log(`Found ${data?.length || 0} cameras for admin user`);
-      // Transform database fields to match Camera type
-      return transformCameraData(data || []);
+      return data || [];
     }
     
     // For regular users and observers, get their assigned camera IDs
@@ -51,9 +50,7 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
       }
       
       console.log(`Found ${data?.length || 0} accessible cameras for user`);
-      
-      // Transform database fields to match Camera type
-      return transformCameraData(data || []);
+      return data || [];
     } catch (assignmentError) {
       console.error("Error in assignment retrieval:", assignmentError);
       return [];
@@ -62,30 +59,4 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
     console.error('Error fetching accessible cameras:', error);
     return [];
   }
-}
-
-/**
- * Helper function to transform database camera fields to Camera type
- */
-function transformCameraData(data: any[]): Camera[] {
-  return data.map(cam => ({
-    id: cam.id,
-    name: cam.name,
-    location: cam.location,
-    ipAddress: cam.ipaddress,
-    port: cam.port || 80,
-    username: cam.username,
-    password: cam.password,
-    rtmpUrl: cam.rtmpurl,
-    connectionType: cam.connectiontype as Camera['connectionType'],
-    onvifPath: cam.onvifpath,
-    manufacturer: cam.manufacturer,
-    model: cam.model,
-    status: (cam.status || 'offline') as CameraStatus,
-    lastSeen: cam.lastseen,
-    motionDetection: cam.motiondetection || false,
-    recording: cam.recording || false,
-    thumbnail: cam.thumbnail,
-    group: cam.group
-  }));
 }
