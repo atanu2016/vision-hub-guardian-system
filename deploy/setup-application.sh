@@ -4,7 +4,7 @@
 # Run as the application user
 
 VISION_HUB_DIR="/opt/visionhub"
-GITHUB_REPO="https://github.com/yourusername/vision-hub.git"  # Replace with your actual GitHub repo URL
+GITHUB_REPO="https://github.com/atanu2016/vision-hub-guardian-system.git"  # Updated GitHub repo URL
 
 echo "===== Setting up Vision Hub Application ====="
 
@@ -82,3 +82,4 @@ echo "Note: Skipping database migrations. You may need to run them manually late
 
 # Storage directories are now created in the main deployment script
 echo "===== Application setup completed ====="
+
