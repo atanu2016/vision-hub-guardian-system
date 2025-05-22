@@ -28,6 +28,7 @@ else
 fi
 
 # Install dependencies
+echo "Installing npm dependencies..."
 npm install
 
 # Create .env file
@@ -55,10 +56,8 @@ echo "Building application..."
 # Use the correct build script as defined in package.json
 npm run build
 
-# Create storage directories with sudo if needed
-echo "Creating storage directories..."
-sudo mkdir -p /var/lib/visionhub/recordings
-sudo chown -R visionhub:visionhub /var/lib/visionhub
-sudo chmod 755 /var/lib/visionhub/recordings
+# Skip Supabase migrations for now since they're causing issues
+echo "Note: Skipping database migrations. You may need to run them manually later."
 
+# Storage directories are now created in the main deployment script
 echo "===== Application setup completed ====="

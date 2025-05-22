@@ -17,10 +17,10 @@ if ! pgrep -x "pm2" > /dev/null; then
 fi
 
 # Check if the application process is running
-if ! pm2 show $APP_NAME &>/dev/null; then
+if ! sudo -u visionhub pm2 show $APP_NAME &>/dev/null; then
   echo "$(date): ERROR - $APP_NAME is not running in PM2. Attempting restart..." >> $LOG_FILE
   cd /opt/visionhub
-  pm2 restart $APP_NAME
+  sudo -u visionhub pm2 restart $APP_NAME || sudo -u visionhub pm2 start ecosystem.config.cjs
   sleep 5
 fi
 

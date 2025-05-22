@@ -1,3 +1,4 @@
+
 # Vision Hub Deployment Troubleshooting Guide
 
 ## Common Issues and Solutions
@@ -34,30 +35,6 @@
 
 ### Application Fails to Start
 
-**Error:** `Error: Script not found: /opt/visionhub/dist/server.js`
-
-**Solution:** 
-1. Verify the build process completed successfully:
-   ```
-   cd /opt/visionhub
-   ls -la dist/
-   ```
-
-2. Check if the entry point is correctly specified in ecosystem.config.js:
-   ```
-   cat ecosystem.config.js
-   ```
-
-3. Rebuild the application:
-   ```
-   npm run build
-   ```
-
-4. Restart PM2:
-   ```
-   pm2 reload visionhub
-   ```
-
 **Error:** `ERR_REQUIRE_ESM`
 
 **Solution:**
@@ -66,30 +43,76 @@
    systemctl status visionhub.service
    ```
 
-2. Update the ecosystem.config.js file:
+2. Make sure the ecosystem file has the .cjs extension:
    ```
    cd /opt/visionhub
-   nano ecosystem.config.js
+   ls -la ecosystem.config.*
    ```
    
-3. Change the configuration to:
-   ```javascript
-   module.exports = {
-     apps: [{
-       name: 'visionhub',
-       script: 'dist/main.js',
-       instances: 1,
-       exec_mode: 'fork',
-       env: {
-         NODE_ENV: 'production'
-       }
-     }]
-   }
+3. If you still see ecosystem.config.js instead of ecosystem.config.cjs, rename it:
+   ```
+   cd /opt/visionhub
+   mv ecosystem.config.js ecosystem.config.cjs
    ```
 
-4. Restart the service:
+4. Update the visionhub.service file to use .cjs:
    ```
-   systemctl restart visionhub.service
+   sudo nano /etc/systemd/system/visionhub.service
+   ```
+   Change `ExecStart=/usr/bin/pm2 start ecosystem.config.js` to 
+   `ExecStart=/usr/bin/pm2 start ecosystem.config.cjs`
+
+5. Restart the service:
+   ```
+   sudo systemctl daemon-reload
+   sudo systemctl restart visionhub.service
+   ```
+
+### Supabase Configuration Issues
+
+**Error:** `Failed to parse config: decoding failed due to invalid keys`
+
+**Solution:**
+1. Simplify the `supabase/config.toml` file to only include the necessary project_id:
+   ```
+   # A string used to distinguish different Supabase projects on the same host. Defaults to the project ID.
+   project_id = "csmsqglfbycodrqipbca"
+   ```
+
+2. Skip Supabase migrations during initial setup if they're failing:
+   ```
+   # Comment out or remove these lines from setup-application.sh
+   # npx supabase db start
+   # npx supabase db push
+   ```
+
+3. Run migrations manually after setup is complete:
+   ```
+   cd /opt/visionhub
+   npx supabase link --project-ref csmsqglfbycodrqipbca
+   npx supabase db push
+   ```
+
+### Permission Issues
+
+**Error:** `mkdir: cannot create directory '/var/lib/visionhub': Permission denied`
+
+**Solution:**
+1. Ensure directories are created with proper permissions:
+   ```
+   sudo mkdir -p /var/lib/visionhub/recordings
+   sudo chown -R visionhub:visionhub /var/lib/visionhub
+   sudo chmod 755 /var/lib/visionhub/recordings
+   ```
+
+2. Make sure the directory creation happens before the application setup:
+   ```
+   # In deploy.sh, move the directory creation before calling setup-application.sh
+   ```
+
+3. Use sudo when needed in scripts running as non-root users:
+   ```
+   sudo mkdir -p /var/lib/visionhub/recordings
    ```
 
 ### Database Connection Issues
@@ -112,80 +135,6 @@
    sudo -u postgres psql -c "\l" | grep visionhub
    ```
 
-### Nginx Configuration Issues
-
-**Error:** Cannot access application via HTTP
-
-**Solution:**
-1. Check Nginx is running:
-   ```
-   systemctl status nginx
-   ```
-
-2. Verify Nginx configuration is valid:
-   ```
-   nginx -t
-   ```
-
-3. Check site configuration:
-   ```
-   cat /etc/nginx/sites-enabled/visionhub
-   ```
-
-4. Look for errors in Nginx logs:
-   ```
-   tail -f /var/log/nginx/error.log
-   ```
-
-### PM2 Issues
-
-**Error:** PM2 not managing the application
-
-**Solution:**
-1. Check PM2 status:
-   ```
-   pm2 list
-   ```
-
-2. Restart PM2:
-   ```
-   pm2 delete all
-   pm2 start ecosystem.config.js
-   pm2 save
-   ```
-
-3. Setup PM2 to start on boot:
-   ```
-   pm2 startup
-   # Follow the instructions provided
-   ```
-
-### Systemd Service Issues
-
-**Error:** Systemd service fails to start
-
-**Solution:**
-1. Check service status:
-   ```
-   systemctl status visionhub.service
-   ```
-
-2. Check service logs:
-   ```
-   journalctl -u visionhub.service
-   ```
-
-3. Verify service file:
-   ```
-   cat /etc/systemd/system/visionhub.service
-   ```
-
-4. Reload systemd and restart:
-   ```
-   systemctl daemon-reload
-   systemctl restart visionhub.service
-   ```
-
 ## Command Cheat Sheet
 
 - **Check application status:** `pm2 list`
@@ -194,3 +143,5 @@
 - **View systemd service logs:** `journalctl -u visionhub.service`
 - **Test Nginx configuration:** `nginx -t`
 - **Check database status:** `systemctl status postgresql`
+- **Manual PM2 start:** `cd /opt/visionhub && sudo -u visionhub pm2 start ecosystem.config.cjs`
+- **View Vision Hub logs:** `cd /opt/visionhub && sudo -u visionhub pm2 logs`

@@ -29,7 +29,8 @@ useradd -m -s /bin/bash visionhub || true
 mkdir -p /opt/visionhub
 chown -R visionhub:visionhub /opt/visionhub
 
-# Create the storage directory with correct permissions
+# Create storage directories with correct permissions first
+echo "Creating storage directories..."
 mkdir -p /var/lib/visionhub/recordings
 chown -R visionhub:visionhub /var/lib/visionhub
 chmod 755 /var/lib/visionhub/recordings
@@ -51,7 +52,20 @@ echo "Setting up systemd service..."
 cp ./visionhub.service /etc/systemd/system/ || handle_error "Failed to copy systemd service file"
 systemctl daemon-reload
 systemctl enable visionhub.service
-systemctl start visionhub.service
+
+# Try to start the service, but don't fail the whole deployment if it doesn't work
+echo "Starting visionhub service..."
+if ! systemctl start visionhub.service; then
+  echo "WARNING: Service failed to start. Will try manual PM2 setup."
+  
+  # Try direct PM2 setup as fallback
+  cd /opt/visionhub
+  sudo -u visionhub pm2 delete all || true
+  sudo -u visionhub pm2 start ecosystem.config.cjs || {
+    echo "WARNING: PM2 direct start failed. Check logs for details."
+    echo "You may need to run: cd /opt/visionhub && sudo -u visionhub pm2 start ecosystem.config.cjs"
+  }
+fi
 
 # Check if service started correctly
 sleep 5

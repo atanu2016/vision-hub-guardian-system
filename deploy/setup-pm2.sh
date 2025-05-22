@@ -30,7 +30,11 @@ module.exports = {
 };
 EOF
 
+# Make sure we stop any running instances first
+pm2 delete $APP_NAME 2>/dev/null || true
+
 # Start the application with PM2
+echo "Starting application with PM2..."
 pm2 start ecosystem.config.cjs
 
 # Save PM2 configuration to start on system boot
