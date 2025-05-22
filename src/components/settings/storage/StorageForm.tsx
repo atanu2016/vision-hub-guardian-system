@@ -1,11 +1,13 @@
 
 import { z } from "zod";
-import { UseFormReturn } from "react-hook-form";
+import { useForm, UseFormReturn } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import StorageProviderSelector from "./StorageProviderSelector";
 import StorageProviderFields from "./StorageProviderFields";
 import RetentionPolicyForm from "./RetentionPolicyForm";
+import { StorageSettings } from "@/types/camera";
 
 // Define the schema for storage form
 export const StorageFormSchema = z.object({

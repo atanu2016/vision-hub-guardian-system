@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -6,8 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Camera } from '@/types/camera';
-import { AlertSettings } from '@/hooks/useAlertSettings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+export interface AlertSettings {
+  motion_detection: boolean;
+  camera_offline: boolean;
+  storage_warning: boolean;
+  email_notifications: boolean;
+  push_notifications: boolean;
+  email_address?: string;
+  notification_sound: string;
+}
 
 export interface AlertSettingsTabProps {
   alertSettings: AlertSettings;

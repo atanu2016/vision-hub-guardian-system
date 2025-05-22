@@ -13,18 +13,13 @@ const AlertsPage = () => {
   const [activeTab, setActiveTab] = useState("general");
   const { 
     settings,
+    cameras,
     loading, 
-    saving, 
-    saveSettings
+    saving,
+    updateAlertSettings,
+    handleSaveSettings,
+    handleCameraAlertLevelChange
   } = useAlertSettings();
-
-  // Placeholder handlers for camera alert level changes
-  const handleCameraAlertLevelChange = (cameraId: string, level: "low" | "medium" | "high" | "none") => {
-    // Convert "none" to "off" if needed by your implementation
-    const adjustedLevel = level === "none" ? "off" : level;
-    console.log(`Setting camera ${cameraId} alert level to ${adjustedLevel}`);
-    // Here you would normally save this to state or directly to your API
-  };
 
   return (
     <div className="container py-6 space-y-6">
@@ -48,24 +43,44 @@ const AlertsPage = () => {
             
             <TabsContent value="general" className="space-y-4">
               <AlertSettingsTab 
-                settings={settings}
-                onSave={saveSettings}
-                isLoading={loading || saving}
+                alertSettings={settings}
+                cameras={cameras}
+                saving={saving}
+                onSettingsChange={updateAlertSettings}
+                onSaveSettings={handleSaveSettings}
+                onCameraAlertLevelChange={handleCameraAlertLevelChange}
               />
             </TabsContent>
             
             <TabsContent value="types" className="space-y-4">
-              <AlertTypes />
+              <AlertTypes 
+                motionDetection={settings.motion_detection}
+                cameraOffline={settings.camera_offline}
+                storageWarning={settings.storage_warning}
+                onMotionChange={(checked) => updateAlertSettings({ motion_detection: checked })}
+                onOfflineChange={(checked) => updateAlertSettings({ camera_offline: checked })}
+                onStorageChange={(checked) => updateAlertSettings({ storage_warning: checked })}
+              />
             </TabsContent>
             
             <TabsContent value="cameras" className="space-y-4">
               <CameraSpecificAlerts 
+                cameras={cameras}
                 onAlertLevelChange={handleCameraAlertLevelChange} 
               />
             </TabsContent>
             
             <TabsContent value="notifications" className="space-y-4">
-              <NotificationSettings />
+              <NotificationSettings
+                emailNotifications={settings.email_notifications}
+                pushNotifications={settings.push_notifications}
+                emailAddress={settings.email_address || ''}
+                notificationSound={settings.notification_sound || 'default'}
+                onEmailToggle={(checked) => updateAlertSettings({ email_notifications: checked })}
+                onPushToggle={(checked) => updateAlertSettings({ push_notifications: checked })}
+                onEmailChange={(email) => updateAlertSettings({ email_address: email })}
+                onSoundChange={(sound) => updateAlertSettings({ notification_sound: sound })}
+              />
             </TabsContent>
             
             <TabsContent value="history" className="space-y-4">

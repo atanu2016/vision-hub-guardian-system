@@ -1,10 +1,12 @@
 
 import { useState, useEffect } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getStorageSettings, saveStorageSettings } from "@/services/apiService";
 import { StorageSettings as StorageSettingsType } from "@/types/camera";
 import { useStorageValidation } from "@/hooks/storage/useStorageValidation";
-import StorageForm from "@/components/settings/storage/StorageForm";
+import StorageForm, { StorageFormSchema, StorageFormSchemaType } from "@/components/settings/storage/StorageForm";
 import AppLayout from "@/components/layout/AppLayout";
 import StorageUsageDisplay from "@/components/settings/storage/StorageUsageDisplay";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +34,17 @@ const StorageSettings = () => {
   const [isClearing, setIsClearing] = useState(false);
   const { validateStorage } = useStorageValidation();
   const { toast } = useToast();
+  
+  // Initialize form with react-hook-form
+  const form = useForm<StorageFormSchemaType>({
+    resolver: zodResolver(StorageFormSchema),
+    defaultValues: {
+      type: 'local',
+      path: '/recordings',
+      retentiondays: 30,
+      overwriteoldest: true
+    }
+  });
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -39,6 +52,8 @@ const StorageSettings = () => {
         const data = await getStorageSettings();
         if (data) {
           setSettings(data);
+          // Update form values with loaded settings
+          form.reset(data);
         }
       } catch (error) {
         console.error("Failed to load storage settings:", error);
@@ -62,9 +77,9 @@ const StorageSettings = () => {
       usedSpaceFormatted: "250 GB",
       totalSpaceFormatted: "1 TB"
     });
-  }, [toast]);
+  }, [toast, form]);
 
-  const handleSaveSettings = async (newSettings: StorageSettingsType) => {
+  const handleSaveSettings = async (newSettings: StorageFormSchemaType) => {
     setIsSaving(true);
     try {
       // Validate the settings first
@@ -179,10 +194,9 @@ const StorageSettings = () => {
               </CardHeader>
               <CardContent>
                 <StorageForm
-                  initialSettings={settings}
-                  onSave={handleSaveSettings}
-                  isLoading={isLoading}
-                  isSaving={isSaving}
+                  form={form}
+                  onSubmit={handleSaveSettings}
+                  isLoading={isLoading || isSaving}
                 />
               </CardContent>
             </Card>
