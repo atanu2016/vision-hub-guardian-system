@@ -161,6 +161,49 @@
    });
    ```
 
+### Systemd Service Issues
+
+**Error:** `Service immediately stops after starting` or `Failed to start Vision Hub Application Service`
+
+**Solution:**
+1. The most common issue is PM2 not being properly configured for systemd:
+   ```
+   systemctl status visionhub.service
+   journalctl -u visionhub.service -n 50
+   ```
+
+2. Make sure the systemd service file has the correct settings:
+   ```
+   sudo nano /etc/systemd/system/visionhub.service
+   ```
+   Ensure it has:
+   - `Type=forking` 
+   - `RemainAfterExit=yes`
+   - Correct `WorkingDirectory` pointing to `/opt/visionhub`
+
+3. Ensure PM2 has a home directory with proper permissions:
+   ```
+   sudo mkdir -p /home/visionhub/.pm2
+   sudo chown -R visionhub:visionhub /home/visionhub/.pm2
+   ```
+
+4. Try starting PM2 manually first:
+   ```
+   sudo -u visionhub bash -c 'cd /opt/visionhub && pm2 start ecosystem.config.cjs && pm2 save'
+   ```
+
+5. Generate and run the PM2 startup script:
+   ```
+   sudo -u visionhub pm2 startup systemd -u visionhub --hp /home/visionhub
+   ```
+   Then run the command it outputs (starts with `sudo env PATH=...`)
+
+6. Reload systemd and try starting the service again:
+   ```
+   sudo systemctl daemon-reload
+   sudo systemctl restart visionhub.service
+   ```
+
 ### Supabase Configuration Issues
 
 **Error:** `Failed to parse config: decoding failed due to invalid keys`

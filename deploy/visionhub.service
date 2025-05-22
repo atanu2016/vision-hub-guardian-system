@@ -10,10 +10,15 @@ WorkingDirectory=/opt/visionhub
 ExecStart=/usr/bin/pm2 start ecosystem.config.cjs
 ExecReload=/usr/bin/pm2 reload all
 ExecStop=/usr/bin/pm2 stop all
+
+# Make sure the service doesn't get marked as failed immediately
 Restart=on-failure
-RestartSec=30
-Environment=PATH=/usr/bin:/bin:/usr/local/bin:/usr/local/sbin
+RestartSec=10
+RemainAfterExit=yes
+
+Environment=PATH=/usr/bin:/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin
 Environment=NODE_ENV=production
+Environment=PM2_HOME=/home/visionhub/.pm2
 
 # Give the service more time to start
 TimeoutStartSec=180

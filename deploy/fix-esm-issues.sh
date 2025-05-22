@@ -7,20 +7,19 @@ APP_DIR="/opt/visionhub"
 
 echo "===== Fixing ES Module related issues ====="
 
-# Check if we're in an ES Module project
-IS_ESM=$(grep '"type": "module"' $APP_DIR/package.json || echo "")
-
 # Navigate to application directory
 cd $APP_DIR
+
+# Check if we're in an ES Module project
+IS_ESM=$(grep '"type": "module"' $APP_DIR/package.json || echo "")
 
 if [ -n "$IS_ESM" ]; then
   echo "Detected ES Module project. Fixing server script..."
   
   # Fix the fallback server script if it exists
-  if [ -f "dist/index.js" ]; then
-    echo "Updating dist/index.js to use ES Module syntax..."
-    cat > dist/index.js << EOF
-// Basic Node.js server (ES Module version)
+  echo "Updating dist/index.js to use ES Module syntax..."
+  cat > dist/index.js << EOF
+// ES Module compatible server
 import http from 'http';
 
 const port = process.env.PORT || 8080;
@@ -35,14 +34,13 @@ const server = http.createServer((req, res) => {
     return;
   }
   
-  res.end('<html><head><title>Vision Hub</title></head><body><h1>Vision Hub</h1><p>Server is running but application build may be incomplete.</p></body></html>');
+  res.end('<html><head><title>Vision Hub</title></head><body><h1>Vision Hub</h1><p>Server is running. Application served through Nginx.</p></body></html>');
 });
 
 server.listen(port, () => {
   console.log(\`Server running on port \${port}\`);
 });
 EOF
-  fi
   
   # Update PM2 ecosystem file to handle ES modules
   echo "Updating PM2 ecosystem config for ES modules..."
@@ -101,12 +99,20 @@ fi
 echo "Installing required dependencies..."
 npm install ws utf-8-validate bufferutil --no-save
 
+# Create a valid PM2_HOME directory and set proper permissions
+mkdir -p /home/visionhub/.pm2
+chown -R visionhub:visionhub /home/visionhub/.pm2
+
 # Restart the application using PM2
 echo "Restarting application with PM2..."
 pm2 delete visionhub 2>/dev/null || true
 pm2 start ecosystem.config.cjs
 pm2 save
 
+# Generate PM2 startup script
+startup_cmd=$(pm2 startup systemd -u visionhub --hp /home/visionhub | grep "sudo" | tail -n 1)
+
 echo "===== ES Module fixes completed ====="
+echo "To make PM2 start on boot, run: $startup_cmd"
 echo "Check application status with: pm2 list"
 echo "Check logs with: pm2 logs"
