@@ -1,10 +1,10 @@
-
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { 
   FileSpreadsheet, Link as LinkIcon, AlertTriangle, DatabaseZap, 
-  HardDrive, Bell, Shield, Settings as SettingsIcon, Sliders 
+  HardDrive, Bell, Shield, Settings as SettingsIcon, Sliders,
+  ArrowUpCircle
 } from 'lucide-react';
 
 // Import all settings pages
@@ -16,6 +16,7 @@ import AdvancedSettings from '@/pages/settings/AdvancedSettings';
 import DatabaseSettings from '@/components/settings/DatabaseSettings';
 import LogsSettings from '@/pages/settings/LogsSettings';
 import SystemSettings from '@/pages/settings/SystemSettings';
+import SystemUpdatePage from '@/pages/settings/SystemUpdatePage';
 
 const Settings = () => {
   const location = useLocation();
@@ -31,6 +32,7 @@ const Settings = () => {
   const isDatabaseActive = path === 'database';
   const isLogsActive = path === 'logs';
   const isSystemSettingsActive = path === 'system';
+  const isSystemUpdateActive = path === 'system-update';
 
   const handleNavigation = (route: string) => {
     navigate(route);
@@ -88,6 +90,18 @@ const Settings = () => {
                       <div>
                         <p className="font-medium">Database</p>
                         <p className="text-sm text-muted-foreground">Configure database connection</p>
+                      </div>
+                    </div>
+                    
+                    <div
+                      className={`flex items-start gap-4 rounded-lg border p-3 text-left cursor-pointer transition-all
+                        ${isSystemUpdateActive ? 'bg-accent' : 'hover:bg-accent/50'}`}
+                      onClick={() => handleNavigation('/settings/system-update')}
+                    >
+                      <ArrowUpCircle className="mt-0.5 h-5 w-5" />
+                      <div>
+                        <p className="font-medium">System Update</p>
+                        <p className="text-sm text-muted-foreground">Update and restart the application</p>
                       </div>
                     </div>
                   </div>
@@ -189,6 +203,7 @@ const Settings = () => {
               {isAdvancedActive && <AdvancedSettings />}
               {isDatabaseActive && <DatabaseSettings />}
               {isLogsActive && <LogsSettings />}
+              {isSystemUpdateActive && <SystemUpdatePage />}
             </div>
           </div>
         </div>

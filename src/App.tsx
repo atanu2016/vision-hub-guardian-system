@@ -1,4 +1,3 @@
-
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme/theme-provider"
@@ -23,6 +22,8 @@ import NotFound from "@/pages/NotFound";
 
 import { AuthProvider } from "@/contexts/auth";
 import { ProtectedRoute } from "@/components/auth";
+
+import SystemUpdatePage from "@/pages/settings/SystemUpdatePage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -162,6 +163,13 @@ function App() {
               <Route path="/admin/users/create" element={
                 <ProtectedRoute requiredPermission="manage-users:all">
                   <CreateUser />
+                </ProtectedRoute>
+              } />
+              
+              {/* Add SystemUpdatePage to routes */}
+              <Route path="/settings/system-update" element={
+                <ProtectedRoute superadminRequired>
+                  <SystemUpdatePage />
                 </ProtectedRoute>
               } />
               
