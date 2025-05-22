@@ -310,6 +310,88 @@
    sudo -u postgres psql -c "\l" | grep visionhub
    ```
 
+### ONVIF Camera Connection Issues
+
+**Problem:** Unable to connect to ONVIF cameras - seeing "Stream Unavailable" message
+
+**Solution:**
+
+1. Verify that the camera is accessible on the network:
+   ```
+   ping camera-ip-address
+   ```
+
+2. Check if the ONVIF port is open and accessible:
+   ```
+   nc -zv camera-ip-address onvif-port
+   ```
+
+3. Verify ONVIF credentials by testing with an ONVIF client:
+   ```
+   cd /opt/visionhub
+   node -e "const onvif=require('onvif');new onvif.Cam({hostname:'camera-ip',port:8000,username:'admin',password:'password'}, function(err){console.log(err||'Connected')});"
+   ```
+
+4. Common ONVIF connection issues:
+   - Wrong credentials (username/password)
+   - Incorrect port (try common ports: 80, 8000, 8080)
+   - Firewall blocking ONVIF traffic
+   - Camera's ONVIF implementation might be non-standard
+
+5. Check Vision Hub logs for detailed error messages:
+   ```
+   sudo -u visionhub pm2 logs
+   ```
+
+6. Ensure ONVIF dependencies are installed:
+   ```
+   cd /opt/visionhub
+   npm install onvif ws node-rtsp-stream-jsmpeg buffer-to-arraybuffer --no-save
+   ```
+
+7. Many cameras require direct access to RTSP streams. Try using an RTSP connection instead of ONVIF:
+   - Find your camera's RTSP URL format (often: `rtsp://username:password@camera-ip:port/stream`)
+   - Add the camera as an RTSP type instead of ONVIF
+
+8. Some ONVIF cameras need specific configuration:
+   ```
+   # Create a custom ONVIF test script
+   cd /opt/visionhub
+   cat > test-onvif.js << EOF
+   const onvif = require('onvif');
+   
+   new onvif.Cam({
+     hostname: 'camera-ip',
+     port: 8000,
+     username: 'admin',
+     password: 'password'
+   }, function(err, cam) {
+     if (err) {
+       console.error(err);
+       return;
+     }
+     
+     // Request camera information
+     cam.getDeviceInformation((err, info) => {
+       console.log('Device Information:', err || info);
+     });
+     
+     // Get streaming URLs
+     cam.getStreamUri({protocol:'RTSP'}, (err, stream) => {
+       console.log('RTSP Stream URI:', err || stream);
+     });
+   });
+   EOF
+   
+   # Run the test script
+   node test-onvif.js
+   ```
+
+9. For IP cameras without ONVIF, get the direct RTSP URL and use that instead:
+   - Hikvision: `rtsp://user:pass@camera-ip:554/Streaming/Channels/101`
+   - Dahua: `rtsp://user:pass@camera-ip:554/cam/realmonitor?channel=1&subtype=0`
+   - Generic: `rtsp://user:pass@camera-ip:554/stream1` or `rtsp://user:pass@camera-ip:554/h264`
+
 ## Command Cheat Sheet
 
 - **Check application status:** `pm2 list`

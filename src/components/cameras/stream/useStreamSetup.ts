@@ -22,6 +22,8 @@ export function useStreamSetup({
 }: UseStreamSetupOptions) {
   const { toast } = useToast();
   const hlsRef = useRef<Hls | null>(null);
+  const retryCountRef = useRef<number>(0);
+  const maxRetries = 3;
 
   useEffect(() => {
     let cleanup: () => void = () => {};
@@ -35,17 +37,25 @@ export function useStreamSetup({
         
         try {
           const videoElement = videoRef.current;
-          const streamUrl = camera.connectionType === 'hls' 
-            ? camera.hlsUrl 
-            : camera.rtmpUrl || '';
+          let streamUrl = '';
           
-          // If the URL is an HLS stream and browser supports HLS.js
+          // Determine stream URL based on camera type
+          if (camera.connectionType === 'hls' && camera.hlsUrl) {
+            streamUrl = camera.hlsUrl;
+          } else if (camera.connectionType === 'rtmp' && camera.rtmpUrl) {
+            streamUrl = camera.rtmpUrl;
+          } else if (camera.connectionType === 'rtsp' && camera.rtmpUrl) {
+            streamUrl = camera.rtmpUrl;
+          }
+          
+          // If we have a direct URL that can be played with HLS.js
           if (streamUrl && (streamUrl.includes('.m3u8') || camera.connectionType === 'hls') && Hls.isSupported()) {
             // Destroy any existing HLS instance
             if (hlsRef.current) {
               hlsRef.current.destroy();
             }
             
+            console.log(`Loading HLS stream: ${streamUrl}`);
             hlsRef.current = new Hls({
               enableWorker: true,
               lowLatencyMode: true,
@@ -53,10 +63,10 @@ export function useStreamSetup({
               maxBufferLength: 30,
               maxMaxBufferLength: 60,
               maxBufferSize: 60 * 1000 * 1000, // 60MB max buffer size
-              maxBufferHole: 0.5
+              maxBufferHole: 0.5,
+              debug: true // Enable debug logs
             });
             
-            console.log(`Loading HLS stream: ${streamUrl}`);
             hlsRef.current.loadSource(streamUrl);
             hlsRef.current.attachMedia(videoElement);
             
@@ -72,28 +82,32 @@ export function useStreamSetup({
             
             hlsRef.current.on(Hls.Events.ERROR, (_, data) => {
               console.error("HLS error:", data);
+              
               if (data.fatal) {
                 console.error("Fatal HLS error:", data);
-                onError("Stream unavailable");
                 
-                if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                if (retryCountRef.current < maxRetries) {
+                  retryCountRef.current++;
+                  console.log(`Retrying stream (${retryCountRef.current}/${maxRetries})...`);
+                  
+                  switch (data.type) {
+                    case Hls.ErrorTypes.NETWORK_ERROR:
+                      hlsRef.current?.startLoad();
+                      break;
+                    case Hls.ErrorTypes.MEDIA_ERROR:
+                      hlsRef.current?.recoverMediaError();
+                      break;
+                    default:
+                      // Cannot recover from other errors
+                      break;
+                  }
+                } else {
+                  onError("Stream unavailable after multiple attempts");
                   toast({
-                    title: "Network Error",
-                    description: "Unable to load the camera stream due to network issues."
+                    title: "Stream Error",
+                    description: "Unable to connect to stream after multiple attempts",
+                    variant: "destructive"
                   });
-                }
-                
-                // Try to recover on fatal errors
-                switch (data.type) {
-                  case Hls.ErrorTypes.NETWORK_ERROR:
-                    hlsRef.current?.startLoad();
-                    break;
-                  case Hls.ErrorTypes.MEDIA_ERROR:
-                    hlsRef.current?.recoverMediaError();
-                    break;
-                  default:
-                    // Cannot recover
-                    break;
                 }
               }
             });
@@ -104,8 +118,8 @@ export function useStreamSetup({
                 hlsRef.current = null;
               }
             };
-          } else if (streamUrl) {
-            // For direct video sources
+          } else if (streamUrl && (streamUrl.startsWith('http://') || streamUrl.startsWith('https://'))) {
+            // For direct video sources that don't need HLS.js
             videoElement.src = streamUrl;
             videoElement.onloadeddata = () => {
               console.log("Direct video stream loaded");
@@ -118,7 +132,9 @@ export function useStreamSetup({
             };
             
             videoElement.onerror = (e) => {
-              console.error("Video error:", e);
+              console.error("Video element error:", e);
+              console.error("Error code:", videoElement.error?.code);
+              console.error("Error message:", videoElement.error?.message);
               onError("Stream unavailable");
             };
             
@@ -127,13 +143,23 @@ export function useStreamSetup({
               videoElement.load();
             };
           } else {
-            // For other stream types via API service
+            // For ONVIF and other camera types that need special handling
+            console.log(`Initializing ${camera.connectionType} camera with setupCameraStream`);
+            console.log("Camera details:", JSON.stringify({
+              type: camera.connectionType,
+              ip: camera.ipAddress,
+              port: camera.port,
+              path: camera.onvifPath,
+              hasCredentials: !!camera.username && !!camera.password
+            }));
+            
             cleanup = setupCameraStream(camera, videoElement, (err) => {
-              console.error("Stream setup error via API service:", err);
-              onError("Unable to play stream");
+              console.error(`Stream setup error via API service (${camera.connectionType}):`, err);
+              onError(`Unable to play stream: ${err || 'Unknown error'}`);
             });
             
             videoElement.onloadeddata = () => {
+              console.log("Stream loaded via API service");
               onLoadingChange(false);
             };
             
