@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, supabaseUrl } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { RecordingDayData } from "./types";
 import { logRecordingAccess } from "./loggingUtils";
@@ -31,37 +31,39 @@ export const useRecordingCalendar = (cameraId?: string) => {
       // Format date for database comparison
       const formattedDate = formatDateKey(selectedDate);
       
-      // Query recordings for this date
-      let query = supabase
-        .from('recordings')
-        .select('*')
-        .eq('date', formattedDate);
-        
-      if (cameraId) {
-        query = query.eq('camera_id', cameraId);
+      // Use direct fetch to avoid TypeScript recursion issues with Supabase client
+      const url = `${supabaseUrl}/rest/v1/recordings?date=eq.${formattedDate}${cameraId ? `&camera_id=eq.${cameraId}` : ''}`;
+      
+      const response = await fetch(url, {
+        headers: {
+          "apikey": process.env.SUPABASE_ANON_KEY || "",
+          "Content-Type": "application/json"
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
       }
       
-      const { data, error } = await query;
+      const data = await response.json();
       
-      if (error) {
-        console.error('Error loading recordings:', error);
-        return;
+      // Transform database records to UI format with explicit typing
+      const recordingsData: RecordingDayData[] = [];
+      
+      if (Array.isArray(data)) {
+        for (let i = 0; i < data.length; i++) {
+          const rec = data[i];
+          recordingsData.push({
+            id: String(rec.id || ''),
+            time: String(rec.time || ''),
+            duration: rec.duration ? `${rec.duration} minutes` : '0 minutes',
+            motion: rec.type === 'Motion',
+            size: String(rec.file_size || '')
+          });
+        }
       }
       
-      if (data && data.length > 0) {
-        // Transform database records to UI format
-        const recordingsData = data.map(rec => ({
-          id: rec.id,
-          time: rec.time,
-          duration: rec.duration ? `${rec.duration} minutes` : '0 minutes',
-          motion: rec.type === 'Motion',
-          size: rec.file_size
-        }));
-        
-        setSelectedDateRecordings(recordingsData);
-      } else {
-        setSelectedDateRecordings([]);
-      }
+      setSelectedDateRecordings(recordingsData);
       
       // Log this action
       await logRecordingAccess(selectedDate, cameraId);
