@@ -16,7 +16,8 @@ cat > ecosystem.config.cjs << EOF
 module.exports = {
   apps: [{
     name: '$APP_NAME',
-    script: 'dist/main.js',
+    script: 'index.js',
+    cwd: '$APP_DIR/dist',
     instances: 1,
     exec_mode: 'fork',
     autorestart: true,

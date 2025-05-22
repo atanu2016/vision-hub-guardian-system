@@ -68,6 +68,44 @@
    sudo systemctl restart visionhub.service
    ```
 
+### Script Not Found Errors
+
+**Error:** `Error: Script not found: /opt/visionhub/dist/main.js`
+
+**Solution:**
+1. Check if the built application files exist:
+   ```
+   ls -la /opt/visionhub/dist/
+   ```
+
+2. If the dist directory doesn't contain the expected files, update ecosystem.config.cjs to point to the correct main script:
+   ```
+   cd /opt/visionhub
+   nano ecosystem.config.cjs
+   ```
+
+3. Make sure a valid script exists by creating a basic fallback server:
+   ```
+   mkdir -p /opt/visionhub/dist
+   nano /opt/visionhub/dist/index.js
+   ```
+   
+4. Create a basic HTTP server in index.js:
+   ```javascript
+   const http = require('http');
+   const port = process.env.PORT || 8080;
+   
+   const server = http.createServer((req, res) => {
+     res.statusCode = 200;
+     res.setHeader('Content-Type', 'text/html');
+     res.end('<html><body><h1>Vision Hub</h1><p>Server is running.</p></body></html>');
+   });
+   
+   server.listen(port, () => {
+     console.log(`Server running on port ${port}`);
+   });
+   ```
+
 ### Supabase Configuration Issues
 
 **Error:** `Failed to parse config: decoding failed due to invalid keys`

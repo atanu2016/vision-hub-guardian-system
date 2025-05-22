@@ -26,14 +26,16 @@ echo "Installing dependencies..."
 # 2. Create application user and directories
 echo "Creating application user and directories..."
 useradd -m -s /bin/bash visionhub || true
-mkdir -p /opt/visionhub
-chown -R visionhub:visionhub /opt/visionhub
 
 # Create storage directories with correct permissions first
 echo "Creating storage directories..."
 mkdir -p /var/lib/visionhub/recordings
 chown -R visionhub:visionhub /var/lib/visionhub
 chmod 755 /var/lib/visionhub/recordings
+
+# Create and set ownership of application directory
+mkdir -p /opt/visionhub
+chown -R visionhub:visionhub /opt/visionhub
 
 # 3. Setup application
 echo "Setting up application..."
@@ -78,14 +80,86 @@ fi
 
 # 7. Setup automated backups
 echo "Setting up automated backups..."
-cp ./backup-script.sh /etc/cron.daily/visionhub-backup
+
+# Create backup script if it doesn't exist
+cat > /etc/cron.daily/visionhub-backup << EOF
+#!/bin/bash
+# Database backup script for Vision Hub
+# Add to crontab for automated backups
+
+BACKUP_DIR="/var/backups/visionhub"
+DB_NAME="visionhub"
+DB_USER="visionadmin"
+TIMESTAMP=\$(date +"%Y%m%d-%H%M%S")
+BACKUP_FILE="\${BACKUP_DIR}/visionhub-backup-\${TIMESTAMP}.sql"
+
+# Create backup directory if it doesn't exist
+mkdir -p \$BACKUP_DIR
+
+# Perform database backup
+echo "Creating database backup: \$BACKUP_FILE"
+PGPASSWORD=SecurePassword123 pg_dump -U \$DB_USER \$DB_NAME > \$BACKUP_FILE
+
+# Compress the backup
+gzip \$BACKUP_FILE
+
+# Remove backups older than 30 days
+find \$BACKUP_DIR -type f -name "*.sql.gz" -mtime +30 -delete
+
+echo "Backup completed: \${BACKUP_FILE}.gz"
+EOF
+
 chmod +x /etc/cron.daily/visionhub-backup
 
 # 8. Setup health check script
 echo "Setting up health check cron job..."
-cp ./healthcheck.sh /opt/visionhub/
+
+# Create health check script if not already there
+cat > /opt/visionhub/healthcheck.sh << EOF
+#!/bin/bash
+# Health check script for Vision Hub
+# Can be run from cron to monitor application health
+
+APP_NAME="visionhub"
+SERVICE_URL="http://localhost:8080/health"
+LOG_FILE="/var/log/visionhub-healthcheck.log"
+
+echo "\$(date): Running health check" >> \$LOG_FILE
+
+# Check if PM2 is running
+if ! pgrep -x "pm2" > /dev/null; then
+  echo "\$(date): ERROR - PM2 is not running. Starting PM2..." >> \$LOG_FILE
+  systemctl restart visionhub.service
+  sleep 10
+fi
+
+# Check if the application process is running
+if ! sudo -u visionhub pm2 show \$APP_NAME &>/dev/null; then
+  echo "\$(date): ERROR - \$APP_NAME is not running in PM2. Attempting restart..." >> \$LOG_FILE
+  cd /opt/visionhub
+  sudo -u visionhub pm2 restart \$APP_NAME || sudo -u visionhub pm2 start ecosystem.config.cjs
+  sleep 5
+fi
+
+# Check if the application endpoint is accessible
+response=\$(curl -s -o /dev/null -w "%{http_code}" \$SERVICE_URL || echo "failed")
+
+if [ "\$response" != "200" ]; then
+  echo "\$(date): ERROR - Health check failed with response: \$response. Restarting service..." >> \$LOG_FILE
+  systemctl restart visionhub.service
+  echo "\$(date): Service restart triggered" >> \$LOG_FILE
+else
+  echo "\$(date): Health check passed with response: \$response" >> \$LOG_FILE
+fi
+EOF
+
 chmod +x /opt/visionhub/healthcheck.sh
-(crontab -l 2>/dev/null; echo "*/5 * * * * /opt/visionhub/healthcheck.sh") | crontab -
+chown visionhub:visionhub /opt/visionhub/healthcheck.sh
+
+# Add to crontab if not already there
+if ! crontab -l | grep -q "healthcheck.sh"; then
+  (crontab -l 2>/dev/null; echo "*/5 * * * * /opt/visionhub/healthcheck.sh") | crontab -
+fi
 
 echo "===== Vision Hub deployment completed ====="
 echo "Access your application at http://visionhub.local or http://server-ip"
