@@ -25,14 +25,14 @@ export interface UserWithCameras {
 }
 
 export interface UseCameraAssignmentReturn {
-  cameras: any[];
+  cameras: Camera[];
   loading: boolean;
   saving: boolean;
   canAssignCameras: boolean;
   isAuthenticated: boolean;
-  groupedCameras: any[];
+  groupedCameras: GroupedCameras[];
   getAvailableGroups: () => string[];
-  getCamerasByGroup: (group: string) => any[];
+  getCamerasByGroup: (group: string) => Camera[];
   error: string | null;
   handleCameraToggle: (cameraId: string) => void;
   handleSave: () => Promise<boolean>;

@@ -8,6 +8,7 @@ export const useStorageUsage = () => {
   const [storageUsage, setStorageUsage] = useState<StorageUsage>({
     totalSpace: 1000,
     usedSpace: 0,
+    percentage: 0,
     usedPercentage: 0,
     usedSpaceFormatted: "0 GB",
     totalSpaceFormatted: "1 TB"
@@ -42,6 +43,7 @@ export const useStorageUsage = () => {
         setStorageUsage({
           usedSpace,
           totalSpace,
+          percentage: usedPercentage,
           usedPercentage,
           usedSpaceFormatted: systemStats.storage_used || "0 GB",
           totalSpaceFormatted: systemStats.storage_total || "1 TB"
@@ -53,6 +55,7 @@ export const useStorageUsage = () => {
       setStorageUsage({
         totalSpace: 1000,
         usedSpace: 0,
+        percentage: 0,
         usedPercentage: 0,
         usedSpaceFormatted: "0 GB",
         totalSpaceFormatted: "1 TB"

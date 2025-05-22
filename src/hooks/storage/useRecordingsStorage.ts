@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { StorageInfo, Recording } from "./storageTypes";
+import { StorageInfo } from "./storageTypes";
+import { Recording } from "@/hooks/recordings/types";
 import { parseStorageValue } from "@/utils/storageUtils";
 import { calculateStorageFromRecordings } from "./useStorageCalculations";
 
@@ -9,7 +10,11 @@ import { calculateStorageFromRecordings } from "./useStorageCalculations";
  * Hook to manage storage usage statistics for recordings
  */
 export const useRecordingsStorage = (initialRecordings: Recording[]) => {
-  const [storageUsed, setStorageUsed] = useState<StorageInfo>({ used: 0, total: 1000 });
+  const [storageUsed, setStorageUsed] = useState<StorageInfo>({ 
+    used: 0, 
+    total: 1000,
+    percentage: 0 
+  });
 
   // Load actual storage data on mount
   useEffect(() => {
@@ -37,10 +42,13 @@ export const useRecordingsStorage = (initialRecordings: Recording[]) => {
         // Parse storage values
         const usedValue = parseStorageValue(systemStats.storage_used || "0 GB");
         const totalValue = parseStorageValue(systemStats.storage_total || "1 TB");
+        const percentage = systemStats.storage_percentage || 
+          (totalValue > 0 ? Math.round((usedValue / totalValue) * 100) : 0);
         
         setStorageUsed({
           used: usedValue,
-          total: totalValue
+          total: totalValue,
+          percentage: percentage
         });
       }
     } catch (error) {
@@ -80,7 +88,8 @@ export const useRecordingsStorage = (initialRecordings: Recording[]) => {
       // Then update with the adjustment
       setStorageUsed(prev => ({
         ...prev,
-        used: Math.max(0, prev.used - sizeInGB)
+        used: Math.max(0, prev.used - sizeInGB),
+        percentage: Math.max(0, prev.total > 0 ? Math.round(((prev.used - sizeInGB) / prev.total) * 100) : 0)
       }));
     }
   };

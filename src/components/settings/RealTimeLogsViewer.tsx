@@ -20,9 +20,10 @@ interface LogEntry {
 interface RealTimeLogsViewerProps {
   logLevel?: string;
   autoRefresh?: boolean;
+  isOpen?: boolean;
 }
 
-const RealTimeLogsViewer = ({ logLevel = "info", autoRefresh = true }: RealTimeLogsViewerProps) => {
+const RealTimeLogsViewer = ({ logLevel = "info", autoRefresh = true, isOpen = true }: RealTimeLogsViewerProps) => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -78,24 +79,29 @@ const RealTimeLogsViewer = ({ logLevel = "info", autoRefresh = true }: RealTimeL
 
   // Fetch logs on component mount and whenever log level changes
   useEffect(() => {
-    fetchLogs();
+    if (isOpen) {
+      fetchLogs();
     
-    // Set up auto-refresh if enabled
-    let interval: NodeJS.Timeout | null = null;
-    
-    if (autoRefresh) {
-      interval = setInterval(fetchLogs, 10000); // Refresh every 10 seconds
+      // Set up auto-refresh if enabled
+      let interval: NodeJS.Timeout | null = null;
+      
+      if (autoRefresh) {
+        interval = setInterval(fetchLogs, 10000); // Refresh every 10 seconds
+      }
+      
+      return () => {
+        if (interval) clearInterval(interval);
+      };
     }
-    
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [fetchLogs, autoRefresh]);
+  }, [fetchLogs, autoRefresh, isOpen]);
 
   const handleClearLogs = async () => {
     try {
+      // Changed from rpc to direct delete for better compatibility
       const { error } = await supabase
-        .rpc('clear_logs');
+        .from('system_logs')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all logs
         
       if (error) {
         throw error;

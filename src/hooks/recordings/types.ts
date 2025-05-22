@@ -1,5 +1,5 @@
 
-import { Camera } from "@/types/camera";
+import { Camera as BaseCamera } from "@/types/camera";
 
 export interface Recording {
   id: string;

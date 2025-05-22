@@ -1,5 +1,5 @@
 
-import { Recording } from './storageTypes';
+import { Recording } from '@/hooks/recordings/types';
 import { parseStorageValue } from '@/utils/storageUtils';
 
 /**

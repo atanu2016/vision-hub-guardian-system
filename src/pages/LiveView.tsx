@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Camera } from "@/types/camera";
@@ -16,12 +15,13 @@ const sampleHLSCamera: Camera = {
   name: "Sample HLS Stream",
   status: "online",
   location: "Demo Location",
-  ipAddress: "",
+  ipaddress: "", // Changed from ipAddress to ipaddress
   lastSeen: new Date().toISOString(),
   recording: false,
-  connectionType: "hls",
-  hlsUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", // Public HLS test stream
-  group: "Demo"
+  connectiontype: "hls", // Added "connectiontype" instead of connectionType
+  hlsurl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", // Public HLS test stream
+  group: "Demo",
+  lastseen: new Date().toISOString() // Added "lastseen" attribute
 };
 
 const LiveView = () => {

@@ -27,7 +27,7 @@ export function DebugTab({ onOpenDebugLog }: DebugTabProps) {
           </Button>
         </CardHeader>
         <CardContent>
-          <RealTimeLogsViewer isOpen={true} />
+          <RealTimeLogsViewer autoRefresh={true} isOpen={true} />
         </CardContent>
       </Card>
       
@@ -96,3 +96,5 @@ export function DebugTab({ onOpenDebugLog }: DebugTabProps) {
     </div>
   );
 }
+
+export default DebugTab;

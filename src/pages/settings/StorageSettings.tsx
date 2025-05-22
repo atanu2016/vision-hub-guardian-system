@@ -6,7 +6,6 @@ import { StorageSettings as StorageSettingsType } from "@/types/camera";
 import { useStorageSettings } from "@/hooks/storage";
 import StorageUsageDisplay from "@/components/settings/storage/StorageUsageDisplay";
 import StorageForm from "@/components/settings/storage/StorageForm";
-import { RefreshCw } from "lucide-react";
 
 // Refactored StorageSettings component
 const StorageSettings = () => {
@@ -47,6 +46,15 @@ const StorageSettings = () => {
     await fetchStorageUsage();
   };
 
+  // Create a compatible display object for StorageUsageDisplay from storageUsage
+  const displayUsage = {
+    usedSpace: storageUsage.usedSpace,
+    totalSpace: storageUsage.totalSpace,
+    usedPercentage: storageUsage.usedPercentage,
+    usedSpaceFormatted: storageUsage.usedSpaceFormatted,
+    totalSpaceFormatted: storageUsage.totalSpaceFormatted
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -72,7 +80,7 @@ const StorageSettings = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <StorageUsageDisplay
-                storageUsage={storageUsage}
+                storageUsage={displayUsage}
                 retentionDays={settings.retentionDays}
                 isClearing={isClearing}
                 onClearStorage={handleClearStorage}
