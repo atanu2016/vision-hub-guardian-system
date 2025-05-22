@@ -28,30 +28,30 @@ const CameraTabs = ({ cameraId }: { cameraId?: string }) => {
   const loadRecordings = async (cameraId: string) => {
     setIsLoading(true);
     try {
-      // Using any to break the recursive type chain
-      const response = await supabase
+      // Breaking the type chain by using explicit type declaration for response
+      const { data, error } = await supabase
         .from('recordings')
         .select('id, time, duration, type, file_size, date')
         .eq('camera_id', cameraId)
         .order('date_time', { ascending: false })
         .limit(10);
       
-      if (response.error) throw response.error;
+      if (error) throw error;
       
       // Manually transform data to avoid TypeScript recursion
       const formattedRecordings: RecordingData[] = [];
       
-      if (response.data) {
-        for (const item of response.data) {
+      if (data) {
+        data.forEach(item => {
           formattedRecordings.push({
-            id: item.id as string,
-            time: item.time as string,
-            duration: item.duration as number,
-            type: item.type as string,
-            file_size: item.file_size as string,
-            date: item.date as string
+            id: String(item.id),
+            time: String(item.time),
+            duration: Number(item.duration),
+            type: String(item.type),
+            file_size: String(item.file_size),
+            date: String(item.date)
           });
-        }
+        });
       }
       
       setRecordings(formattedRecordings);
