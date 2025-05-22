@@ -1,6 +1,6 @@
 
-import { Button } from '@/components/ui/button';
-import { Save } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Save } from "lucide-react";
 
 interface SettingsHeaderProps {
   onSaveAll: () => void;
@@ -9,12 +9,12 @@ interface SettingsHeaderProps {
 
 const SettingsHeader = ({ onSaveAll, isSaving }: SettingsHeaderProps) => {
   return (
-    <div className="flex items-center justify-between mb-6">
-      <h2 className="text-2xl font-bold">System Settings</h2>
+    <div className="flex justify-between items-center mb-6">
+      <h1 className="text-2xl font-bold">System Settings</h1>
       <Button 
-        onClick={onSaveAll}
+        onClick={onSaveAll} 
         disabled={isSaving}
-        className="flex items-center gap-2"
+        className="gap-2"
       >
         <Save className="h-4 w-4" />
         Save All Changes

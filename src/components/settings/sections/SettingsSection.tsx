@@ -1,6 +1,5 @@
 
-import { ReactNode } from 'react';
-import { Card } from '@/components/ui/card';
+import { ReactNode } from "react";
 
 interface SettingsSectionProps {
   children: ReactNode;
@@ -8,9 +7,9 @@ interface SettingsSectionProps {
 
 const SettingsSection = ({ children }: SettingsSectionProps) => {
   return (
-    <Card className="p-6">
+    <div className="border rounded-lg p-6 bg-card shadow-sm">
       {children}
-    </Card>
+    </div>
   );
 };
 

@@ -7,21 +7,26 @@ export interface StorageUsage {
   totalSpaceFormatted: string;
 }
 
-export interface StorageInfo {
-  used: number;
-  total: number;
-}
-
-export interface Recording {
-  id: string;
-  cameraName: string;
-  dateTime: string;
-  duration: number;  // Changed to number
-  fileSize: string;
-  thumbnail?: string;
-  type: string;
-  date?: string;
-  time?: string;
-  important?: boolean;
-  thumbnailUrl?: string; // Added to match recordings type
+export interface StorageSettings {
+  type: 'local' | 'nas' | 's3' | 'dropbox' | 'google_drive' | 'onedrive' | 'azure_blob' | 'backblaze';
+  path?: string;
+  retentionDays: number;
+  overwriteOldest: boolean;
+  nasAddress?: string;
+  nasPath?: string;
+  nasUsername?: string;
+  nasPassword?: string;
+  s3Endpoint?: string;
+  s3Bucket?: string;
+  s3AccessKey?: string;
+  s3SecretKey?: string;
+  s3Region?: string;
+  dropboxToken?: string;
+  googleDriveToken?: string;
+  oneDriveToken?: string;
+  azureConnectionString?: string;
+  azureContainer?: string;
+  backblazeKeyId?: string;
+  backblazeApplicationKey?: string;
+  backblazeBucket?: string;
 }

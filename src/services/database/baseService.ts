@@ -1,35 +1,29 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+// Base service with common database utility functions
 
-// Log database errors with optional UI toast
-export const logDatabaseError = (error: any, message: string, showToast = true) => {
-  console.error(`Database service error: ${message}`, error);
-  if (showToast) {
-    toast("Error", {
-      description: message
-    });
-  }
-  return error;
+/**
+ * Log database errors with a standardized format
+ */
+export const logDatabaseError = (error: any, message: string) => {
+  console.error(`Database Error: ${message}`, error);
+  return new Error(`${message}: ${error?.message || 'Unknown error'}`);
 };
 
-// Check if database tables exist
-export const checkDatabaseSetup = async (): Promise<boolean> => {
+/**
+ * Safely get nested properties from an object without throwing errors
+ */
+export const safeGet = <T>(obj: any, path: string, defaultValue: T): T => {
   try {
-    // Try to query the cameras table
-    const { error } = await supabase
-      .from('cameras')
-      .select('id')
-      .limit(1);
-      
-    // If we get a PGRST109 error, the table doesn't exist
-    if (error && error.code === 'PGRST109') {
-      return false;
+    const keys = path.split('.');
+    let result = obj;
+    
+    for (const key of keys) {
+      if (result === undefined || result === null) return defaultValue;
+      result = result[key];
     }
     
-    return true;
+    return (result === undefined || result === null) ? defaultValue : result as T;
   } catch (error) {
-    console.error("Error checking database setup:", error);
-    return false;
+    return defaultValue;
   }
 };
