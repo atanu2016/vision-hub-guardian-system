@@ -42,9 +42,9 @@ export const getCameras = async (): Promise<Camera[]> => {
       status: (cam.status === 'online' || cam.status === 'offline' || cam.status === 'recording') 
         ? cam.status 
         : 'offline' as 'online' | 'offline' | 'recording'
-    }));
+    })) as Camera[];
     
-    return validCameras as Camera[];
+    return validCameras;
   } catch (err) {
     console.error('Error fetching cameras:', err);
     throw err;

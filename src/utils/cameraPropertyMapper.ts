@@ -1,99 +1,132 @@
 
 import { Camera } from "@/types/camera";
 
-/**
- * Maps camera properties to the expected case format
- * This utility helps bridge the gap between the backend schema (lowercase properties)
- * and frontend components expecting camelCase properties
- */
-
-export type CameraUIProps = {
+// The UI format of camera properties (camelCase)
+export interface CameraUIProps {
   id: string;
   name: string;
+  status: "online" | "offline" | "recording";
+  location: string;
   ipAddress: string;
-  port?: number;
+  port: number;
   username?: string;
   password?: string;
-  location: string;
-  status: 'online' | 'offline' | 'recording';
+  model?: string;
+  manufacturer?: string;
   lastSeen: string;
-  recording?: boolean;
-  motionDetection?: boolean;
+  recording: boolean;
+  group?: string;
+  connectionType: "ip" | "rtsp" | "rtmp" | "hls" | "onvif";
   rtmpUrl?: string;
   hlsUrl?: string;
   onvifPath?: string;
-  connectionType?: string;
-  group?: string;
+  motionDetection?: boolean;
   thumbnail?: string;
-  manufacturer?: string;
-  model?: string;
-  quality?: string;
-  scheduleType?: string;
-  timeStart?: string;
-  timeEnd?: string;
-  daysOfWeek?: string[];
-};
+}
 
-/**
- * Converts database camera model to UI friendly format
- */
-export const toUICamera = (dbCamera: Camera): CameraUIProps => {
-  return {
-    id: dbCamera.id,
-    name: dbCamera.name,
-    ipAddress: dbCamera.ipaddress,
-    port: dbCamera.port,
-    username: dbCamera.username,
-    password: dbCamera.password,
-    location: dbCamera.location,
-    status: dbCamera.status,
-    lastSeen: dbCamera.lastseen,
-    recording: dbCamera.recording,
-    motionDetection: dbCamera.motiondetection,
-    rtmpUrl: dbCamera.rtmpurl,
-    hlsUrl: dbCamera.hlsurl,
-    onvifPath: dbCamera.onvifpath,
-    connectionType: dbCamera.connectiontype,
-    group: dbCamera.group,
-    thumbnail: dbCamera.thumbnail,
-    manufacturer: dbCamera.manufacturer,
-    model: dbCamera.model,
-    quality: dbCamera.quality,
-    scheduleType: dbCamera.scheduleType,
-    timeStart: dbCamera.timeStart,
-    timeEnd: dbCamera.timeEnd,
-    daysOfWeek: dbCamera.daysOfWeek
-  };
-};
-
-/**
- * Converts UI camera model back to database format
- */
-export const toDatabaseCamera = (uiCamera: CameraUIProps): Camera => {
+// Convert from UI format (camelCase) to database format (snake_case-like)
+export function toDatabaseCamera(uiCamera: CameraUIProps): Camera {
   return {
     id: uiCamera.id,
     name: uiCamera.name,
+    status: uiCamera.status,
+    location: uiCamera.location,
     ipaddress: uiCamera.ipAddress,
     port: uiCamera.port,
     username: uiCamera.username,
     password: uiCamera.password,
-    location: uiCamera.location,
-    status: uiCamera.status as "online" | "offline" | "recording",
+    model: uiCamera.model,
+    manufacturer: uiCamera.manufacturer,
     lastseen: uiCamera.lastSeen,
     recording: uiCamera.recording,
-    motiondetection: uiCamera.motionDetection,
+    group: uiCamera.group,
+    connectiontype: uiCamera.connectionType,
     rtmpurl: uiCamera.rtmpUrl,
     hlsurl: uiCamera.hlsUrl,
     onvifpath: uiCamera.onvifPath,
-    connectiontype: uiCamera.connectionType,
-    group: uiCamera.group,
-    thumbnail: uiCamera.thumbnail,
-    manufacturer: uiCamera.manufacturer,
-    model: uiCamera.model,
-    quality: uiCamera.quality,
-    scheduleType: uiCamera.scheduleType,
-    timeStart: uiCamera.timeStart,
-    timeEnd: uiCamera.timeEnd,
-    daysOfWeek: uiCamera.daysOfWeek
+    motiondetection: uiCamera.motionDetection,
+    thumbnail: uiCamera.thumbnail
   };
-};
+}
+
+// Convert from database format to UI format
+export function toUICamera(dbCamera: Camera): CameraUIProps {
+  return {
+    id: dbCamera.id,
+    name: dbCamera.name,
+    status: dbCamera.status,
+    location: dbCamera.location,
+    ipAddress: dbCamera.ipaddress,
+    port: dbCamera.port || 80,
+    username: dbCamera.username,
+    password: dbCamera.password,
+    model: dbCamera.model,
+    manufacturer: dbCamera.manufacturer,
+    lastSeen: dbCamera.lastseen,
+    recording: dbCamera.recording || false,
+    group: dbCamera.group,
+    connectionType: (dbCamera.connectiontype as "ip" | "rtsp" | "rtmp" | "hls" | "onvif") || "ip",
+    rtmpUrl: dbCamera.rtmpurl,
+    hlsUrl: dbCamera.hlsurl,
+    onvifPath: dbCamera.onvifpath,
+    motionDetection: dbCamera.motiondetection,
+    thumbnail: dbCamera.thumbnail
+  };
+}
+
+// Convert to UI format with a default value for the camera
+export function toUICameraWithDefault(dbCamera: Partial<Camera> & { id: string }): CameraUIProps {
+  return {
+    id: dbCamera.id,
+    name: dbCamera.name || "Unknown Camera",
+    status: (dbCamera.status as "online" | "offline" | "recording") || "offline",
+    location: dbCamera.location || "Unknown",
+    ipAddress: dbCamera.ipaddress || "",
+    port: dbCamera.port || 80,
+    username: dbCamera.username,
+    password: dbCamera.password,
+    model: dbCamera.model,
+    manufacturer: dbCamera.manufacturer,
+    lastSeen: dbCamera.lastseen || new Date().toISOString(),
+    recording: dbCamera.recording || false,
+    group: dbCamera.group || "Ungrouped",
+    connectionType: (dbCamera.connectiontype as "ip" | "rtsp" | "rtmp" | "hls" | "onvif") || "ip",
+    rtmpUrl: dbCamera.rtmpurl,
+    hlsUrl: dbCamera.hlsurl,
+    onvifPath: dbCamera.onvifpath,
+    motionDetection: dbCamera.motiondetection || false,
+    thumbnail: dbCamera.thumbnail
+  };
+}
+
+// Add a function to adapt between different camera object formats with appropriate type handling
+export function adaptCamera<T extends Partial<Camera>, U extends Partial<CameraUIProps>>(
+  camera: T, 
+  isUiToDb = false
+): U {
+  if (isUiToDb) {
+    // UI format to DB format
+    return {
+      ...(camera as any),
+      ipaddress: (camera as any).ipAddress,
+      lastseen: (camera as any).lastSeen,
+      connectiontype: (camera as any).connectionType,
+      rtmpurl: (camera as any).rtmpUrl,
+      hlsurl: (camera as any).hlsUrl,
+      onvifpath: (camera as any).onvifPath,
+      motiondetection: (camera as any).motionDetection
+    } as U;
+  } else {
+    // DB format to UI format
+    return {
+      ...(camera as any),
+      ipAddress: (camera as any).ipaddress,
+      lastSeen: (camera as any).lastseen,
+      connectionType: (camera as any).connectiontype,
+      rtmpUrl: (camera as any).rtmpurl,
+      hlsUrl: (camera as any).hlsurl,
+      onvifPath: (camera as any).onvifpath,
+      motionDetection: (camera as any).motiondetection
+    } as U;
+  }
+}

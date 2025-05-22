@@ -4,7 +4,7 @@ import { GroupedCameras, Camera } from "@/types/camera";
 
 export function useFilteredCameras(cameraGroups: GroupedCameras[], searchQuery: string = ""): GroupedCameras[] {
   // Filter cameras based on search query
-  const filteredGroups = useMemo(() => {
+  return useMemo(() => {
     if (!searchQuery.trim()) {
       return cameraGroups;
     }
@@ -27,6 +27,4 @@ export function useFilteredCameras(cameraGroups: GroupedCameras[], searchQuery: 
       })
       .filter(group => group.cameras.length > 0); // Remove empty groups
   }, [cameraGroups, searchQuery]);
-  
-  return filteredGroups;
 }

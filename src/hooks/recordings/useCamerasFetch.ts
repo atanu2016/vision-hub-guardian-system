@@ -1,9 +1,8 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera } from "./types";
+import { Camera, CameraStatus } from "@/types/camera";
 import { toast } from "sonner";
-import { CameraStatus } from "@/types/camera";
 
 export const useCamerasFetch = () => {
   const [cameras, setCameras] = useState<Camera[]>([]);
@@ -29,11 +28,21 @@ export const useCamerasFetch = () => {
           name: cam.name,
           status: (cam.status as CameraStatus) || 'offline',
           location: cam.location || 'Unknown',
-          ipAddress: cam.ipaddress || '', 
-          ipaddress: cam.ipaddress || '', // Include both for compatibility
-          lastSeen: cam.lastseen || new Date().toISOString(),
-          lastseen: cam.lastseen || new Date().toISOString(), // Include both for compatibility
-          recording: cam.recording === true
+          ipaddress: cam.ipaddress || '',
+          lastseen: cam.lastseen || new Date().toISOString(),
+          recording: cam.recording === true,
+          port: cam.port,
+          username: cam.username,
+          password: cam.password,
+          model: cam.model,
+          manufacturer: cam.manufacturer,
+          connectiontype: cam.connectiontype,
+          thumbnail: cam.thumbnail,
+          group: cam.group,
+          motiondetection: cam.motiondetection,
+          rtmpurl: cam.rtmpurl,
+          hlsurl: cam.hlsurl,
+          onvifpath: cam.onvifpath
         }));
         setCameras(camerasFormatted);
       }

@@ -32,8 +32,9 @@ export const fetchCamerasFromDB = async (): Promise<Camera[]> => {
       recording: cam.recording || false,
       thumbnail: cam.thumbnail || undefined,
       group: cam.group || undefined,
-      connectiontype: cam.connectiontype as "ip" | "rtsp" | "rtmp" | "onvif" || "ip",
+      connectiontype: cam.connectiontype as "ip" | "rtsp" | "rtmp" | "onvif" | "hls" || "ip",
       rtmpurl: cam.rtmpurl || undefined,
+      hlsurl: cam.hlsurl || undefined,
       onvifpath: cam.onvifpath || undefined,
       motiondetection: cam.motiondetection || false
     }));

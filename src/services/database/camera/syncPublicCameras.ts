@@ -40,6 +40,7 @@ export const syncPublicCamerasToDatabase = async (publicCameras: Camera[]): Prom
       group: rest.group,
       connectiontype: rest.connectiontype,
       rtmpurl: rest.rtmpurl,
+      hlsurl: rest.hlsurl,
       onvifpath: rest.onvifpath,
       motiondetection: rest.motiondetection
     }));
