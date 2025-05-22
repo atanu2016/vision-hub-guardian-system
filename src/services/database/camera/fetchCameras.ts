@@ -20,14 +20,14 @@ export const fetchCamerasFromDB = async (): Promise<Camera[]> => {
     const cameras: Camera[] = data.map(cam => {
       // For each connection type, determine the right URL to use
       let rtmpUrl = cam.rtmpurl;
-      let rtspUrl = cam.rtspurl;
-      let hlsUrl = cam.hlsurl;
+      let rtspUrl = undefined;
+      let hlsUrl = undefined;
       
       // Set the appropriate URL based on connection type
       // For backward compatibility, use rtmpurl as a fallback for rtsp and hls
-      if (cam.connectiontype === 'rtsp' && !cam.rtspurl) {
+      if (cam.connectiontype === 'rtsp') {
         rtspUrl = cam.rtmpurl; // Use rtmpurl for rtsp as a fallback
-      } else if (cam.connectiontype === 'hls' && !cam.hlsurl) {
+      } else if (cam.connectiontype === 'hls') {
         hlsUrl = cam.rtmpurl; // Use rtmpurl for hls as a fallback
       }
       
