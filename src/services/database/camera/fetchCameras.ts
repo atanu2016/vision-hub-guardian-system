@@ -20,22 +20,22 @@ export const fetchCamerasFromDB = async (): Promise<Camera[]> => {
     const cameras: Camera[] = data.map(cam => ({
       id: cam.id,
       name: cam.name,
-      status: cam.status as "online" | "offline" | "error",
+      status: cam.status as "online" | "offline" | "recording",
       location: cam.location,
-      ipAddress: cam.ipaddress,
+      ipaddress: cam.ipaddress,
       port: cam.port || 80,
       username: cam.username || undefined,
       password: cam.password || undefined,
       model: cam.model || undefined,
       manufacturer: cam.manufacturer || undefined,
-      lastSeen: cam.lastseen,
+      lastseen: cam.lastseen,
       recording: cam.recording || false,
       thumbnail: cam.thumbnail || undefined,
       group: cam.group || undefined,
-      connectionType: (cam.connectiontype as "ip" | "rtsp" | "rtmp" | "onvif") || "ip",
-      rtmpUrl: cam.rtmpurl || undefined,
-      onvifPath: cam.onvifpath || undefined,
-      motionDetection: cam.motiondetection || false
+      connectiontype: cam.connectiontype as "ip" | "rtsp" | "rtmp" | "onvif" || "ip",
+      rtmpurl: cam.rtmpurl || undefined,
+      onvifpath: cam.onvifpath || undefined,
+      motiondetection: cam.motiondetection || false
     }));
     
     return cameras;

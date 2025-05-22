@@ -9,7 +9,7 @@ export interface StorageUsage {
   usedSpace: number;
   totalSpace: number;
   percentage: number;
-  usedPercentage: number;
+  usedPercentage: number;  // Added this property
   usedSpaceFormatted: string;
   totalSpaceFormatted: string;
 }

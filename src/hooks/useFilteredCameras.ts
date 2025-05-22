@@ -1,8 +1,8 @@
 
 import { useMemo } from "react";
-import { GroupedCameras } from "@/types/camera";
+import { GroupedCameras, Camera } from "@/types/camera";
 
-export function useFilteredCameras(cameraGroups: GroupedCameras[], searchQuery: string = "") {
+export function useFilteredCameras(cameraGroups: GroupedCameras[], searchQuery: string = ""): GroupedCameras[] {
   // Filter cameras based on search query
   const filteredGroups = useMemo(() => {
     if (!searchQuery.trim()) {

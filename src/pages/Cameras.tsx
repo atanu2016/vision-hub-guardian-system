@@ -26,7 +26,7 @@ const Cameras = () => {
   } = useCameraData();
 
   // Filter cameras based on search query
-  const filteredCameraGroups = useFilteredCameras(cameraGroups);
+  const filteredCameraGroups = useFilteredCameras(cameraGroups, searchQuery);
 
   return (
     <AppLayout>
@@ -70,7 +70,7 @@ const Cameras = () => {
       <AddCameraModal 
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onAdd={addCamera as any}
+        onAdd={addCamera}
         existingGroups={existingGroups}
       />
     </AppLayout>

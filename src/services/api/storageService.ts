@@ -47,6 +47,7 @@ export const getStorageSettings = async (): Promise<StorageSettings> => {
       s3SecretKey: data.s3secretkey,
       s3Region: data.s3region,
       // Add fallbacks for all optional properties
+      // Handle the case where the database doesn't have these fields yet
       dropboxToken: data.dropboxtoken || undefined,
       dropboxFolder: data.dropboxfolder || undefined,
       googleDriveToken: data.googledrivertoken || undefined,
@@ -85,17 +86,18 @@ export const saveStorageSettings = async (settings: StorageSettings): Promise<bo
       s3accesskey: settings.s3AccessKey,
       s3secretkey: settings.s3SecretKey,
       s3region: settings.s3Region,
-      dropboxtoken: settings.dropboxToken,
-      dropboxfolder: settings.dropboxFolder,
-      googledrivertoken: settings.googleDriveToken,
-      googledrivefolderid: settings.googleDriveFolderId,
-      onedrivetoken: settings.oneDriveToken,
-      onedrivefolderid: settings.oneDriveFolderId,
-      azureconnectionstring: settings.azureConnectionString,
-      azurecontainer: settings.azureContainer,
-      backblazekeyid: settings.backblazeKeyId,
-      backblazeapplicationkey: settings.backblazeApplicationKey,
-      backblazebucket: settings.backblazeBucket
+      // Add all cloud storage fields, may be null but include for schema compatibility
+      dropboxtoken: settings.dropboxToken || null,
+      dropboxfolder: settings.dropboxFolder || null,
+      googledrivertoken: settings.googleDriveToken || null,
+      googledrivefolderid: settings.googleDriveFolderId || null,
+      onedrivetoken: settings.oneDriveToken || null,
+      onedrivefolderid: settings.oneDriveFolderId || null,
+      azureconnectionstring: settings.azureConnectionString || null,
+      azurecontainer: settings.azureContainer || null,
+      backblazekeyid: settings.backblazeKeyId || null,
+      backblazeapplicationkey: settings.backblazeApplicationKey || null,
+      backblazebucket: settings.backblazeBucket || null
     };
     
     const { error } = await supabase

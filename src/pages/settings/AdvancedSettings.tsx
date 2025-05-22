@@ -10,6 +10,7 @@ import { toast } from "sonner";
 
 const AdvancedSettings = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isDebugLogOpen, setIsDebugLogOpen] = useState(false);
   
   const handleSaveSettings = async (settings: any) => {
     setIsLoading(true);
@@ -24,6 +25,10 @@ const AdvancedSettings = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleOpenDebugLog = () => {
+    setIsDebugLogOpen(true);
   };
 
   return (
@@ -62,7 +67,7 @@ const AdvancedSettings = () => {
                 <SecurityTab />
               </TabsContent>
               <TabsContent value="debug" className="pt-6">
-                <DebugTab />
+                <DebugTab onOpenDebugLog={handleOpenDebugLog} />
               </TabsContent>
             </Tabs>
           </CardContent>

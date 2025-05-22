@@ -29,9 +29,11 @@ export const useCamerasFetch = () => {
           name: cam.name,
           status: (cam.status as CameraStatus) || 'offline',
           location: cam.location || 'Unknown',
-          ipAddress: cam.ipaddress || '', // Ensure it's never undefined
-          lastSeen: cam.lastseen || new Date().toISOString(), // Ensure it's never undefined
-          recording: cam.recording === true // Ensure it's always a boolean
+          ipAddress: cam.ipaddress || '', 
+          ipaddress: cam.ipaddress || '', // Include both for compatibility
+          lastSeen: cam.lastseen || new Date().toISOString(),
+          lastseen: cam.lastseen || new Date().toISOString(), // Include both for compatibility
+          recording: cam.recording === true
         }));
         setCameras(camerasFormatted);
       }
