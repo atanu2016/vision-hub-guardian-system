@@ -5,57 +5,85 @@ export interface ValidationErrors {
   [key: string]: string;
 }
 
-export const validateConnectionSettings = (
-  cameraData: Camera, 
+/**
+ * Validate camera connection settings based on connection type
+ */
+export function validateConnectionSettings(
+  camera: Partial<Camera>,
   connectionType: string
-): ValidationErrors => {
+): ValidationErrors {
   const errors: ValidationErrors = {};
-
-  // Validate IP Address for IP, RTSP, and ONVIF connection types
-  if (!['rtmp', 'hls'].includes(connectionType)) {
-    if (!cameraData.ipAddress?.trim()) {
-      errors.ipAddress = 'IP Address is required';
-    } else {
-      const ipPattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
-      if (!ipPattern.test(cameraData.ipAddress)) {
+  
+  // Validate based on connection type
+  switch (connectionType) {
+    case 'ip':
+    case 'onvif':
+      // IP Address validation
+      if (!camera.ipAddress) {
+        errors.ipAddress = 'IP Address is required';
+      } else if (!isValidIpAddress(camera.ipAddress)) {
         errors.ipAddress = 'Invalid IP address format';
       }
-    }
-    
-    // Validate port
-    if (cameraData.port) {
-      if (isNaN(cameraData.port) || cameraData.port < 1 || cameraData.port > 65535) {
-        errors.port = 'Port must be between 1-65535';
+      
+      // Port validation
+      if (!camera.port && camera.port !== 0) {
+        errors.port = 'Port is required';
+      } else if (camera.port < 0 || camera.port > 65535) {
+        errors.port = 'Port must be between 0 and 65535';
       }
-    }
+      break;
+      
+    case 'rtmp':
+      if (!camera.rtmpUrl) {
+        errors.rtmpUrl = 'RTMP URL is required';
+      } else if (!camera.rtmpUrl.startsWith('rtmp://')) {
+        errors.rtmpUrl = 'RTMP URL must start with rtmp://';
+      }
+      break;
+      
+    case 'rtsp':
+      if (!camera.rtmpUrl) {
+        errors.rtmpUrl = 'RTSP URL is required';
+      } else if (!camera.rtmpUrl.startsWith('rtsp://')) {
+        errors.rtmpUrl = 'RTSP URL must start with rtsp://';
+      }
+      break;
+      
+    case 'hls':
+      if (!camera.hlsUrl) {
+        errors.hlsUrl = 'HLS URL is required';
+      } else if (!isValidHlsUrl(camera.hlsUrl)) {
+        errors.hlsUrl = 'Invalid HLS URL format (should end with .m3u8)';
+      }
+      break;
   }
   
-  // Validate RTMP URL
-  if (connectionType === 'rtmp') {
-    if (!cameraData.rtmpUrl?.trim()) {
-      errors.rtmpUrl = 'Stream URL is required for RTMP';
-    } else if (!cameraData.rtmpUrl.startsWith('rtmp://')) {
-      errors.rtmpUrl = 'RTMP URL should start with rtmp://';
-    }
-  }
-  
-  // Validate RTSP URL
-  if (connectionType === 'rtsp') {
-    if (!cameraData.rtmpUrl?.trim()) {
-      errors.rtmpUrl = 'Stream URL is required for RTSP';
-    } else if (!cameraData.rtmpUrl.startsWith('rtsp://')) {
-      errors.rtmpUrl = 'RTSP URL should start with rtsp://';
-    }
-  }
-  
-  // Validate HLS URL
-  if (connectionType === 'hls') {
-    if (!cameraData.hlsUrl?.trim()) {
-      errors.hlsUrl = 'Stream URL is required for HLS';
-    } else if (!cameraData.hlsUrl.includes('.m3u8')) {
-      errors.hlsUrl = 'HLS URL should include .m3u8 format';
-    }
-  }
-
   return errors;
-};
+}
+
+/**
+ * Check if a string is a valid IP address
+ * Allow local IP addresses and hostnames for local network cameras
+ */
+function isValidIpAddress(ip: string): boolean {
+  // Allow hostnames and "localhost" for local network usage
+  if (ip === 'localhost' || /^[a-zA-Z0-9][a-zA-Z0-9-]*(\.[a-zA-Z0-9-]+)*$/.test(ip)) {
+    return true;
+  }
+  
+  // Standard IP address validation
+  const ipPattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+  if (!ipPattern.test(ip)) return false;
+  
+  // Check each octet
+  const parts = ip.split('.').map(part => parseInt(part, 10));
+  return parts.every(part => part >= 0 && part <= 255);
+}
+
+/**
+ * Check if a string is a valid HLS URL
+ */
+function isValidHlsUrl(url: string): boolean {
+  // Basic check for HLS URL format
+  return url.includes('.m3u8');
+}

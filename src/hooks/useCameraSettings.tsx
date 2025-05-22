@@ -28,36 +28,41 @@ export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera
       return;
     }
 
-    // IP validation - only required for certain connection types
-    if (cameraData.connectionType !== 'rtmp' && cameraData.connectionType !== 'hls') {
-      if (!cameraData.ipAddress?.trim() || !isValidIP(cameraData.ipAddress)) {
-        setIsValid(false);
-        return;
-      }
-    }
-
-    // RTMP URL validation for RTMP type
-    if (cameraData.connectionType === 'rtmp' && (!cameraData.rtmpUrl?.trim() || !cameraData.rtmpUrl.startsWith('rtmp://'))) {
-      setIsValid(false);
-      return;
-    }
-
-    // HLS URL validation for HLS type
-    if (cameraData.connectionType === 'hls' && (!cameraData.hlsUrl?.trim() || !cameraData.hlsUrl.includes('.m3u8'))) {
-      setIsValid(false);
-      return;
-    }
-
-    // RTSP URL validation for RTSP type
-    if (cameraData.connectionType === 'rtsp' && (!cameraData.rtmpUrl?.trim() || !cameraData.rtmpUrl.startsWith('rtsp://'))) {
-      setIsValid(false);
-      return;
+    // Each connection type has its own required fields
+    switch (cameraData.connectionType) {
+      case 'rtmp':
+        if (!cameraData.rtmpUrl?.trim() || !cameraData.rtmpUrl.startsWith('rtmp://')) {
+          setIsValid(false);
+          return;
+        }
+        break;
+      case 'hls':
+        if (!cameraData.hlsUrl?.trim() || !cameraData.hlsUrl.includes('.m3u8')) {
+          setIsValid(false);
+          return;
+        }
+        break;
+      case 'rtsp':
+        if (!cameraData.rtmpUrl?.trim() || !cameraData.rtmpUrl.startsWith('rtsp://')) {
+          setIsValid(false);
+          return;
+        }
+        break;
+      default:
+        // IP, ONVIF, etc. require IP address validation
+        if (!cameraData.ipAddress?.trim() || !isValidIP(cameraData.ipAddress)) {
+          setIsValid(false);
+          return;
+        }
     }
 
     setIsValid(true);
   };
 
   const isValidIP = (ip: string) => {
+    // Allow for local IPs to pass validation more easily
+    if (ip === 'localhost') return true;
+    
     const ipPattern = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
     if (!ipPattern.test(ip)) return false;
     
@@ -84,16 +89,25 @@ export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera
 
     setIsLoading(true);
     try {
-      onSave(cameraData);
+      // Update camera status to ensure it's marked as processing the update
+      const updatedCamera = {
+        ...cameraData,
+        lastSeen: new Date().toISOString() // Update last seen timestamp
+      };
+      
+      onSave(updatedCamera);
+      
       toast({
         title: "Settings saved",
-        description: "Camera settings have been updated successfully."
+        description: "Camera settings have been updated successfully. Please refresh the camera view to apply changes."
       });
+      
       setHasChanges(false);
     } catch (error) {
       console.error("Error saving camera settings:", error);
       toast({
         title: "Failed to save camera settings",
+        description: "An error occurred while saving. Please try again.",
         variant: "destructive"
       });
     } finally {

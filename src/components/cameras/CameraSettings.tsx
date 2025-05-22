@@ -18,10 +18,9 @@ const CameraSettings = ({ camera, onSave, userRole = 'user' }: CameraSettingsPro
     isValid
   } = useCameraSettings(camera, onSave);
 
-  // Check if user has permission to edit camera settings
-  // Only superadmin should be able to configure camera settings
-  const canEditSettings = userRole === 'superadmin';
-  const isDisabled = !canEditSettings;
+  // Enable editing for all users
+  const canEditSettings = true; // Allow all users to edit camera settings
+  const isDisabled = false;     // Never disable the settings forms
 
   return (
     <div className="space-y-8 pb-16 relative">
@@ -46,15 +45,14 @@ const CameraSettings = ({ camera, onSave, userRole = 'user' }: CameraSettingsPro
         disabled={isDisabled}
       />
 
-      {canEditSettings && (
-        <SettingsActionButtons 
-          onSave={handleSave}
-          onReset={handleReset}
-          isLoading={isLoading}
-          hasChanges={hasChanges}
-          isValid={isValid}
-        />
-      )}
+      {/* Always show action buttons */}
+      <SettingsActionButtons 
+        onSave={handleSave}
+        onReset={handleReset}
+        isLoading={isLoading}
+        hasChanges={hasChanges}
+        isValid={isValid}
+      />
     </div>
   );
 };

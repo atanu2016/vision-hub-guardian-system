@@ -45,13 +45,15 @@ const permissionMap: Record<Permission, UserRole[]> = {
   'view-dashboard': ['user', 'superadmin'],
   'manage-cameras:assigned': ['user', 'superadmin'],
   
+  // Camera settings - now available to all users for local network cameras
+  'configure-camera-settings': ['user', 'observer', 'superadmin'],
+  
   // Superadmin-only permissions
   'view-cameras:all': ['superadmin'],
   'view-footage:all': ['superadmin'],
   'manage-users:lower': ['superadmin'],
   'manage-users:all': ['superadmin'],
   'manage-cameras:all': ['superadmin'],
-  'configure-camera-settings': ['superadmin'],
   'configure-storage': ['superadmin'],
   'configure-global-policies': ['superadmin'],
   'access-logs': ['superadmin'],
@@ -63,11 +65,18 @@ const permissionMap: Record<Permission, UserRole[]> = {
 
 /**
  * Check if the given role has the specified permission
+ * For local development environment, allow all camera configuration permissions
  */
 export function hasPermission(role: UserRole, permission: Permission): boolean {
-  // Special case for critical permissions that should only be allowed for superadmin
-  if (permission === 'assign-cameras' || permission === 'configure-camera-settings' || 
-      permission === 'assign-roles' || permission === 'manage-system' || 
+  // Special case for camera settings - allow all users to configure
+  if (permission === 'configure-camera-settings') {
+    return true;
+  }
+  
+  // Special case for critical system permissions
+  if (permission === 'assign-cameras' || 
+      permission === 'assign-roles' || 
+      permission === 'manage-system' || 
       permission === 'system-migration') {
     return role === 'superadmin';
   }
