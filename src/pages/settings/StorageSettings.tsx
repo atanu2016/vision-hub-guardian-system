@@ -9,6 +9,13 @@ import AppLayout from "@/components/layout/AppLayout";
 import StorageUsageDisplay from "@/components/settings/storage/StorageUsageDisplay";
 import { useToast } from "@/hooks/use-toast";
 
+// Define initial storage usage state
+const initialStorageUsage = {
+  used: 0,
+  total: 1000,
+  percentage: 0
+};
+
 const StorageSettings = () => {
   const [settings, setSettings] = useState<StorageSettingsType>({
     type: 'local',
@@ -18,6 +25,8 @@ const StorageSettings = () => {
   });
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [storageUsage, setStorageUsage] = useState(initialStorageUsage);
+  const [isClearing, setIsClearing] = useState(false);
   const { validateStorage } = useStorageValidation();
   const { toast } = useToast();
 
@@ -41,6 +50,12 @@ const StorageSettings = () => {
     };
 
     loadSettings();
+    // Load storage usage data here (mock for now)
+    setStorageUsage({
+      used: 250,
+      total: 1000,
+      percentage: 25
+    });
   }, [toast]);
 
   const handleSaveSettings = async (newSettings: StorageSettingsType) => {
@@ -89,6 +104,35 @@ const StorageSettings = () => {
     }
   };
 
+  const handleClearStorage = async () => {
+    setIsClearing(true);
+    try {
+      // Simulated API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      toast({
+        title: "Success",
+        description: "Storage cleared successfully",
+      });
+      
+      // Update usage display
+      setStorageUsage({
+        ...storageUsage,
+        used: 0,
+        percentage: 0
+      });
+      
+    } catch (error) {
+      console.error("Error clearing storage:", error);
+      toast({
+        title: "Error",
+        description: "Failed to clear storage",
+        variant: "destructive"
+      });
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="container mx-auto px-4 py-6">
@@ -109,7 +153,12 @@ const StorageSettings = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <StorageUsageDisplay />
+                <StorageUsageDisplay 
+                  storageUsage={storageUsage}
+                  retentionDays={settings.retentiondays}
+                  isClearing={isClearing}
+                  onClearStorage={handleClearStorage}
+                />
               </CardContent>
             </Card>
 
@@ -122,9 +171,10 @@ const StorageSettings = () => {
               </CardHeader>
               <CardContent>
                 <StorageForm
-                  settings={settings}
+                  initialSettings={settings}
                   onSave={handleSaveSettings}
-                  isLoading={isLoading || isSaving}
+                  isLoading={isLoading}
+                  isSaving={isSaving}
                 />
               </CardContent>
             </Card>

@@ -72,3 +72,4 @@ export interface CameraGroup {
 
 export type QualityType = 'low' | 'medium' | 'high' | 'ultra';
 export type ScheduleType = 'always' | 'workdays' | 'weekends' | 'custom';
+

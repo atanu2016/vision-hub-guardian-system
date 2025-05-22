@@ -60,7 +60,13 @@ const TopBar = () => {
             group: cam.group,
             motiondetection: cam.motiondetection,
             rtmpurl: cam.rtmpurl || '',
-            onvifpath: cam.onvifpath || ''
+            hlsurl: cam.hlsurl || '',
+            onvifpath: cam.onvifpath || '',
+            quality: cam.quality || '',
+            schedule_type: cam.schedule_type || '',
+            time_start: cam.time_start || '',
+            time_end: cam.time_end || '',
+            days_of_week: cam.days_of_week || []
           })) as Camera[];
           
           setCameras(formattedCameras);
@@ -100,7 +106,12 @@ const TopBar = () => {
         status: (savedCamera.status as CameraStatus) || 'offline',
         rtmpurl: savedCamera.rtmpurl || '',
         onvifpath: savedCamera.onvifpath || '',
-        hlsurl: savedCamera.hlsurl || ''
+        hlsurl: savedCamera.hlsurl || '',
+        quality: savedCamera.quality || '',
+        schedule_type: savedCamera.schedule_type || '',
+        time_start: savedCamera.time_start || '',
+        time_end: savedCamera.time_end || '',
+        days_of_week: savedCamera.days_of_week || []
       };
       
       // Update local state with the properly typed saved camera

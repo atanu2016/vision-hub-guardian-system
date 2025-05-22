@@ -20,7 +20,12 @@ export const fetchCamerasFromDB = async (): Promise<Camera[]> => {
     const cameras: Camera[] = data?.map(camera => ({
       ...camera,
       status: camera.status as CameraStatus,
-      hlsurl: camera.hlsurl || undefined
+      hlsurl: camera.hlsurl || undefined,
+      quality: camera.quality || undefined,
+      schedule_type: camera.schedule_type || undefined,
+      time_start: camera.time_start || undefined,
+      time_end: camera.time_end || undefined,
+      days_of_week: camera.days_of_week || undefined
     })) || [];
     
     return cameras;

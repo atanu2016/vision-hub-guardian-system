@@ -1,21 +1,23 @@
 
 import { StorageSettings } from "@/types/camera";
 
-// Type definition for the form data format
 export interface StorageFormData {
-  type: "local" | "nas" | "s3" | "dropbox" | "google_drive" | "onedrive" | "azure_blob" | "backblaze";
+  type: 'local' | 'nas' | 's3' | 'dropbox' | 'google_drive' | 'onedrive' | 'azure_blob' | 'backblaze';
   path?: string;
   retentionDays: number;
   overwriteOldest: boolean;
+  // NAS fields
   nasAddress?: string;
   nasPath?: string;
   nasUsername?: string;
   nasPassword?: string;
+  // S3 fields
   s3Endpoint?: string;
   s3Bucket?: string;
   s3AccessKey?: string;
   s3SecretKey?: string;
   s3Region?: string;
+  // Cloud storage fields
   dropboxToken?: string;
   dropboxFolder?: string;
   googleDriveToken?: string;
@@ -30,7 +32,9 @@ export interface StorageFormData {
 }
 
 export const useStorageAdapter = () => {
-  // Convert DB format to form format
+  /**
+   * Converts database storage settings to UI form data
+   */
   const toFormData = (settings: StorageSettings): StorageFormData => {
     return {
       type: settings.type,
@@ -56,11 +60,13 @@ export const useStorageAdapter = () => {
       azureContainer: settings.azurecontainer,
       backblazeKeyId: settings.backblazekeyid,
       backblazeApplicationKey: settings.backblazeapplicationkey,
-      backblazeBucket: settings.backblazebucket
+      backblazeBucket: settings.backblazebucket,
     };
   };
 
-  // Convert form format to DB format
+  /**
+   * Converts UI form data to database storage settings
+   */
   const toDbFormat = (formData: StorageFormData): StorageSettings => {
     return {
       type: formData.type,
@@ -86,12 +92,12 @@ export const useStorageAdapter = () => {
       azurecontainer: formData.azureContainer,
       backblazekeyid: formData.backblazeKeyId,
       backblazeapplicationkey: formData.backblazeApplicationKey,
-      backblazebucket: formData.backblazeBucket
+      backblazebucket: formData.backblazeBucket,
     };
   };
 
   return {
     toFormData,
-    toDbFormat
+    toDbFormat,
   };
 };
