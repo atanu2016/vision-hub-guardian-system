@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { getCameras, saveCamera } from "@/data/mockData";
 import { Camera, CameraStatus } from "@/types/camera";
 import { useNotifications } from "@/hooks/useNotifications";
 import SearchBar from "@/components/search/SearchBar";
@@ -13,6 +12,7 @@ import MobileSidebarToggle from "./topbar/MobileSidebarToggle";
 import { getPageTitle } from "@/lib/navigation";
 import { CameraUIProps } from "@/utils/cameraPropertyMapper";
 import { useCameraAdapter } from "@/hooks/useCameraAdapter";
+import { supabase } from "@/integrations/supabase/client";
 
 const TopBar = () => {
   const location = useLocation();
@@ -33,8 +33,23 @@ const TopBar = () => {
   useEffect(() => {
     const loadCameras = async () => {
       try {
-        const loadedCameras = await getCameras();
-        setCameras(loadedCameras);
+        const { data, error } = await supabase
+          .from('cameras')
+          .select('*');
+          
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          // Format cameras with proper types
+          const formattedCameras = data.map(cam => ({
+            ...cam,
+            status: (cam.status as CameraStatus) || 'offline'
+          })) as Camera[];
+          
+          setCameras(formattedCameras);
+        }
       } catch (error) {
         console.error("Failed to load cameras:", error);
       }
@@ -54,7 +69,15 @@ const TopBar = () => {
       const cameraParams = adaptCameraParams(newCamera);
       
       // Save to database
-      const savedCamera = await saveCamera(cameraParams as unknown as Camera);
+      const { data: savedCamera, error } = await supabase
+        .from('cameras')
+        .insert(cameraParams)
+        .select()
+        .single();
+        
+      if (error) {
+        throw error;
+      }
       
       // Ensure the saved camera is properly typed before updating state
       const typedCamera: Camera = {

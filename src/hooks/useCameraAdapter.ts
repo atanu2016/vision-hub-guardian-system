@@ -55,7 +55,7 @@ export const useCameraAdapter = () => {
   };
 
   // Helper to adapt camera parameters for the addCamera function
-  const adaptCameraParams = (cameraUIParams: Omit<CameraUIProps, "id" | "lastSeen">): Omit<Camera, "id" | "lastseen"> & { lastseen: string } => {
+  const adaptCameraParams = (cameraUIParams: Omit<CameraUIProps, "id" | "lastSeen">): Omit<Camera, "id"> & { lastseen: string } => {
     return {
       name: cameraUIParams.name,
       status: cameraUIParams.status as CameraStatus,
