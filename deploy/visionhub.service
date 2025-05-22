@@ -1,0 +1,16 @@
+
+[Unit]
+Description=Vision Hub Application Service
+After=network.target postgresql.service
+
+[Service]
+Type=forking
+User=visionhub
+WorkingDirectory=/opt/visionhub
+ExecStart=/usr/bin/pm2 start ecosystem.config.js
+ExecReload=/usr/bin/pm2 reload all
+ExecStop=/usr/bin/pm2 stop all
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
