@@ -23,6 +23,7 @@ export interface Camera {
   group?: string;
   connectionType?: CameraConnectionType;
   rtmpUrl?: string;
+  rtspUrl?: string; // Added RTSP URL field
   hlsUrl?: string; // Added HLS URL field
   onvifPath?: string;
   motionDetection?: boolean;

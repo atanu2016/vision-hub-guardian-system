@@ -43,7 +43,8 @@ export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera
         }
         break;
       case 'rtsp':
-        if (!cameraData.rtmpUrl?.trim() || !cameraData.rtmpUrl.startsWith('rtsp://')) {
+        // Fix: Use rtspUrl instead of rtmpUrl for RTSP validation
+        if (!cameraData.rtspUrl?.trim() || !cameraData.rtspUrl.startsWith('rtsp://')) {
           setIsValid(false);
           return;
         }
