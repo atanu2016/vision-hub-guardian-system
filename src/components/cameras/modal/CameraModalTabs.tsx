@@ -16,6 +16,7 @@ interface CameraModalTabsProps {
     password: string;
     rtmpUrl: string;
     onvifPath: string;
+    hlsUrl?: string;
   };
   onChange: (field: string, value: string) => void;
 }
