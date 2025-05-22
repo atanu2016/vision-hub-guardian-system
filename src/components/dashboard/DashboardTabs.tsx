@@ -1,10 +1,9 @@
 
 import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Skeleton } from "@/components/ui/skeleton";
 import CameraControls, { SortKey, SortDirection } from "@/components/dashboard/CameraControls";
-import CameraCard from "@/components/dashboard/CameraCard";
-import RecordingCard from "@/components/dashboard/RecordingCard";
+import CameraTabContent from "@/components/dashboard/CameraTabContent";
+import RecordingTabContent from "@/components/dashboard/RecordingTabContent";
 import { Camera } from "@/types/camera";
 import { Recording } from "@/hooks/recordings/types";
 
@@ -57,39 +56,17 @@ const DashboardTabs = ({
       </div>
       
       <TabsContent value="cameras" className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {cameraLoading ? (
-            <>
-              <Skeleton className="h-48 w-full rounded-md" />
-              <Skeleton className="h-48 w-full rounded-md" />
-              <Skeleton className="h-48 w-full rounded-md" />
-            </>
-          ) : sortedCameras.length > 0 ? (
-            sortedCameras.map((camera) => (
-              <CameraCard key={camera.id} camera={camera} />
-            ))
-          ) : (
-            <div className="col-span-3 text-center">No cameras found.</div>
-          )}
-        </div>
+        <CameraTabContent 
+          loading={cameraLoading}
+          cameras={sortedCameras}
+        />
       </TabsContent>
       
       <TabsContent value="recordings" className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {recordingsLoading ? (
-            <>
-              <Skeleton className="h-48 w-full rounded-md" />
-              <Skeleton className="h-48 w-full rounded-md" />
-              <Skeleton className="h-48 w-full rounded-md" />
-            </>
-          ) : recordings.length > 0 ? (
-            recordings.slice(0, 6).map((recording) => (
-              <RecordingCard key={recording.id} recording={recording} />
-            ))
-          ) : (
-            <div className="col-span-3 text-center">No recordings found.</div>
-          )}
-        </div>
+        <RecordingTabContent
+          loading={recordingsLoading}
+          recordings={recordings}
+        />
       </TabsContent>
     </Tabs>
   );

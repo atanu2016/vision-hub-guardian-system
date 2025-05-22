@@ -43,12 +43,12 @@ export const useCamerasFetch = () => {
           rtmpurl: cam.rtmpurl || undefined,
           hlsurl: cam.hlsurl || undefined,
           onvifpath: cam.onvifpath || undefined,
-          // Optional properties with defaults
+          // Handle optional properties with defaults
           quality: cam.quality || 'medium',
-          scheduleType: cam.scheduleType || 'always',
-          timeStart: cam.timeStart || '00:00',
-          timeEnd: cam.timeEnd || '23:59',
-          daysOfWeek: cam.daysOfWeek || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+          scheduleType: cam.schedule_type || 'always',
+          timeStart: cam.time_start || '00:00',
+          timeEnd: cam.time_end || '23:59',
+          daysOfWeek: cam.days_of_week || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         }));
         setCameras(camerasFormatted);
       }

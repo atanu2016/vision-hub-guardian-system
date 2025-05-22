@@ -1,55 +1,34 @@
 
+import { Skeleton } from "@/components/ui/skeleton";
+import CameraCard from "@/components/cameras/CameraCard";
 import { Camera } from "@/types/camera";
-import EmptyCameraState from "./EmptyCameraState";
-import CameraGroupDisplay from "./CameraGroupDisplay";
 
-interface GroupedCameras {
-  id: string;
-  name: string;
+interface CameraTabContentProps {
+  loading: boolean;
   cameras: Camera[];
 }
 
-interface CameraTabContentProps {
-  groupedCameras: GroupedCameras[];
-  groupBy: "none" | "group" | "location";
-  emptyCamerasMessage: string;
-  emptyCamerasDescription?: string;
-  showManageCamerasButton?: boolean;
-}
-
-const CameraTabContent = ({
-  groupedCameras,
-  groupBy,
-  emptyCamerasMessage,
-  emptyCamerasDescription,
-  showManageCamerasButton = false
-}: CameraTabContentProps) => {
-  const isEmpty = 
-    groupedCameras.length === 0 || 
-    (groupedCameras.length === 1 && groupedCameras[0].cameras.length === 0);
-  
-  if (isEmpty) {
+const CameraTabContent = ({ loading, cameras }: CameraTabContentProps) => {
+  if (loading) {
     return (
-      <EmptyCameraState
-        message={emptyCamerasMessage}
-        description={emptyCamerasDescription}
-        showManageCamerasButton={showManageCamerasButton}
-      />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Skeleton className="h-48 w-full rounded-md" />
+        <Skeleton className="h-48 w-full rounded-md" />
+        <Skeleton className="h-48 w-full rounded-md" />
+      </div>
     );
   }
-  
+
+  if (cameras.length === 0) {
+    return <div className="col-span-3 text-center">No cameras found.</div>;
+  }
+
   return (
-    <>
-      {groupedCameras.map(group => (
-        <CameraGroupDisplay
-          key={group.id}
-          id={group.id}
-          name={group.name}
-          cameras={group.cameras}
-          showGroupTitle={groupBy !== "none"}
-        />
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {cameras.map((camera) => (
+        <CameraCard key={camera.id} camera={camera} />
       ))}
-    </>
+    </div>
   );
 };
 
