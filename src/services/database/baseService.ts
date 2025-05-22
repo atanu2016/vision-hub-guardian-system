@@ -4,6 +4,17 @@
 import { supabase } from '@/integrations/supabase/client';
 
 /**
+ * Logs database errors with additional context
+ * @param error The error object to log
+ * @param context Additional context about where the error occurred
+ * @returns The original error for chaining
+ */
+export const logDatabaseError = (error: unknown, context: string): unknown => {
+  console.error(`${context}:`, error);
+  return error;
+};
+
+/**
  * Verifies database setup and connection
  * @returns Promise resolving to a boolean indicating if the database is properly set up
  */
