@@ -1,12 +1,10 @@
 
-import { Camera } from "@/types/camera";
 import { CameraSettingsProps } from "./settings/types";
 import BasicSettings from "./settings/BasicSettings";
 import ConnectionSettings from "./settings/ConnectionSettings";
 import RecordingSettings from "./settings/RecordingSettings";
 import SettingsActionButtons from "./settings/SettingsActionButtons";
 import { useCameraSettings } from "@/hooks/useCameraSettings";
-import { UserRole } from "@/utils/permissionUtils";
 import { hasPermission } from "@/utils/permissionUtils";
 
 const CameraSettings = ({ camera, onSave, userRole = 'user' }: CameraSettingsProps) => {
