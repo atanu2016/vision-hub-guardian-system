@@ -1,116 +1,135 @@
 
 import { useState, useEffect } from "react";
-import AppLayout from "@/components/layout/AppLayout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getStorageSettings, saveStorageSettings } from "@/services/apiService";
 import { StorageSettings as StorageSettingsType } from "@/types/camera";
-import { useStorageSettings } from "@/hooks/storage";
-import StorageUsageDisplay from "@/components/settings/storage/StorageUsageDisplay";
+import { useStorageValidation } from "@/hooks/storage/useStorageValidation";
 import StorageForm from "@/components/settings/storage/StorageForm";
-import { useStorageAdapter } from "@/hooks/storage/useStorageAdapter";
+import AppLayout from "@/components/layout/AppLayout";
+import StorageUsageDisplay from "@/components/settings/storage/StorageUsageDisplay";
+import { useToast } from "@/hooks/use-toast";
 
-// Refactored StorageSettings component
 const StorageSettings = () => {
-  // Use the custom hook for storage settings
-  const {
-    storageUsage,
-    isLoading,
-    isSaving,
-    isClearing,
-    loadStorageSettings,
-    fetchStorageUsage,
-    handleSaveSettings,
-    handleClearStorage
-  } = useStorageSettings();
-
-  // Get storage adapter
-  const { toFormData } = useStorageAdapter();
-
-  // Initial settings state
   const [settings, setSettings] = useState<StorageSettingsType>({
-    type: "local",
-    path: "/recordings",
+    type: 'local',
+    path: '/recordings',
     retentiondays: 30,
-    overwriteoldest: true,
+    overwriteoldest: true
   });
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const { validateStorage } = useStorageValidation();
+  const { toast } = useToast();
 
-  // Load storage settings on mount
   useEffect(() => {
-    const initialize = async () => {
-      const loadedSettings = await loadStorageSettings();
-      if (loadedSettings) {
-        setSettings(loadedSettings);
+    const loadSettings = async () => {
+      try {
+        const data = await getStorageSettings();
+        if (data) {
+          setSettings(data);
+        }
+      } catch (error) {
+        console.error("Failed to load storage settings:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load storage settings",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    initialize();
-  }, []);
+    loadSettings();
+  }, [toast]);
 
-  // Handle refresh of storage data
-  const handleRefreshStorage = async () => {
-    await fetchStorageUsage();
-  };
-
-  // Create a compatible display object for StorageUsageDisplay from storageUsage
-  const displayUsage = {
-    usedSpace: storageUsage.usedSpace,
-    totalSpace: storageUsage.totalSpace,
-    usedPercentage: storageUsage.usedPercentage,
-    usedSpaceFormatted: storageUsage.usedSpaceFormatted,
-    totalSpaceFormatted: storageUsage.totalSpaceFormatted
+  const handleSaveSettings = async (newSettings: StorageSettingsType) => {
+    setIsSaving(true);
+    try {
+      // Validate the settings first
+      const isValid = await validateStorage(newSettings);
+      
+      if (!isValid) {
+        toast({
+          title: "Validation Failed",
+          description: "Storage settings failed validation. Please check your settings.",
+          variant: "destructive"
+        });
+        return false;
+      }
+      
+      // Save the settings
+      const success = await saveStorageSettings(newSettings);
+      
+      if (success) {
+        setSettings(newSettings);
+        toast({
+          title: "Success",
+          description: "Storage settings saved successfully",
+        });
+        return true;
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to save storage settings",
+          variant: "destructive"
+        });
+        return false;
+      }
+    } catch (error) {
+      console.error("Error saving storage settings:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
     <AppLayout>
-      <div className="container mx-auto px-4 py-6 space-y-6 max-w-4xl">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Storage Settings</h1>
-          <p className="text-muted-foreground">
-            Manage your system's storage usage and retention policies
-          </p>
-        </div>
+      <div className="container mx-auto px-4 py-6">
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Storage Settings</h2>
+            <p className="text-muted-foreground">
+              Configure where and how recordings are stored.
+            </p>
+          </div>
 
-        <Tabs defaultValue="usage" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="usage">Storage Usage</TabsTrigger>
-            <TabsTrigger value="settings">Storage Configuration</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="usage" className="space-y-4">
+          <div className="grid gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>Storage Usage</CardTitle>
                 <CardDescription>
-                  View your current storage usage and manage recordings
+                  Current storage usage for all recordings
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <StorageUsageDisplay
-                  storageUsage={displayUsage}
-                  retentionDays={settings.retentiondays}
-                  isClearing={isClearing}
-                  onClearStorage={handleClearStorage}
-                  onRefreshStorage={handleRefreshStorage}
+              <CardContent>
+                <StorageUsageDisplay />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Storage Configuration</CardTitle>
+                <CardDescription>
+                  Configure storage location and retention policies
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <StorageForm
+                  settings={settings}
+                  onSave={handleSaveSettings}
+                  isLoading={isLoading || isSaving}
                 />
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="settings" className="space-y-4">
-            <StorageForm
-              initialSettings={settings}
-              isLoading={isLoading}
-              isSaving={isSaving}
-              onSave={async (updatedSettings) => {
-                const success = await handleSaveSettings(updatedSettings);
-                if (success) {
-                  setSettings(updatedSettings);
-                }
-                return success;
-              }}
-            />
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
       </div>
     </AppLayout>
   );

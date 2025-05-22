@@ -41,7 +41,13 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
         group: cam.group,
         motiondetection: cam.motiondetection,
         rtmpurl: cam.rtmpurl || '',
-        onvifpath: cam.onvifpath || ''
+        hlsurl: cam.hlsurl || '',
+        onvifpath: cam.onvifpath || '',
+        quality: cam.quality || '',
+        schedule_type: cam.schedule_type || '',
+        time_start: cam.time_start || '',
+        time_end: cam.time_end || '',
+        days_of_week: cam.days_of_week || []
       })) as Camera[];
       
       console.log(`Found ${camerasWithCorrectTypes.length || 0} cameras for admin user`);
@@ -90,7 +96,13 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
         group: cam.group,
         motiondetection: cam.motiondetection,
         rtmpurl: cam.rtmpurl || '',
-        onvifpath: cam.onvifpath || ''
+        hlsurl: cam.hlsurl || '',
+        onvifpath: cam.onvifpath || '',
+        quality: cam.quality || '',
+        schedule_type: cam.schedule_type || '',
+        time_start: cam.time_start || '',
+        time_end: cam.time_end || '',
+        days_of_week: cam.days_of_week || []
       })) as Camera[];
       
       console.log(`Found ${camerasWithCorrectTypes.length || 0} accessible cameras for user`);

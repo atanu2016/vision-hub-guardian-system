@@ -1,5 +1,6 @@
 
 import { StorageSettings } from "@/types/camera";
+import { validateStorageAccess } from "@/services/apiService";
 
 export const useStorageValidation = () => {
   /**
@@ -16,7 +17,7 @@ export const useStorageValidation = () => {
           console.error('Local storage path is required');
           return false;
         }
-        return true;
+        return await validateStorageAccess(settings);
       }
       
       // For NAS storage
@@ -25,7 +26,7 @@ export const useStorageValidation = () => {
           console.error('NAS address and path are required');
           return false;
         }
-        return true;
+        return await validateStorageAccess(settings);
       }
       
       // For S3 storage
@@ -34,7 +35,7 @@ export const useStorageValidation = () => {
           console.error('S3 endpoint, bucket, access key, and secret key are required');
           return false;
         }
-        return true;
+        return await validateStorageAccess(settings);
       }
       
       // For Google Drive
@@ -43,7 +44,7 @@ export const useStorageValidation = () => {
           console.error('Google Drive token is required');
           return false;
         }
-        return true;
+        return await validateStorageAccess(settings);
       }
       
       // For other provider types, implement their validation logic

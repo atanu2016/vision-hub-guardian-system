@@ -24,6 +24,7 @@ interface CameraModalTabsProps {
 const CameraModalTabs = ({
   connectionTab,
   onTabChange,
+  connectionType,
   formValues,
   onChange,
 }: CameraModalTabsProps) => {

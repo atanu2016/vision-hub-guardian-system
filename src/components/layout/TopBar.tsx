@@ -99,7 +99,8 @@ const TopBar = () => {
         ...savedCamera,
         status: (savedCamera.status as CameraStatus) || 'offline',
         rtmpurl: savedCamera.rtmpurl || '',
-        onvifpath: savedCamera.onvifpath || ''
+        onvifpath: savedCamera.onvifpath || '',
+        hlsurl: savedCamera.hlsurl || ''
       };
       
       // Update local state with the properly typed saved camera

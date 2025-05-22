@@ -42,7 +42,12 @@ export const syncPublicCamerasToDatabase = async (publicCameras: Camera[]): Prom
       rtmpurl: rest.rtmpurl,
       hlsurl: rest.hlsurl,
       onvifpath: rest.onvifpath,
-      motiondetection: rest.motiondetection
+      motiondetection: rest.motiondetection,
+      quality: rest.quality,
+      schedule_type: rest.schedule_type,
+      time_start: rest.time_start,
+      time_end: rest.time_end,
+      days_of_week: rest.days_of_week
     }));
     
     // Insert cameras

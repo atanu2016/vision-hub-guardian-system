@@ -19,7 +19,8 @@ export const fetchCamerasFromDB = async (): Promise<Camera[]> => {
     // Ensure we properly cast status to the CameraStatus type
     const cameras: Camera[] = data?.map(camera => ({
       ...camera,
-      status: camera.status as CameraStatus
+      status: camera.status as CameraStatus,
+      hlsurl: camera.hlsurl || undefined
     })) || [];
     
     return cameras;

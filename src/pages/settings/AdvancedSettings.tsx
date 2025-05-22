@@ -33,7 +33,7 @@ const AdvancedSettings = () => {
 
   return (
     <AppLayout>
-      <div className="container mx-auto px-4 py-6 space-y-6 max-w-4xl">
+      <div className="container mx-auto px-4 py-6 space-y-6">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Advanced Settings</h2>
           <p className="text-muted-foreground">
@@ -52,7 +52,7 @@ const AdvancedSettings = () => {
                 <TabsTrigger value="security">Security</TabsTrigger>
                 <TabsTrigger value="debug">Debug</TabsTrigger>
               </TabsList>
-              <TabsContent value="general" className="pt-6 w-full">
+              <TabsContent value="general" className="pt-6">
                 <GeneralTab 
                   onSave={handleSaveSettings}
                   settings={{
@@ -63,10 +63,10 @@ const AdvancedSettings = () => {
                   loading={isLoading}
                 />
               </TabsContent>
-              <TabsContent value="security" className="pt-6 w-full">
+              <TabsContent value="security" className="pt-6">
                 <SecurityTab />
               </TabsContent>
-              <TabsContent value="debug" className="pt-6 w-full">
+              <TabsContent value="debug" className="pt-6">
                 <DebugTab onOpenDebugLog={handleOpenDebugLog} />
               </TabsContent>
             </Tabs>
