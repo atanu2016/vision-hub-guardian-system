@@ -5,8 +5,8 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
-// Completely separate interface to avoid type recursion
-interface RecordingData {
+// Define a simple interface with primitive types to avoid type recursion
+interface Recording {
   id: string;
   time: string;
   duration: number;
@@ -16,7 +16,7 @@ interface RecordingData {
 }
 
 const CameraTabs = ({ cameraId }: { cameraId?: string }) => {
-  const [recordings, setRecordings] = useState<RecordingData[]>([]);
+  const [recordings, setRecordings] = useState<Recording[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -28,7 +28,7 @@ const CameraTabs = ({ cameraId }: { cameraId?: string }) => {
   const loadRecordings = async (cameraId: string) => {
     setIsLoading(true);
     try {
-      // Breaking the type chain by using explicit type declaration for response
+      // Explicitly type the response to avoid type recursion
       const { data, error } = await supabase
         .from('recordings')
         .select('id, time, duration, type, file_size, date')
@@ -38,20 +38,22 @@ const CameraTabs = ({ cameraId }: { cameraId?: string }) => {
       
       if (error) throw error;
       
-      // Manually transform data to avoid TypeScript recursion
-      const formattedRecordings: RecordingData[] = [];
+      // Transform data safely without type recursion
+      const formattedRecordings: Recording[] = [];
       
-      if (data) {
-        data.forEach(item => {
+      if (data && Array.isArray(data)) {
+        // Use regular for loop to avoid any potential typing issues
+        for (let i = 0; i < data.length; i++) {
+          const item = data[i];
           formattedRecordings.push({
-            id: String(item.id),
-            time: String(item.time),
-            duration: Number(item.duration),
-            type: String(item.type),
-            file_size: String(item.file_size),
-            date: String(item.date)
+            id: String(item.id || ''),
+            time: String(item.time || ''),
+            duration: Number(item.duration || 0),
+            type: String(item.type || ''),
+            file_size: String(item.file_size || ''),
+            date: String(item.date || '')
           });
-        });
+        }
       }
       
       setRecordings(formattedRecordings);
