@@ -1,128 +1,188 @@
 
-import { useState, useEffect } from 'react';
-import { Card, CardHeader, CardContent, CardDescription, CardTitle } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
-import { getSystemStats } from '@/services/apiService';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { getSystemStats } from "@/services/apiService";
 
-// Interface for server statistics
-interface ServerStats {
-  cpuUsage: number;
-  memoryUsage: number;
-  diskSpace: number;
-  uptime: string;
-  activeConnections: number;
+interface GeneralTabProps {
+  onSave: (settings: any) => void;
+  settings: any;
+  loading: boolean;
 }
 
-export function GeneralTab() {
-  const [serverStats, setServerStats] = useState<ServerStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+const GeneralTab = ({ onSave, settings, loading }: GeneralTabProps) => {
+  const [systemStats, setSystemStats] = useState<any>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
 
-  // Fetch server statistics
   useEffect(() => {
-    // In a real implementation, this would call an API
-    const fetchServerStats = async () => {
-      setIsLoading(true);
+    const fetchStats = async () => {
       try {
+        setStatsLoading(true);
         const stats = await getSystemStats();
-        
-        // Convert system stats API response to our ServerStats interface
-        // with meaningful fallbacks for each property
-        setServerStats({
-          cpuUsage: Math.floor(Math.random() * 60) + 10, // Fallback 10-70%
-          memoryUsage: Math.floor(Math.random() * 50) + 20, // Fallback 20-70%
-          diskSpace: stats.storagePercentage || Math.floor(Math.random() * 80) + 10, // Use storage percentage for disk space
-          uptime: `${Math.floor(Math.random() * 30) + 1} days, ${Math.floor(Math.random() * 24)} hours`, // Generate random uptime
-          activeConnections: Math.floor(Math.random() * 100) + 1, // Random active connections
-        });
+        setSystemStats(stats);
       } catch (error) {
-        console.error('Failed to fetch server stats:', error);
-        // Fallback to random data if API fails
-        setServerStats({
-          cpuUsage: Math.floor(Math.random() * 60) + 10,
-          memoryUsage: Math.floor(Math.random() * 50) + 20,
-          diskSpace: Math.floor(Math.random() * 80) + 10,
-          uptime: `${Math.floor(Math.random() * 30) + 1} days, ${Math.floor(Math.random() * 24)} hours`,
-          activeConnections: Math.floor(Math.random() * 100) + 1,
-        });
+        console.error("Failed to fetch system stats", error);
+        toast.error("Could not load system statistics");
       } finally {
-        setIsLoading(false);
+        setStatsLoading(false);
       }
     };
-
-    fetchServerStats();
-    // Refresh stats every 30 seconds
-    const intervalId = setInterval(fetchServerStats, 30000);
     
-    return () => clearInterval(intervalId);
+    fetchStats();
   }, []);
 
+  const handlePortChange = (value: string) => {
+    if (!value || Number.isNaN(Number(value))) return;
+    onSave({ ...settings, server_port: value });
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Server Settings</CardTitle>
-        <CardDescription>Configure server and network options</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            <span className="ml-3 text-muted-foreground">Loading server statistics...</span>
-          </div>
-        ) : serverStats ? (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="p-4 rounded-lg border border-border">
-                <div className="text-sm font-medium text-muted-foreground mb-2">CPU Usage</div>
-                <div className="flex items-center">
-                  <div className="text-2xl font-bold">{serverStats.cpuUsage}%</div>
-                  <div className="ml-2 w-full max-w-xs bg-secondary rounded-full h-2">
-                    <div 
-                      className="bg-vision-blue h-2 rounded-full" 
-                      style={{ width: `${serverStats.cpuUsage}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="p-4 rounded-lg border border-border">
-                <div className="text-sm font-medium text-muted-foreground mb-2">Memory Usage</div>
-                <div className="flex items-center">
-                  <div className="text-2xl font-bold">{serverStats.memoryUsage}%</div>
-                  <div className="ml-2 w-full max-w-xs bg-secondary rounded-full h-2">
-                    <div 
-                      className="bg-vision-blue h-2 rounded-full" 
-                      style={{ width: `${serverStats.memoryUsage}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>System Information</CardTitle>
+          <CardDescription>Overview of your system performance</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label className="text-sm text-muted-foreground">Storage Usage</Label>
+              <p className="text-sm font-medium mt-1">
+                {statsLoading ? 'Loading...' : systemStats ? 
+                  `${systemStats.storage_used} of ${systemStats.storage_total} (${systemStats.storage_percentage}%)` : 
+                  'Not available'}
+              </p>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="p-4 rounded-lg border border-border">
-                <div className="text-sm font-medium text-muted-foreground mb-1">Disk Space</div>
-                <div className="text-xl font-bold">{serverStats.diskSpace}% used</div>
-              </div>
-              
-              <div className="p-4 rounded-lg border border-border">
-                <div className="text-sm font-medium text-muted-foreground mb-1">Uptime</div>
-                <div className="text-xl font-bold">{serverStats.uptime}</div>
-              </div>
-              
-              <div className="p-4 rounded-lg border border-border">
-                <div className="text-sm font-medium text-muted-foreground mb-1">Active Connections</div>
-                <div className="text-xl font-bold">{serverStats.activeConnections}</div>
-              </div>
+            <div>
+              <Label className="text-sm text-muted-foreground">System Uptime</Label>
+              <p className="text-sm font-medium mt-1">
+                {statsLoading ? 'Loading...' : systemStats ? 
+                  `${systemStats.uptime_hours} hours` : 
+                  'Not available'}
+              </p>
             </div>
-            
-            <div className="mt-4 text-sm text-muted-foreground">
-              <p>Server statistics are updated every 30 seconds. Last updated: {new Date().toLocaleTimeString()}</p>
+            <div>
+              <Label className="text-sm text-muted-foreground">Camera Count</Label>
+              <p className="text-sm font-medium mt-1">
+                {statsLoading ? 'Loading...' : systemStats ? 
+                  `Total: ${systemStats.total_cameras}, Online: ${systemStats.online_cameras}, Recording: ${systemStats.recording_cameras}` : 
+                  'Not available'}
+              </p>
+            </div>
+            <div>
+              <Label className="text-sm text-muted-foreground">System Version</Label>
+              <p className="text-sm font-medium mt-1">Vision Hub v1.0.0</p>
             </div>
           </div>
-        ) : (
-          <p className="text-muted-foreground">Unable to load server statistics</p>
-        )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Server Settings</CardTitle>
+          <CardDescription>Configure the server behavior</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="serverPort">Server Port</Label>
+              <Input
+                id="serverPort"
+                placeholder="8080"
+                value={settings?.server_port || ''}
+                onChange={e => handlePortChange(e.target.value)}
+                className="max-w-[180px] mt-1.5"
+              />
+              <p className="text-sm text-muted-foreground mt-1.5">
+                Port for the web server. Restart required after change.
+              </p>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="debug" className="block mb-1.5">Debug Mode</Label>
+                <p className="text-sm text-muted-foreground">
+                  Enable detailed logging and debugging tools
+                </p>
+              </div>
+              <Switch 
+                id="debug"
+                checked={!!settings?.debug_mode}
+                onCheckedChange={checked => onSave({ ...settings, debug_mode: checked })}
+                disabled={loading}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="logLevel">Log Level</Label>
+              <Select 
+                value={settings?.log_level || 'info'}
+                onValueChange={value => onSave({ ...settings, log_level: value })}
+                disabled={loading}
+              >
+                <SelectTrigger id="logLevel" className="max-w-[180px] mt-1.5">
+                  <SelectValue placeholder="Select log level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="error">Error</SelectItem>
+                  <SelectItem value="warning">Warning</SelectItem>
+                  <SelectItem value="info">Info</SelectItem>
+                  <SelectItem value="debug">Debug</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground mt-1.5">
+                Level of detail for system logs
+              </p>
+            </div>
+            
+            <div>
+              <Label htmlFor="logRetention">Log Retention (Days)</Label>
+              <Input
+                id="logRetention"
+                type="number"
+                placeholder="30"
+                value={settings?.log_retention_days || '30'}
+                onChange={e => onSave({ ...settings, log_retention_days: parseInt(e.target.value) })}
+                className="max-w-[180px] mt-1.5"
+                disabled={loading}
+              />
+              <p className="text-sm text-muted-foreground mt-1.5">
+                Number of days to keep system logs before automatic deletion
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>System Operations</CardTitle>
+          <CardDescription>Maintenance operations for your system</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Button variant="outline">
+              Restart Service
+            </Button>
+            <Button variant="outline">
+              Run System Diagnostics
+            </Button>
+            <Button variant="outline">
+              Clear Cache
+            </Button>
+            <Button variant="outline">
+              Export System Logs
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
-}
+};
+
+export default GeneralTab;

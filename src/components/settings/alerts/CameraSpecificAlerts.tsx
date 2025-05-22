@@ -29,7 +29,7 @@ const CameraSpecificAlerts = ({ cameras, onAlertLevelChange }: CameraSpecificAle
               </div>
               <div className="flex items-center">
                 <Button variant="ghost" size="icon" className="mr-2">
-                  {camera.motionDetection ? (
+                  {camera.motiondetection ? (
                     <Bell className="h-4 w-4" />
                   ) : (
                     <BellOff className="h-4 w-4" />

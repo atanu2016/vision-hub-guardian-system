@@ -1,64 +1,50 @@
 
-import { Camera, CameraStatus } from "@/types/camera";
+import { Camera } from "@/types/camera";
 
-export interface RecordingDateData {
-  date: string;
-  recordingsCount: number;
-  cameras: {
-    id: string;
-    name: string;
-    recordingsCount: number;
-  }[];
-}
-
-export interface RecordingTimeRange {
-  start: string;
-  end: string;
-}
-
-export interface RecordingCalendarDate {
-  date: string;
-  hasRecordings: boolean;
-  count: number;
-}
-
-// Re-export Camera and CameraStatus for convenience
-export type { Camera, CameraStatus };
-
-// Additional types for recordings
 export interface Recording {
   id: string;
-  cameraId: string;
+  cameraId?: string;
   cameraName: string;
   date: string;
   time: string;
   duration: number;
-  size: string;
   fileSize: string;
-  type: 'motion' | 'continuous' | 'manual';
-  thumbnailUrl?: string;
-  fileUrl?: string;
-  isImportant?: boolean;
+  size?: number;
+  type: "Scheduled" | "Motion" | "Manual";
+  important: boolean;
+  thumbnailUrl: string;
+  dateTime: string;
+}
+
+export interface Camera {
+  id: string;
+  name: string;
+  status: "online" | "offline" | "recording";
+  location: string;
+  ipAddress: string;
+  lastSeen: string;
+  recording: boolean;
 }
 
 export interface StorageInfo {
-  totalSpace: string;
-  usedSpace: string;
-  freeSpace: string;
-  usedPercentage: number;
-  used?: string;
-  recordings: {
-    count: number;
-    size: string;
-  };
+  used: number;
+  total: number;
+  percentage: number;
 }
 
 export interface UseRecordingsReturn {
   recordings: Recording[];
+  filteredRecordings: Recording[];
+  selectedCamera: string;
+  setSelectedCamera: (camera: string) => void;
+  selectedType: string;
+  setSelectedType: (type: string) => void;
   loading: boolean;
-  error: string | null;
-  deleteRecording: (id: string) => Promise<void>;
-  markAsImportant: (id: string, important: boolean) => Promise<void>;
-  downloadRecording: (id: string) => Promise<void>;
-  storageInfo: StorageInfo;
+  cameras: Camera[];
+  storageUsed: StorageInfo;
+  deleteRecording: (id: string) => Promise<boolean>;
+  filterRecordingsByDate: (date: Date | null) => void;
+  dateFilter: Date | null;
+  setDateFilter: (date: Date | null) => void;
+  fetchActualStorageUsage?: () => Promise<void>;
 }

@@ -25,9 +25,21 @@ export interface UserWithCameras {
 }
 
 export interface UseCameraAssignmentReturn {
-  state: CameraAssignmentState;
-  loadUsers: () => Promise<void>;
-  loadCameras: () => Promise<void>;
-  assignCameras: (userId: string, cameraIds: string[]) => Promise<boolean>;
-  reset: () => void;
+  cameras: any[];
+  loading: boolean;
+  saving: boolean;
+  canAssignCameras: boolean;
+  isAuthenticated: boolean;
+  groupedCameras: any[];
+  getAvailableGroups: () => string[];
+  getCamerasByGroup: (group: string) => any[];
+  error: string | null;
+  handleCameraToggle: (cameraId: string) => void;
+  handleSave: () => Promise<boolean>;
+  loadCamerasAndAssignments: () => Promise<void>;
+  state?: CameraAssignmentState;
+  loadUsers?: () => Promise<void>;
+  loadCameras?: () => Promise<void>;
+  assignCameras?: (userId: string, cameraIds: string[]) => Promise<boolean>;
+  reset?: () => void;
 }

@@ -29,6 +29,7 @@ export const useRecordingsFilter = (recordings: Recording[]) => {
     
     if (dateFilter) {
       filtered = filtered.filter(recording => {
+        if (!recording.dateTime) return false;
         const recordingDate = new Date(recording.dateTime).toDateString();
         const filterDate = dateFilter.toDateString();
         return recordingDate === filterDate;

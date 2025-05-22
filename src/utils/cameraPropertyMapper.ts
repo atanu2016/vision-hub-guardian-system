@@ -78,7 +78,7 @@ export const toDatabaseCamera = (uiCamera: CameraUIProps): Camera => {
     username: uiCamera.username,
     password: uiCamera.password,
     location: uiCamera.location,
-    status: uiCamera.status,
+    status: uiCamera.status as "online" | "offline" | "recording",
     lastseen: uiCamera.lastSeen,
     recording: uiCamera.recording,
     motiondetection: uiCamera.motionDetection,

@@ -136,7 +136,10 @@ export function useCameraData() {
       
       // Save to database
       const savedCamera = await saveCamera(dbCamera);
-      setCameras(prev => [...prev, savedCamera]);
+      
+      // Ensure we add a camera with the correct type
+      setCameras(prev => [...prev, savedCamera as Camera]);
+      
       toast({
         title: `${savedCamera.name} has been added successfully`,
       });
