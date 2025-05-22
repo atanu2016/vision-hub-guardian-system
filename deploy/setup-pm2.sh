@@ -26,13 +26,24 @@ module.exports = {
     env: {
       NODE_ENV: 'production',
       PORT: 8080
-    }
+    },
+    error_file: '/var/log/visionhub/app-err.log',
+    out_file: '/var/log/visionhub/app-out.log',
+    log_file: '/var/log/visionhub/combined.log',
+    time: true
   }]
 };
 EOF
 
 # Make sure we stop any running instances first
 pm2 delete $APP_NAME 2>/dev/null || true
+
+# Create log directories
+mkdir -p /var/log/visionhub
+chown -R visionhub:visionhub /var/log/visionhub
+
+# Install missing dependencies if needed
+npm install ws --no-save || true
 
 # Start the application with PM2
 echo "Starting application with PM2..."

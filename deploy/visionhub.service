@@ -11,9 +11,12 @@ ExecStart=/usr/bin/pm2 start ecosystem.config.cjs
 ExecReload=/usr/bin/pm2 reload all
 ExecStop=/usr/bin/pm2 stop all
 Restart=on-failure
-RestartSec=10
-Environment=PATH=/usr/bin:/bin:/usr/local/bin
+RestartSec=30
+Environment=PATH=/usr/bin:/bin:/usr/local/bin:/usr/local/sbin
 Environment=NODE_ENV=production
+
+# Give the service more time to start
+TimeoutStartSec=180
 
 [Install]
 WantedBy=multi-user.target

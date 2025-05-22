@@ -27,11 +27,14 @@ echo "Installing dependencies..."
 echo "Creating application user and directories..."
 useradd -m -s /bin/bash visionhub || true
 
-# Create storage directories with correct permissions first
-echo "Creating storage directories..."
+# Create storage and log directories with correct permissions first
+echo "Creating storage and log directories..."
 mkdir -p /var/lib/visionhub/recordings
+mkdir -p /var/log/visionhub
 chown -R visionhub:visionhub /var/lib/visionhub
+chown -R visionhub:visionhub /var/log/visionhub
 chmod 755 /var/lib/visionhub/recordings
+chmod 755 /var/log/visionhub
 
 # Create and set ownership of application directory
 mkdir -p /opt/visionhub
@@ -57,12 +60,13 @@ systemctl enable visionhub.service
 
 # Try to start the service, but don't fail the whole deployment if it doesn't work
 echo "Starting visionhub service..."
-if ! systemctl start visionhub.service; then
+if ! systemctl restart visionhub.service; then
   echo "WARNING: Service failed to start. Will try manual PM2 setup."
   
   # Try direct PM2 setup as fallback
   cd /opt/visionhub
   sudo -u visionhub pm2 delete all || true
+  sudo -u visionhub npm install ws --no-save || true
   sudo -u visionhub pm2 start ecosystem.config.cjs || {
     echo "WARNING: PM2 direct start failed. Check logs for details."
     echo "You may need to run: cd /opt/visionhub && sudo -u visionhub pm2 start ecosystem.config.cjs"
@@ -122,7 +126,7 @@ cat > /opt/visionhub/healthcheck.sh << EOF
 
 APP_NAME="visionhub"
 SERVICE_URL="http://localhost:8080/health"
-LOG_FILE="/var/log/visionhub-healthcheck.log"
+LOG_FILE="/var/log/visionhub/healthcheck.log"
 
 echo "\$(date): Running health check" >> \$LOG_FILE
 
@@ -167,3 +171,4 @@ echo ""
 echo "To check service status run: systemctl status visionhub.service"
 echo "To check application logs run: journalctl -u visionhub.service"
 echo "To check PM2 logs run: sudo -u visionhub pm2 logs"
+echo "Application logs are also available at: /var/log/visionhub/"

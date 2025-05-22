@@ -10,7 +10,7 @@
 **Solution:**
 1. Verify the GitHub repository URL in `setup-application.sh`:
    ```
-   GITHUB_REPO="https://github.com/yourusername/vision-hub.git"
+   GITHUB_REPO="https://github.com/atanu2016/vision-hub-guardian-system.git"
    ```
 
 2. Check if git is installed:
@@ -68,6 +68,27 @@
    sudo systemctl restart visionhub.service
    ```
 
+### Missing Module Error
+
+**Error:** `Error: Cannot find module 'utf-8-validate'` or similar missing module errors
+
+**Solution:**
+1. This typically happens when PM2 or its dependencies have missing modules:
+   ```
+   cd /opt/visionhub
+   npm install ws utf-8-validate bufferutil --no-save
+   ```
+
+2. If using global PM2, install the modules globally:
+   ```
+   sudo npm install -g ws utf-8-validate bufferutil
+   ```
+
+3. Restart the service:
+   ```
+   sudo systemctl restart visionhub.service
+   ```
+
 ### Script Not Found Errors
 
 **Error:** `Error: Script not found: /opt/visionhub/dist/main.js`
@@ -83,6 +104,7 @@
    cd /opt/visionhub
    nano ecosystem.config.cjs
    ```
+   Change `script: 'main.js'` to `script: 'index.js'` or whatever your main entry file is called.
 
 3. Make sure a valid script exists by creating a basic fallback server:
    ```
@@ -139,8 +161,11 @@
 1. Ensure directories are created with proper permissions:
    ```
    sudo mkdir -p /var/lib/visionhub/recordings
+   sudo mkdir -p /var/log/visionhub
    sudo chown -R visionhub:visionhub /var/lib/visionhub
+   sudo chown -R visionhub:visionhub /var/log/visionhub
    sudo chmod 755 /var/lib/visionhub/recordings
+   sudo chmod 755 /var/log/visionhub
    ```
 
 2. Make sure the directory creation happens before the application setup:
@@ -182,4 +207,7 @@
 - **Test Nginx configuration:** `nginx -t`
 - **Check database status:** `systemctl status postgresql`
 - **Manual PM2 start:** `cd /opt/visionhub && sudo -u visionhub pm2 start ecosystem.config.cjs`
-- **View Vision Hub logs:** `cd /opt/visionhub && sudo -u visionhub pm2 logs`
+- **View Vision Hub logs:** `cd /opt/visionhub && sudo -u visionhub pm2 logs` or `cat /var/log/visionhub/combined.log`
+- **Check system resources:** `htop` or `top`
+- **Check disk space:** `df -h`
+- **Check file permissions:** `ls -la /opt/visionhub/`
