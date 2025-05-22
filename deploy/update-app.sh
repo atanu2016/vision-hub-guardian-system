@@ -20,6 +20,6 @@ npm install
 npm run build
 
 # Restart using PM2
-pm2 restart visionhub
+pm2 reload visionhub || pm2 restart visionhub
 
 echo "===== Vision Hub update completed ====="

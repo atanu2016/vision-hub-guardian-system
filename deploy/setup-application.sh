@@ -43,7 +43,16 @@ LOG_LEVEL=info
 EOF
 
 echo "Building application..."
+# Use the correct build script as defined in package.json
 npm run build
+
+# Create server.js entry point to ensure backward compatibility
+cat > server.js << EOF
+// Server entry point
+// This file exists to maintain compatibility with deployment scripts
+// It simply requires the built application
+require('./dist/main');
+EOF
 
 # Apply database migrations
 echo "Setting up database schema..."

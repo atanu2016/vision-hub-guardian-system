@@ -12,6 +12,7 @@ echo "$(date): Running health check" >> $LOG_FILE
 # Check if the application process is running
 if ! pm2 show $APP_NAME &>/dev/null; then
   echo "$(date): ERROR - $APP_NAME is not running in PM2. Attempting restart..." >> $LOG_FILE
+  cd /opt/visionhub
   pm2 restart $APP_NAME
   sleep 5
 fi

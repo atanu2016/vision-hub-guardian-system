@@ -16,7 +16,7 @@ cat > ecosystem.config.js << EOF
 module.exports = {
   apps: [{
     name: '$APP_NAME',
-    script: 'dist/server.js',  // Adjust based on your build output
+    script: 'dist/main.js',  # Changed from server.js to main.js to match Vite output
     instances: 'max',
     autorestart: true,
     watch: false,
@@ -35,7 +35,7 @@ pm2 start ecosystem.config.js
 # Save PM2 configuration to start on system boot
 pm2 save
 
-echo "To make PM2 start on boot, run: pm2 startup"
-echo "And then run the command it provides"
+echo "To make PM2 start on boot, run the following command:"
+pm2 startup
 
 echo "===== PM2 setup completed ====="

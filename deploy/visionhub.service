@@ -11,6 +11,7 @@ ExecStart=/usr/bin/pm2 start ecosystem.config.js
 ExecReload=/usr/bin/pm2 reload all
 ExecStop=/usr/bin/pm2 stop all
 Restart=on-failure
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
