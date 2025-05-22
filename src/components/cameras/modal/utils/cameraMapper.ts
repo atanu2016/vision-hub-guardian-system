@@ -22,10 +22,10 @@ export function mapFormValuesToCamera(formValues: CameraFormValues, group: strin
     group,
     
     // Fields that depend on connection type
-    ipAddress: ['rtmp', 'hls', 'rtsp'].includes(connectionType) ? "" : ipAddress,
-    port: ['rtmp', 'hls', 'rtsp'].includes(connectionType) ? 0 : parseInt(port || "80"),
-    username: ['rtmp', 'hls', 'rtsp'].includes(connectionType) ? undefined : username || undefined,
-    password: ['rtmp', 'hls', 'rtsp'].includes(connectionType) ? undefined : password || undefined,
+    ipAddress: connectionType === 'ip' || connectionType === 'onvif' ? ipAddress : "",
+    port: connectionType === 'ip' || connectionType === 'onvif' ? parseInt(port || "80") : 0,
+    username: connectionType === 'ip' || connectionType === 'onvif' ? username || undefined : undefined,
+    password: connectionType === 'ip' || connectionType === 'onvif' ? password || undefined : undefined,
     
     // Optional metadata
     model: model || undefined,
