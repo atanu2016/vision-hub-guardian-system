@@ -25,12 +25,7 @@ export const useCameraAdapter = () => {
       hlsUrl: camera.hlsurl,
       onvifPath: camera.onvifpath,
       motionDetection: camera.motiondetection,
-      thumbnail: camera.thumbnail,
-      quality: camera.quality,
-      scheduleType: camera.schedule_type,
-      timeStart: camera.time_start,
-      timeEnd: camera.time_end,
-      daysOfWeek: camera.days_of_week
+      thumbnail: camera.thumbnail
     };
   };
 
@@ -55,12 +50,7 @@ export const useCameraAdapter = () => {
       hlsurl: cameraUI.hlsUrl,
       onvifpath: cameraUI.onvifPath,
       motiondetection: cameraUI.motionDetection,
-      thumbnail: cameraUI.thumbnail,
-      quality: cameraUI.quality,
-      schedule_type: cameraUI.scheduleType,
-      time_start: cameraUI.timeStart,
-      time_end: cameraUI.timeEnd,
-      days_of_week: cameraUI.daysOfWeek
+      thumbnail: cameraUI.thumbnail
     };
   };
 
@@ -84,12 +74,7 @@ export const useCameraAdapter = () => {
       hlsurl: cameraUIParams.hlsUrl,
       onvifpath: cameraUIParams.onvifPath,
       motiondetection: cameraUIParams.motionDetection,
-      thumbnail: cameraUIParams.thumbnail,
-      quality: cameraUIParams.quality,
-      schedule_type: cameraUIParams.scheduleType,
-      time_start: cameraUIParams.timeStart,
-      time_end: cameraUIParams.timeEnd,
-      days_of_week: cameraUIParams.daysOfWeek
+      thumbnail: cameraUIParams.thumbnail
     };
   };
 

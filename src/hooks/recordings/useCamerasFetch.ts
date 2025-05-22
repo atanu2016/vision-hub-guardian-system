@@ -42,13 +42,8 @@ export const useCamerasFetch = () => {
           motiondetection: cam.motiondetection,
           rtmpurl: cam.rtmpurl,
           hlsurl: cam.hlsurl,
-          onvifpath: cam.onvifpath,
-          // Handle optional properties with defaults
-          quality: cam.quality || 'medium',
-          schedule_type: cam.schedule_type || 'always',
-          time_start: cam.time_start || '00:00',
-          time_end: cam.time_end || '23:59',
-          days_of_week: cam.days_of_week || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+          onvifpath: cam.onvifpath
+          // Only include fields that exist in the database schema
         }));
         setCameras(camerasFormatted);
       }

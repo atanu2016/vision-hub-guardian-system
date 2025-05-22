@@ -75,7 +75,8 @@ const StorageForm = ({ initialSettings, isLoading, isSaving, onSave }: StorageFo
   // Update form values when initialSettings changes
   useEffect(() => {
     if (initialSettings) {
-      form.reset(toFormData(initialSettings));
+      const formData = toFormData(initialSettings);
+      form.reset(formData);
     }
     
     // Reset validation status when form values change
@@ -91,7 +92,7 @@ const StorageForm = ({ initialSettings, isLoading, isSaving, onSave }: StorageFo
     setValidationStatus({ status: 'validating', message: 'Validating storage configuration...' });
     
     // Convert form data to StorageSettings type
-    const settings = toDbFormat(values);
+    const settings = toDbFormat(values as StorageFormData);
 
     try {
       const success = await onSave(settings);

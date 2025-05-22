@@ -22,8 +22,14 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
         throw error;
       }
       
-      console.log(`Found ${data?.length || 0} cameras for admin user`);
-      return data || [];
+      // Ensure proper type casting for status
+      const camerasWithCorrectStatus = (data || []).map(cam => ({
+        ...cam,
+        status: (cam.status as CameraStatus) || 'offline'
+      })) as Camera[];
+      
+      console.log(`Found ${camerasWithCorrectStatus.length || 0} cameras for admin user`);
+      return camerasWithCorrectStatus;
     }
     
     // For regular users and observers, get their assigned camera IDs
@@ -49,8 +55,14 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
         return [];
       }
       
-      console.log(`Found ${data?.length || 0} accessible cameras for user`);
-      return data || [];
+      // Ensure proper type casting for status
+      const camerasWithCorrectStatus = (data || []).map(cam => ({
+        ...cam,
+        status: (cam.status as CameraStatus) || 'offline'
+      })) as Camera[];
+      
+      console.log(`Found ${camerasWithCorrectStatus.length || 0} accessible cameras for user`);
+      return camerasWithCorrectStatus;
     } catch (assignmentError) {
       console.error("Error in assignment retrieval:", assignmentError);
       return [];

@@ -26,7 +26,7 @@ const TopBar = () => {
     addNotification 
   } = useNotifications();
   
-  const { adaptCameraParams } = useCameraAdapter();
+  const { adaptCameraParams, toCamera } = useCameraAdapter();
   const pageTitle = getPageTitle(location.pathname);
   
   // Load cameras when component mounts
