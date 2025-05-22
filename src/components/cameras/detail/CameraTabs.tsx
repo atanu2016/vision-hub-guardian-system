@@ -5,8 +5,8 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
-// Define a simple interface with primitive types to avoid type recursion
-interface Recording {
+// Use a simple interface with only the fields we need
+interface RecordingItem {
   id: string;
   time: string;
   duration: number;
@@ -16,7 +16,7 @@ interface Recording {
 }
 
 const CameraTabs = ({ cameraId }: { cameraId?: string }) => {
-  const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [recordings, setRecordings] = useState<RecordingItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -28,21 +28,27 @@ const CameraTabs = ({ cameraId }: { cameraId?: string }) => {
   const loadRecordings = async (cameraId: string) => {
     setIsLoading(true);
     try {
-      // Explicitly type the response to avoid type recursion
-      const { data, error } = await supabase
-        .from('recordings')
-        .select('id, time, duration, type, file_size, date')
-        .eq('camera_id', cameraId)
-        .order('date_time', { ascending: false })
-        .limit(10);
+      // Use a plain JS fetch to avoid TypeScript recursion issues with Supabase client
+      const response = await fetch(
+        `${supabase.supabaseUrl}/rest/v1/recordings?camera_id=eq.${cameraId}&select=id,time,duration,type,file_size,date&order=date_time.desc&limit=10`,
+        {
+          headers: {
+            "apikey": supabase.supabaseKey,
+            "Content-Type": "application/json",
+          },
+        }
+      );
       
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
       
-      // Transform data safely without type recursion
-      const formattedRecordings: Recording[] = [];
+      const data = await response.json();
       
-      if (data && Array.isArray(data)) {
-        // Use regular for loop to avoid any potential typing issues
+      // Transform data safely
+      const formattedRecordings: RecordingItem[] = [];
+      
+      if (Array.isArray(data)) {
         for (let i = 0; i < data.length; i++) {
           const item = data[i];
           formattedRecordings.push({
