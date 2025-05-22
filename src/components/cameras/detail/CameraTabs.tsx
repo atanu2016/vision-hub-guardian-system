@@ -2,7 +2,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, supabaseUrl } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
 // Use a simple interface with only the fields we need
@@ -30,10 +30,10 @@ const CameraTabs = ({ cameraId }: { cameraId?: string }) => {
     try {
       // Use a plain JS fetch to avoid TypeScript recursion issues with Supabase client
       const response = await fetch(
-        `${supabase.supabaseUrl}/rest/v1/recordings?camera_id=eq.${cameraId}&select=id,time,duration,type,file_size,date&order=date_time.desc&limit=10`,
+        `${supabaseUrl}/rest/v1/recordings?camera_id=eq.${cameraId}&select=id,time,duration,type,file_size,date&order=date_time.desc&limit=10`,
         {
           headers: {
-            "apikey": supabase.supabaseKey,
+            "apikey": process.env.SUPABASE_ANON_KEY || "",
             "Content-Type": "application/json",
           },
         }

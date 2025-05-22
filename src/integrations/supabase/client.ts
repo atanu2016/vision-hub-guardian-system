@@ -3,13 +3,14 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = "https://csmsqglfbycodrqipbca.supabase.co";
+export const supabaseUrl = "https://csmsqglfbycodrqipbca.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNzbXNxZ2xmYnljb2RycWlwYmNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxNzQ0NjYsImV4cCI6MjA2Mjc1MDQ2Nn0.fmwXi68rSFHfij8nv4CadbSNIoWTDFRipLBVrwSAPOw";
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+export const supabase = createClient<Database>(supabaseUrl, SUPABASE_PUBLISHABLE_KEY);
 
 // Export the URL separately for UI display purposes
-export const supabaseUrl = SUPABASE_URL;
+export const supabaseKey = SUPABASE_PUBLISHABLE_KEY;
+
