@@ -1,24 +1,21 @@
 
 import { StorageSettings } from "@/types/camera";
 
-// Define the UI-friendly version of StorageSettings
+// Type definition for the form data format
 export interface StorageFormData {
   type: "local" | "nas" | "s3" | "dropbox" | "google_drive" | "onedrive" | "azure_blob" | "backblaze";
   path?: string;
   retentionDays: number;
   overwriteOldest: boolean;
-  // NAS fields
   nasAddress?: string;
   nasPath?: string;
   nasUsername?: string;
   nasPassword?: string;
-  // S3 fields
   s3Endpoint?: string;
   s3Bucket?: string;
   s3AccessKey?: string;
   s3SecretKey?: string;
   s3Region?: string;
-  // Cloud storage fields
   dropboxToken?: string;
   dropboxFolder?: string;
   googleDriveToken?: string;
@@ -36,7 +33,7 @@ export const useStorageAdapter = () => {
   // Convert DB format to form format
   const toFormData = (settings: StorageSettings): StorageFormData => {
     return {
-      type: settings.type as StorageFormData["type"],
+      type: settings.type,
       path: settings.path,
       retentionDays: settings.retentiondays,
       overwriteOldest: settings.overwriteoldest,
@@ -59,7 +56,7 @@ export const useStorageAdapter = () => {
       azureContainer: settings.azurecontainer,
       backblazeKeyId: settings.backblazekeyid,
       backblazeApplicationKey: settings.backblazeapplicationkey,
-      backblazeBucket: settings.backblazebucket,
+      backblazeBucket: settings.backblazebucket
     };
   };
 
@@ -89,7 +86,7 @@ export const useStorageAdapter = () => {
       azurecontainer: formData.azureContainer,
       backblazekeyid: formData.backblazeKeyId,
       backblazeapplicationkey: formData.backblazeApplicationKey,
-      backblazebucket: formData.backblazeBucket,
+      backblazebucket: formData.backblazeBucket
     };
   };
 

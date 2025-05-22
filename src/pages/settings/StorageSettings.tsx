@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import AppLayout from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StorageSettings as StorageSettingsType } from "@/types/camera";
@@ -60,56 +61,58 @@ const StorageSettings = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Storage Settings</h1>
-        <p className="text-muted-foreground">
-          Manage your system's storage usage and retention policies
-        </p>
+    <AppLayout>
+      <div className="container mx-auto px-4 py-6 space-y-6 max-w-4xl">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Storage Settings</h1>
+          <p className="text-muted-foreground">
+            Manage your system's storage usage and retention policies
+          </p>
+        </div>
+
+        <Tabs defaultValue="usage" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="usage">Storage Usage</TabsTrigger>
+            <TabsTrigger value="settings">Storage Configuration</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="usage" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Storage Usage</CardTitle>
+                <CardDescription>
+                  View your current storage usage and manage recordings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <StorageUsageDisplay
+                  storageUsage={displayUsage}
+                  retentionDays={settings.retentiondays}
+                  isClearing={isClearing}
+                  onClearStorage={handleClearStorage}
+                  onRefreshStorage={handleRefreshStorage}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-4">
+            <StorageForm
+              initialSettings={settings}
+              isLoading={isLoading}
+              isSaving={isSaving}
+              onSave={async (updatedSettings) => {
+                const success = await handleSaveSettings(updatedSettings);
+                if (success) {
+                  setSettings(updatedSettings);
+                }
+                return success;
+              }}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
-
-      <Tabs defaultValue="usage" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="usage">Storage Usage</TabsTrigger>
-          <TabsTrigger value="settings">Storage Configuration</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="usage" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Storage Usage</CardTitle>
-              <CardDescription>
-                View your current storage usage and manage recordings
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <StorageUsageDisplay
-                storageUsage={displayUsage}
-                retentionDays={settings.retentiondays}
-                isClearing={isClearing}
-                onClearStorage={handleClearStorage}
-                onRefreshStorage={handleRefreshStorage}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="settings" className="space-y-4">
-          <StorageForm
-            initialSettings={settings}
-            isLoading={isLoading}
-            isSaving={isSaving}
-            onSave={async (updatedSettings) => {
-              const success = await handleSaveSettings(updatedSettings);
-              if (success) {
-                setSettings(updatedSettings);
-              }
-              return success;
-            }}
-          />
-        </TabsContent>
-      </Tabs>
-    </div>
+    </AppLayout>
   );
 };
 

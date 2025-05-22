@@ -28,7 +28,7 @@ const CameraCard = ({ camera, onDelete }: CameraCardProps) => {
         try {
           // This would be a real API call to check stream availability in production
           // For now we'll simulate an API call with a timeout
-          const hasStreamingUrl = Boolean(cameraUI.rtmpUrl?.length > 0 || cameraUI.hlsUrl?.length > 0);
+          const hasStreamingUrl = Boolean(cameraUI.rtmpUrl?.length > 0);
           
           // For demo purposes, simulate a delay like we'd have with a real API call
           await new Promise(resolve => setTimeout(resolve, 500));
@@ -58,7 +58,7 @@ const CameraCard = ({ camera, onDelete }: CameraCardProps) => {
       setIsLiveStream(false);
       setStreamChecked(true);
     }
-  }, [camera.status, cameraUI.rtmpUrl, cameraUI.hlsUrl, camera.name]);
+  }, [camera.status, cameraUI.rtmpUrl, camera.name]);
 
   // Camera is considered online ONLY if both its status is "online" AND it has a live stream
   const isOnline = camera.status === "online";

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { Camera } from "@/types/camera";
 import { useToast } from "@/hooks/use-toast";
@@ -25,7 +24,7 @@ export function useCameraData() {
   const { toast } = useToast();
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [loading, setLoading] = useState(true);
-  const [includeSampleCamera, setIncludeSampleCamera] = useState(true);
+  const [includeSampleCamera, setIncludeSampleCamera] = useState(false); // Changed default to false
   const { adaptCameraParams, toCameraUIProps } = useCameraAdapter();
   
   // Initialize system and load cameras
@@ -53,22 +52,8 @@ export function useCameraData() {
     try {
       const camerasData = await getCameras();
       
-      // Add sample HLS camera if enabled
-      if (includeSampleCamera) {
-        // Check if sample camera already exists in the database
-        const sampleExists = camerasData.some(camera => 
-          camera.id === sampleHLSCamera.id || 
-          (camera.hlsurl === sampleHLSCamera.hlsurl && camera.connectiontype === 'hls')
-        );
-        
-        if (!sampleExists) {
-          setCameras([...camerasData, sampleHLSCamera]);
-        } else {
-          setCameras(camerasData);
-        }
-      } else {
-        setCameras(camerasData);
-      }
+      // We're no longer adding the sample HLS camera by default
+      setCameras(camerasData);
     } catch (error) {
       console.error('Error fetching cameras:', error);
       toast({
@@ -77,18 +62,14 @@ export function useCameraData() {
         variant: "destructive"
       });
       
-      // Still show the sample camera if there's an error
-      if (includeSampleCamera) {
-        setCameras([sampleHLSCamera]);
-      } else {
-        setCameras([]);
-      }
+      // Show empty state when there's an error, no longer defaulting to sample camera
+      setCameras([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Toggle the sample camera
+  // Toggle the sample camera functionality remains but is disabled by default
   const toggleSampleCamera = () => {
     setIncludeSampleCamera(prev => !prev);
   };
