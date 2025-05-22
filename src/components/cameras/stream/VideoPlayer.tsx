@@ -1,7 +1,6 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Camera } from "@/types/camera";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 interface VideoPlayerProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -10,22 +9,28 @@ interface VideoPlayerProps {
   autoPlay: boolean;
 }
 
-export const VideoPlayer: React.FC<VideoPlayerProps> = ({
-  videoRef,
-  camera,
-  isMuted,
-  autoPlay
+export const VideoPlayer: React.FC<VideoPlayerProps> = ({ 
+  videoRef, 
+  camera, 
+  isMuted, 
+  autoPlay 
 }) => {
+  // Add CORS handling for local network connections
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.crossOrigin = "anonymous";
+    }
+  }, [videoRef]);
+  
   return (
-    <AspectRatio ratio={16/9}>
-      <video
-        ref={videoRef}
-        className="w-full h-full object-contain"
-        poster={camera.thumbnail || '/placeholder.svg'}
-        muted={isMuted}
-        playsInline
-        autoPlay={autoPlay}
-      />
-    </AspectRatio>
+    <video
+      ref={videoRef}
+      muted={isMuted}
+      playsInline
+      autoPlay={autoPlay}
+      className="h-full w-full object-contain bg-vision-dark-900"
+      controls={false}
+      onContextMenu={(e) => e.preventDefault()}
+    />
   );
 };
