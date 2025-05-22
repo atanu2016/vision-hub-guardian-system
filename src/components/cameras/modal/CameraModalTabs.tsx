@@ -31,12 +31,14 @@ const CameraModalTabs = ({
   formValues,
   onChange
 }: CameraModalTabsProps) => {
-  console.log("CameraModalTabs rendered, connectionType:", connectionType);
-  console.log("Form values in Tabs:", formValues);
+  const handleTabChange = (tab: string) => {
+    console.log("Tab changed to:", tab);
+    onTabChange(tab);
+  };
   
   return (
     <div>
-      <Tabs value={connectionTab} onValueChange={onTabChange} className="w-full">
+      <Tabs value={connectionTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid grid-cols-5 mb-4">
           <TabsTrigger value="ip">IP</TabsTrigger>
           <TabsTrigger value="rtsp">RTSP</TabsTrigger>

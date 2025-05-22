@@ -18,12 +18,19 @@ export const fetchCamerasFromDB = async (): Promise<Camera[]> => {
     
     // Transform the data to match our Camera type
     const cameras: Camera[] = data.map(cam => {
-      // For RTSP and HLS connection types, use rtmpurl as a fallback
-      // since rtspurl and hlsurl don't exist in the database yet
-      let streamUrl: string | undefined = undefined;
+      // For each connection type, use the rtmpurl field for backward compatibility
+      // This is because rtspurl and hlsurl don't exist in the database yet
+      let rtmpUrl = cam.rtmpurl;
+      let rtspUrl = undefined;
+      let hlsUrl = undefined;
       
-      if (cam.connectiontype === 'rtsp' || cam.connectiontype === 'hls') {
-        streamUrl = cam.rtmpurl; // Use rtmpurl for both types as a fallback
+      // Set the appropriate URL based on connection type
+      if (cam.connectiontype === 'rtsp') {
+        rtspUrl = cam.rtmpurl; // Use rtmpurl for rtsp as a fallback
+      } else if (cam.connectiontype === 'hls') {
+        hlsUrl = cam.rtmpurl; // Use rtmpurl for hls as a fallback
+      } else if (cam.connectiontype === 'rtmp') {
+        rtmpUrl = cam.rtmpurl;
       }
       
       return {
@@ -42,14 +49,15 @@ export const fetchCamerasFromDB = async (): Promise<Camera[]> => {
         thumbnail: cam.thumbnail || undefined,
         group: cam.group || undefined,
         connectionType: (cam.connectiontype as "ip" | "rtsp" | "rtmp" | "onvif" | "hls") || "ip",
-        rtmpUrl: cam.connectiontype === 'rtmp' ? cam.rtmpurl : undefined,
-        rtspUrl: cam.connectiontype === 'rtsp' ? streamUrl : undefined,
-        hlsUrl: cam.connectiontype === 'hls' ? streamUrl : undefined,
+        rtmpUrl: rtmpUrl || undefined,
+        rtspUrl: rtspUrl || undefined,
+        hlsUrl: hlsUrl || undefined,
         onvifPath: cam.onvifpath || undefined,
         motionDetection: cam.motiondetection || false
       };
     });
     
+    console.log("Fetched and processed cameras:", cameras);
     return cameras;
   } catch (error) {
     throw logDatabaseError(error, "Failed to fetch cameras");

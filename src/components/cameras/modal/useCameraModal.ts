@@ -20,6 +20,7 @@ export function useCameraModal({ isOpen, onClose, onAdd, existingGroups }: UseCa
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Submitting form with values:", formState);
 
     // Validate form
     const { isValid, errorMessage } = validateCameraForm(formState);
@@ -56,6 +57,7 @@ export function useCameraModal({ isOpen, onClose, onAdd, existingGroups }: UseCa
       
       // Map form values to camera object
       const newCamera = mapFormValuesToCamera(formState, finalGroup);
+      console.log("Mapped camera object:", newCamera);
       
       onAdd(newCamera);
       toast({

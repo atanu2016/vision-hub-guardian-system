@@ -34,6 +34,7 @@ export function useCameraForm() {
   
   // Field change handler
   const handleFieldChange = useCallback((field: string, value: string) => {
+    console.log(`Changing field ${field} to:`, value);
     setFormState(prev => ({
       ...prev,
       [field]: value
@@ -42,12 +43,13 @@ export function useCameraForm() {
   
   // Handle connection tab change
   const handleTabChange = useCallback((tab: string) => {
+    console.log(`Changing tab to: ${tab}`);
     const connectionType = tab as CameraConnectionType;
     
     setFormState(prev => ({
       ...prev,
       connectionTab: tab,
-      connectionType 
+      connectionType
     }));
   }, []);
 
