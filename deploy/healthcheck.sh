@@ -9,6 +9,13 @@ LOG_FILE="/var/log/visionhub-healthcheck.log"
 
 echo "$(date): Running health check" >> $LOG_FILE
 
+# Check if PM2 is running
+if ! pgrep -x "pm2" > /dev/null; then
+  echo "$(date): ERROR - PM2 is not running. Starting PM2..." >> $LOG_FILE
+  systemctl restart visionhub.service
+  sleep 10
+fi
+
 # Check if the application process is running
 if ! pm2 show $APP_NAME &>/dev/null; then
   echo "$(date): ERROR - $APP_NAME is not running in PM2. Attempting restart..." >> $LOG_FILE

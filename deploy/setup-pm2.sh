@@ -16,8 +16,9 @@ cat > ecosystem.config.js << EOF
 module.exports = {
   apps: [{
     name: '$APP_NAME',
-    script: 'dist/main.js',  # Changed from server.js to main.js to match Vite output
-    instances: 'max',
+    script: 'dist/main.js',
+    instances: 1,
+    exec_mode: 'fork',
     autorestart: true,
     watch: false,
     max_memory_restart: '1G',
@@ -36,6 +37,6 @@ pm2 start ecosystem.config.js
 pm2 save
 
 echo "To make PM2 start on boot, run the following command:"
-pm2 startup
+echo "pm2 startup systemd -u visionhub --hp /home/visionhub"
 
 echo "===== PM2 setup completed ====="

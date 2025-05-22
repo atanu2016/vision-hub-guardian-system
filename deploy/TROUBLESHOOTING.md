@@ -1,4 +1,3 @@
-
 # Vision Hub Deployment Troubleshooting Guide
 
 ## Common Issues and Solutions
@@ -57,6 +56,40 @@
 4. Restart PM2:
    ```
    pm2 reload visionhub
+   ```
+
+**Error:** `ERR_REQUIRE_ESM`
+
+**Solution:**
+1. This error occurs when PM2 tries to run an ES module with CommonJS:
+   ```
+   systemctl status visionhub.service
+   ```
+
+2. Update the ecosystem.config.js file:
+   ```
+   cd /opt/visionhub
+   nano ecosystem.config.js
+   ```
+   
+3. Change the configuration to:
+   ```javascript
+   module.exports = {
+     apps: [{
+       name: 'visionhub',
+       script: 'dist/main.js',
+       instances: 1,
+       exec_mode: 'fork',
+       env: {
+         NODE_ENV: 'production'
+       }
+     }]
+   }
+   ```
+
+4. Restart the service:
+   ```
+   systemctl restart visionhub.service
    ```
 
 ### Database Connection Issues

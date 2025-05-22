@@ -46,7 +46,16 @@ echo "Setting up systemd service..."
 cp ./visionhub.service /etc/systemd/system/ || handle_error "Failed to copy systemd service file"
 systemctl daemon-reload
 systemctl enable visionhub.service
-systemctl start visionhub.service || echo "Warning: Service failed to start. Check logs with 'journalctl -u visionhub.service'"
+systemctl start visionhub.service
+
+# Check if service started correctly
+sleep 5
+if ! systemctl is-active --quiet visionhub.service; then
+  echo "WARNING: Service failed to start. Check logs with 'journalctl -u visionhub.service'"
+  journalctl -u visionhub.service --no-pager -n 50
+else
+  echo "Service started successfully."
+fi
 
 # 7. Setup automated backups
 echo "Setting up automated backups..."
@@ -65,3 +74,4 @@ echo ""
 echo "To check service status run: systemctl status visionhub.service"
 echo "To check application logs run: journalctl -u visionhub.service"
 echo "To check PM2 logs run: sudo -u visionhub pm2 logs"
+

@@ -12,6 +12,8 @@ ExecReload=/usr/bin/pm2 reload all
 ExecStop=/usr/bin/pm2 stop all
 Restart=on-failure
 RestartSec=10
+Environment=PATH=/usr/bin:/bin:/usr/local/bin
+Environment=NODE_ENV=production
 
 [Install]
 WantedBy=multi-user.target
