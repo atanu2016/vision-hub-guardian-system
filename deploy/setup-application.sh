@@ -4,6 +4,7 @@
 # Run as the application user
 
 VISION_HUB_DIR="/opt/visionhub"
+GITHUB_REPO="https://github.com/yourusername/vision-hub.git"  # Replace with your actual GitHub repo URL
 
 echo "===== Setting up Vision Hub Application ====="
 
@@ -11,12 +12,20 @@ echo "===== Setting up Vision Hub Application ====="
 mkdir -p $VISION_HUB_DIR
 cd $VISION_HUB_DIR
 
-# Clone or copy application (assuming Git repository)
-# git clone https://your-repo-url.git .
-# OR copy the application files
-echo "Copy your application files to $VISION_HUB_DIR"
-echo "Press Enter after copying the files..."
-read -p ""
+# Clone application from GitHub
+echo "Cloning application from GitHub repository..."
+if [ -d ".git" ]; then
+  echo "Git repository already exists. Pulling latest changes..."
+  git pull
+else
+  echo "Cloning fresh repository..."
+  git clone $GITHUB_REPO .
+  if [ $? -ne 0 ]; then
+    echo "Failed to clone repository. Please check the repository URL and your internet connection."
+    echo "You can manually copy the application files to $VISION_HUB_DIR and press Enter to continue."
+    read -p ""
+  fi
+fi
 
 # Install dependencies
 npm install

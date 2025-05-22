@@ -3,6 +3,11 @@
 
 This directory contains scripts and configuration files for deploying Vision Hub on an Ubuntu server.
 
+## Before Deployment
+
+1. **Update GitHub Repository URL**:
+   - Edit `setup-application.sh` and change the `GITHUB_REPO` variable to your Vision Hub repository URL.
+
 ## Deployment Steps
 
 1. **Prepare the server**:
@@ -45,6 +50,13 @@ This directory contains scripts and configuration files for deploying Vision Hub
    sudo chmod +x /etc/cron.daily/visionhub-backup
    ```
 
+## One-Step Deployment
+
+For a complete automated deployment, run:
+```bash
+sudo ./deploy/deploy.sh
+```
+
 ## Environment Configuration
 
 - Edit the `.env` file in the application directory to configure your environment settings.
@@ -63,3 +75,4 @@ This directory contains scripts and configuration files for deploying Vision Hub
 - Check application logs: `sudo journalctl -u visionhub`
 - Check PM2 logs: `pm2 logs`
 - Check Nginx logs: `sudo tail -f /var/log/nginx/error.log`
+- See TROUBLESHOOTING.md for common issues and solutions

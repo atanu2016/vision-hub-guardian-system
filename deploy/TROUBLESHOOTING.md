@@ -3,6 +3,36 @@
 
 ## Common Issues and Solutions
 
+### GitHub Repository Issues
+
+**Error:** `Failed to clone repository`
+
+**Solution:**
+1. Verify the GitHub repository URL in `setup-application.sh`:
+   ```
+   GITHUB_REPO="https://github.com/yourusername/vision-hub.git"
+   ```
+
+2. Check if git is installed:
+   ```
+   git --version
+   ```
+
+3. Make sure you have internet connectivity:
+   ```
+   ping github.com
+   ```
+
+4. If using a private repository, set up SSH keys or provide credentials:
+   ```
+   git clone https://username:personal-access-token@github.com/yourusername/vision-hub.git
+   ```
+
+5. Manually copy files if Git doesn't work:
+   ```
+   scp -r /path/to/local/vision-hub/ visionhub@server:/opt/visionhub/
+   ```
+
 ### Application Fails to Start
 
 **Error:** `Error: Script not found: /opt/visionhub/dist/server.js`
