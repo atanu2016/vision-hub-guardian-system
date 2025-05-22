@@ -3,6 +3,7 @@ import React from "react";
 import { Camera } from "@/types/camera";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Info, WifiOff } from "lucide-react";
+import { toUICamera } from "@/utils/cameraPropertyMapper";
 
 interface CameraDetailsProps {
   camera: Camera;
@@ -10,8 +11,11 @@ interface CameraDetailsProps {
 }
 
 const CameraDetails: React.FC<CameraDetailsProps> = ({ camera, isStreaming = false }) => {
+  // Convert to UI format for consistent property access
+  const cameraUI = toUICamera(camera);
+  
   // A camera is truly online only if both its status is "online" AND the stream is available
-  const isTrulyOnline = camera.status === "online" && isStreaming;
+  const isTrulyOnline = cameraUI.status === "online" && isStreaming;
   
   return (
     <Card>
@@ -30,31 +34,31 @@ const CameraDetails: React.FC<CameraDetailsProps> = ({ camera, isStreaming = fal
                 <span className="text-green-500">Online</span>
               ) : (
                 <span className="text-red-500 flex items-center gap-1">
-                  <WifiOff size={12} /> {camera.status === "online" ? "Stream Unavailable" : "Offline"}
+                  <WifiOff size={12} /> {cameraUI.status === "online" ? "Stream Unavailable" : "Offline"}
                 </span>
               )}
             </p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Location</p>
-            <p className="font-medium">{camera.location || "Not specified"}</p>
+            <p className="font-medium">{cameraUI.location || "Not specified"}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">IP Address</p>
-            <p className="font-medium">{camera.ipAddress}</p>
+            <p className="font-medium">{cameraUI.ipAddress}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Model</p>
-            <p className="font-medium">{camera.model || "Unknown"}</p>
+            <p className="font-medium">{cameraUI.model || "Unknown"}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Connection Type</p>
-            <p className="font-medium">{camera.connectionType?.toUpperCase() || "IP"}</p>
+            <p className="font-medium">{cameraUI.connectionType?.toUpperCase() || "IP"}</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Last Seen</p>
             <p className="font-medium">
-              {new Date(camera.lastSeen).toLocaleString()}
+              {new Date(cameraUI.lastSeen).toLocaleString()}
             </p>
           </div>
         </div>

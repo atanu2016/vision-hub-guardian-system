@@ -2,6 +2,7 @@
 import { Camera } from "@/types/camera";
 import { Separator } from "@/components/ui/separator";
 import { useState, useEffect } from "react";
+import { toUICamera } from "@/utils/cameraPropertyMapper";
 
 interface CameraDetailsCardProps {
   camera: Camera;
@@ -9,6 +10,8 @@ interface CameraDetailsCardProps {
 
 const CameraDetailsCard = ({ camera }: CameraDetailsCardProps) => {
   const [isStreaming, setIsStreaming] = useState(false);
+  // Convert to UI format for consistent property access
+  const cameraUI = toUICamera(camera);
   
   useEffect(() => {
     // Only check streaming status if the camera is marked as online
@@ -17,7 +20,7 @@ const CameraDetailsCard = ({ camera }: CameraDetailsCardProps) => {
         try {
           // In a real implementation, this would be an actual API call
           // For demo purposes, we're checking if stream URL exists and simulating success/failure
-          const hasStreamUrl = Boolean(camera.rtmpUrl?.length > 0 || camera.hlsUrl?.length > 0);
+          const hasStreamUrl = Boolean(cameraUI.rtmpUrl?.length > 0 || cameraUI.hlsUrl?.length > 0);
           
           if (hasStreamUrl) {
             // Simulate a 70% chance of stream being available
@@ -36,7 +39,7 @@ const CameraDetailsCard = ({ camera }: CameraDetailsCardProps) => {
     } else {
       setIsStreaming(false);
     }
-  }, [camera.status, camera.rtmpUrl, camera.hlsUrl]);
+  }, [camera.status, cameraUI.rtmpUrl, cameraUI.hlsUrl]);
   
   // A camera is truly online only if both its status is "online" AND the stream is available
   const isTrulyOnline = camera.status === "online" && isStreaming;
@@ -47,27 +50,27 @@ const CameraDetailsCard = ({ camera }: CameraDetailsCardProps) => {
       <div className="space-y-4">
         <div>
           <p className="text-sm text-muted-foreground">Location</p>
-          <p>{camera.location}</p>
+          <p>{cameraUI.location}</p>
         </div>
         <Separator />
         <div>
           <p className="text-sm text-muted-foreground">Model</p>
-          <p>{camera.model || "Not specified"}</p>
+          <p>{cameraUI.model || "Not specified"}</p>
         </div>
         <Separator />
         <div>
           <p className="text-sm text-muted-foreground">Manufacturer</p>
-          <p>{camera.manufacturer || "Not specified"}</p>
+          <p>{cameraUI.manufacturer || "Not specified"}</p>
         </div>
         <Separator />
         <div>
           <p className="text-sm text-muted-foreground">IP Address</p>
-          <p>{camera.ipAddress}:{camera.port}</p>
+          <p>{cameraUI.ipAddress}:{cameraUI.port}</p>
         </div>
         <Separator />
         <div>
           <p className="text-sm text-muted-foreground">Connection Type</p>
-          <p>{camera.connectionType?.toUpperCase() || "IP"}</p>
+          <p>{cameraUI.connectionType?.toUpperCase() || "IP"}</p>
         </div>
         <Separator />
         <div>

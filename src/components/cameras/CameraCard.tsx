@@ -7,6 +7,7 @@ import CameraStatusIndicator from "./card/CameraStatusIndicator";
 import CameraThumbnail from "./card/CameraThumbnail";
 import CameraInfo from "./card/CameraInfo";
 import CameraFooter from "./card/CameraFooter";
+import { toUICamera } from "@/utils/cameraPropertyMapper";
 
 interface CameraCardProps {
   camera: Camera;
@@ -16,6 +17,8 @@ interface CameraCardProps {
 const CameraCard = ({ camera, onDelete }: CameraCardProps) => {
   const [isLiveStream, setIsLiveStream] = useState(false);
   const [streamChecked, setStreamChecked] = useState(false);
+  // Convert to UI format for consistent property access
+  const cameraUI = toUICamera(camera);
 
   // Check if the camera stream is actually available
   useEffect(() => {
@@ -25,7 +28,7 @@ const CameraCard = ({ camera, onDelete }: CameraCardProps) => {
         try {
           // This would be a real API call to check stream availability in production
           // For now we'll simulate an API call with a timeout
-          const hasStreamingUrl = Boolean(camera.rtmpUrl?.length > 0 || camera.hlsUrl?.length > 0);
+          const hasStreamingUrl = Boolean(cameraUI.rtmpUrl?.length > 0 || cameraUI.hlsUrl?.length > 0);
           
           // For demo purposes, simulate a delay like we'd have with a real API call
           await new Promise(resolve => setTimeout(resolve, 500));
@@ -55,7 +58,7 @@ const CameraCard = ({ camera, onDelete }: CameraCardProps) => {
       setIsLiveStream(false);
       setStreamChecked(true);
     }
-  }, [camera.status, camera.rtmpUrl, camera.hlsUrl, camera.name]);
+  }, [camera.status, cameraUI.rtmpUrl, cameraUI.hlsUrl, camera.name]);
 
   // Camera is considered online ONLY if both its status is "online" AND it has a live stream
   const isOnline = camera.status === "online";
@@ -89,7 +92,7 @@ const CameraCard = ({ camera, onDelete }: CameraCardProps) => {
         
         <CardFooter className="p-4 pt-0 text-xs text-muted-foreground">
           <CameraFooter 
-            ipAddress={camera.ipAddress} 
+            ipAddress={cameraUI.ipAddress} 
             isRecording={isRecording}
             isStreaming={isLiveStream}
           />

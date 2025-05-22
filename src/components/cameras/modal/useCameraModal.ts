@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Camera, CameraConnectionType } from "@/types/camera";
+import { CameraUIProps, toDatabaseCamera } from "@/utils/cameraPropertyMapper"; 
 import { useToast } from "@/hooks/use-toast";
 
 interface UseCameraModalProps {
@@ -88,53 +89,89 @@ export function useCameraModal({ isOpen, onClose, onAdd, existingGroups }: UseCa
 
     // Basic validation
     if (!name || !location) {
-      toast.error("Please fill in all required fields");
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
       return;
     }
 
     // Connection type specific validation
     if (connectionType === "ip") {
       if (!ipAddress || !port) {
-        toast.error("IP address and port are required");
+        toast({
+          title: "Error",
+          description: "IP address and port are required",
+          variant: "destructive"
+        });
         return;
       }
 
       // Simple IP validation
       const ipRegex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
       if (!ipRegex.test(ipAddress)) {
-        toast.error("Please enter a valid IP address");
+        toast({
+          title: "Error",
+          description: "Please enter a valid IP address",
+          variant: "destructive"
+        });
         return;
       }
     } else if (connectionType === "rtmp") {
       if (!rtmpUrl) {
-        toast.error("RTMP URL is required");
+        toast({
+          title: "Error",
+          description: "RTMP URL is required",
+          variant: "destructive"
+        });
         return;
       }
       
       // Basic RTMP URL validation
       if (!rtmpUrl.startsWith("rtmp://")) {
-        toast.error("RTMP URL should start with rtmp://");
+        toast({
+          title: "Error",
+          description: "RTMP URL should start with rtmp://",
+          variant: "destructive"
+        });
         return;
       }
     } else if (connectionType === "hls") {
       if (!hlsUrl) {
-        toast.error("HLS URL is required");
+        toast({
+          title: "Error",
+          description: "HLS URL is required",
+          variant: "destructive"
+        });
         return;
       }
       
       // Basic HLS URL validation
       if (!hlsUrl.includes(".m3u8")) {
-        toast.error("HLS URL should include .m3u8 format");
+        toast({
+          title: "Error",
+          description: "HLS URL should include .m3u8 format",
+          variant: "destructive"
+        });
         return;
       }
     } else if (connectionType === "onvif") {
       if (!ipAddress || !port) {
-        toast.error("IP address and port are required for ONVIF");
+        toast({
+          title: "Error",
+          description: "IP address and port are required for ONVIF",
+          variant: "destructive"
+        });
         return;
       }
       
       if (!username || !password) {
-        toast.error("Username and password are required for ONVIF");
+        toast({
+          title: "Error",
+          description: "Username and password are required for ONVIF",
+          variant: "destructive"
+        });
         return;
       }
     }
@@ -144,7 +181,11 @@ export function useCameraModal({ isOpen, onClose, onAdd, existingGroups }: UseCa
     if (group === "new" && newGroupName) {
       finalGroup = newGroupName.trim();
     } else if (group === "new" && !newGroupName) {
-      toast.error("Please provide a name for the new group");
+      toast({
+        title: "Error",
+        description: "Please provide a name for the new group",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -155,7 +196,8 @@ export function useCameraModal({ isOpen, onClose, onAdd, existingGroups }: UseCa
       // In a real app, this would make an API call to verify the camera connection
       await simulateConnectionTest();
       
-      const newCamera: Omit<Camera, "id"> = {
+      // Create camera in UI format first
+      const newCameraUI: Omit<CameraUIProps, "id" | "lastSeen"> = {
         name,
         location,
         ipAddress: ['rtmp', 'hls'].includes(connectionType) ? "" : ipAddress,
@@ -165,7 +207,6 @@ export function useCameraModal({ isOpen, onClose, onAdd, existingGroups }: UseCa
         status: "online", // Assuming successful verification sets it to online
         model,
         manufacturer,
-        lastSeen: new Date().toISOString(),
         recording: false,
         group: finalGroup,
         connectionType,
@@ -174,12 +215,29 @@ export function useCameraModal({ isOpen, onClose, onAdd, existingGroups }: UseCa
         onvifPath: connectionType === "onvif" ? onvifPath : undefined,
       };
 
-      onAdd(newCamera);
-      toast.success(`${name} has been added to ${finalGroup}`);
+      // Convert to database format for saving
+      const dbCamera = toDatabaseCamera({
+        ...newCameraUI,
+        id: "", // Will be generated on the server
+        lastSeen: new Date().toISOString()
+      });
+
+      // Remove the id as it will be generated
+      const { id, ...newCameraWithoutId } = dbCamera;
+      
+      onAdd(newCameraWithoutId);
+      toast({
+        title: "Success",
+        description: `${name} has been added to ${finalGroup}`
+      });
       resetForm();
       onClose();
     } catch (error) {
-      toast.error("Could not connect to camera. Check credentials and try again.");
+      toast({
+        title: "Error",
+        description: "Could not connect to camera. Check credentials and try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsVerifying(false);
     }

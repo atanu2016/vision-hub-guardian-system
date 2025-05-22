@@ -57,7 +57,12 @@ export const toUICamera = (dbCamera: Camera): CameraUIProps => {
     group: dbCamera.group,
     thumbnail: dbCamera.thumbnail,
     manufacturer: dbCamera.manufacturer,
-    model: dbCamera.model
+    model: dbCamera.model,
+    quality: dbCamera.quality,
+    scheduleType: dbCamera.scheduleType,
+    timeStart: dbCamera.timeStart,
+    timeEnd: dbCamera.timeEnd,
+    daysOfWeek: dbCamera.daysOfWeek
   };
 };
 
@@ -84,6 +89,11 @@ export const toDatabaseCamera = (uiCamera: CameraUIProps): Camera => {
     group: uiCamera.group,
     thumbnail: uiCamera.thumbnail,
     manufacturer: uiCamera.manufacturer,
-    model: uiCamera.model
+    model: uiCamera.model,
+    quality: uiCamera.quality,
+    scheduleType: uiCamera.scheduleType,
+    timeStart: uiCamera.timeStart,
+    timeEnd: uiCamera.timeEnd,
+    daysOfWeek: uiCamera.daysOfWeek
   };
 };

@@ -4,6 +4,7 @@ import Hls from "hls.js";
 import { setupCameraStream } from "@/services/apiService";
 import { Camera } from "@/types/camera";
 import { useToast } from "@/hooks/use-toast";
+import { toUICamera } from "@/utils/cameraPropertyMapper";
 
 interface UseStreamSetupOptions {
   camera: Camera;
@@ -35,12 +36,13 @@ export function useStreamSetup({
         
         try {
           const videoElement = videoRef.current;
-          const streamUrl = camera.connectionType === 'hls' 
-            ? camera.hlsUrl 
-            : camera.rtmpUrl || '';
+          const cameraUI = toUICamera(camera);
+          const streamUrl = cameraUI.connectionType === 'hls' 
+            ? cameraUI.hlsUrl 
+            : cameraUI.rtmpUrl || '';
           
           // If the URL is an HLS stream and browser supports HLS.js
-          if (streamUrl && (streamUrl.includes('.m3u8') || camera.connectionType === 'hls') && Hls.isSupported()) {
+          if (streamUrl && (streamUrl.includes('.m3u8') || cameraUI.connectionType === 'hls') && Hls.isSupported()) {
             // Destroy any existing HLS instance
             if (hlsRef.current) {
               hlsRef.current.destroy();

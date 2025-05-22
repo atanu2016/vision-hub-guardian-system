@@ -12,13 +12,28 @@ export interface Camera {
   recording?: boolean;
   motiondetection?: boolean;
   rtmpurl?: string;
-  hlsurl?: string; // Added this missing property
+  hlsurl?: string;
   onvifpath?: string;
   connectiontype?: string;
   group?: string;
   thumbnail?: string;
   manufacturer?: string;
   model?: string;
+  quality?: string;
+  scheduleType?: string;
+  timeStart?: string;
+  timeEnd?: string;
+  daysOfWeek?: string[];
+}
+
+export type CameraConnectionType = 'ip' | 'rtsp' | 'rtmp' | 'hls' | 'onvif';
+
+export type CameraStatus = 'online' | 'offline' | 'recording';
+
+export interface GroupedCameras {
+  id: string;
+  name: string;
+  cameras: Camera[];
 }
 
 export interface StorageSettings {
@@ -36,8 +51,11 @@ export interface StorageSettings {
   s3SecretKey?: string;
   s3Region?: string;
   dropboxToken?: string;
+  dropboxFolder?: string;
   googleDriveToken?: string;
+  googleDriveFolderId?: string;
   oneDriveToken?: string;
+  oneDriveFolderId?: string;
   azureConnectionString?: string;
   azureContainer?: string;
   backblazeKeyId?: string;
@@ -51,6 +69,5 @@ export interface CameraGroup {
   cameras: string[];
 }
 
-// Add these missing type definitions for the components
 export type QualityType = 'low' | 'medium' | 'high' | 'ultra';
 export type ScheduleType = 'always' | 'workdays' | 'weekends' | 'custom';

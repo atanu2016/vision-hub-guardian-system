@@ -1,121 +1,67 @@
 
-import { useState, useMemo } from "react";
-import { Camera as CameraType } from "@/types/camera";
+import { useState, useMemo } from 'react';
+import { Camera } from '@/types/camera';
+import { toUICamera } from '@/utils/cameraPropertyMapper';
 
-export interface GroupedCameras {
-  id: string;
-  name: string;
-  cameras: CameraType[];
-}
+type SortKey = 'name' | 'location' | 'status' | 'lastSeen';
+type SortDirection = 'asc' | 'desc';
 
-export const useCameraSorting = (cameras: CameraType[]) => {
-  const [sortOption, setSortOption] = useState("name");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [groupBy, setGroupBy] = useState<"none" | "group" | "location">("none");
+export function useCameraSorting(cameras: Camera[]) {
+  const [sortBy, setSortBy] = useState<SortKey>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
-  // Sort cameras based on selected option
-  const sortCameras = (camerasToSort: CameraType[]) => {
-    return [...camerasToSort].sort((a, b) => {
-      let valueA, valueB;
+  // Toggle sort direction
+  const toggleSortDirection = () => {
+    setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+  };
+
+  // Change sort key
+  const changeSortBy = (key: SortKey) => {
+    if (sortBy === key) {
+      toggleSortDirection();
+    } else {
+      setSortBy(key);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sorted cameras
+  const sortedCameras = useMemo(() => {
+    if (!cameras || cameras.length === 0) return [];
+    
+    return [...cameras].sort((a, b) => {
+      // Convert to UI format for easier property access
+      const aUI = toUICamera(a);
+      const bUI = toUICamera(b);
       
-      switch (sortOption) {
-        case "name":
-          valueA = a.name.toLowerCase();
-          valueB = b.name.toLowerCase();
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'name':
+          comparison = aUI.name.localeCompare(bUI.name);
           break;
-        case "location":
-          valueA = a.location.toLowerCase();
-          valueB = b.location.toLowerCase();
+        case 'location':
+          comparison = aUI.location.localeCompare(bUI.location);
           break;
-        case "status":
-          valueA = a.status;
-          valueB = b.status;
+        case 'status':
+          comparison = aUI.status.localeCompare(bUI.status);
           break;
-        case "lastSeen":
-          valueA = a.lastSeen || "";
-          valueB = b.lastSeen || "";
+        case 'lastSeen':
+          comparison = new Date(aUI.lastSeen).getTime() - new Date(bUI.lastSeen).getTime();
           break;
         default:
-          valueA = a.name.toLowerCase();
-          valueB = b.name.toLowerCase();
+          comparison = 0;
       }
       
-      if (sortOrder === "asc") {
-        return valueA < valueB ? -1 : valueA > valueB ? 1 : 0;
-      } else {
-        return valueA > valueB ? -1 : valueA < valueB ? 1 : 0;
-      }
+      return sortDirection === 'asc' ? comparison : -comparison;
     });
-  };
-
-  // Group cameras if groupBy is selected
-  const groupCameras = (camerasToGroup: CameraType[]) => {
-    if (groupBy === "none") {
-      return [{
-        id: "all",
-        name: "All Cameras",
-        cameras: sortCameras(camerasToGroup)
-      }];
-    }
-    
-    const grouped = camerasToGroup.reduce((acc, camera) => {
-      const key = groupBy === "group" 
-        ? (camera.group || "Ungrouped") 
-        : camera.location;
-        
-      if (!acc[key]) {
-        acc[key] = [];
-      }
-      
-      acc[key].push(camera);
-      return acc;
-    }, {} as Record<string, CameraType[]>);
-    
-    return Object.entries(grouped).map(([name, groupCameras]) => ({
-      id: name,
-      name,
-      cameras: sortCameras(groupCameras)
-    }));
-  };
-
-  // Get camera list based on tab and apply sorting/grouping
-  const getCameraList = (tabValue: string) => {
-    let cameraList;
-    
-    const onlineCameras = cameras.filter(camera => camera.status === "online");
-    const offlineCameras = cameras.filter(camera => camera.status === "offline");
-    const recordingCameras = cameras.filter(camera => camera.recording);
-    
-    switch (tabValue) {
-      case "all":
-        cameraList = cameras;
-        break;
-      case "online":
-        cameraList = onlineCameras;
-        break;
-      case "offline":
-        cameraList = offlineCameras;
-        break;
-      case "recording":
-        cameraList = recordingCameras;
-        break;
-      default:
-        cameraList = cameras;
-    }
-    
-    return groupCameras(cameraList);
-  };
+  }, [cameras, sortBy, sortDirection]);
 
   return {
-    sortOption,
-    setSortOption,
-    sortOrder,
-    setSortOrder,
-    groupBy,
-    setGroupBy,
-    getCameraList,
-    onlineCamerasCount: useMemo(() => cameras.filter(c => c.status === "online").length, [cameras]),
-    offlineCamerasCount: useMemo(() => cameras.filter(c => c.status === "offline").length, [cameras]),
-    recordingCamerasCount: useMemo(() => cameras.filter(c => c.recording).length, [cameras])
+    sortedCameras,
+    sortBy,
+    sortDirection,
+    changeSortBy,
+    toggleSortDirection
   };
-};
+}

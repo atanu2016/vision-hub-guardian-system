@@ -4,6 +4,7 @@ import { Camera } from "@/types/camera";
 import { useToast } from "@/hooks/use-toast";
 import { getCameras, saveCamera, deleteCamera } from "@/services/apiService";
 import { checkDatabaseSetup } from "@/services/database";
+import { toUICamera, toDatabaseCamera, CameraUIProps } from "@/utils/cameraPropertyMapper";
 
 // Sample HLS camera for consistency
 const sampleHLSCamera: Camera = {
@@ -11,11 +12,11 @@ const sampleHLSCamera: Camera = {
   name: "Sample HLS Stream",
   status: "online",
   location: "Demo Location",
-  ipAddress: "",
-  lastSeen: new Date().toISOString(),
+  ipaddress: "",
+  lastseen: new Date().toISOString(),
   recording: false,
-  connectionType: "hls",
-  hlsUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", // Public HLS test stream
+  connectiontype: "hls",
+  hlsurl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", // Public HLS test stream
   group: "Demo"
 };
 
@@ -32,7 +33,11 @@ export function useCameraData() {
         await checkDatabaseSetup();
       } catch (error) {
         console.error('Error initializing system:', error);
-        toast.error("Could not initialize the system. Using fallback data.");
+        toast({
+          title: "Could not initialize the system",
+          description: "Using fallback data.",
+          variant: "destructive"
+        });
       }
       
       fetchCameras();
@@ -51,7 +56,7 @@ export function useCameraData() {
         // Check if sample camera already exists in the database
         const sampleExists = camerasData.some(camera => 
           camera.id === sampleHLSCamera.id || 
-          (camera.hlsUrl === sampleHLSCamera.hlsUrl && camera.connectionType === 'hls')
+          (camera.hlsurl === sampleHLSCamera.hlsurl && camera.connectiontype === 'hls')
         );
         
         if (!sampleExists) {
@@ -64,7 +69,11 @@ export function useCameraData() {
       }
     } catch (error) {
       console.error('Error fetching cameras:', error);
-      toast.error("Could not load cameras from the server. Using cached data.");
+      toast({
+        title: "Could not load cameras from the server",
+        description: "Using cached data.",
+        variant: "destructive"
+      });
       
       // Still show the sample camera if there's an error
       if (includeSampleCamera) {
@@ -113,21 +122,32 @@ export function useCameraData() {
   }, [cameras]);
 
   // Add camera function
-  const addCamera = async (newCamera: Omit<Camera, "id" | "lastSeen">) => {
+  const addCamera = async (newCameraUI: Omit<CameraUIProps, "id" | "lastSeen">) => {
     try {
-      const camera: Camera = {
-        ...newCamera,
-        id: `cam-${Date.now()}`, 
+      // Create camera object with UI format but add the missing required properties
+      const cameraUI: CameraUIProps = {
+        ...newCameraUI,
+        id: `cam-${Date.now()}`,
         lastSeen: new Date().toISOString()
       };
       
-      const savedCamera = await saveCamera(camera);
+      // Convert to database format
+      const dbCamera = toDatabaseCamera(cameraUI);
+      
+      // Save to database
+      const savedCamera = await saveCamera(dbCamera);
       setCameras(prev => [...prev, savedCamera]);
-      toast.success(`${savedCamera.name} has been added successfully`);
+      toast({
+        title: `${savedCamera.name} has been added successfully`,
+      });
       return savedCamera;
     } catch (error) {
       console.error('Error adding camera:', error);
-      toast.error("Could not add camera. Please try again.");
+      toast({
+        title: "Could not add camera",
+        description: "Please try again.",
+        variant: "destructive"
+      });
       throw error;
     }
   };
@@ -136,17 +156,27 @@ export function useCameraData() {
   const handleDeleteCamera = async (cameraId: string) => {
     // Don't allow deletion of the sample camera
     if (cameraId === sampleHLSCamera.id) {
-      toast.error("Cannot delete sample camera. Use the toggle instead.");
+      toast({
+        title: "Cannot delete sample camera",
+        description: "Use the toggle instead.",
+        variant: "destructive"
+      });
       return;
     }
     
     try {
       await deleteCamera(cameraId);
       setCameras(prev => prev.filter(camera => camera.id !== cameraId));
-      toast.success("Camera has been removed successfully");
+      toast({
+        title: "Camera has been removed successfully"
+      });
     } catch (error) {
       console.error('Error deleting camera:', error);
-      toast.error("Could not delete camera. Please try again.");
+      toast({
+        title: "Could not delete camera",
+        description: "Please try again.",
+        variant: "destructive"
+      });
     }
   };
 
