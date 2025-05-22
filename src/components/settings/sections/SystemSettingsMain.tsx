@@ -37,25 +37,39 @@ const SystemSettingsMain = () => {
 
   return (
     <div className="space-y-6">
-      <SettingsHeader title="System Settings" description="Configure system appearance and behavior" />
+      <SettingsHeader 
+        onSaveAll={() => {}} 
+        isSaving={isSaving}
+      />
       
       <SettingsGrid>
         <InterfaceSettings
-          settings={interfaceSettings}
-          onUpdate={updateInterfaceSettings}
-          isSaving={isSaving}
+          darkMode={interfaceSettings.darkMode}
+          notifications={interfaceSettings.notifications}
+          audio={interfaceSettings.audio}
+          onChangeDarkMode={(enabled) => updateInterfaceSettings({ ...interfaceSettings, darkMode: enabled })}
+          onChangeNotifications={(enabled) => updateInterfaceSettings({ ...interfaceSettings, notifications: enabled })}
+          onChangeAudio={(enabled) => updateInterfaceSettings({ ...interfaceSettings, audio: enabled })}
         />
         
         <DetectionSettings
-          settings={detectionSettings}
-          onUpdate={updateDetectionSettings}
-          isSaving={isSaving}
+          sensitivityLevel={detectionSettings.sensitivityLevel}
+          enabled={detectionSettings.enabled}
+          objectTypes={detectionSettings.objectTypes}
+          smartDetection={detectionSettings.smartDetection}
+          onChangeSensitivity={(value) => updateDetectionSettings({ sensitivityLevel: value[0] })}
+          onChangeEnabled={(enabled) => updateDetectionSettings({ enabled })}
+          onChangeObjectTypes={(types) => updateDetectionSettings({ objectTypes: types })}
+          onChangeSmartDetection={(enabled) => updateDetectionSettings({ smartDetection: enabled })}
         />
         
         <StorageSettings
-          settings={storageSettings}
-          onUpdate={updateStorageSettings}
-          isSaving={isSaving}
+          autoDeleteOld={storageSettings.autoDeleteOld}
+          maxStorageSize={storageSettings.maxStorageSize}
+          backupSchedule={storageSettings.backupSchedule}
+          onChangeAutoDeleteOld={(enabled) => updateStorageSettings({ ...storageSettings, autoDeleteOld: enabled })}
+          onChangeMaxStorageSize={(size) => updateStorageSettings({ ...storageSettings, maxStorageSize: size })}
+          onChangeBackupSchedule={(schedule) => updateStorageSettings({ ...storageSettings, backupSchedule: schedule })}
         />
         
         <SystemInformation
