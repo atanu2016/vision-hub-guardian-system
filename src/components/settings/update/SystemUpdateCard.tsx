@@ -106,8 +106,8 @@ export const SystemUpdateCard = ({
         
         {status !== 'idle' && (
           <div className={`p-3 rounded-md flex items-center gap-2 ${
-            status === 'success' ? 'bg-green-100 text-green-800' : 
-            status === 'error' ? 'bg-red-100 text-red-800' : ''
+            status === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' : 
+            status === 'error' ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300' : ''
           }`}>
             {status === 'success' && <CheckCircle className="h-5 w-5" />}
             {status === 'error' && <XCircle className="h-5 w-5" />}

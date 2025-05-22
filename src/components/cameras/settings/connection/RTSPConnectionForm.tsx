@@ -68,7 +68,8 @@ const RTSPConnectionForm = ({
   };
   
   const useExample = (exampleUrl: string) => {
-    handleChange('rtmpUrl', exampleUrl);
+    // Fix: Use rtspUrl instead of rtmpUrl for RTSP connections
+    handleChange('rtspUrl', exampleUrl);
   };
 
   return (
@@ -97,14 +98,15 @@ const RTSPConnectionForm = ({
       
       <Input
         id="streamUrl"
-        value={cameraData.rtmpUrl || ''}
-        onChange={(e) => handleChange('rtmpUrl', e.target.value)}
+        // Fix: Use rtspUrl instead of rtmpUrl for RTSP streams
+        value={cameraData.rtspUrl || ''}
+        onChange={(e) => handleChange('rtspUrl', e.target.value)}
         placeholder="rtsp://ipaddress:port/path"
-        className={errors.rtmpUrl ? "border-destructive" : ""}
+        className={errors.rtspUrl ? "border-destructive" : ""}
         disabled={disabled}
       />
-      {errors.rtmpUrl && (
-        <p className="text-xs text-destructive mt-1">{errors.rtmpUrl}</p>
+      {errors.rtspUrl && (
+        <p className="text-xs text-destructive mt-1">{errors.rtspUrl}</p>
       )}
       
       {testResult && (
@@ -119,7 +121,8 @@ const RTSPConnectionForm = ({
           variant="outline" 
           size="sm" 
           onClick={testConnection} 
-          disabled={testing || disabled || !cameraData.rtmpUrl}
+          // Fix: Use rtspUrl instead of rtmpUrl for RTSP streams
+          disabled={testing || disabled || !cameraData.rtspUrl}
         >
           {testing ? "Testing..." : "Test RTSP URL"}
         </Button>

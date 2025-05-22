@@ -56,8 +56,8 @@ const SystemUpdate = () => {
       <SystemUpdateCard 
         onUpdate={updateSystem}
         onRestart={restartSystem}
-        version={systemInformation.systemInfo.version}
-        lastUpdated={systemInformation.systemInfo.lastUpdated}
+        version={systemInformation?.systemInfo?.version || "1.0.0"}
+        lastUpdated={systemInformation?.systemInfo?.lastUpdated || new Date().toLocaleString()}
       />
     </div>
   );

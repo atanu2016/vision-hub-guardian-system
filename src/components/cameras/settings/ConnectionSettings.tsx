@@ -68,11 +68,24 @@ const ConnectionSettings = ({ cameraData, handleChange, disabled = false }: Sett
 
   const handleConnectionTypeChange = (type: CameraConnectionType) => {
     handleChange('connectionType', type);
+    
+    // Clear any previous connection-specific fields when changing types
+    if (type === 'rtsp') {
+      // Clear RTMP URL if it exists
+      if (cameraData.rtmpUrl) {
+        handleChange('rtmpUrl', '');
+      }
+    } else if (type === 'rtmp') {
+      // Clear RTSP URL if it exists
+      if (cameraData.rtspUrl) {
+        handleChange('rtspUrl', '');
+      }
+    }
   };
 
   const useSuggestedUrl = (url: string) => {
     handleChange('connectionType', 'rtsp');
-    handleChange('rtmpUrl', url);
+    handleChange('rtspUrl', url);
     setSuggestedUrls([]);
   };
 

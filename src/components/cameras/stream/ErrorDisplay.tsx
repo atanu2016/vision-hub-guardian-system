@@ -22,7 +22,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, camera, onRet
   // Determine common error types
   const isRTSPError = camera.connectionType === 'rtsp' || 
     error.toLowerCase().includes('rtsp') ||
-    (camera.connectionType === 'onvif' && camera.rtmpUrl?.startsWith('rtsp://'));
+    (camera.connectionType === 'onvif' && camera.rtspUrl?.startsWith('rtsp://'));
     
   const isLocalNetworkIssue = 
     camera.ipAddress?.startsWith('192.168.') || 

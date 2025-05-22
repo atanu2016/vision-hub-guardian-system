@@ -36,6 +36,12 @@ export const useSystemUpdate = () => {
         timestamp: Date.now(),
       });
       
+      if (data.success) {
+        toast.success("System update successful");
+      } else {
+        toast.error(`Update failed: ${data.message}`);
+      }
+      
       return data.success;
     } catch (error) {
       console.error('Error updating system:', error);
@@ -46,6 +52,7 @@ export const useSystemUpdate = () => {
         timestamp: Date.now(),
       });
       
+      toast.error('Error updating system. Check network connection and try again.');
       return false;
     } finally {
       setIsLoading(false);
@@ -75,7 +82,10 @@ export const useSystemUpdate = () => {
       
       // Set a timeout to check if the server is back online
       if (data.success) {
+        toast.success("System restart initiated");
         setTimeout(checkServerStatus, 5000);
+      } else {
+        toast.error(`Restart failed: ${data.message}`);
       }
       
       return data.success;
@@ -88,6 +98,7 @@ export const useSystemUpdate = () => {
         timestamp: Date.now(),
       });
       
+      toast.error('Error restarting system. Check network connection and try again.');
       return false;
     } finally {
       setIsLoading(false);
