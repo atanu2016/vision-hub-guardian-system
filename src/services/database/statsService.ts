@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { logDatabaseError } from "./baseService";
 
@@ -37,8 +38,8 @@ export const fetchSystemStatsFromDB = async () => {
   }
 };
 
-// Add additional stats-related functions below
-export const checkDatabaseSetup = async () => {
+// Initialize database setup - rename to avoid conflict with baseService
+export const initializeSystemStats = async () => {
   try {
     // Check if the database tables exist
     const { data, error } = await supabase

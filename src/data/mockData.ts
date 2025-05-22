@@ -4,7 +4,7 @@ import {
   fetchCamerasFromDB,
   fetchSystemStatsFromDB,
   saveCameraToDB,
-  deleteCameraFromDB,
+  deleteCameraToDB,
   fetchStorageSettingsFromDB,
   saveStorageSettingsToDB,
   checkDatabaseSetup
@@ -14,7 +14,7 @@ import {
 export const getCameras = fetchCamerasFromDB;
 export const getSystemStats = fetchSystemStatsFromDB;
 export const saveCamera = saveCameraToDB;
-export const deleteCamera = deleteCameraFromDB;
+export const deleteCamera = deleteCameraToDB;
 export const getStorageSettings = fetchStorageSettingsFromDB;
 export const saveStorageSettings = saveStorageSettingsToDB;
 export const initializeSystem = checkDatabaseSetup;

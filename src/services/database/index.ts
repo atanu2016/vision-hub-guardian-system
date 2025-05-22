@@ -1,6 +1,6 @@
 
 // Export all database services
-export * from './baseService';
+export { logDatabaseError, checkDatabaseSetup, checkTablesExist } from './baseService';
 export * from './camera';
 export * from './storageService';
 export * from './statsService';
