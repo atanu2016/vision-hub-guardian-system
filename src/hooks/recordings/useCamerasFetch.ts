@@ -14,6 +14,7 @@ export const useCamerasFetch = () => {
 
   const fetchCameras = async () => {
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('cameras')
         .select('*');

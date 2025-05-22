@@ -48,11 +48,13 @@ interface StorageFormProps {
 }
 
 const StorageForm = ({ form, onSubmit, isLoading }: StorageFormProps) => {
+  const storageType = form.watch("type");
+  
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <StorageProviderSelector form={form} isLoading={isLoading} />
-        <StorageProviderFields form={form} isLoading={isLoading} />
+        <StorageProviderFields form={form} isLoading={isLoading} currentStorageType={storageType} />
         <RetentionPolicyForm form={form} isLoading={isLoading} />
         
         <Button type="submit" className="w-full" disabled={isLoading}>
