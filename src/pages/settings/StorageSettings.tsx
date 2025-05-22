@@ -83,7 +83,7 @@ const StorageSettings = () => {
     setIsSaving(true);
     try {
       // Validate the settings first
-      const isValid = await validateStorage(newSettings);
+      const isValid = await validateStorage(newSettings as StorageSettingsType);
       
       if (!isValid) {
         toast({
@@ -95,10 +95,10 @@ const StorageSettings = () => {
       }
       
       // Save the settings
-      const success = await saveStorageSettings(newSettings);
+      const success = await saveStorageSettings(newSettings as StorageSettingsType);
       
       if (success) {
-        setSettings(newSettings);
+        setSettings(newSettings as StorageSettingsType);
         toast({
           title: "Success",
           description: "Storage settings saved successfully",
