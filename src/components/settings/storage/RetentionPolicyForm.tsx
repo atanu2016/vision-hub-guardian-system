@@ -16,7 +16,7 @@ const RetentionPolicyForm = ({ form, isLoading }: RetentionPolicyFormProps) => {
     <>
       <FormField
         control={form.control}
-        name="retentiondays"
+        name="retentionDays"
         render={({ field }) => (
           <FormItem>
             <FormLabel>Retention Period (Days)</FormLabel>
@@ -27,7 +27,6 @@ const RetentionPolicyForm = ({ form, isLoading }: RetentionPolicyFormProps) => {
                 max="365"
                 {...field}
                 onChange={(e) => field.onChange(parseInt(e.target.value) || 30)}
-                value={field.value}
                 disabled={isLoading}
               />
             </FormControl>
@@ -40,7 +39,7 @@ const RetentionPolicyForm = ({ form, isLoading }: RetentionPolicyFormProps) => {
       
       <FormField
         control={form.control}
-        name="overwriteoldest"
+        name="overwriteOldest"
         render={({ field }) => (
           <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
             <div className="space-y-0.5">

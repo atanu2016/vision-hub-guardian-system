@@ -1,10 +1,9 @@
+
 import { useState, useEffect, useMemo } from "react";
 import { Camera } from "@/types/camera";
 import { useToast } from "@/hooks/use-toast";
 import { getCameras, saveCamera, deleteCamera } from "@/services/apiService";
 import { checkDatabaseSetup } from "@/services/database";
-import { CameraUIProps } from "@/utils/cameraPropertyMapper";
-import { useCameraAdapter } from "@/hooks/useCameraAdapter";
 
 // Sample HLS camera for consistency
 const sampleHLSCamera: Camera = {
@@ -12,11 +11,11 @@ const sampleHLSCamera: Camera = {
   name: "Sample HLS Stream",
   status: "online",
   location: "Demo Location",
-  ipaddress: "",
-  lastseen: new Date().toISOString(),
+  ipAddress: "",
+  lastSeen: new Date().toISOString(),
   recording: false,
-  connectiontype: "hls",
-  hlsurl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", // Public HLS test stream
+  connectionType: "hls",
+  hlsUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", // Public HLS test stream
   group: "Demo"
 };
 
@@ -24,8 +23,7 @@ export function useCameraData() {
   const { toast } = useToast();
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [loading, setLoading] = useState(true);
-  const [includeSampleCamera, setIncludeSampleCamera] = useState(false); // Changed default to false
-  const { adaptCameraParams, toCameraUIProps } = useCameraAdapter();
+  const [includeSampleCamera, setIncludeSampleCamera] = useState(true);
   
   // Initialize system and load cameras
   useEffect(() => {
@@ -34,11 +32,7 @@ export function useCameraData() {
         await checkDatabaseSetup();
       } catch (error) {
         console.error('Error initializing system:', error);
-        toast({
-          title: "Could not initialize the system",
-          description: "Using fallback data.",
-          variant: "destructive"
-        });
+        toast.error("Could not initialize the system. Using fallback data.");
       }
       
       fetchCameras();
@@ -52,24 +46,38 @@ export function useCameraData() {
     try {
       const camerasData = await getCameras();
       
-      // We're no longer adding the sample HLS camera by default
-      setCameras(camerasData);
+      // Add sample HLS camera if enabled
+      if (includeSampleCamera) {
+        // Check if sample camera already exists in the database
+        const sampleExists = camerasData.some(camera => 
+          camera.id === sampleHLSCamera.id || 
+          (camera.hlsUrl === sampleHLSCamera.hlsUrl && camera.connectionType === 'hls')
+        );
+        
+        if (!sampleExists) {
+          setCameras([...camerasData, sampleHLSCamera]);
+        } else {
+          setCameras(camerasData);
+        }
+      } else {
+        setCameras(camerasData);
+      }
     } catch (error) {
       console.error('Error fetching cameras:', error);
-      toast({
-        title: "Could not load cameras from the server",
-        description: "Using cached data.",
-        variant: "destructive"
-      });
+      toast.error("Could not load cameras from the server. Using cached data.");
       
-      // Show empty state when there's an error, no longer defaulting to sample camera
-      setCameras([]);
+      // Still show the sample camera if there's an error
+      if (includeSampleCamera) {
+        setCameras([sampleHLSCamera]);
+      } else {
+        setCameras([]);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Toggle the sample camera functionality remains but is disabled by default
+  // Toggle the sample camera
   const toggleSampleCamera = () => {
     setIncludeSampleCamera(prev => !prev);
   };
@@ -104,32 +112,22 @@ export function useCameraData() {
       .filter(group => group !== "Ungrouped");
   }, [cameras]);
 
-  // Add camera function - uses the DB format
-  const addCamera = async (cameraParams: Omit<Camera, "id">) => {
+  // Add camera function
+  const addCamera = async (newCamera: Omit<Camera, "id" | "lastSeen">) => {
     try {
-      // Create camera object with DB format
-      const newCamera: Camera = {
-        ...cameraParams,
-        id: `cam-${Date.now()}`
+      const camera: Camera = {
+        ...newCamera,
+        id: `cam-${Date.now()}`, 
+        lastSeen: new Date().toISOString()
       };
       
-      // Save to database
-      const savedCamera = await saveCamera(newCamera);
-      
-      // Ensure we add a camera with the correct type
-      setCameras(prev => [...prev, savedCamera as Camera]);
-      
-      toast({
-        title: `${savedCamera.name} has been added successfully`,
-      });
+      const savedCamera = await saveCamera(camera);
+      setCameras(prev => [...prev, savedCamera]);
+      toast.success(`${savedCamera.name} has been added successfully`);
       return savedCamera;
     } catch (error) {
       console.error('Error adding camera:', error);
-      toast({
-        title: "Could not add camera",
-        description: "Please try again.",
-        variant: "destructive"
-      });
+      toast.error("Could not add camera. Please try again.");
       throw error;
     }
   };
@@ -138,27 +136,17 @@ export function useCameraData() {
   const handleDeleteCamera = async (cameraId: string) => {
     // Don't allow deletion of the sample camera
     if (cameraId === sampleHLSCamera.id) {
-      toast({
-        title: "Cannot delete sample camera",
-        description: "Use the toggle instead.",
-        variant: "destructive"
-      });
+      toast.error("Cannot delete sample camera. Use the toggle instead.");
       return;
     }
     
     try {
       await deleteCamera(cameraId);
       setCameras(prev => prev.filter(camera => camera.id !== cameraId));
-      toast({
-        title: "Camera has been removed successfully"
-      });
+      toast.success("Camera has been removed successfully");
     } catch (error) {
       console.error('Error deleting camera:', error);
-      toast({
-        title: "Could not delete camera",
-        description: "Please try again.",
-        variant: "destructive"
-      });
+      toast.error("Could not delete camera. Please try again.");
     }
   };
 

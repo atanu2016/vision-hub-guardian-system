@@ -1,326 +1,419 @@
 
-// Import necessary dependencies
-import { Camera, StorageSettings } from "@/types/camera";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchCamerasFromDB,
+  saveCameraToDB,
+  deleteCameraFromDB,
+  fetchWebhooksFromDB,
+  saveWebhookToDB,
+  deleteWebhookFromDB,
+  fetchStorageSettingsFromDB,
+  saveStorageSettingsToDB,
+  fetchSystemStatsFromDB,
+  fetchRecordingSettingsFromDB,
+  saveRecordingSettingsToDB,
+  fetchAlertSettingsFromDB,
+  saveAlertSettingsToDB,
+  fetchAdvancedSettingsFromDB,
+  saveAdvancedSettingsToDB,
+  fetchLogsFromDB,
+  addLogToDB,
+  saveCameraRecordingStatus,
+  checkDatabaseSetup
+} from './database';
+import { StorageSettings } from '@/types/camera';
 
-// Re-export camera service functions
-export { saveCamera, getCameras, deleteCamera, setupCameraStream } from './api/cameraService';
+// Camera API
+export const getCameras = fetchCamerasFromDB;
+export const saveCamera = saveCameraToDB;
+export const deleteCamera = deleteCameraFromDB;
 
-/**
- * Get storage settings from the database
- * @returns Promise resolving to storage settings
- */
-export const getStorageSettings = async (): Promise<StorageSettings> => {
-  try {
-    const { data, error } = await supabase
-      .from('storage_settings')
-      .select('*')
-      .limit(1)
-      .maybeSingle();
-      
-    if (error) {
-      console.error('Error fetching storage settings:', error);
-      // Return default settings if there's an error
-      return {
-        type: 'local',
-        path: '/recordings',
-        retentiondays: 30,
-        overwriteoldest: true
-      };
-    }
-    
-    return data as StorageSettings || {
-      type: 'local',
-      path: '/recordings',
-      retentiondays: 30,
-      overwriteoldest: true
-    };
-  } catch (error) {
-    console.error('Error fetching storage settings:', error);
-    // Return default settings if there's an exception
-    return {
-      type: 'local',
-      path: '/recordings',
-      retentiondays: 30,
-      overwriteoldest: true
-    };
-  }
-};
+// Storage API
+export const getStorageSettings = fetchStorageSettingsFromDB;
+export const saveStorageSettings = saveStorageSettingsToDB;
 
-/**
- * Save storage settings to the database
- * @param settings Storage settings to save
- * @returns Promise resolving to boolean indicating success
- */
-export const saveStorageSettings = async (settings: StorageSettings): Promise<boolean> => {
-  try {
-    // Check if settings already exist
-    const { data: existingSettings, error: checkError } = await supabase
-      .from('storage_settings')
-      .select('id')
-      .limit(1)
-      .maybeSingle();
-      
-    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-      console.error('Error checking storage settings:', checkError);
-      return false;
-    }
-    
-    if (existingSettings) {
-      // Update existing settings
-      const { error } = await supabase
-        .from('storage_settings')
-        .update(settings)
-        .eq('id', existingSettings.id);
-        
-      if (error) {
-        console.error('Error updating storage settings:', error);
-        return false;
-      }
-    } else {
-      // Insert new settings with a generated ID
-      const { error } = await supabase
-        .from('storage_settings')
-        .insert({
-          ...settings,
-          id: crypto.randomUUID()
-        });
-        
-      if (error) {
-        console.error('Error inserting storage settings:', error);
-        return false;
-      }
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Error saving storage settings:', error);
-    return false;
-  }
-};
-
-/**
- * Validate storage settings access
- * @param settings Storage settings to validate
- * @returns Promise resolving to boolean indicating validation success
- */
+// Validate storage access
 export const validateStorageAccess = async (settings: StorageSettings): Promise<boolean> => {
-  // This is a mock function as actual validation would require backend API
-  console.log('Validating storage settings:', settings);
-  return true;
-};
-
-/**
- * Get system statistics
- * @returns Promise resolving to system statistics
- */
-export const getSystemStats = async () => {
   try {
-    const { data, error } = await supabase
-      .from('system_stats')
-      .select('*')
-      .limit(1)
-      .single();
-      
-    if (error) {
-      console.error('Error fetching system stats:', error);
-      return {
-        total_cameras: 0,
-        online_cameras: 0,
-        offline_cameras: 0,
-        recording_cameras: 0,
-        storage_used: '0 GB',
-        storage_total: '0 GB',
-        storage_percentage: 0,
-        uptime_hours: 0
-      };
-    }
+    // In a real app, this would connect to the storage service and verify access
+    // For now, we'll simulate a validation process with a delay
+    console.log("Validating storage access for type:", settings.type);
     
-    return data;
-  } catch (error) {
-    console.error('Error fetching system stats:', error);
-    return {
-      total_cameras: 0,
-      online_cameras: 0,
-      offline_cameras: 0,
-      recording_cameras: 0,
-      storage_used: '0 GB',
-      storage_total: '0 GB',
-      storage_percentage: 0,
-      uptime_hours: 0
-    };
-  }
-};
-
-/**
- * Get alert settings
- * @returns Promise resolving to alert settings
- */
-export const getAlertSettings = async () => {
-  try {
-    const { data, error } = await supabase
-      .from('alert_settings')
-      .select('*')
-      .limit(1)
-      .maybeSingle();
-      
-    if (error) {
-      console.error('Error fetching alert settings:', error);
-      return {
-        motion_detection: true,
-        camera_offline: true,
-        storage_warning: true,
-        email_notifications: false,
-        push_notifications: false,
-        notification_sound: 'default'
-      };
-    }
+    // Add log entry about validation attempt
+    await addLog({
+      level: "info",
+      source: "storage",
+      message: `Validating storage configuration for ${settings.type} storage`,
+      details: JSON.stringify(settings)
+    });
     
-    return data || {
-      motion_detection: true,
-      camera_offline: true,
-      storage_warning: true,
-      email_notifications: false,
-      push_notifications: false,
-      notification_sound: 'default'
-    };
-  } catch (error) {
-    console.error('Error fetching alert settings:', error);
-    return {
-      motion_detection: true,
-      camera_offline: true,
-      storage_warning: true,
-      email_notifications: false,
-      push_notifications: false,
-      notification_sound: 'default'
-    };
-  }
-};
-
-/**
- * Save alert settings
- * @param settings Alert settings to save
- * @returns Promise resolving to boolean indicating success
- */
-export const saveAlertSettings = async (settings: any): Promise<boolean> => {
-  try {
-    const { data: existingSettings } = await supabase
-      .from('alert_settings')
-      .select('id')
-      .limit(1)
-      .maybeSingle();
-      
-    if (existingSettings) {
-      const { error } = await supabase
-        .from('alert_settings')
-        .update(settings)
-        .eq('id', existingSettings.id);
-        
-      if (error) {
-        console.error('Error updating alert settings:', error);
-        return false;
-      }
-    } else {
-      const { error } = await supabase
-        .from('alert_settings')
-        .insert({
-          ...settings,
-          id: crypto.randomUUID()
+    // Simulate API call with a delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Validate based on storage type
+    switch(settings.type) {
+      case 's3':
+        // Validate S3 configuration
+        if (!settings.s3Endpoint || !settings.s3Bucket || !settings.s3AccessKey || !settings.s3SecretKey) {
+          await addLog({
+            level: "error",
+            source: "storage",
+            message: "S3 storage configuration validation failed: Missing required fields",
+            details: "One or more required S3 configuration fields are missing"
+          });
+          return false;
+        }
+        // In a real app, we'd try to connect to the S3 endpoint and test access
+        await addLog({
+          level: "info",
+          source: "storage",
+          message: "S3 storage configuration validated successfully",
+          details: `Endpoint: ${settings.s3Endpoint}, Bucket: ${settings.s3Bucket}`
         });
+        return true;
         
-      if (error) {
-        console.error('Error inserting alert settings:', error);
-        return false;
-      }
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Error saving alert settings:', error);
-    return false;
-  }
-};
-
-/**
- * Get webhooks
- * @returns Promise resolving to webhooks
- */
-export const getWebhooks = async () => {
-  try {
-    const { data, error } = await supabase
-      .from('webhooks')
-      .select('*');
-      
-    if (error) {
-      console.error('Error fetching webhooks:', error);
-      return [];
-    }
-    
-    return data || [];
-  } catch (error) {
-    console.error('Error fetching webhooks:', error);
-    return [];
-  }
-};
-
-/**
- * Save webhook
- * @param webhook Webhook to save
- * @returns Promise resolving to boolean indicating success
- */
-export const saveWebhook = async (webhook: any): Promise<boolean> => {
-  try {
-    if (webhook.id) {
-      const { error } = await supabase
-        .from('webhooks')
-        .update(webhook)
-        .eq('id', webhook.id);
-        
-      if (error) {
-        console.error('Error updating webhook:', error);
-        return false;
-      }
-    } else {
-      const { error } = await supabase
-        .from('webhooks')
-        .insert({
-          ...webhook,
-          id: crypto.randomUUID()
+      case 'nas':
+        // Validate NAS configuration
+        if (!settings.nasAddress || !settings.nasPath) {
+          await addLog({
+            level: "error",
+            source: "storage",
+            message: "NAS storage configuration validation failed: Missing required fields",
+            details: "NAS address or path missing"
+          });
+          return false;
+        }
+        // In a real app, we'd try to connect to the NAS and test access
+        await addLog({
+          level: "info",
+          source: "storage",
+          message: "NAS storage configuration validated successfully",
+          details: `Address: ${settings.nasAddress}, Path: ${settings.nasPath}`
         });
+        return true;
         
-      if (error) {
-        console.error('Error inserting webhook:', error);
+      case 'local':
+        // Validate local path
+        if (!settings.path) {
+          await addLog({
+            level: "error",
+            source: "storage",
+            message: "Local storage configuration validation failed: No path specified",
+            details: "Local storage path is missing"
+          });
+          return false;
+        }
+        // In a real app, we'd check if the path is valid and accessible
+        await addLog({
+          level: "info",
+          source: "storage",
+          message: "Local storage configuration validated successfully",
+          details: `Path: ${settings.path}`
+        });
+        return true;
+      
+      case 'dropbox':
+        // Validate Dropbox configuration
+        if (!settings.dropboxToken) {
+          await addLog({
+            level: "error",
+            source: "storage",
+            message: "Dropbox configuration validation failed: Missing access token",
+            details: "Dropbox access token is required"
+          });
+          return false;
+        }
+        await addLog({
+          level: "info",
+          source: "storage",
+          message: "Dropbox storage configuration validated successfully",
+          details: `Folder path: ${settings.dropboxFolder || "Root"}`
+        });
+        return true;
+        
+      case 'google_drive':
+        // Validate Google Drive configuration
+        if (!settings.googleDriveToken) {
+          await addLog({
+            level: "error",
+            source: "storage",
+            message: "Google Drive configuration validation failed: Missing OAuth token",
+            details: "Google Drive OAuth token is required"
+          });
+          return false;
+        }
+        await addLog({
+          level: "info",
+          source: "storage",
+          message: "Google Drive storage configuration validated successfully",
+          details: `Folder ID: ${settings.googleDriveFolderId || "Root"}`
+        });
+        return true;
+        
+      case 'onedrive':
+        // Validate OneDrive configuration
+        if (!settings.oneDriveToken) {
+          await addLog({
+            level: "error",
+            source: "storage",
+            message: "OneDrive configuration validation failed: Missing OAuth token",
+            details: "OneDrive OAuth token is required"
+          });
+          return false;
+        }
+        await addLog({
+          level: "info",
+          source: "storage",
+          message: "OneDrive storage configuration validated successfully",
+          details: `Folder ID: ${settings.oneDriveFolderId || "Root"}`
+        });
+        return true;
+        
+      case 'azure_blob':
+        // Validate Azure Blob Storage configuration
+        if (!settings.azureConnectionString || !settings.azureContainer) {
+          await addLog({
+            level: "error",
+            source: "storage",
+            message: "Azure Blob Storage configuration validation failed: Missing required fields",
+            details: "Connection string or container name is missing"
+          });
+          return false;
+        }
+        await addLog({
+          level: "info",
+          source: "storage",
+          message: "Azure Blob Storage configuration validated successfully",
+          details: `Container: ${settings.azureContainer}`
+        });
+        return true;
+        
+      case 'backblaze':
+        // Validate Backblaze B2 configuration
+        if (!settings.backblazeKeyId || !settings.backblazeApplicationKey || !settings.backblazeBucket) {
+          await addLog({
+            level: "error",
+            source: "storage",
+            message: "Backblaze B2 configuration validation failed: Missing required fields",
+            details: "Key ID, Application Key or Bucket name is missing"
+          });
+          return false;
+        }
+        await addLog({
+          level: "info",
+          source: "storage",
+          message: "Backblaze B2 storage configuration validated successfully",
+          details: `Bucket: ${settings.backblazeBucket}`
+        });
+        return true;
+        
+      default:
+        // For unknown storage types
+        await addLog({
+          level: "warning",
+          source: "storage",
+          message: `Validation for ${settings.type} storage type not implemented`,
+          details: "Assuming valid configuration"
+        });
         return false;
-      }
     }
-    
-    return true;
   } catch (error) {
-    console.error('Error saving webhook:', error);
+    // Log the error
+    console.error("Error validating storage access:", error);
+    await addLog({
+      level: "error",
+      source: "storage",
+      message: `Storage validation error for ${settings.type} storage`,
+      details: error instanceof Error ? error.message : String(error)
+    });
     return false;
   }
 };
 
-/**
- * Delete webhook
- * @param id Webhook ID to delete
- * @returns Promise resolving to boolean indicating success
- */
-export const deleteWebhook = async (id: string): Promise<boolean> => {
+// System Stats API
+export const getSystemStats = fetchSystemStatsFromDB;
+
+// Recordings API
+export const getRecordingSettings = fetchRecordingSettingsFromDB;
+export const saveRecordingSettings = saveRecordingSettingsToDB;
+export { saveCameraRecordingStatus };
+
+// Alerts API
+export const getAlertSettings = fetchAlertSettingsFromDB;
+export const saveAlertSettings = saveAlertSettingsToDB;
+
+// Webhooks API
+export const getWebhooks = fetchWebhooksFromDB;
+export const saveWebhook = saveWebhookToDB;
+export const deleteWebhook = deleteWebhookFromDB;
+
+// Advanced Settings API
+export const getAdvancedSettings = fetchAdvancedSettingsFromDB;
+export const saveAdvancedSettings = saveAdvancedSettingsToDB;
+
+// Logs API
+export const getLogs = fetchLogsFromDB;
+
+// Helper function for adding logs with proper type
+interface LogEntry {
+  level: string;
+  source: string;
+  message: string;
+  details?: string;
+}
+
+export const addLog = (logEntry: LogEntry) => {
+  return addLogToDB(logEntry.level, logEntry.source, logEntry.message, logEntry.details);
+};
+
+// System initialization
+export const initializeSystem = checkDatabaseSetup;
+
+// Firewall API
+export const getFirewallSettings = async () => {
   try {
-    const { error } = await supabase
-      .from('webhooks')
-      .delete()
-      .eq('id', id);
-      
-    if (error) {
-      console.error('Error deleting webhook:', error);
-      return false;
+    // We'll implement the actual API call when the backend endpoint is available
+    const response = await fetch('/api/firewall/settings');
+    if (!response.ok) {
+      throw new Error('Failed to fetch firewall settings');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching firewall settings:', error);
+    // We'll throw the error to handle it in the component
+    throw error;
+  }
+};
+
+export const updateFirewallStatus = async (enabled: boolean) => {
+  try {
+    const response = await fetch('/api/firewall/status', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ enabled }),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to update firewall status');
     }
     
-    return true;
+    return await response.json();
   } catch (error) {
-    console.error('Error deleting webhook:', error);
-    return false;
+    console.error('Error updating firewall status:', error);
+    throw error;
   }
+};
+
+export const updateFirewallRule = async (rule: any) => {
+  try {
+    const response = await fetch('/api/firewall/rules', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(rule),
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to update firewall rule');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating firewall rule:', error);
+    throw error;
+  }
+};
+
+export const deleteFirewallRule = async (ruleId: string) => {
+  try {
+    const response = await fetch(`/api/firewall/rules/${ruleId}`, {
+      method: 'DELETE',
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to delete firewall rule');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error deleting firewall rule:', error);
+    throw error;
+  }
+};
+
+// Real-time logs API
+export const streamLogs = async (logLevel: string, source: string, onLogReceived: (log: any) => void) => {
+  try {
+    // This would be a WebSocket or Server-Sent Events connection in production
+    // For now, we'll use the regular logs endpoint with polling
+    const fetchLogsWithPolling = async () => {
+      try {
+        const filters = {
+          level: logLevel !== 'all' ? logLevel : undefined,
+          source: source !== 'all' ? source : undefined
+        };
+        
+        const logs = await getLogs(filters);
+        onLogReceived(logs);
+      } catch (error) {
+        console.error('Error streaming logs:', error);
+      }
+    };
+    
+    // Initial fetch
+    await fetchLogsWithPolling();
+    
+    // Set up polling (in a real implementation, this would be a WebSocket)
+    const intervalId = setInterval(fetchLogsWithPolling, 3000);
+    
+    // Return cleanup function
+    return () => clearInterval(intervalId);
+  } catch (error) {
+    console.error('Error setting up log stream:', error);
+    throw error;
+  }
+};
+
+// Camera stream setup utility
+export const setupCameraStream = (camera, videoElement, onError) => {
+  console.log("Setting up stream for camera:", camera.name);
+  
+  // This is a placeholder implementation - in a real app, this would connect
+  // to a streaming service or handle RTSP/RTMP connections
+  
+  // For now, we'll just set the poster image if available
+  if (camera.thumbnail) {
+    videoElement.poster = camera.thumbnail;
+  }
+  
+  // Return cleanup function
+  return () => {
+    console.log("Cleaning up camera stream");
+    // Any cleanup code here
+  };
+};
+
+// Camera groups api
+export const getCameraGroups = async () => {
+  const cameras = await getCameras();
+  
+  // Extract unique camera groups
+  const groupsMap = new Map();
+  cameras.forEach(camera => {
+    if (camera.group) {
+      if (!groupsMap.has(camera.group)) {
+        groupsMap.set(camera.group, {
+          id: camera.group,
+          name: camera.group,
+          cameras: []
+        });
+      }
+      
+      groupsMap.get(camera.group).cameras.push(camera);
+    }
+  });
+  
+  return Array.from(groupsMap.values());
 };

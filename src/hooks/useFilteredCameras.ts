@@ -1,30 +1,28 @@
 
 import { useMemo } from "react";
-import { GroupedCameras, Camera } from "@/types/camera";
+import { Camera } from "@/types/camera";
 
-export function useFilteredCameras(cameraGroups: GroupedCameras[], searchQuery: string = ""): GroupedCameras[] {
-  // Filter cameras based on search query
-  return useMemo(() => {
-    if (!searchQuery.trim()) {
-      return cameraGroups;
-    }
+interface CameraGroup {
+  id: string;
+  name: string;
+  cameras: Camera[];
+}
+
+export function useFilteredCameras(cameraGroups: CameraGroup[], searchQuery: string) {
+  const filteredCameraGroups = useMemo(() => {
+    if (!searchQuery) return cameraGroups;
     
-    const query = searchQuery.toLowerCase();
-    
-    return cameraGroups
-      .map(group => {
-        // Filter cameras within the group by name or location
-        const filteredCameras = group.cameras.filter(camera => 
-          camera.name.toLowerCase().includes(query) || 
-          (camera.location && camera.location.toLowerCase().includes(query))
-        );
-        
-        // Return a new group object with only matching cameras
-        return {
-          ...group,
-          cameras: filteredCameras
-        };
-      })
-      .filter(group => group.cameras.length > 0); // Remove empty groups
+    return cameraGroups.map(group => ({
+      ...group,
+      cameras: group.cameras.filter(camera => 
+        camera.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        camera.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (camera.ipAddress && camera.ipAddress.includes(searchQuery)) ||
+        (camera.manufacturer && camera.manufacturer.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (camera.model && camera.model.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    })).filter(group => group.cameras.length > 0);
   }, [cameraGroups, searchQuery]);
+
+  return filteredCameraGroups;
 }

@@ -1,42 +1,64 @@
 
 import { useMemo } from 'react';
 import { Camera } from '@/components/admin/camera-assignment/types';
-import { GroupedCameras } from '@/types/camera';
 
 export function useCameraGroups(cameras: Camera[]) {
-  // Group cameras by their group property
-  const groupedCameras = useMemo(() => {
-    const result: Record<string, Camera[]> = {};
-    
-    cameras.forEach(camera => {
-      const groupName = camera.group || 'Ungrouped';
-      if (!result[groupName]) {
-        result[groupName] = [];
+  // Get all available camera groups
+  const getAvailableGroups = useMemo(() => {
+    return () => {
+      const groups = ['All Cameras'];
+      
+      // Add unique group names
+      cameras.forEach(camera => {
+        const groupName = camera.group || 'Uncategorized';
+        if (!groups.includes(groupName)) {
+          groups.push(groupName);
+        }
+      });
+      
+      return groups;
+    };
+  }, [cameras]);
+
+  // Get cameras by group name
+  const getCamerasByGroup = useMemo(() => {
+    return (groupName: string) => {
+      if (groupName === 'All Cameras') {
+        return cameras;
       }
-      result[groupName].push(camera);
+      
+      return cameras.filter(camera => {
+        const cameraGroup = camera.group || 'Uncategorized';
+        return cameraGroup === groupName;
+      });
+    };
+  }, [cameras]);
+
+  // Group cameras by their groups
+  const groupedCameras = useMemo(() => {
+    const groups: Record<string, Camera[]> = {};
+    
+    // Initialize with empty arrays for each unique group
+    const uniqueGroups = getAvailableGroups().filter(group => group !== 'All Cameras');
+    uniqueGroups.forEach(group => {
+      groups[group] = [];
     });
     
-    // Convert to array format for easier consumption
-    return Object.entries(result).map(([name, groupCameras]) => ({
-      id: name.toLowerCase().replace(/\s+/g, '-'),
-      name,
-      cameras: groupCameras
-    })) as unknown as GroupedCameras[]; // Type assertion for compatibility
-  }, [cameras]);
-  
-  // Get available group names
-  const getAvailableGroups = () => {
-    return Array.from(new Set(cameras.map(camera => camera.group || 'Ungrouped')));
-  };
-  
-  // Get cameras for a specific group
-  const getCamerasByGroup = (group: string): Camera[] => {
-    return cameras.filter(camera => (camera.group || 'Ungrouped') === group);
-  };
-  
+    // Populate groups with cameras
+    cameras.forEach(camera => {
+      const groupName = camera.group || 'Uncategorized';
+      if (!groups[groupName]) {
+        groups[groupName] = [];
+      }
+      groups[groupName].push(camera);
+    });
+    
+    return groups;
+  }, [cameras, getAvailableGroups]);
+
   return {
-    groupedCameras,
     getAvailableGroups,
-    getCamerasByGroup
+    getCamerasByGroup,
+    groupedCameras
   };
 }

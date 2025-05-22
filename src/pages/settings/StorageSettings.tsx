@@ -1,76 +1,103 @@
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import AppLayout from "@/components/layout/AppLayout";
-import { StorageFormSchema, StorageFormSchemaType } from "@/components/settings/storage/StorageForm";
-import { useStorageSettingsPage } from "@/hooks/storage/useStorageSettingsPage";
-import StorageSettingsHeader from "@/components/settings/storage/StorageSettingsHeader";
-import StorageUsageCard from "@/components/settings/storage/StorageUsageCard";
-import StorageConfigCard from "@/components/settings/storage/StorageConfigCard";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { StorageSettings as StorageSettingsType } from "@/types/camera";
+import { useStorageSettings } from "@/hooks/storage";
+import StorageUsageDisplay from "@/components/settings/storage/StorageUsageDisplay";
+import StorageForm from "@/components/settings/storage/StorageForm";
+import { RefreshCw } from "lucide-react";
 
+// Refactored StorageSettings component
 const StorageSettings = () => {
+  // Use the custom hook for storage settings
   const {
-    settings,
     storageUsage,
     isLoading,
     isSaving,
     isClearing,
+    loadStorageSettings,
+    fetchStorageUsage,
     handleSaveSettings,
-    handleClearStorage,
-    setSettings
-  } = useStorageSettingsPage();
-  
-  // Initialize form with react-hook-form
-  const form = useForm<StorageFormSchemaType>({
-    resolver: zodResolver(StorageFormSchema),
-    defaultValues: {
-      type: 'local',
-      path: '/recordings',
-      retentiondays: 30,
-      overwriteoldest: true
-    }
+    handleClearStorage
+  } = useStorageSettings();
+
+  // Initial settings state
+  const [settings, setSettings] = useState<StorageSettingsType>({
+    type: "local",
+    path: "/recordings",
+    retentionDays: 30,
+    overwriteOldest: true,
   });
 
-  // Update form values when settings are loaded
-  if (!isLoading && settings) {
-    form.reset(settings);
-  }
+  // Load storage settings on mount
+  useEffect(() => {
+    const initialize = async () => {
+      const loadedSettings = await loadStorageSettings();
+      if (loadedSettings) {
+        setSettings(loadedSettings);
+      }
+    };
 
-  // Wrapper function to handle the boolean return value
-  const onClearStorage = async () => {
-    await handleClearStorage();
-    return;
-  };
+    initialize();
+  }, []);
 
-  // Wrapper function to ensure the correct return type
-  const onSubmit = async (values: StorageFormSchemaType) => {
-    await handleSaveSettings(values);
-    return true;
+  // Handle refresh of storage data
+  const handleRefreshStorage = async () => {
+    await fetchStorageUsage();
   };
 
   return (
-    <AppLayout>
-      <div className="container mx-auto px-4 py-6">
-        <div className="space-y-6">
-          <StorageSettingsHeader />
-
-          <div className="grid gap-6">
-            <StorageUsageCard
-              storageUsage={storageUsage}
-              retentionDays={settings.retentiondays}
-              isClearing={isClearing}
-              onClearStorage={onClearStorage}
-            />
-
-            <StorageConfigCard
-              form={form}
-              onSubmit={onSubmit}
-              isLoading={isLoading || isSaving}
-            />
-          </div>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Storage Settings</h1>
+        <p className="text-muted-foreground">
+          Manage your system's storage usage and retention policies
+        </p>
       </div>
-    </AppLayout>
+
+      <Tabs defaultValue="usage" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="usage">Storage Usage</TabsTrigger>
+          <TabsTrigger value="settings">Storage Configuration</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="usage" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Storage Usage</CardTitle>
+              <CardDescription>
+                View your current storage usage and manage recordings
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <StorageUsageDisplay
+                storageUsage={storageUsage}
+                retentionDays={settings.retentionDays}
+                isClearing={isClearing}
+                onClearStorage={handleClearStorage}
+                onRefreshStorage={handleRefreshStorage}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-4">
+          <StorageForm
+            initialSettings={settings}
+            isLoading={isLoading}
+            isSaving={isSaving}
+            onSave={async (updatedSettings) => {
+              const success = await handleSaveSettings(updatedSettings);
+              if (success) {
+                setSettings(updatedSettings);
+              }
+              return success;
+            }}
+          />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 

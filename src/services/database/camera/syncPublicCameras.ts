@@ -28,7 +28,7 @@ export const syncPublicCamerasToDatabase = async (publicCameras: Camera[]): Prom
       name: rest.name,
       status: rest.status,
       location: rest.location,
-      ipaddress: rest.ipaddress,
+      ipaddress: rest.ipAddress,
       port: rest.port,
       username: rest.username,
       password: rest.password,
@@ -38,16 +38,10 @@ export const syncPublicCamerasToDatabase = async (publicCameras: Camera[]): Prom
       recording: rest.recording,
       thumbnail: rest.thumbnail,
       group: rest.group,
-      connectiontype: rest.connectiontype,
-      rtmpurl: rest.rtmpurl,
-      hlsurl: rest.hlsurl,
-      onvifpath: rest.onvifpath,
-      motiondetection: rest.motiondetection,
-      quality: rest.quality,
-      schedule_type: rest.schedule_type,
-      time_start: rest.time_start,
-      time_end: rest.time_end,
-      days_of_week: rest.days_of_week
+      connectiontype: rest.connectionType,
+      rtmpurl: rest.rtmpUrl,
+      onvifpath: rest.onvifPath,
+      motiondetection: rest.motionDetection
     }));
     
     // Insert cameras

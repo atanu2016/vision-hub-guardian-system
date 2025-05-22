@@ -14,7 +14,7 @@ const S3StorageFields = ({ form, isLoading }: S3StorageFieldsProps) => {
     <>
       <FormField
         control={form.control}
-        name="s3endpoint"
+        name="s3Endpoint"
         render={({ field }) => (
           <FormItem>
             <FormLabel>S3 Endpoint</FormLabel>
@@ -32,7 +32,7 @@ const S3StorageFields = ({ form, isLoading }: S3StorageFieldsProps) => {
       
       <FormField
         control={form.control}
-        name="s3region"
+        name="s3Region"
         render={({ field }) => (
           <FormItem>
             <FormLabel>S3 Region</FormLabel>
@@ -50,7 +50,7 @@ const S3StorageFields = ({ form, isLoading }: S3StorageFieldsProps) => {
       
       <FormField
         control={form.control}
-        name="s3bucket"
+        name="s3Bucket"
         render={({ field }) => (
           <FormItem>
             <FormLabel>S3 Bucket</FormLabel>
@@ -68,7 +68,7 @@ const S3StorageFields = ({ form, isLoading }: S3StorageFieldsProps) => {
       
       <FormField
         control={form.control}
-        name="s3accesskey"
+        name="s3AccessKey"
         render={({ field }) => (
           <FormItem>
             <FormLabel>Access Key</FormLabel>
@@ -86,7 +86,7 @@ const S3StorageFields = ({ form, isLoading }: S3StorageFieldsProps) => {
       
       <FormField
         control={form.control}
-        name="s3secretkey"
+        name="s3SecretKey"
         render={({ field }) => (
           <FormItem>
             <FormLabel>Secret Key</FormLabel>

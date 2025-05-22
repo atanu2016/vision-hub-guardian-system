@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { useAssignCameras } from '@/hooks/camera-assignment';
@@ -58,10 +59,10 @@ const CameraAssignmentModal = ({ isOpen, onClose, userId, userName }: CameraAssi
   // Combined auth check from both component and hook
   const isTrulyAuthenticated = isAuthenticated && hookIsAuthenticated;
 
-  // Get cameras for the currently selected group with type assertion for compatibility
+  // Get cameras for the currently selected group
   const filteredCameras: AssignmentCamera[] = selectedGroup === 'All Cameras' ? 
-    (cameras as unknown as AssignmentCamera[]) : 
-    (getCamerasByGroup ? (getCamerasByGroup(selectedGroup) as unknown as AssignmentCamera[]) : []);
+    cameras : 
+    (getCamerasByGroup ? getCamerasByGroup(selectedGroup) : []);
 
   // Show loading state while checking auth
   if (!authChecked) {

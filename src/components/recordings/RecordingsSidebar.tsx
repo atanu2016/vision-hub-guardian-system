@@ -36,10 +36,7 @@ export default function RecordingsSidebar({
     { id: "motion", name: "Motion" }
   ];
 
-  // Calculate percentage safely
-  const usedPercentage = storageUsed && typeof storageUsed.used === 'number' && 
-                         typeof storageUsed.total === 'number' && storageUsed.total > 0 ? 
-                         (storageUsed.used / storageUsed.total) * 100 : 0;
+  const usedPercentage = (storageUsed.used / storageUsed.total) * 100;
 
   return (
     <div className="space-y-6">
@@ -136,12 +133,7 @@ export default function RecordingsSidebar({
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Used</span>
-              <span>
-                {typeof storageUsed.used === 'number' ? 
-                  `${Number(storageUsed.used).toFixed(1)} GB` : '0 GB'} / 
-                {typeof storageUsed.total === 'number' ? 
-                  `${storageUsed.total} GB` : '0 GB'}
-              </span>
+              <span>{storageUsed.used.toFixed(1)} GB / {storageUsed.total} GB</span>
             </div>
             <Progress value={usedPercentage} className="h-2" />
           </div>

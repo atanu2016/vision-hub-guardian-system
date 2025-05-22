@@ -1,8 +1,9 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Camera, CameraStatus } from "@/types/camera";
+import { Camera } from "./types";
 import { toast } from "sonner";
+import { CameraStatus } from "@/types/camera";
 
 export const useCamerasFetch = () => {
   const [cameras, setCameras] = useState<Camera[]>([]);
@@ -14,7 +15,6 @@ export const useCamerasFetch = () => {
 
   const fetchCameras = async () => {
     try {
-      setLoading(true);
       const { data, error } = await supabase
         .from('cameras')
         .select('*');
@@ -24,34 +24,15 @@ export const useCamerasFetch = () => {
       }
 
       if (data) {
-        // Ensure we properly cast and type the camera data from database
         const camerasFormatted: Camera[] = data.map(cam => ({
           id: cam.id,
           name: cam.name,
           status: (cam.status as CameraStatus) || 'offline',
           location: cam.location || 'Unknown',
-          ipaddress: cam.ipaddress || '',
-          lastseen: cam.lastseen || new Date().toISOString(),
-          recording: cam.recording === true,
-          port: cam.port,
-          username: cam.username,
-          password: cam.password,
-          model: cam.model,
-          manufacturer: cam.manufacturer,
-          connectiontype: cam.connectiontype,
-          thumbnail: cam.thumbnail,
-          group: cam.group,
-          motiondetection: cam.motiondetection,
-          rtmpurl: cam.rtmpurl || '',
-          hlsurl: cam.hlsurl || '',
-          onvifpath: cam.onvifpath || '',
-          quality: cam.quality || '',
-          schedule_type: cam.schedule_type || '',
-          time_start: cam.time_start || '',
-          time_end: cam.time_end || '',
-          days_of_week: cam.days_of_week || []
+          ipAddress: cam.ipaddress || '', // Ensure it's never undefined
+          lastSeen: cam.lastseen || new Date().toISOString(), // Ensure it's never undefined
+          recording: cam.recording === true // Ensure it's always a boolean
         }));
-        
         setCameras(camerasFormatted);
       }
     } catch (error) {

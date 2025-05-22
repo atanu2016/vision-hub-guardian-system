@@ -1,129 +1,129 @@
 
-import { useEffect, useState } from "react";
-import { useCameraData } from "@/hooks/useCameraData";
-import { useToast } from "@/hooks/use-toast";
-import { useRecordings } from "@/hooks/useRecordings";
-import { useDashboardData } from "@/hooks/useDashboardData";
-import { useDashboardCameras } from "@/hooks/useDashboardCameras";
+import { TabsContent, Tabs } from "@/components/ui/tabs";
 import AppLayout from "@/components/layout/AppLayout";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
-import DashboardStats from "@/components/dashboard/DashboardStats";
+import StatsCard from "@/components/dashboard/StatsCard";
 import StorageCard from "@/components/dashboard/StorageCard";
-import DashboardTabs from "@/components/dashboard/DashboardTabs";
-
-// Simplified type for dashboard stats
-interface DashboardStats {
-  totalCameras: number;
-  onlineCameras: number;
-  offlineCameras: number;
-  recordingCameras: number;
-}
+import CameraControls from "@/components/dashboard/CameraControls";
+import CameraTabContent from "@/components/dashboard/CameraTabContent";
+import { Camera, Cpu, AlertTriangle } from "lucide-react";
+import { useDashboardData } from "@/hooks/useDashboardData";
+import { useCameraSorting } from "@/hooks/useCameraSorting";
 
 const Dashboard = () => {
-  const { toast } = useToast();
-  const { cameras, loading: cameraLoading } = useCameraData();
-  const { recordings, loading: recordingsLoading } = useRecordings();
-  const [stats, setStats] = useState<DashboardStats>({
-    totalCameras: 0,
-    onlineCameras: 0,
-    offlineCameras: 0,
-    recordingCameras: 0,
-  });
-  const [dashboardData, setDashboardData] = useState({
-    storageUsed: '0 GB',
-    storageTotal: '1 TB',
-    storagePercentage: 0,
-    uptimeHours: 0,
-  });
-  const [loading, setLoading] = useState(true);
-
+  const { stats, cameras, loading } = useDashboardData();
   const {
-    sortedCameras,
-    sortBy,
-    sortDirection,
-    changeSortBy,
-    toggleSortDirection,
-    grouping,
-    setGrouping
-  } = useDashboardCameras(cameras);
-
-  useEffect(() => {
-    const calculateStats = () => {
-      const onlineCameras = cameras.filter(cam => cam.status === 'online').length;
-      const offlineCameras = cameras.filter(cam => cam.status === 'offline').length;
-      const recordingCameras = cameras.filter(cam => cam.status === 'recording').length;
-
-      setStats({
-        totalCameras: cameras.length,
-        onlineCameras,
-        offlineCameras,
-        recordingCameras,
-      });
-    };
-
-    calculateStats();
-  }, [cameras]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const data = await useDashboardData();
-        setDashboardData({
-          storageUsed: data.stats.storageUsed || '0 GB',
-          storageTotal: data.stats.storageTotal || '1 TB',
-          storagePercentage: data.stats.storagePercentage || 0,
-          uptimeHours: data.stats.uptimeHours || 0,
-        });
-      } catch (error) {
-        console.error("Failed to fetch dashboard data:", error);
-        toast({
-          title: "Could not load dashboard data",
-          description: "Using fallback data.",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [toast]);
+    sortOption, setSortOption,
+    sortOrder, setSortOrder,
+    groupBy, setGroupBy,
+    getCameraList,
+  } = useCameraSorting(cameras);
 
   return (
     <AppLayout>
-      <div className="space-y-6 pb-8">
+      <div className="space-y-6">
         <DashboardHeader 
           title="Dashboard" 
-          subtitle="Monitor your cameras and recordings"
+          subtitle="Monitor your camera system status and activity" 
         />
-        
-        <DashboardStats
-          totalCameras={stats.totalCameras}
-          onlineCameras={stats.onlineCameras}
-          offlineCameras={stats.offlineCameras}
-          recordingCameras={stats.recordingCameras}
-        />
-        
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <StatsCard
+            title="Total Cameras"
+            value={stats.totalCameras}
+            icon={<Camera className="h-4 w-4 text-vision-blue-500" />}
+            description="Connected to system"
+          />
+          <StatsCard
+            title="Online Cameras"
+            value={stats.onlineCameras}
+            icon={<Cpu className="h-4 w-4 text-green-500" />}
+            description={`${stats.totalCameras > 0 ? Math.round((stats.onlineCameras / stats.totalCameras) * 100) : 0}% online`}
+            trend={{
+              value: "1",
+              positive: true,
+            }}
+          />
+          <StatsCard
+            title="Recording"
+            value={stats.recordingCameras}
+            icon={<Camera className="h-4 w-4 text-red-500" />}
+            description={`${stats.recordingCameras} active recordings`}
+          />
+          <StatsCard
+            title="Offline"
+            value={stats.offlineCameras}
+            icon={<AlertTriangle className="h-4 w-4 text-amber-500" />}
+            description="Require attention"
+            trend={{
+              value: "1",
+              positive: false,
+            }}
+          />
+        </div>
+
         <StorageCard 
-          storageUsed={dashboardData.storageUsed}
-          storageTotal={dashboardData.storageTotal}
-          storagePercentage={dashboardData.storagePercentage}
-          uptimeHours={dashboardData.uptimeHours}
+          storageUsed={stats.storageUsed}
+          storageTotal={stats.storageTotal}
+          storagePercentage={stats.storagePercentage}
+          uptimeHours={stats.uptimeHours}
         />
-        
-        <DashboardTabs
-          cameras={cameras}
-          recordings={recordings}
-          cameraLoading={cameraLoading}
-          recordingsLoading={recordingsLoading}
-          sortBy={sortBy}
-          sortDirection={sortDirection}
-          grouping={grouping}
-          sortedCameras={sortedCameras}
-          changeSortBy={changeSortBy}
-          toggleSortDirection={toggleSortDirection}
-          setGrouping={setGrouping}
-        />
+
+        <div className="space-y-4">
+          <Tabs defaultValue="all" className="w-full">
+            <CameraControls 
+              sortOption={sortOption}
+              setSortOption={setSortOption}
+              sortOrder={sortOrder}
+              setSortOrder={setSortOrder}
+              groupBy={groupBy}
+              setGroupBy={setGroupBy}
+            />
+            
+            {loading ? (
+              <div className="py-10 text-center">Loading camera data...</div>
+            ) : (
+              <>
+                <TabsContent value="all" className="mt-4">
+                  <CameraTabContent
+                    groupedCameras={getCameraList("all")}
+                    groupBy={groupBy}
+                    emptyCamerasMessage="No cameras found"
+                    emptyCamerasDescription="Go to the Cameras page to add cameras to your system"
+                    showManageCamerasButton={true}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="online" className="mt-4">
+                  <CameraTabContent
+                    groupedCameras={getCameraList("online")}
+                    groupBy={groupBy}
+                    emptyCamerasMessage="No online cameras found"
+                    emptyCamerasDescription="There are currently no cameras online"
+                  />
+                </TabsContent>
+                
+                <TabsContent value="offline" className="mt-4">
+                  <CameraTabContent
+                    groupedCameras={getCameraList("offline")}
+                    groupBy={groupBy}
+                    emptyCamerasMessage="No offline cameras"
+                    emptyCamerasDescription="All cameras are currently online"
+                  />
+                </TabsContent>
+                
+                <TabsContent value="recording" className="mt-4">
+                  <CameraTabContent
+                    groupedCameras={getCameraList("recording")}
+                    groupBy={groupBy}
+                    emptyCamerasMessage="No recording cameras"
+                    emptyCamerasDescription="No cameras are currently recording"
+                  />
+                </TabsContent>
+              </>
+            )}
+          </Tabs>
+        </div>
       </div>
     </AppLayout>
   );

@@ -8,7 +8,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useCameraGroups } from './useCameraGroups';
 import { Camera as AssignmentCamera } from '@/components/admin/camera-assignment/types';
-import { GroupedCameras } from '@/types/camera';
 
 export function useAssignCameras(userId: string, isOpen: boolean): UseCameraAssignmentReturn {
   const { canAssignCameras } = useAdminPermission();
@@ -73,14 +72,14 @@ export function useAssignCameras(userId: string, isOpen: boolean): UseCameraAssi
   };
 
   return {
-    cameras: cameras as any[], // Use type assertion to avoid type conflicts
+    cameras,
     loading,
     saving,
     canAssignCameras,
     isAuthenticated,
-    groupedCameras: groupedCameras as unknown as GroupedCameras[], // Type assertion to match expected return type
+    groupedCameras,
     getAvailableGroups,
-    getCamerasByGroup: getCamerasByGroup as any, // Type assertion for compatibility
+    getCamerasByGroup,
     error,
     handleCameraToggle,
     handleSave,

@@ -14,7 +14,7 @@ const NasStorageFields = ({ form, isLoading }: NasStorageFieldsProps) => {
     <>
       <FormField
         control={form.control}
-        name="nasaddress"
+        name="nasAddress"
         render={({ field }) => (
           <FormItem>
             <FormLabel>NAS Address</FormLabel>
@@ -32,7 +32,7 @@ const NasStorageFields = ({ form, isLoading }: NasStorageFieldsProps) => {
       
       <FormField
         control={form.control}
-        name="naspath"
+        name="nasPath"
         render={({ field }) => (
           <FormItem>
             <FormLabel>NAS Share Path</FormLabel>
@@ -50,7 +50,7 @@ const NasStorageFields = ({ form, isLoading }: NasStorageFieldsProps) => {
       
       <FormField
         control={form.control}
-        name="nasusername"
+        name="nasUsername"
         render={({ field }) => (
           <FormItem>
             <FormLabel>NAS Username</FormLabel>
@@ -68,7 +68,7 @@ const NasStorageFields = ({ form, isLoading }: NasStorageFieldsProps) => {
       
       <FormField
         control={form.control}
-        name="naspassword"
+        name="nasPassword"
         render={({ field }) => (
           <FormItem>
             <FormLabel>NAS Password</FormLabel>

@@ -1,28 +1,32 @@
 
-import { Camera as BaseCamera } from "@/types/camera";
+import { CameraStatus } from "@/types/camera";
 
 export interface Recording {
   id: string;
-  cameraId?: string;
   cameraName: string;
   date: string;
   time: string;
   duration: number;
   fileSize: string;
-  size?: number;
   type: "Scheduled" | "Motion" | "Manual";
   important: boolean;
-  thumbnailUrl: string;
+  thumbnailUrl?: string;
   dateTime: string;
 }
 
-// Use the base Camera type directly
-export type Camera = BaseCamera;
+export interface Camera {
+  id: string;
+  name: string;
+  status: CameraStatus;
+  location: string;
+  ipAddress: string;
+  lastSeen: string;
+  recording: boolean;  // Changed from optional to required to match type in @/types/camera
+}
 
 export interface StorageInfo {
   used: number;
   total: number;
-  percentage: number;
 }
 
 export interface UseRecordingsReturn {
@@ -39,5 +43,5 @@ export interface UseRecordingsReturn {
   filterRecordingsByDate: (date: Date | null) => void;
   dateFilter: Date | null;
   setDateFilter: (date: Date | null) => void;
-  fetchActualStorageUsage?: () => Promise<void>;
+  fetchActualStorageUsage: () => Promise<void>;
 }

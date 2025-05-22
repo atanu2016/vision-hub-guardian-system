@@ -11,7 +11,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { DatePicker } from "@/components/recordings/DatePicker";
-import { Camera as RecordingCamera } from "@/hooks/recordings/types";
 
 const Recordings = () => {
   const {
@@ -91,7 +90,7 @@ const Recordings = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-6">
           {/* Left sidebar */}
           <RecordingsSidebar 
-            cameras={cameras as any[]}
+            cameras={cameras}
             selectedCamera={selectedCamera}
             setSelectedCamera={setSelectedCamera}
             selectedType={selectedType}

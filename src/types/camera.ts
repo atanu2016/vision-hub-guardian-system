@@ -1,74 +1,87 @@
 
+// Camera types
+export type CameraConnectionType = "ip" | "rtsp" | "rtmp" | "onvif" | "hls";
+export type CameraStatus = "online" | "offline" | "error";
+export type StorageProviderType = "local" | "nas" | "s3" | "dropbox" | "google_drive" | "onedrive" | "azure_blob" | "backblaze";
+export type QualityType = 'low' | 'medium' | 'high' | 'ultra';
+export type ScheduleType = 'always' | 'workdays' | 'weekends' | 'custom';
+
 export interface Camera {
   id: string;
   name: string;
-  ipaddress: string;
+  status: CameraStatus;
+  location: string;
+  ipAddress: string;
   port?: number;
   username?: string;
   password?: string;
-  location: string;
-  status: CameraStatus;
-  lastseen: string;
-  recording?: boolean;
-  motiondetection?: boolean;
-  rtmpurl?: string;
-  hlsurl?: string;
-  onvifpath?: string;
-  connectiontype?: string;
-  group?: string;
-  thumbnail?: string;
-  manufacturer?: string;
   model?: string;
-  quality?: string;
-  schedule_type?: string;
-  time_start?: string;
-  time_end?: string;
-  days_of_week?: string[];
-}
-
-export type CameraConnectionType = 'ip' | 'rtsp' | 'rtmp' | 'onvif' | 'hls';
-
-export type CameraStatus = 'online' | 'offline' | 'recording';
-
-export interface GroupedCameras {
-  id: string;
-  name: string;
-  cameras: Camera[];
-}
-
-export interface StorageSettings {
-  id?: string;
-  type: 'local' | 'nas' | 's3' | 'dropbox' | 'google_drive' | 'onedrive' | 'azure_blob' | 'backblaze';
-  path?: string;
-  retentiondays: number;
-  overwriteoldest: boolean;
-  nasaddress?: string;
-  naspath?: string;
-  nasusername?: string;
-  naspassword?: string;
-  s3endpoint?: string;
-  s3bucket?: string;
-  s3accesskey?: string;
-  s3secretkey?: string;
-  s3region?: string;
-  dropboxtoken?: string;
-  dropboxfolder?: string;
-  googledrivertoken?: string;
-  googledrivefolderid?: string;
-  onedrivetoken?: string;
-  onedrivefolderid?: string;
-  azureconnectionstring?: string;
-  azurecontainer?: string;
-  backblazekeyid?: string;
-  backblazeapplicationkey?: string;
-  backblazebucket?: string;
+  manufacturer?: string;
+  lastSeen: string; // ISO date string
+  recording: boolean;
+  thumbnail?: string;
+  group?: string;
+  connectionType?: CameraConnectionType;
+  rtmpUrl?: string;
+  hlsUrl?: string; // Added HLS URL field
+  onvifPath?: string;
+  motionDetection?: boolean;
+  
+  // Recording settings properties
+  quality?: QualityType; 
+  scheduleType?: ScheduleType;
+  timeStart?: string;
+  timeEnd?: string;
+  daysOfWeek?: string[];
 }
 
 export interface CameraGroup {
   id: string;
   name: string;
-  cameras: string[];
+  description?: string;
 }
 
-export type QualityType = 'low' | 'medium' | 'high' | 'ultra';
-export type ScheduleType = 'always' | 'workdays' | 'weekends' | 'custom';
+export interface GroupedCameras {
+  [groupName: string]: Camera[];
+}
+
+export interface StorageSettings {
+  type: StorageProviderType;
+  path?: string;
+  retentionDays: number;
+  overwriteOldest: boolean;
+  
+  // NAS settings
+  nasAddress?: string;
+  nasPath?: string;
+  nasUsername?: string;
+  nasPassword?: string;
+  
+  // S3 settings
+  s3Endpoint?: string;
+  s3Bucket?: string; 
+  s3AccessKey?: string;
+  s3SecretKey?: string;
+  s3Region?: string;
+
+  // Dropbox settings
+  dropboxToken?: string;
+  dropboxFolder?: string;
+
+  // Google Drive settings
+  googleDriveToken?: string;
+  googleDriveFolderId?: string;
+
+  // OneDrive settings
+  oneDriveToken?: string;
+  oneDriveFolderId?: string;
+
+  // Azure Blob Storage settings
+  azureConnectionString?: string;
+  azureContainer?: string;
+
+  // Backblaze settings
+  backblazeKeyId?: string;
+  backblazeApplicationKey?: string;
+  backblazeBucket?: string;
+}

@@ -9,13 +9,10 @@ import NoCamerasFound from "@/components/cameras/page/NoCamerasFound";
 import CameraGroups from "@/components/cameras/page/CameraGroups";
 import { useCameraData } from "@/hooks/useCameraData";
 import { useFilteredCameras } from "@/hooks/useFilteredCameras";
-import { CameraUIProps } from "@/utils/cameraPropertyMapper";
-import { useCameraAdapter } from "@/hooks/useCameraAdapter";
 
 const Cameras = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const { adaptCameraParams } = useCameraAdapter();
   
   const {
     cameras,
@@ -30,13 +27,6 @@ const Cameras = () => {
 
   // Filter cameras based on search query
   const filteredCameraGroups = useFilteredCameras(cameraGroups, searchQuery);
-
-  // Handler for adding a camera that converts from UI props to database format
-  const handleAddCamera = (newCameraUI: Omit<CameraUIProps, "id" | "lastSeen">) => {
-    // Convert UI format to database format before adding
-    const dbCameraParams = adaptCameraParams(newCameraUI);
-    return addCamera(dbCameraParams);
-  };
 
   return (
     <AppLayout>
@@ -80,7 +70,7 @@ const Cameras = () => {
       <AddCameraModal 
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onAdd={handleAddCamera}
+        onAdd={addCamera}
         existingGroups={existingGroups}
       />
     </AppLayout>

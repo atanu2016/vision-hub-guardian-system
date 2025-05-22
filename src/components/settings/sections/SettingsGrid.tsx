@@ -1,5 +1,6 @@
 
-import { ReactNode } from "react";
+import { ReactNode } from 'react';
+import { Card } from '@/components/ui/card';
 
 interface SettingsGridProps {
   children: ReactNode;

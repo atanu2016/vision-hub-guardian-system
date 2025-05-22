@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { StorageSettings } from '@/types/camera';
+import { StorageSettings as StorageSettingsType } from '@/types/camera';
 import { saveStorageSettings } from '@/services/apiService';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,7 +16,7 @@ export const useStorageOperations = () => {
   const { fetchStorageUsage } = useStorageUsage();
 
   // Save storage settings
-  const handleSaveSettings = async (settings: StorageSettings) => {
+  const handleSaveSettings = async (settings: StorageSettingsType) => {
     setIsSaving(true);
     try {
       // First validate the storage configuration

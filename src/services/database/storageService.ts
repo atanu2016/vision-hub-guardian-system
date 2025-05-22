@@ -1,82 +1,118 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { StorageSettings } from "@/types/camera";
 import { logDatabaseError } from "./baseService";
 
-// Fetch storage settings from database
-export const fetchStorageSettingsFromDB = async () => {
+// Storage settings operations
+export const fetchStorageSettingsFromDB = async (): Promise<StorageSettings> => {
   try {
     const { data, error } = await supabase
       .from('storage_settings')
       .select('*')
       .limit(1)
-      .maybeSingle();
-      
+      .single();
+    
     if (error) {
+      if (error.code === 'PGRST116') {
+        // No data found, return default settings
+        return {
+          type: 'local',
+          path: '/recordings',
+          retentionDays: 30,
+          overwriteOldest: true
+        };
+      }
       console.error("Error fetching storage settings:", error);
       throw error;
     }
     
-    // If no settings exist, return default settings
-    if (!data) {
-      return {
-        id: 'default',
-        type: 'local',
-        path: '/recordings',
-        retentiondays: 30,
-        overwriteoldest: true
-      };
-    }
-    
-    return data;
+    // Transform DB data to our StorageSettings type
+    return {
+      type: data.type as "local" | "nas" | "s3",
+      path: data.path || undefined,
+      retentionDays: data.retentiondays,
+      overwriteOldest: data.overwriteoldest,
+      nasAddress: data.nasaddress || undefined,
+      nasPath: data.naspath || undefined,
+      nasUsername: data.nasusername || undefined, 
+      nasPassword: data.naspassword || undefined,
+      s3Endpoint: data.s3endpoint || undefined,
+      s3Bucket: data.s3bucket || undefined,
+      s3AccessKey: data.s3accesskey || undefined,
+      s3SecretKey: data.s3secretkey || undefined,
+      s3Region: data.s3region || undefined
+    };
   } catch (error) {
-    throw logDatabaseError(error, "Failed to fetch storage settings");
+    throw logDatabaseError(error, "Failed to load storage settings");
   }
 };
 
-// Save storage settings to database
-export const saveStorageSettingsToDB = async (settings: any) => {
+export const saveStorageSettingsToDB = async (settings: StorageSettings): Promise<StorageSettings> => {
   try {
-    // Check if settings exist
-    const { data: existingSettings } = await supabase
+    // Transform to DB format
+    const dbSettings = {
+      type: settings.type,
+      path: settings.path,
+      retentiondays: settings.retentionDays,
+      overwriteoldest: settings.overwriteOldest,
+      nasaddress: settings.nasAddress,
+      naspath: settings.nasPath,
+      nasusername: settings.nasUsername,
+      naspassword: settings.nasPassword,
+      s3endpoint: settings.s3Endpoint,
+      s3bucket: settings.s3Bucket,
+      s3accesskey: settings.s3AccessKey,
+      s3secretkey: settings.s3SecretKey,
+      s3region: settings.s3Region
+    };
+    
+    // First check if we have any settings
+    const { data: existingData } = await supabase
       .from('storage_settings')
       .select('id')
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
     
-    let result;
-    
-    if (existingSettings) {
+    let query;
+    if (existingData && existingData.length > 0) {
       // Update existing settings
-      const { data, error } = await supabase
+      query = supabase
         .from('storage_settings')
-        .update(settings)
-        .eq('id', existingSettings.id)
+        .update(dbSettings)
+        .eq('id', existingData[0].id)
         .select()
         .single();
-        
-      if (error) {
-        console.error("Error updating storage settings:", error);
-        throw error;
-      }
-      
-      result = data;
     } else {
       // Insert new settings
-      const { data, error } = await supabase
+      query = supabase
         .from('storage_settings')
-        .insert(settings)
+        .insert(dbSettings)
         .select()
         .single();
-        
-      if (error) {
-        console.error("Error inserting storage settings:", error);
-        throw error;
-      }
-      
-      result = data;
     }
     
-    return result;
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error("Error saving storage settings:", error);
+      throw error;
+    }
+    
+    // Transform back to our type
+    return {
+      type: data.type as "local" | "nas" | "s3",
+      path: data.path || undefined,
+      retentionDays: data.retentiondays,
+      overwriteOldest: data.overwriteoldest,
+      nasAddress: data.nasaddress || undefined,
+      nasPath: data.naspath || undefined,
+      nasUsername: data.nasusername || undefined, 
+      nasPassword: data.naspassword || undefined,
+      s3Endpoint: data.s3endpoint || undefined,
+      s3Bucket: data.s3bucket || undefined,
+      s3AccessKey: data.s3accesskey || undefined,
+      s3SecretKey: data.s3secretkey || undefined,
+      s3Region: data.s3region || undefined
+    };
   } catch (error) {
     throw logDatabaseError(error, "Failed to save storage settings");
   }

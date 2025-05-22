@@ -2,24 +2,26 @@
 export interface StorageUsage {
   totalSpace: number;
   usedSpace: number;
-  percentage: number;
   usedPercentage: number;
   usedSpaceFormatted: string;
   totalSpaceFormatted: string;
 }
 
-export interface StorageStats {
-  used: number;
-  total: number;
-  percentage: number;
-}
-
 export interface StorageInfo {
   used: number;
   total: number;
-  percentage: number;
-  totalSpace?: number;
-  usedSpace?: number;
-  freeSpace?: number;
-  usagePercentage?: number;
+}
+
+export interface Recording {
+  id: string;
+  cameraName: string;
+  dateTime: string;
+  duration: number;  // Changed to number
+  fileSize: string;
+  thumbnail?: string;
+  type: string;
+  date?: string;
+  time?: string;
+  important?: boolean;
+  thumbnailUrl?: string; // Added to match recordings type
 }

@@ -10,11 +10,6 @@ const SampleCameraToggle = ({
   includeSampleCamera,
   toggleSampleCamera,
 }: SampleCameraToggleProps) => {
-  // Return null since we're removing the sample camera functionality
-  return null;
-  
-  // Original component code is kept for reference but not used
-  /* 
   return (
     <div className="flex justify-end mb-4">
       <Button
@@ -25,7 +20,6 @@ const SampleCameraToggle = ({
       </Button>
     </div>
   );
-  */
 };
 
 export default SampleCameraToggle;

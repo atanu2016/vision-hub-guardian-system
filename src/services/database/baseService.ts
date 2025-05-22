@@ -1,28 +1,35 @@
 
-// Basic error logging for database operations
-export function logDatabaseError(error: any, message: string): Error {
-  console.error(`${message}:`, error);
-  return new Error(`${message}: ${error.message || 'Unknown error'}`);
-}
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-// Check if database is set up (placeholder implementation)
-export async function checkDatabaseSetup(): Promise<boolean> {
+// Log database errors with optional UI toast
+export const logDatabaseError = (error: any, message: string, showToast = true) => {
+  console.error(`Database service error: ${message}`, error);
+  if (showToast) {
+    toast("Error", {
+      description: message
+    });
+  }
+  return error;
+};
+
+// Check if database tables exist
+export const checkDatabaseSetup = async (): Promise<boolean> => {
   try {
-    // In a real implementation, this would check if the database is properly set up
+    // Try to query the cameras table
+    const { error } = await supabase
+      .from('cameras')
+      .select('id')
+      .limit(1);
+      
+    // If we get a PGRST109 error, the table doesn't exist
+    if (error && error.code === 'PGRST109') {
+      return false;
+    }
+    
     return true;
   } catch (error) {
-    console.error('Database setup check failed:', error);
+    console.error("Error checking database setup:", error);
     return false;
   }
-}
-
-// Check if tables exist (placeholder implementation)
-export async function checkTablesExist(): Promise<boolean> {
-  try {
-    // In a real implementation, this would check if required tables exist
-    return true;
-  } catch (error) {
-    console.error('Table check failed:', error);
-    return false;
-  }
-}
+};

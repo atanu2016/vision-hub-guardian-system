@@ -2,12 +2,12 @@
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import AddCameraModal from "@/components/cameras/AddCameraModal";
-import { CameraUIProps } from "@/utils/cameraPropertyMapper";
+import { Camera } from "@/types/camera";
 
 interface AddCameraButtonProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  onAddCamera: (camera: Omit<CameraUIProps, "id" | "lastSeen">) => Promise<any>;
+  onAddCamera: (camera: Omit<Camera, "id">) => void;
   existingGroups: string[];
 }
 
