@@ -23,3 +23,11 @@ export interface UserWithCameras {
   role: UserRole;
   cameraIds: string[];
 }
+
+export interface UseCameraAssignmentReturn {
+  state: CameraAssignmentState;
+  loadUsers: () => Promise<void>;
+  loadCameras: () => Promise<void>;
+  assignCameras: (userId: string, cameraIds: string[]) => Promise<boolean>;
+  reset: () => void;
+}
