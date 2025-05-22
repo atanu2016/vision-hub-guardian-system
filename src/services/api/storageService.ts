@@ -1,127 +1,112 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { StorageSettings } from "@/types/camera";
 
-/**
- * Get storage settings from database
- */
-export const getStorageSettings = async (): Promise<StorageSettings> => {
+// Define explicit interface for storage settings
+interface StorageSettings {
+  id: string;
+  nasaddress?: string;
+  naspassword?: string;
+  naspath?: string;
+  nasusername?: string;
+  overwriteoldest: boolean;
+  path: string;
+  retentiondays: number;
+  s3accesskey?: string;
+  s3bucket?: string;
+  s3endpoint?: string;
+  s3region?: string;
+  s3secretkey?: string;
+  type: string;
+  // Cloud storage providers
+  dropboxtoken?: string;
+  dropboxfolder?: string;
+  googledrivertoken?: string;
+  googledrivefolderid?: string;
+  onedrivetoken?: string;
+  onedrivefolderid?: string;
+  azureconnectionstring?: string;
+  azurecontainer?: string;
+  backblazekeyid?: string;
+  backblazeapplicationkey?: string;
+  backblazebucket?: string;
+}
+
+export const getStorageSettings = async (): Promise<StorageSettings | null> => {
   try {
     const { data, error } = await supabase
       .from('storage_settings')
       .select('*')
-      .order('updated_at', { ascending: false })
-      .limit(1)
       .single();
-      
-    if (error && error.code !== 'PGRST116') {
-      throw error;
+    
+    if (error) {
+      console.error('Error fetching storage settings:', error);
+      return null;
     }
     
-    // If no settings exist, return default settings
-    if (!data) {
-      return {
-        type: 'local',
-        path: '/recordings',
-        retentionDays: 30,
-        overwriteOldest: true
-      };
-    }
-    
-    // Translate database keys to interface format
-    // Cast the type to ensure it matches the expected enum values
-    const storageType = data.type as 'local' | 'nas' | 's3' | 'dropbox' | 'google_drive' | 'onedrive' | 'azure_blob' | 'backblaze';
-    
-    return {
-      type: storageType,
-      path: data.path,
-      retentionDays: data.retentiondays,
-      overwriteOldest: data.overwriteoldest,
-      nasAddress: data.nasaddress,
-      nasPath: data.naspath,
-      nasUsername: data.nasusername,
-      nasPassword: data.naspassword,
-      s3Endpoint: data.s3endpoint,
-      s3Bucket: data.s3bucket,
-      s3AccessKey: data.s3accesskey,
-      s3SecretKey: data.s3secretkey,
-      s3Region: data.s3region,
-      // Handle optional properties
-      dropboxToken: data.dropboxtoken || undefined,
-      dropboxFolder: data.dropboxfolder || undefined,
-      googleDriveToken: data.googledrivertoken || undefined,
-      googleDriveFolderId: data.googledrivefolderid || undefined,
-      oneDriveToken: data.onedrivetoken || undefined,
-      oneDriveFolderId: data.onedrivefolderid || undefined,
-      azureConnectionString: data.azureconnectionstring || undefined,
-      azureContainer: data.azurecontainer || undefined,
-      backblazeKeyId: data.backblazekeyid || undefined,
-      backblazeApplicationKey: data.backblazeapplicationkey || undefined,
-      backblazeBucket: data.backblazebucket || undefined
-    };
-  } catch (err) {
-    console.error('Error fetching storage settings:', err);
-    throw err;
+    return data as StorageSettings;
+  } catch (error) {
+    console.error('Error fetching storage settings:', error);
+    return null;
   }
 };
 
-/**
- * Save storage settings to database
- */
-export const saveStorageSettings = async (settings: StorageSettings): Promise<boolean> => {
+export const saveStorageSettings = async (settings: Partial<StorageSettings>): Promise<boolean> => {
   try {
-    // Convert to database format
-    const dbSettings = {
-      type: settings.type,
-      path: settings.path,
-      retentiondays: settings.retentionDays,
-      overwriteoldest: settings.overwriteOldest,
-      nasaddress: settings.nasAddress,
-      naspath: settings.nasPath, 
-      nasusername: settings.nasUsername,
-      naspassword: settings.nasPassword,
-      s3endpoint: settings.s3Endpoint,
-      s3bucket: settings.s3Bucket,
-      s3accesskey: settings.s3AccessKey,
-      s3secretkey: settings.s3SecretKey,
-      s3region: settings.s3Region,
-      // Add all cloud storage fields
-      dropboxtoken: settings.dropboxToken || null,
-      dropboxfolder: settings.dropboxFolder || null,
-      googledrivertoken: settings.googleDriveToken || null,
-      googledrivefolderid: settings.googleDriveFolderId || null,
-      onedrivetoken: settings.oneDriveToken || null,
-      onedrivefolderid: settings.oneDriveFolderId || null,
-      azureconnectionstring: settings.azureConnectionString || null,
-      azurecontainer: settings.azureContainer || null,
-      backblazekeyid: settings.backblazeKeyId || null,
-      backblazeapplicationkey: settings.backblazeApplicationKey || null,
-      backblazebucket: settings.backblazeBucket || null
-    };
-    
-    const { error } = await supabase
+    // Check if settings already exist
+    const { data, error } = await supabase
       .from('storage_settings')
-      .upsert(dbSettings);
+      .select('id')
+      .limit(1);
+    
+    if (error) {
+      console.error('Error checking storage settings:', error);
+      return false;
+    }
+    
+    if (data && data.length > 0) {
+      // Update existing settings
+      const { error: updateError } = await supabase
+        .from('storage_settings')
+        .update(settings)
+        .eq('id', data[0].id);
       
-    if (error) throw error;
+      if (updateError) {
+        console.error('Error updating storage settings:', updateError);
+        return false;
+      }
+    } else {
+      // Insert new settings
+      const { error: insertError } = await supabase
+        .from('storage_settings')
+        .insert({
+          ...settings,
+          id: crypto.randomUUID()
+        });
+      
+      if (insertError) {
+        console.error('Error inserting storage settings:', insertError);
+        return false;
+      }
+    }
+    
     return true;
-  } catch (err) {
-    console.error('Error saving storage settings:', err);
+  } catch (error) {
+    console.error('Error saving storage settings:', error);
     return false;
   }
 };
 
-/**
- * Validate storage access
- */
-export const validateStorageAccess = async (settings: StorageSettings): Promise<boolean> => {
+export const getStorageUsage = async (): Promise<{ used: number, total: number, percentage: number } | null> => {
   try {
-    // In a real application, this would make an API call to check if storage is accessible
-    // For demo purposes, we'll simulate with a delay and random success
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return Math.random() > 0.2; // 80% success rate for demo
-  } catch (err) {
-    console.error('Error validating storage:', err);
-    return false;
+    // This would typically be an API call to get actual storage usage
+    // For now, we'll return mock data
+    return {
+      used: 128, // GB
+      total: 1024, // GB
+      percentage: 12.5
+    };
+  } catch (error) {
+    console.error('Error fetching storage usage:', error);
+    return null;
   }
 };
