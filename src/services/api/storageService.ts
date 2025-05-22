@@ -46,7 +46,7 @@ export const getStorageSettings = async (): Promise<StorageSettings> => {
       s3AccessKey: data.s3accesskey,
       s3SecretKey: data.s3secretkey,
       s3Region: data.s3region,
-      // Add fallbacks for all optional properties using null coalescing
+      // Handle optional properties
       dropboxToken: data.dropboxtoken || undefined,
       dropboxFolder: data.dropboxfolder || undefined,
       googleDriveToken: data.googledrivertoken || undefined,
@@ -85,7 +85,7 @@ export const saveStorageSettings = async (settings: StorageSettings): Promise<bo
       s3accesskey: settings.s3AccessKey,
       s3secretkey: settings.s3SecretKey,
       s3region: settings.s3Region,
-      // Add all cloud storage fields, may be null but include for schema compatibility
+      // Add all cloud storage fields
       dropboxtoken: settings.dropboxToken || null,
       dropboxfolder: settings.dropboxFolder || null,
       googledrivertoken: settings.googleDriveToken || null,

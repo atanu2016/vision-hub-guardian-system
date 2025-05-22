@@ -22,6 +22,12 @@ export interface CameraUIProps {
   onvifPath?: string;
   motionDetection?: boolean;
   thumbnail?: string;
+  // Add the missing properties from the Camera type
+  quality?: string;
+  scheduleType?: string;
+  timeStart?: string;
+  timeEnd?: string;
+  daysOfWeek?: string[];
 }
 
 // Convert from UI format (camelCase) to database format (snake_case-like)
@@ -45,7 +51,13 @@ export function toDatabaseCamera(uiCamera: CameraUIProps): Camera {
     hlsurl: uiCamera.hlsUrl,
     onvifpath: uiCamera.onvifPath,
     motiondetection: uiCamera.motionDetection,
-    thumbnail: uiCamera.thumbnail
+    thumbnail: uiCamera.thumbnail,
+    // Map the additional properties
+    quality: uiCamera.quality,
+    scheduleType: uiCamera.scheduleType,
+    timeStart: uiCamera.timeStart,
+    timeEnd: uiCamera.timeEnd,
+    daysOfWeek: uiCamera.daysOfWeek
   };
 }
 
@@ -70,7 +82,13 @@ export function toUICamera(dbCamera: Camera): CameraUIProps {
     hlsUrl: dbCamera.hlsurl,
     onvifPath: dbCamera.onvifpath,
     motionDetection: dbCamera.motiondetection,
-    thumbnail: dbCamera.thumbnail
+    thumbnail: dbCamera.thumbnail,
+    // Map additional properties
+    quality: dbCamera.quality,
+    scheduleType: dbCamera.scheduleType,
+    timeStart: dbCamera.timeStart,
+    timeEnd: dbCamera.timeEnd,
+    daysOfWeek: dbCamera.daysOfWeek
   };
 }
 
@@ -95,7 +113,13 @@ export function toUICameraWithDefault(dbCamera: Partial<Camera> & { id: string }
     hlsUrl: dbCamera.hlsurl,
     onvifPath: dbCamera.onvifpath,
     motionDetection: dbCamera.motiondetection || false,
-    thumbnail: dbCamera.thumbnail
+    thumbnail: dbCamera.thumbnail,
+    // Map additional properties with defaults
+    quality: dbCamera.quality || "medium",
+    scheduleType: dbCamera.scheduleType || "always",
+    timeStart: dbCamera.timeStart || "00:00",
+    timeEnd: dbCamera.timeEnd || "23:59",
+    daysOfWeek: dbCamera.daysOfWeek || []
   };
 }
 

@@ -1,79 +1,105 @@
 
 import { Button } from "@/components/ui/button";
-import { Filter } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronDown,
+  Grid,
+  List,
+  SortAsc,
+  Terminal
+} from "lucide-react";
 
-interface CameraControlsProps {
-  sortOption: string;
-  setSortOption: (option: string) => void;
-  sortOrder: "asc" | "desc";
-  setSortOrder: (order: "asc" | "desc") => void;
-  groupBy: "none" | "group" | "location";
-  setGroupBy: (groupBy: "none" | "group" | "location") => void;
+export type SortKey = 'name' | 'location' | 'status' | 'lastSeen';
+export type SortDirection = 'asc' | 'desc';
+
+export interface CameraControlsProps {
+  onSortChange: (key: SortKey) => void;
+  currentSort: SortKey;
+  onSortDirectionToggle: () => void;
+  currentSortDirection: SortDirection;
+  onGroupChange: () => void;
+  currentGrouping: 'none' | 'location';
 }
 
 const CameraControls = ({
-  sortOption,
-  setSortOption,
-  sortOrder,
-  setSortOrder,
-  groupBy,
-  setGroupBy,
+  onSortChange,
+  currentSort,
+  onSortDirectionToggle,
+  currentSortDirection,
+  onGroupChange,
+  currentGrouping
 }: CameraControlsProps) => {
+  const getSortLabel = (key: SortKey): string => {
+    switch (key) {
+      case 'name': return 'Name';
+      case 'location': return 'Location';
+      case 'status': return 'Status';
+      case 'lastSeen': return 'Last Seen';
+      default: return 'Name';
+    }
+  };
+
   return (
-    <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-4">
-      <TabsList>
-        <TabsTrigger value="all">All Cameras</TabsTrigger>
-        <TabsTrigger value="online">Online</TabsTrigger>
-        <TabsTrigger value="offline">Offline</TabsTrigger>
-        <TabsTrigger value="recording">Recording</TabsTrigger>
-      </TabsList>
-      
-      <div className="flex items-center gap-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Filter className="h-4 w-4" />
-              Sort & Group
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56">
-            <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-            <DropdownMenuRadioGroup value={sortOption} onValueChange={setSortOption}>
-              <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="location">Location</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="status">Status</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="lastSeen">Last Seen</DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-            
-            <DropdownMenuSeparator />
-            
-            <DropdownMenuLabel>Order</DropdownMenuLabel>
-            <DropdownMenuRadioGroup value={sortOrder} onValueChange={(value) => setSortOrder(value as "asc" | "desc")}>
-              <DropdownMenuRadioItem value="asc">Ascending</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="desc">Descending</DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-            
-            <DropdownMenuSeparator />
-            
-            <DropdownMenuLabel>Group by</DropdownMenuLabel>
-            <DropdownMenuRadioGroup value={groupBy} onValueChange={(value) => setGroupBy(value as "none" | "group" | "location")}>
-              <DropdownMenuRadioItem value="none">No Grouping</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="group">Camera Group</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="location">Location</DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+    <div className="flex items-center gap-2">
+      {/* Sort dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" className="h-8 gap-1">
+            <SortAsc className="h-3.5 w-3.5" />
+            <span>Sort: {getSortLabel(currentSort)}</span>
+            <ChevronDown className="h-3.5 w-3.5 opacity-50" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => onSortChange('name')}>
+            Name
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onSortChange('location')}>
+            Location
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onSortChange('status')}>
+            Status
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onSortChange('lastSeen')}>
+            Last Seen
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Sort direction toggle */}
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-8 w-8 p-0"
+        onClick={onSortDirectionToggle}
+      >
+        {currentSortDirection === 'asc' ? (
+          <ArrowUp className="h-4 w-4" />
+        ) : (
+          <ArrowDown className="h-4 w-4" />
+        )}
+      </Button>
+
+      {/* Group toggle */}
+      <Button
+        variant="outline" 
+        size="sm"
+        className="h-8 w-8 p-0"
+        onClick={onGroupChange}
+      >
+        {currentGrouping === 'none' ? (
+          <List className="h-4 w-4" />
+        ) : (
+          <Grid className="h-4 w-4" />
+        )}
+      </Button>
     </div>
   );
 };

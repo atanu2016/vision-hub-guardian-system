@@ -1,19 +1,31 @@
 
 import { Button } from "@/components/ui/button";
-import { CameraIcon } from "lucide-react";
+import { PlusCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface DashboardHeaderProps {
-  title: string;
-  subtitle: string;
+  title?: string;
+  subtitle?: string;
 }
 
-const DashboardHeader = ({ title, subtitle }: DashboardHeaderProps) => {
+const DashboardHeader = ({ 
+  title = "Dashboard", 
+  subtitle = "Monitor your cameras and recordings"
+}: DashboardHeaderProps) => {
+  const navigate = useNavigate();
+  
   return (
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-2 md:space-y-0">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
         <p className="text-muted-foreground">{subtitle}</p>
       </div>
+      <Button 
+        onClick={() => navigate("/cameras")} 
+        className="sm:self-end gap-1"
+      >
+        <PlusCircle className="h-4 w-4" /> Add Camera
+      </Button>
     </div>
   );
 };

@@ -16,17 +16,10 @@ export interface Recording {
   dateTime: string;
 }
 
-export interface Camera {
-  id: string;
-  name: string;
-  status: "online" | "offline" | "recording";
-  location: string;
-  ipAddress: string;
-  lastSeen: string;
-  recording: boolean;
-  // Add these properties to make it compatible with the base Camera type
-  ipaddress: string;
-  lastseen: string;
+// Make this compatible with the base Camera type
+export interface Camera extends BaseCamera {
+  // Add any additional properties needed for the recordings module
+  // But make sure it extends the base Camera type to ensure compatibility
 }
 
 export interface StorageInfo {

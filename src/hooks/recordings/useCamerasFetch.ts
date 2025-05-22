@@ -40,9 +40,15 @@ export const useCamerasFetch = () => {
           thumbnail: cam.thumbnail,
           group: cam.group,
           motiondetection: cam.motiondetection,
-          rtmpurl: cam.rtmpurl,
-          hlsurl: cam.hlsurl,
-          onvifpath: cam.onvifpath
+          rtmpurl: cam.rtmpurl || undefined,
+          hlsurl: cam.hlsurl || undefined,
+          onvifpath: cam.onvifpath || undefined,
+          // Add additional properties with defaults
+          quality: cam.quality,
+          scheduleType: cam.scheduleType,
+          timeStart: cam.timeStart,
+          timeEnd: cam.timeEnd,
+          daysOfWeek: cam.daysOfWeek
         }));
         setCameras(camerasFormatted);
       }

@@ -4,7 +4,8 @@ import { Camera } from "@/types/camera";
 import { useToast } from "@/hooks/use-toast";
 import { getCameras, saveCamera, deleteCamera } from "@/services/apiService";
 import { checkDatabaseSetup } from "@/services/database";
-import { toUICamera, toDatabaseCamera, CameraUIProps } from "@/utils/cameraPropertyMapper";
+import { CameraUIProps } from "@/utils/cameraPropertyMapper";
+import { useCameraAdapter } from "@/hooks/useCameraAdapter";
 
 // Sample HLS camera for consistency
 const sampleHLSCamera: Camera = {
@@ -25,6 +26,7 @@ export function useCameraData() {
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [loading, setLoading] = useState(true);
   const [includeSampleCamera, setIncludeSampleCamera] = useState(true);
+  const { adaptCameraParams, toCameraUIProps } = useCameraAdapter();
   
   // Initialize system and load cameras
   useEffect(() => {
@@ -121,21 +123,17 @@ export function useCameraData() {
       .filter(group => group !== "Ungrouped");
   }, [cameras]);
 
-  // Add camera function
-  const addCamera = async (newCameraUI: Omit<CameraUIProps, "id" | "lastSeen">) => {
+  // Add camera function - uses the DB format
+  const addCamera = async (cameraParams: Omit<Camera, "id">) => {
     try {
-      // Create camera object with UI format but add the missing required properties
-      const cameraUI: CameraUIProps = {
-        ...newCameraUI,
-        id: `cam-${Date.now()}`,
-        lastSeen: new Date().toISOString()
+      // Create camera object with DB format
+      const newCamera: Camera = {
+        ...cameraParams,
+        id: `cam-${Date.now()}`
       };
       
-      // Convert to database format
-      const dbCamera = toDatabaseCamera(cameraUI);
-      
       // Save to database
-      const savedCamera = await saveCamera(dbCamera);
+      const savedCamera = await saveCamera(newCamera);
       
       // Ensure we add a camera with the correct type
       setCameras(prev => [...prev, savedCamera as Camera]);

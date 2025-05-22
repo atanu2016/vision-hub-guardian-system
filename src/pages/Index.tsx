@@ -1,47 +1,39 @@
+
 import { useState, useEffect, useMemo } from "react";
-import { Camera, CameraStatus } from "@/types/camera";
-import { Recording } from "@/hooks/recordings";
+import { Camera } from "@/types/camera";
 import { useDashboardData } from "@/hooks/useDashboardData";
-import { useRecordings } from "@/hooks/useRecordings";
 import { useCameraData } from "@/hooks/useCameraData";
 import { useToast } from "@/hooks/use-toast";
-import { useSearchParams } from 'next/navigation';
 import AppLayout from "@/components/layout/AppLayout";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import StatsCard from "@/components/dashboard/StatsCard";
 import StorageCard from "@/components/dashboard/StorageCard";
 import CameraCard from "@/components/dashboard/CameraCard";
 import RecordingCard from "@/components/dashboard/RecordingCard";
-import CameraControls from "@/components/dashboard/CameraControls";
+import CameraControls, { SortKey, SortDirection } from "@/components/dashboard/CameraControls";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
 import {
-  Camera,
   Video as VideoIcon,
   Wifi as WifiIcon,
-  WifiOff,
-  ArrowDown,
-  ArrowUp,
-  Grip,
-  List,
-  Plus,
-  Download,
-  Share2,
-  Edit,
-  Trash2
+  WifiOff
 } from "lucide-react";
+import { useRecordings } from "@/hooks/useRecordings";
 
-type SortKey = 'name' | 'location' | 'status' | 'lastSeen';
-type SortDirection = 'asc' | 'desc';
+// Simplified type for dashboard stats to avoid duplication
+interface DashboardStats {
+  totalCameras: number;
+  onlineCameras: number;
+  offlineCameras: number;
+  recordingCameras: number;
+}
 
-interface CameraControlsProps {
-  onSortChange: (key: SortKey) => void;
-  currentSort: SortKey;
-  onSortDirectionToggle: () => void;
-  currentSortDirection: SortDirection;
-  onGroupChange: () => void;
-  currentGrouping: 'none' | 'location';
+// Type for dashboard data
+interface DashboardData {
+  storageUsed: string;
+  storageTotal: string;
+  storagePercentage: number;
+  uptimeHours: number;
 }
 
 const useCameraSorting = (cameras: Camera[]) => {
@@ -62,17 +54,23 @@ const useCameraSorting = (cameras: Camera[]) => {
 
   const sortedCameras = useMemo(() => {
     const sortFunction = (a: Camera, b: Camera): number => {
-      let aValue: string | CameraStatus | number = a[sortBy];
-      let bValue: string | CameraStatus | number = b[sortBy];
+      let aValue: string | number = '';
+      let bValue: string | number = '';
 
-      if (sortBy === 'status') {
-        const statusOrder: Record<CameraStatus, number> = {
+      if (sortBy === 'name') {
+        aValue = a.name;
+        bValue = b.name;
+      } else if (sortBy === 'location') {
+        aValue = a.location;
+        bValue = b.location;
+      } else if (sortBy === 'status') {
+        const statusOrder = {
           online: 1,
           recording: 2,
           offline: 3,
         };
-        aValue = statusOrder[a.status];
-        bValue = statusOrder[b.status];
+        aValue = statusOrder[a.status as keyof typeof statusOrder] || 4;
+        bValue = statusOrder[b.status as keyof typeof statusOrder] || 4;
       } else if (sortBy === 'lastSeen') {
         aValue = new Date(a.lastseen).getTime();
         bValue = new Date(b.lastseen).getTime();
@@ -101,24 +99,24 @@ const useCameraSorting = (cameras: Camera[]) => {
 };
 
 const Dashboard = () => {
-  const searchParams = useSearchParams();
-  const tab = searchParams.get('tab');
   const { toast } = useToast();
   const { cameras, loading: cameraLoading } = useCameraData();
   const { recordings, loading: recordingsLoading } = useRecordings();
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<DashboardStats>({
     totalCameras: 0,
     onlineCameras: 0,
     offlineCameras: 0,
     recordingCameras: 0,
   });
-  const [dashboardData, setDashboardData] = useState({
+  const [dashboardData, setDashboardData] = useState<DashboardData>({
     storageUsed: '0 GB',
     storageTotal: '1 TB',
     storagePercentage: 0,
     uptimeHours: 0,
   });
+  const [grouping, setGrouping] = useState<'none' | 'location'>('none');
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("cameras");
 
   const {
     sortedCameras,
@@ -199,27 +197,26 @@ const Dashboard = () => {
         </div>
         
         <StorageCard 
-          usedSpace={dashboardData.storageUsed || "0 GB"}
-          totalSpace={dashboardData.storageTotal || "1 TB"}
-          usedPercent={dashboardData.storagePercentage || 0}
-          uptimeHours={dashboardData.uptimeHours || 0}
+          storageUsed={dashboardData.storageUsed}
+          storageTotal={dashboardData.storageTotal}
+          storagePercentage={dashboardData.storagePercentage}
+          uptimeHours={dashboardData.uptimeHours}
         />
         
-        <Tabs defaultValue="cameras" className="space-y-4">
+        <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <div className="flex items-center justify-between">
             <TabsList>
               <TabsTrigger value="cameras">All Cameras</TabsTrigger>
               <TabsTrigger value="recordings">Recent Recordings</TabsTrigger>
             </TabsList>
             <div className="items-center flex gap-2">
-              {/* Fix CameraControls props to match expected interface */}
               <CameraControls 
                 onSortChange={changeSortBy}
                 currentSort={sortBy}
                 onSortDirectionToggle={toggleSortDirection}
                 currentSortDirection={sortDirection}
-                onGroupChange={() => {}} // Empty function since we don't implement grouping here
-                currentGrouping="none"
+                onGroupChange={() => setGrouping(prev => prev === 'none' ? 'location' : 'none')}
+                currentGrouping={grouping}
               />
             </div>
           </div>
@@ -251,7 +248,7 @@ const Dashboard = () => {
                   <Skeleton className="h-48 w-full rounded-md" />
                 </>
               ) : recordings.length > 0 ? (
-                recordings.map((recording) => (
+                recordings.slice(0, 6).map((recording) => (
                   <RecordingCard key={recording.id} recording={recording} />
                 ))
               ) : (
