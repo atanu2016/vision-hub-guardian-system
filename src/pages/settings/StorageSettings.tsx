@@ -6,7 +6,6 @@ import { StorageSettings as StorageSettingsType } from "@/types/camera";
 import { useStorageSettings } from "@/hooks/storage";
 import StorageUsageDisplay from "@/components/settings/storage/StorageUsageDisplay";
 import StorageForm from "@/components/settings/storage/StorageForm";
-import { RefreshCw } from "lucide-react";
 
 // Refactored StorageSettings component
 const StorageSettings = () => {
@@ -36,6 +35,7 @@ const StorageSettings = () => {
       const loadedSettings = await loadStorageSettings();
       if (loadedSettings) {
         setSettings(loadedSettings);
+        console.log("Loaded storage settings:", loadedSettings);
       }
     };
 
@@ -74,6 +74,7 @@ const StorageSettings = () => {
               <StorageUsageDisplay
                 storageUsage={storageUsage}
                 retentionDays={settings.retentionDays}
+                storageType={settings.type}
                 isClearing={isClearing}
                 onClearStorage={handleClearStorage}
                 onRefreshStorage={handleRefreshStorage}
@@ -88,6 +89,7 @@ const StorageSettings = () => {
             isLoading={isLoading}
             isSaving={isSaving}
             onSave={async (updatedSettings) => {
+              console.log("Saving storage settings:", updatedSettings);
               const success = await handleSaveSettings(updatedSettings);
               if (success) {
                 setSettings(updatedSettings);

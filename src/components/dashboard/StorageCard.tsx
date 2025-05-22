@@ -2,7 +2,7 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { HardDrive, RefreshCw } from "lucide-react";
+import { HardDrive, RefreshCw, Cloud, Database } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { parseStorageValue } from "@/utils/storageUtils";
@@ -11,6 +11,7 @@ interface StorageCardProps {
   storageUsed: string;
   storageTotal: string;
   storagePercentage: number;
+  storageType?: string;
   uptimeHours: number;
   onRefresh?: () => void;
 }
@@ -19,6 +20,7 @@ const StorageCard = ({
   storageUsed, 
   storageTotal, 
   storagePercentage, 
+  storageType = "local",
   uptimeHours,
   onRefresh 
 }: StorageCardProps) => {
@@ -62,6 +64,23 @@ const StorageCard = ({
     }
   };
 
+  // Get appropriate storage icon based on type
+  const getStorageTypeIcon = () => {
+    switch (storageType) {
+      case 'nas':
+        return <Database className="h-4 w-4" />;
+      case 's3':
+      case 'dropbox':
+      case 'google_drive':
+      case 'onedrive':
+      case 'azure_blob':
+      case 'backblaze':
+        return <Cloud className="h-4 w-4" />;
+      default:
+        return <HardDrive className="h-4 w-4" />;
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -72,7 +91,7 @@ const StorageCard = ({
           className="gap-1" 
           onClick={() => window.location.href = "/settings/storage"}
         >
-          <HardDrive className="h-4 w-4" /> Details
+          {getStorageTypeIcon()} Details
         </Button>
       </CardHeader>
       <CardContent>

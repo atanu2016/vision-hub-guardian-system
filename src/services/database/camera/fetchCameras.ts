@@ -18,10 +18,12 @@ export const fetchCamerasFromDB = async (): Promise<Camera[]> => {
     
     // Transform the data to match our Camera type
     const cameras: Camera[] = data.map(cam => {
-      // For RTSP connection type, check rtmpurl as we don't have rtspurl in the database yet
-      let rtspUrl: string | undefined = undefined;
-      if (cam.connectiontype === 'rtsp') {
-        rtspUrl = cam.rtmpurl; // Use rtmpurl as a fallback since rtspurl doesn't exist yet
+      // For RTSP and HLS connection types, use rtmpurl as a fallback
+      // since rtspurl and hlsurl don't exist in the database yet
+      let streamUrl: string | undefined = undefined;
+      
+      if (cam.connectiontype === 'rtsp' || cam.connectiontype === 'hls') {
+        streamUrl = cam.rtmpurl; // Use rtmpurl for both types as a fallback
       }
       
       return {
@@ -41,8 +43,8 @@ export const fetchCamerasFromDB = async (): Promise<Camera[]> => {
         group: cam.group || undefined,
         connectionType: (cam.connectiontype as "ip" | "rtsp" | "rtmp" | "onvif" | "hls") || "ip",
         rtmpUrl: cam.connectiontype === 'rtmp' ? cam.rtmpurl : undefined,
-        rtspUrl: rtspUrl,
-        hlsUrl: cam.connectiontype === 'hls' ? cam.rtmpurl : undefined, // Use rtmpurl as a fallback for hlsUrl
+        rtspUrl: cam.connectiontype === 'rtsp' ? streamUrl : undefined,
+        hlsUrl: cam.connectiontype === 'hls' ? streamUrl : undefined,
         onvifPath: cam.onvifpath || undefined,
         motionDetection: cam.motiondetection || false
       };

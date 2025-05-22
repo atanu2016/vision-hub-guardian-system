@@ -18,6 +18,7 @@ export const useStorageSettings = () => {
     setIsLoading(true);
     try {
       const settings = await getStorageSettings();
+      console.log("Loaded storage settings:", settings);
       
       // Fetch storage usage data
       await fetchStorageUsage();

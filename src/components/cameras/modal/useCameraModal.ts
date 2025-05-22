@@ -44,31 +44,28 @@ export function useCameraModal({ isOpen, onClose, onAdd, existingGroups }: UseCa
     try {
       await simulateCameraConnection();
       
-      // Log the form values especially related to RTSP
-      console.log("Form values before mapping:", {
+      // Debug log all connection details
+      console.log("Form submission details:", {
+        name: formState.name,
         connectionType: formState.connectionType,
+        ipAddress: formState.ipAddress,
         rtspUrl: formState.rtspUrl,
-        rtmpUrl: formState.rtmpUrl
+        rtmpUrl: formState.rtmpUrl,
+        hlsUrl: formState.hlsUrl
       });
       
       // Map form values to camera object
       const newCamera = mapFormValuesToCamera(formState, finalGroup);
       
-      // Log the mapped camera to check RTSP values
-      console.log("Mapped camera object:", {
-        connectionType: newCamera.connectionType,
-        rtspUrl: newCamera.rtspUrl,
-        rtmpUrl: newCamera.rtmpUrl
-      });
-
       onAdd(newCamera);
       toast({
         title: "Success",
-        description: `${formState.name} has been added to ${finalGroup}`,
+        description: `${formState.name} has been added successfully`,
       });
       formActions.resetForm();
       onClose();
     } catch (error) {
+      console.error("Camera connection error:", error);
       toast({
         title: "Connection Error",
         description: "Could not connect to camera. Check credentials and try again.",
