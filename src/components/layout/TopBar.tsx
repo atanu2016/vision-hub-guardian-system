@@ -56,8 +56,14 @@ const TopBar = () => {
       // Save to database
       const savedCamera = await saveCamera(cameraParams as unknown as Camera);
       
+      // Ensure the saved camera is properly typed before updating state
+      const typedCamera: Camera = {
+        ...savedCamera,
+        status: (savedCamera.status as CameraStatus) || 'offline'
+      };
+      
       // Update local state with the properly typed saved camera
-      setCameras(prev => [...prev, savedCamera]);
+      setCameras(prev => [...prev, typedCamera]);
       
       // Add notification
       addNotification({

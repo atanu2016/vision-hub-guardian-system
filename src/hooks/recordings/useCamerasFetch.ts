@@ -23,6 +23,7 @@ export const useCamerasFetch = () => {
       }
 
       if (data) {
+        // Ensure we properly cast and type the camera data from database
         const camerasFormatted: Camera[] = data.map(cam => ({
           id: cam.id,
           name: cam.name,
@@ -43,8 +44,8 @@ export const useCamerasFetch = () => {
           rtmpurl: cam.rtmpurl,
           hlsurl: cam.hlsurl,
           onvifpath: cam.onvifpath
-          // Only include fields that exist in the database schema
         }));
+        
         setCameras(camerasFormatted);
       }
     } catch (error) {
