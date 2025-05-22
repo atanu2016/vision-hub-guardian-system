@@ -1,6 +1,7 @@
 
 import { Camera, GroupedCameras } from "@/types/camera";
 import { UserRole } from "@/utils/permissionUtils";
+import { Camera as AssignmentCamera } from "@/components/admin/camera-assignment/types";
 
 export interface UserCameraAssignment {
   userId: string;
@@ -11,7 +12,7 @@ export interface UserCameraAssignment {
 export interface CameraAssignmentState {
   loading: boolean;
   users: UserWithCameras[];
-  cameras: Camera[];
+  cameras: AssignmentCamera[]; // Updated to use AssignmentCamera
   saving: boolean;
   error: string | null;
 }
@@ -25,14 +26,14 @@ export interface UserWithCameras {
 }
 
 export interface UseCameraAssignmentReturn {
-  cameras: Camera[];
+  cameras: AssignmentCamera[]; // Updated to use AssignmentCamera
   loading: boolean;
   saving: boolean;
   canAssignCameras: boolean;
   isAuthenticated: boolean;
   groupedCameras: GroupedCameras[];
   getAvailableGroups: () => string[];
-  getCamerasByGroup: (group: string) => Camera[];
+  getCamerasByGroup: (group: string) => AssignmentCamera[]; // Updated to use AssignmentCamera
   error: string | null;
   handleCameraToggle: (cameraId: string) => void;
   handleSave: () => Promise<boolean>;

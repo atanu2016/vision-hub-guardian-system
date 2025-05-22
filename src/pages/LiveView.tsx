@@ -15,13 +15,12 @@ const sampleHLSCamera: Camera = {
   name: "Sample HLS Stream",
   status: "online",
   location: "Demo Location",
-  ipaddress: "", // Changed from ipAddress to ipaddress
-  lastSeen: new Date().toISOString(),
+  ipaddress: "", // Using the correct property name
+  lastseen: new Date().toISOString(), // Using the correct property name
   recording: false,
-  connectiontype: "hls", // Added "connectiontype" instead of connectionType
+  connectiontype: "hls",
   hlsurl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", // Public HLS test stream
-  group: "Demo",
-  lastseen: new Date().toISOString() // Added "lastseen" attribute
+  group: "Demo"
 };
 
 const LiveView = () => {

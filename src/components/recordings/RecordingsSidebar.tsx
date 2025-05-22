@@ -138,7 +138,7 @@ export default function RecordingsSidebar({
               <span className="text-muted-foreground">Used</span>
               <span>
                 {typeof storageUsed.used === 'number' ? 
-                  `${storageUsed.used.toFixed(1)} GB` : '0 GB'} / 
+                  `${Number(storageUsed.used).toFixed(1)} GB` : '0 GB'} / 
                 {typeof storageUsed.total === 'number' ? 
                   `${storageUsed.total} GB` : '0 GB'}
               </span>
