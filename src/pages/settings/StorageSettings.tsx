@@ -36,9 +36,16 @@ const StorageSettings = () => {
     form.reset(settings);
   }
 
+  // Wrapper function to handle the boolean return value
+  const onClearStorage = async () => {
+    await handleClearStorage();
+    return;
+  };
+
   // Wrapper function to ensure the correct return type
   const onSubmit = async (values: StorageFormSchemaType) => {
     await handleSaveSettings(values);
+    return true;
   };
 
   return (
@@ -52,7 +59,7 @@ const StorageSettings = () => {
               storageUsage={storageUsage}
               retentionDays={settings.retentiondays}
               isClearing={isClearing}
-              onClearStorage={handleClearStorage}
+              onClearStorage={onClearStorage}
             />
 
             <StorageConfigCard

@@ -21,6 +21,13 @@ const AlertsPage = () => {
     handleCameraAlertLevelChange
   } = useAlertSettings();
 
+  // Create a wrapper function to adapt the level parameter types
+  const handleAlertLevelChange = (cameraId: string, level: "low" | "medium" | "high" | "none") => {
+    // Map "none" to "off" if needed
+    const adaptedLevel = level === "none" ? "off" : level;
+    return handleCameraAlertLevelChange(cameraId, adaptedLevel as "off" | "low" | "medium" | "high");
+  };
+
   return (
     <div className="container py-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -48,7 +55,7 @@ const AlertsPage = () => {
                 saving={saving}
                 onSettingsChange={updateAlertSettings}
                 onSaveSettings={handleSaveSettings}
-                onCameraAlertLevelChange={handleCameraAlertLevelChange}
+                onCameraAlertLevelChange={handleAlertLevelChange}
               />
             </TabsContent>
             
@@ -66,7 +73,7 @@ const AlertsPage = () => {
             <TabsContent value="cameras" className="space-y-4">
               <CameraSpecificAlerts 
                 cameras={cameras}
-                onAlertLevelChange={handleCameraAlertLevelChange} 
+                onAlertLevelChange={handleAlertLevelChange} 
               />
             </TabsContent>
             

@@ -48,7 +48,12 @@ export const useRecordingsStorage = (initialRecordings: Recording[]) => {
         setStorageUsed({
           used: usedValue,
           total: totalValue,
-          percentage: percentage
+          percentage: percentage,
+          // Also set these properties for compatibility
+          usedSpace: usedValue,
+          totalSpace: totalValue,
+          freeSpace: totalValue - usedValue,
+          usagePercentage: percentage
         });
       }
     } catch (error) {
@@ -69,7 +74,8 @@ export const useRecordingsStorage = (initialRecordings: Recording[]) => {
     // Update with the new calculation
     setStorageUsed(prev => ({
       ...prev,
-      used: usedGB
+      used: usedGB,
+      usedSpace: usedGB
     }));
   };
 
@@ -86,11 +92,17 @@ export const useRecordingsStorage = (initialRecordings: Recording[]) => {
       await fetchActualStorageUsage();
       
       // Then update with the adjustment
-      setStorageUsed(prev => ({
-        ...prev,
-        used: Math.max(0, prev.used - sizeInGB),
-        percentage: Math.max(0, prev.total > 0 ? Math.round(((prev.used - sizeInGB) / prev.total) * 100) : 0)
-      }));
+      setStorageUsed(prev => {
+        const newUsed = Math.max(0, prev.used - sizeInGB);
+        const newPercentage = prev.total > 0 ? Math.round((newUsed / prev.total) * 100) : 0;
+        return {
+          ...prev,
+          used: newUsed,
+          usedSpace: newUsed,
+          percentage: newPercentage,
+          usagePercentage: newPercentage
+        };
+      });
     }
   };
 

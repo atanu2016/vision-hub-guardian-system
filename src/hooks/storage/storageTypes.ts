@@ -15,8 +15,11 @@ export interface StorageStats {
 }
 
 export interface StorageInfo {
-  totalSpace: number;
-  usedSpace: number;
-  freeSpace: number;
-  usagePercentage: number;
+  used: number;
+  total: number;
+  percentage: number;
+  totalSpace?: number;
+  usedSpace?: number;
+  freeSpace?: number;
+  usagePercentage?: number;
 }
