@@ -41,9 +41,9 @@ export const useCamerasFetch = () => {
           thumbnail: cam.thumbnail,
           group: cam.group,
           motiondetection: cam.motiondetection,
-          rtmpurl: cam.rtmpurl,
-          hlsurl: cam.hlsurl,
-          onvifpath: cam.onvifpath
+          rtmpurl: cam.rtmpurl || '',
+          hlsurl: cam.hlsurl || '',
+          onvifpath: cam.onvifpath || ''
         }));
         
         setCameras(camerasFormatted);

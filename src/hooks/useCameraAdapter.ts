@@ -70,9 +70,9 @@ export const useCameraAdapter = () => {
       recording: cameraUIParams.recording,
       group: cameraUIParams.group,
       connectiontype: cameraUIParams.connectionType,
-      rtmpurl: cameraUIParams.rtmpUrl,
-      hlsurl: cameraUIParams.hlsUrl,
-      onvifpath: cameraUIParams.onvifPath,
+      rtmpurl: cameraUIParams.rtmpUrl || '',
+      hlsurl: cameraUIParams.hlsUrl || '',
+      onvifpath: cameraUIParams.onvifPath || '',
       motiondetection: cameraUIParams.motionDetection,
       thumbnail: cameraUIParams.thumbnail
     };

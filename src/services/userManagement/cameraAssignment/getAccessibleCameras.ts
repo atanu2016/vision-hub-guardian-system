@@ -22,14 +22,31 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
         throw error;
       }
       
-      // Ensure proper type casting for status
-      const camerasWithCorrectStatus = (data || []).map(cam => ({
-        ...cam,
-        status: (cam.status as CameraStatus) || 'offline'
+      // Ensure proper type casting for all camera properties
+      const camerasWithCorrectTypes = (data || []).map(cam => ({
+        id: cam.id,
+        name: cam.name,
+        status: (cam.status as CameraStatus) || 'offline',
+        location: cam.location || 'Unknown',
+        ipaddress: cam.ipaddress || '',
+        lastseen: cam.lastseen || new Date().toISOString(),
+        recording: cam.recording === true,
+        port: cam.port,
+        username: cam.username,
+        password: cam.password,
+        model: cam.model,
+        manufacturer: cam.manufacturer,
+        connectiontype: cam.connectiontype,
+        thumbnail: cam.thumbnail,
+        group: cam.group,
+        motiondetection: cam.motiondetection,
+        rtmpurl: cam.rtmpurl || '',
+        hlsurl: cam.hlsurl || '',
+        onvifpath: cam.onvifpath || ''
       })) as Camera[];
       
-      console.log(`Found ${camerasWithCorrectStatus.length || 0} cameras for admin user`);
-      return camerasWithCorrectStatus;
+      console.log(`Found ${camerasWithCorrectTypes.length || 0} cameras for admin user`);
+      return camerasWithCorrectTypes;
     }
     
     // For regular users and observers, get their assigned camera IDs
@@ -55,14 +72,31 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
         return [];
       }
       
-      // Ensure proper type casting for status
-      const camerasWithCorrectStatus = (data || []).map(cam => ({
-        ...cam,
-        status: (cam.status as CameraStatus) || 'offline'
+      // Ensure proper type casting for all camera properties
+      const camerasWithCorrectTypes = (data || []).map(cam => ({
+        id: cam.id,
+        name: cam.name,
+        status: (cam.status as CameraStatus) || 'offline',
+        location: cam.location || 'Unknown',
+        ipaddress: cam.ipaddress || '',
+        lastseen: cam.lastseen || new Date().toISOString(),
+        recording: cam.recording === true,
+        port: cam.port,
+        username: cam.username,
+        password: cam.password,
+        model: cam.model,
+        manufacturer: cam.manufacturer,
+        connectiontype: cam.connectiontype,
+        thumbnail: cam.thumbnail,
+        group: cam.group,
+        motiondetection: cam.motiondetection,
+        rtmpurl: cam.rtmpurl || '',
+        hlsurl: cam.hlsurl || '',
+        onvifpath: cam.onvifpath || ''
       })) as Camera[];
       
-      console.log(`Found ${camerasWithCorrectStatus.length || 0} accessible cameras for user`);
-      return camerasWithCorrectStatus;
+      console.log(`Found ${camerasWithCorrectTypes.length || 0} accessible cameras for user`);
+      return camerasWithCorrectTypes;
     } catch (assignmentError) {
       console.error("Error in assignment retrieval:", assignmentError);
       return [];

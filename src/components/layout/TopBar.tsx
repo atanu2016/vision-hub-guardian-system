@@ -44,8 +44,25 @@ const TopBar = () => {
         if (data) {
           // Format cameras with proper types
           const formattedCameras = data.map(cam => ({
-            ...cam,
-            status: (cam.status as CameraStatus) || 'offline'
+            id: cam.id,
+            name: cam.name,
+            status: (cam.status as CameraStatus) || 'offline',
+            location: cam.location || 'Unknown',
+            ipaddress: cam.ipaddress || '',
+            lastseen: cam.lastseen || new Date().toISOString(),
+            recording: cam.recording === true,
+            port: cam.port,
+            username: cam.username,
+            password: cam.password,
+            model: cam.model,
+            manufacturer: cam.manufacturer,
+            connectiontype: cam.connectiontype,
+            thumbnail: cam.thumbnail,
+            group: cam.group,
+            motiondetection: cam.motiondetection,
+            rtmpurl: cam.rtmpurl || '',
+            hlsurl: cam.hlsurl || '',
+            onvifpath: cam.onvifpath || ''
           })) as Camera[];
           
           setCameras(formattedCameras);
@@ -82,7 +99,10 @@ const TopBar = () => {
       // Ensure the saved camera is properly typed before updating state
       const typedCamera: Camera = {
         ...savedCamera,
-        status: (savedCamera.status as CameraStatus) || 'offline'
+        status: (savedCamera.status as CameraStatus) || 'offline',
+        rtmpurl: savedCamera.rtmpurl || '',
+        hlsurl: savedCamera.hlsurl || '',
+        onvifpath: savedCamera.onvifpath || ''
       };
       
       // Update local state with the properly typed saved camera
