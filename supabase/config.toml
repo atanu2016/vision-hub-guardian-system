@@ -1,12 +1,3 @@
 
 # A string used to distinguish different Supabase projects on the same host. Defaults to the project ID.
 project_id = "csmsqglfbycodrqipbca"
-services = ["postgres", "api", "functions"]
-modules = []
-
-[functions]
-[functions.admin-delete-user]
-verify_jwt = true
-
-[functions.repair-permissions]
-verify_jwt = true

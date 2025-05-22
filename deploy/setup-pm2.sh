@@ -11,8 +11,8 @@ echo "===== Setting up PM2 for Vision Hub ====="
 # Navigate to application directory
 cd $APP_DIR
 
-# Create PM2 ecosystem file
-cat > ecosystem.config.js << EOF
+# Create PM2 ecosystem file with .cjs extension to ensure CommonJS compatibility
+cat > ecosystem.config.cjs << EOF
 module.exports = {
   apps: [{
     name: '$APP_NAME',
@@ -31,7 +31,7 @@ module.exports = {
 EOF
 
 # Start the application with PM2
-pm2 start ecosystem.config.js
+pm2 start ecosystem.config.cjs
 
 # Save PM2 configuration to start on system boot
 pm2 save

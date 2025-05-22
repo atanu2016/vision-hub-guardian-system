@@ -55,21 +55,10 @@ echo "Building application..."
 # Use the correct build script as defined in package.json
 npm run build
 
-# Create server.js entry point to ensure backward compatibility
-cat > server.js << EOF
-// Server entry point
-// This file exists to maintain compatibility with deployment scripts
-// It simply requires the built application
-require('./dist/main');
-EOF
-
-# Apply database migrations
-echo "Setting up database schema..."
-npx supabase db start
-npx supabase db push
-
-# Create storage directories
-mkdir -p /var/lib/visionhub/recordings
-chmod 755 /var/lib/visionhub/recordings
+# Create storage directories with sudo if needed
+echo "Creating storage directories..."
+sudo mkdir -p /var/lib/visionhub/recordings
+sudo chown -R visionhub:visionhub /var/lib/visionhub
+sudo chmod 755 /var/lib/visionhub/recordings
 
 echo "===== Application setup completed ====="

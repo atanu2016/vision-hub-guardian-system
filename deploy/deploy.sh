@@ -23,11 +23,16 @@ handle_error() {
 echo "Installing dependencies..."
 ./install-dependencies.sh || handle_error "Failed to install dependencies"
 
-# 2. Create application user
-echo "Creating application user..."
+# 2. Create application user and directories
+echo "Creating application user and directories..."
 useradd -m -s /bin/bash visionhub || true
 mkdir -p /opt/visionhub
 chown -R visionhub:visionhub /opt/visionhub
+
+# Create the storage directory with correct permissions
+mkdir -p /var/lib/visionhub/recordings
+chown -R visionhub:visionhub /var/lib/visionhub
+chmod 755 /var/lib/visionhub/recordings
 
 # 3. Setup application
 echo "Setting up application..."
@@ -74,4 +79,3 @@ echo ""
 echo "To check service status run: systemctl status visionhub.service"
 echo "To check application logs run: journalctl -u visionhub.service"
 echo "To check PM2 logs run: sudo -u visionhub pm2 logs"
-
