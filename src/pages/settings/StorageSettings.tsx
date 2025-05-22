@@ -11,9 +11,12 @@ import { useToast } from "@/hooks/use-toast";
 
 // Define initial storage usage state
 const initialStorageUsage = {
-  used: 0,
-  total: 1000,
-  percentage: 0
+  usedSpace: 0,
+  totalSpace: 1000,
+  percentage: 0,
+  usedPercentage: 0,
+  usedSpaceFormatted: "0 GB",
+  totalSpaceFormatted: "1 TB"
 };
 
 const StorageSettings = () => {
@@ -52,9 +55,12 @@ const StorageSettings = () => {
     loadSettings();
     // Load storage usage data here (mock for now)
     setStorageUsage({
-      used: 250,
-      total: 1000,
-      percentage: 25
+      usedSpace: 250,
+      totalSpace: 1000,
+      percentage: 25,
+      usedPercentage: 25,
+      usedSpaceFormatted: "250 GB",
+      totalSpaceFormatted: "1 TB"
     });
   }, [toast]);
 
@@ -117,8 +123,10 @@ const StorageSettings = () => {
       // Update usage display
       setStorageUsage({
         ...storageUsage,
-        used: 0,
-        percentage: 0
+        usedSpace: 0,
+        percentage: 0,
+        usedPercentage: 0,
+        usedSpaceFormatted: "0 GB"
       });
       
     } catch (error) {

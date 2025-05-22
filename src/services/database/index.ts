@@ -1,31 +1,12 @@
 
-// Export database-related functions
-export { logDatabaseError } from './baseService';
+// Re-export all database service functions
 export * from './camera';
+export * from './baseService';
 export * from './storageService';
 export * from './statsService';
+export * from './systemSettingsService';
+export * from './recordingService';
 export * from './alertService';
-
-// Function to check database setup
-export const checkDatabaseSetup = async (): Promise<boolean> => {
-  try {
-    // Simple check to see if we can connect to the database
-    console.log('Checking database setup...');
-    return true;
-  } catch (error) {
-    console.error('Database setup check failed:', error);
-    return false;
-  }
-};
-
-// Function to check tables exist
-export const checkTablesExist = async (): Promise<boolean> => {
-  try {
-    // Simple check to see if expected tables exist
-    console.log('Checking tables exist...');
-    return true;
-  } catch (error) {
-    console.error('Tables existence check failed:', error);
-    return false;
-  }
-};
+export * from './advancedSettingsService';
+export * from './logsService';
+export * from './webhookService';
