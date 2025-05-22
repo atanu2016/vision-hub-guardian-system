@@ -2,7 +2,10 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { Info } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 interface ONVIFCameraFormProps {
   ipAddress: string;
@@ -21,6 +24,8 @@ const ONVIFCameraForm = ({
   onvifPath,
   onChange,
 }: ONVIFCameraFormProps) => {
+  const [showAdvancedHelp, setShowAdvancedHelp] = useState(false);
+  
   return (
     <>
       <div className="space-y-4">
@@ -35,6 +40,16 @@ const ONVIFCameraForm = ({
             </ul>
           </div>
         </div>
+        
+        <Alert className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300">
+          <AlertDescription className="text-sm flex items-start gap-2">
+            <AlertTriangle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+            <span>
+              <strong>Connection troubleshooting:</strong> If your camera doesn't connect, try the camera's default RTSP URL 
+              instead. Many ONVIF cameras also support direct RTSP streaming.
+            </span>
+          </AlertDescription>
+        </Alert>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -103,6 +118,35 @@ const ONVIFCameraForm = ({
           placeholder="/onvif/device_service"
         />
       </div>
+
+      <Button 
+        type="button" 
+        variant="ghost" 
+        className="text-xs text-muted-foreground px-0 mt-1" 
+        onClick={() => setShowAdvancedHelp(!showAdvancedHelp)}
+      >
+        {showAdvancedHelp ? "Hide" : "Show"} advanced troubleshooting tips
+      </Button>
+
+      {showAdvancedHelp && (
+        <div className="text-sm p-3 bg-muted rounded-md border text-muted-foreground">
+          <p className="font-medium mb-2">Common ONVIF troubleshooting tips:</p>
+          <ul className="space-y-2">
+            <li>
+              <strong>Hikvision cameras:</strong> Try RTSP URL format: <code className="text-xs bg-muted-foreground/20 p-1 rounded">rtsp://user:pass@camera-ip:554/Streaming/Channels/101</code>
+            </li>
+            <li>
+              <strong>Dahua cameras:</strong> Try RTSP URL format: <code className="text-xs bg-muted-foreground/20 p-1 rounded">rtsp://user:pass@camera-ip:554/cam/realmonitor?channel=1&subtype=0</code>
+            </li>
+            <li>
+              <strong>Generic cameras:</strong> Common RTSP paths include <code className="text-xs bg-muted-foreground/20 p-1 rounded">rtsp://user:pass@camera-ip:554/stream1</code> or <code className="text-xs bg-muted-foreground/20 p-1 rounded">/h264</code> or <code className="text-xs bg-muted-foreground/20 p-1 rounded">/live</code>
+            </li>
+            <li>
+              <strong>Firewall issues:</strong> Make sure ports 80, 554, and the ONVIF port are open on your network
+            </li>
+          </ul>
+        </div>
+      )}
 
       <div className="text-sm text-muted-foreground mt-4">
         <p>* Required fields</p>

@@ -1,4 +1,3 @@
-
 import {
   fetchCamerasFromDB,
   saveCameraToDB,
@@ -379,20 +378,63 @@ export const streamLogs = async (logLevel: string, source: string, onLogReceived
 // Camera stream setup utility
 export const setupCameraStream = (camera, videoElement, onError) => {
   console.log("Setting up stream for camera:", camera.name);
+  console.log("Camera type:", camera.connectionType);
   
   // This is a placeholder implementation - in a real app, this would connect
   // to a streaming service or handle RTSP/RTMP connections
-  
-  // For now, we'll just set the poster image if available
-  if (camera.thumbnail) {
-    videoElement.poster = camera.thumbnail;
+
+  try {
+    // Set up poster image if available
+    if (camera.thumbnail) {
+      videoElement.poster = camera.thumbnail;
+    }
+    
+    // For ONVIF cameras, we need to handle them specially
+    if (camera.connectionType === 'onvif') {
+      console.log("Setting up ONVIF camera with details:", {
+        ip: camera.ipAddress,
+        port: camera.port,
+        username: camera.username ? "set" : "not set",
+        path: camera.onvifPath
+      });
+      
+      // In a real implementation, this would connect to the camera via ONVIF
+      // and set up a stream
+      
+      // For demo purposes, we'll generate an RTSP URL that would typically
+      // be retrieved from the ONVIF camera's GetStreamUri method
+      const rtspUrl = `rtsp://${camera.username}:${camera.password}@${camera.ipAddress}:554/Streaming/Channels/101`;
+      console.log("Generated RTSP URL for testing:", rtspUrl);
+      
+      // In a real implementation, we would:
+      // 1. Connect to the ONVIF device
+      // 2. Get the stream URI
+      // 3. Use a backend service to proxy the RTSP stream to HLS or WebRTC
+      
+      // For this demo, we'll simulate a delay and then report an error,
+      // since we don't have the backend services set up to handle RTSP->HLS conversion
+      setTimeout(() => {
+        onError("ONVIF streaming requires server-side proxy which is not configured. Please use an HLS or RTMP URL instead.");
+      }, 2000);
+      
+      // Instead, for demo we could point to a sample stream:
+      // videoElement.src = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
+      // This would work but wouldn't represent a real ONVIF connection
+    }
+    
+    // Return cleanup function
+    return () => {
+      console.log("Cleaning up camera stream for:", camera.name);
+      if (videoElement) {
+        videoElement.src = '';
+        videoElement.load();
+      }
+    };
+  } catch (error) {
+    console.error("Error in setupCameraStream:", error);
+    onError(error.message || "Unknown error setting up camera stream");
+    return () => {}; // Empty cleanup function
   }
-  
-  // Return cleanup function
-  return () => {
-    console.log("Cleaning up camera stream");
-    // Any cleanup code here
-  };
 };
 
 // Camera groups api

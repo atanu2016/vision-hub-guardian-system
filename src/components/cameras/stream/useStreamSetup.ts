@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Hls from "hls.js";
 import { setupCameraStream } from "@/services/apiService";
 import { Camera } from "@/types/camera";
@@ -24,19 +24,88 @@ export function useStreamSetup({
   const hlsRef = useRef<Hls | null>(null);
   const retryCountRef = useRef<number>(0);
   const maxRetries = 3;
+  const cleanupFnRef = useRef<(() => void) | null>(null);
 
+  // Reset retry counter when camera changes
   useEffect(() => {
-    let cleanup: () => void = () => {};
-    
-    if (camera && camera.status === 'online') {
-      onLoadingChange(true);
-      onError(null);
+    retryCountRef.current = 0;
+  }, [camera.id]);
 
-      const initializeStream = async () => {
-        if (!videoRef.current) return;
+  // Main streaming setup effect
+  useEffect(() => {
+    if (!camera) return;
+    
+    // Cleanup function for the current effect instance
+    let localCleanup: (() => void) = () => {};
+    
+    const initializeStream = async () => {
+      if (!videoRef.current) return;
+      
+      // Clean up any previous stream
+      if (cleanupFnRef.current) {
+        cleanupFnRef.current();
+        cleanupFnRef.current = null;
+      }
+      
+      if (camera.status === 'online') {
+        onLoadingChange(true);
+        onError(null);
         
         try {
           const videoElement = videoRef.current;
+          
+          // ----------------
+          // Handle ONVIF camera type specifically
+          // ----------------
+          if (camera.connectionType === 'onvif') {
+            console.log('Setting up ONVIF camera:', camera.name);
+            console.log('ONVIF details:', {
+              ip: camera.ipAddress,
+              port: camera.port,
+              username: camera.username ? 'set' : 'not set',
+              path: camera.onvifPath
+            });
+            
+            // For ONVIF cameras, use the specialized setupCameraStream function
+            localCleanup = setupCameraStream(camera, videoElement, (err) => {
+              console.error(`ONVIF stream setup error: ${err}`);
+              onError(`Unable to play stream: ${err || 'Connection failed'}`);
+              onLoadingChange(false);
+              
+              toast({
+                title: "Stream Error",
+                description: "Failed to connect to ONVIF camera. Check your camera settings and network.",
+                variant: "destructive"
+              });
+            });
+            
+            // Monitor the video element for load events
+            const handleLoadedData = () => {
+              console.log('ONVIF camera stream loaded successfully');
+              onLoadingChange(false);
+              if (isPlaying) {
+                videoElement.play().catch(e => {
+                  console.warn("Autoplay prevented:", e);
+                });
+              }
+            };
+            
+            videoElement.addEventListener('loadeddata', handleLoadedData);
+            
+            // Add additional cleanup for ONVIF
+            const originalCleanup = localCleanup;
+            localCleanup = () => {
+              videoElement.removeEventListener('loadeddata', handleLoadedData);
+              if (originalCleanup) originalCleanup();
+            };
+            
+            cleanupFnRef.current = localCleanup;
+            return;
+          }
+          
+          // ----------------
+          // Handle other camera types (HLS, RTMP, etc.)
+          // ----------------
           let streamUrl = '';
           
           // Determine stream URL based on camera type
@@ -46,6 +115,13 @@ export function useStreamSetup({
             streamUrl = camera.rtmpUrl;
           } else if (camera.connectionType === 'rtsp' && camera.rtmpUrl) {
             streamUrl = camera.rtmpUrl;
+          }
+          
+          if (!streamUrl) {
+            console.error('No valid stream URL found for camera:', camera.name);
+            onError("Missing stream URL");
+            onLoadingChange(false);
+            return;
           }
           
           // If we have a direct URL that can be played with HLS.js
@@ -103,6 +179,7 @@ export function useStreamSetup({
                   }
                 } else {
                   onError("Stream unavailable after multiple attempts");
+                  onLoadingChange(false);
                   toast({
                     title: "Stream Error",
                     description: "Unable to connect to stream after multiple attempts",
@@ -112,7 +189,7 @@ export function useStreamSetup({
               }
             });
             
-            cleanup = () => {
+            localCleanup = () => {
               if (hlsRef.current) {
                 hlsRef.current.destroy();
                 hlsRef.current = null;
@@ -136,53 +213,66 @@ export function useStreamSetup({
               console.error("Error code:", videoElement.error?.code);
               console.error("Error message:", videoElement.error?.message);
               onError("Stream unavailable");
+              onLoadingChange(false);
             };
             
-            cleanup = () => {
+            localCleanup = () => {
               videoElement.src = '';
               videoElement.load();
             };
           } else {
-            // For ONVIF and other camera types that need special handling
-            console.log(`Initializing ${camera.connectionType} camera with setupCameraStream`);
-            console.log("Camera details:", JSON.stringify({
-              type: camera.connectionType,
-              ip: camera.ipAddress,
-              port: camera.port,
-              path: camera.onvifPath,
-              hasCredentials: !!camera.username && !!camera.password
-            }));
-            
-            cleanup = setupCameraStream(camera, videoElement, (err) => {
-              console.error(`Stream setup error via API service (${camera.connectionType}):`, err);
-              onError(`Unable to play stream: ${err || 'Unknown error'}`);
-            });
-            
-            videoElement.onloadeddata = () => {
-              console.log("Stream loaded via API service");
-              onLoadingChange(false);
-            };
-            
-            videoElement.onerror = () => {
-              onError("Stream unavailable");
-            };
+            console.error(`Unsupported stream URL format: ${streamUrl}`);
+            onError("Unsupported stream format");
+            onLoadingChange(false);
           }
+          
+          cleanupFnRef.current = localCleanup;
+          
         } catch (err) {
           console.error("Stream setup error:", err);
           onError("Failed to initialize stream");
+          onLoadingChange(false);
+          
+          toast({
+            title: "Stream Error",
+            description: "Failed to initialize camera stream",
+            variant: "destructive"
+          });
         }
-      };
-      
-      initializeStream();
-    } else {
-      onLoadingChange(false);
-      onError(camera.status === 'offline' ? "Camera offline" : "Camera unavailable");
-    }
+      } else {
+        onLoadingChange(false);
+        onError(camera.status === 'offline' ? "Camera offline" : "Camera unavailable");
+      }
+    };
+    
+    initializeStream();
     
     return () => {
-      cleanup();
+      if (localCleanup) localCleanup();
+      if (cleanupFnRef.current) cleanupFnRef.current();
+      cleanupFnRef.current = null;
     };
   }, [camera, isPlaying, onError, onLoadingChange, toast]);
 
-  return { hlsRef };
+  // Function to retry the connection manually
+  const retryConnection = useCallback(() => {
+    retryCountRef.current = 0;
+    onLoadingChange(true);
+    onError(null);
+    
+    // Force clean and reload the stream
+    if (cleanupFnRef.current) {
+      cleanupFnRef.current();
+      cleanupFnRef.current = null;
+    }
+    
+    if (videoRef.current) {
+      videoRef.current.src = '';
+      videoRef.current.load();
+    }
+    
+    // The main effect will reinitialize the stream
+  }, [onLoadingChange, onError]);
+
+  return { hlsRef, retryConnection };
 }

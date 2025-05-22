@@ -24,7 +24,7 @@ const CameraStreamPlayer = memo(({ camera, autoPlay = true, className = "" }: Ca
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
-  const { hlsRef } = useStreamSetup({
+  const { hlsRef, retryConnection } = useStreamSetup({
     camera,
     videoRef,
     isPlaying,
@@ -58,23 +58,18 @@ const CameraStreamPlayer = memo(({ camera, autoPlay = true, className = "" }: Ca
   }, [isMuted]);
 
   const handleRetryConnection = useCallback(() => {
+    console.log("Retrying camera connection:", camera.name);
     setError(null);
     setIsLoading(true);
     
-    // Force reload the stream
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-    }
+    // Use the enhanced retry function
+    retryConnection();
     
-    setTimeout(() => {
-      if (videoRef.current) {
-        videoRef.current.load();
-        if (isPlaying) {
-          videoRef.current.play().catch(console.error);
-        }
-      }
-    }, 500);
-  }, [hlsRef, isPlaying]);
+    toast({
+      title: "Reconnecting",
+      description: `Attempting to reconnect to ${camera.name}...`,
+    });
+  }, [camera.name, retryConnection, toast]);
   
   return (
     <div className={cn("relative bg-vision-dark-900 rounded-lg overflow-hidden", className)}>
