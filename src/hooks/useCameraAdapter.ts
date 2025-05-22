@@ -25,7 +25,12 @@ export const useCameraAdapter = () => {
       hlsUrl: camera.hlsurl,
       onvifPath: camera.onvifpath,
       motionDetection: camera.motiondetection,
-      thumbnail: camera.thumbnail
+      thumbnail: camera.thumbnail,
+      quality: camera.quality,
+      scheduleType: camera.schedule_type,
+      timeStart: camera.time_start,
+      timeEnd: camera.time_end,
+      daysOfWeek: camera.days_of_week
     };
   };
 
@@ -50,12 +55,17 @@ export const useCameraAdapter = () => {
       hlsurl: cameraUI.hlsUrl,
       onvifpath: cameraUI.onvifPath,
       motiondetection: cameraUI.motionDetection,
-      thumbnail: cameraUI.thumbnail
+      thumbnail: cameraUI.thumbnail,
+      quality: cameraUI.quality,
+      schedule_type: cameraUI.scheduleType,
+      time_start: cameraUI.timeStart,
+      time_end: cameraUI.timeEnd,
+      days_of_week: cameraUI.daysOfWeek
     };
   };
 
   // Helper to adapt camera parameters for the addCamera function
-  const adaptCameraParams = (cameraUIParams: Omit<CameraUIProps, "id" | "lastSeen">): Omit<Camera, "id"> => {
+  const adaptCameraParams = (cameraUIParams: Omit<CameraUIProps, "id" | "lastSeen">): Omit<Camera, "id" | "lastseen"> & { lastseen: string } => {
     return {
       name: cameraUIParams.name,
       status: cameraUIParams.status as CameraStatus,
@@ -74,7 +84,12 @@ export const useCameraAdapter = () => {
       hlsurl: cameraUIParams.hlsUrl,
       onvifpath: cameraUIParams.onvifPath,
       motiondetection: cameraUIParams.motionDetection,
-      thumbnail: cameraUIParams.thumbnail
+      thumbnail: cameraUIParams.thumbnail,
+      quality: cameraUIParams.quality,
+      schedule_type: cameraUIParams.scheduleType,
+      time_start: cameraUIParams.timeStart,
+      time_end: cameraUIParams.timeEnd,
+      days_of_week: cameraUIParams.daysOfWeek
     };
   };
 

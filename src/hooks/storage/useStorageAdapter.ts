@@ -36,7 +36,7 @@ export const useStorageAdapter = () => {
   // Convert DB format to form format
   const toFormData = (settings: StorageSettings): StorageFormData => {
     return {
-      type: settings.type,
+      type: settings.type as StorageFormData["type"],
       path: settings.path,
       retentionDays: settings.retentiondays,
       overwriteOldest: settings.overwriteoldest,

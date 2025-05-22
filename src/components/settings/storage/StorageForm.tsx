@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
@@ -73,11 +74,13 @@ const StorageForm = ({ initialSettings, isLoading, isSaving, onSave }: StorageFo
 
   // Update form values when initialSettings changes
   useEffect(() => {
-    form.reset(toFormData(initialSettings));
+    if (initialSettings) {
+      form.reset(toFormData(initialSettings));
+    }
     
     // Reset validation status when form values change
     setValidationStatus({ status: 'idle', message: '' });
-  }, [initialSettings, form]);
+  }, [initialSettings, form, toFormData]);
 
   // Get current form values
   const currentStorageType = form.watch("type");
@@ -90,17 +93,25 @@ const StorageForm = ({ initialSettings, isLoading, isSaving, onSave }: StorageFo
     // Convert form data to StorageSettings type
     const settings = toDbFormat(values);
 
-    const success = await onSave(settings);
-    
-    if (success) {
-      setValidationStatus({ 
-        status: 'success', 
-        message: 'Storage configuration validated and saved successfully.'
-      });
-    } else {
+    try {
+      const success = await onSave(settings);
+      
+      if (success) {
+        setValidationStatus({ 
+          status: 'success', 
+          message: 'Storage configuration validated and saved successfully.'
+        });
+      } else {
+        setValidationStatus({ 
+          status: 'error', 
+          message: 'Failed to validate storage configuration. Please check your settings and try again.'
+        });
+      }
+    } catch (error) {
+      console.error("Error saving storage settings:", error);
       setValidationStatus({ 
         status: 'error', 
-        message: 'Failed to validate storage configuration. Please check your settings and try again.'
+        message: 'An error occurred while saving settings.'
       });
     }
   };

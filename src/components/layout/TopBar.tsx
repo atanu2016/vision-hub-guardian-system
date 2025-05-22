@@ -12,6 +12,7 @@ import ThemeToggleButton from "./topbar/ThemeToggleButton";
 import MobileSidebarToggle from "./topbar/MobileSidebarToggle";
 import { getPageTitle } from "@/lib/navigation";
 import { CameraUIProps } from "@/utils/cameraPropertyMapper";
+import { useCameraAdapter } from "@/hooks/useCameraAdapter";
 
 const TopBar = () => {
   const location = useLocation();
@@ -25,6 +26,7 @@ const TopBar = () => {
     addNotification 
   } = useNotifications();
   
+  const { adaptCameraParams } = useCameraAdapter();
   const pageTitle = getPageTitle(location.pathname);
   
   // Load cameras when component mounts
@@ -47,42 +49,33 @@ const TopBar = () => {
 
   // Adapt the handleAddCamera function to handle CameraUIProps
   const handleAddCamera = async (newCamera: Omit<CameraUIProps, "id" | "lastSeen">) => {
-    // Convert UI props to database format
-    const camera: Omit<Camera, "id"> = {
-      name: newCamera.name,
-      ipaddress: newCamera.ipAddress,
-      port: newCamera.port,
-      username: newCamera.username,
-      password: newCamera.password,
-      location: newCamera.location,
-      status: newCamera.status as CameraStatus,
-      lastseen: new Date().toISOString(),
-      recording: newCamera.recording,
-      motiondetection: newCamera.motionDetection,
-      rtmpurl: newCamera.rtmpUrl,
-      hlsurl: newCamera.hlsUrl,
-      onvifpath: newCamera.onvifPath,
-      connectiontype: newCamera.connectionType,
-      group: newCamera.group,
-      thumbnail: newCamera.thumbnail,
-      manufacturer: newCamera.manufacturer,
-      model: newCamera.model
-    };
-    
-    // Save to database
-    const savedCamera = await saveCamera(camera as Camera);
-    
-    // Update local state
-    setCameras(prev => [...prev, savedCamera]);
-    
-    // Add notification
-    addNotification({
-      title: "Camera Added",
-      message: `${camera.name} has been added successfully`,
-      type: "success"
-    });
-    
-    return savedCamera;
+    try {
+      // Convert UI props to database format
+      const cameraParams = adaptCameraParams(newCamera);
+      
+      // Save to database
+      const savedCamera = await saveCamera(cameraParams as unknown as Camera);
+      
+      // Update local state with the properly typed saved camera
+      setCameras(prev => [...prev, savedCamera]);
+      
+      // Add notification
+      addNotification({
+        title: "Camera Added",
+        message: `${cameraParams.name} has been added successfully`,
+        type: "success"
+      });
+      
+      return savedCamera;
+    } catch (error) {
+      console.error("Failed to add camera:", error);
+      addNotification({
+        title: "Error Adding Camera",
+        message: "An error occurred while adding the camera.",
+        type: "error"
+      });
+      throw error;
+    }
   };
 
   return (

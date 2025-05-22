@@ -1,3 +1,4 @@
+
 import { Camera } from "@/types/camera";
 
 // The UI format of camera properties (camelCase)
@@ -111,10 +112,10 @@ export function toUICameraWithDefault(dbCamera: Partial<Camera> & { id: string }
     motionDetection: dbCamera.motiondetection || false,
     thumbnail: dbCamera.thumbnail,
     quality: dbCamera.quality || "medium",
-    scheduleType: dbCamera.scheduleType || "always",
-    timeStart: dbCamera.timeStart || "00:00",
-    timeEnd: dbCamera.timeEnd || "23:59",
-    daysOfWeek: dbCamera.daysOfWeek || []
+    scheduleType: dbCamera.schedule_type || "always",
+    timeStart: dbCamera.time_start || "00:00",
+    timeEnd: dbCamera.time_end || "23:59",
+    daysOfWeek: dbCamera.days_of_week || []
   };
 }
 
@@ -133,7 +134,11 @@ export function adaptCamera<T extends Partial<Camera>, U extends Partial<CameraU
       rtmpurl: (camera as any).rtmpUrl,
       hlsurl: (camera as any).hlsUrl,
       onvifpath: (camera as any).onvifPath,
-      motiondetection: (camera as any).motionDetection
+      motiondetection: (camera as any).motionDetection,
+      schedule_type: (camera as any).scheduleType,
+      time_start: (camera as any).timeStart,
+      time_end: (camera as any).timeEnd,
+      days_of_week: (camera as any).daysOfWeek
     } as U;
   } else {
     // DB format to UI format
@@ -145,7 +150,11 @@ export function adaptCamera<T extends Partial<Camera>, U extends Partial<CameraU
       rtmpUrl: (camera as any).rtmpurl,
       hlsUrl: (camera as any).hlsurl,
       onvifPath: (camera as any).onvifpath,
-      motionDetection: (camera as any).motiondetection
+      motionDetection: (camera as any).motiondetection,
+      scheduleType: (camera as any).schedule_type,
+      timeStart: (camera as any).time_start,
+      timeEnd: (camera as any).time_end,
+      daysOfWeek: (camera as any).days_of_week
     } as U;
   }
 }

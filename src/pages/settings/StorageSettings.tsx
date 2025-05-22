@@ -22,6 +22,9 @@ const StorageSettings = () => {
     handleClearStorage
   } = useStorageSettings();
 
+  // Get storage adapter
+  const { toFormData } = useStorageAdapter();
+
   // Initial settings state
   const [settings, setSettings] = useState<StorageSettingsType>({
     type: "local",
@@ -82,7 +85,7 @@ const StorageSettings = () => {
             <CardContent className="space-y-4">
               <StorageUsageDisplay
                 storageUsage={displayUsage}
-                retentionDays={settings.retentionDays}
+                retentionDays={settings.retentiondays}
                 isClearing={isClearing}
                 onClearStorage={handleClearStorage}
                 onRefreshStorage={handleRefreshStorage}

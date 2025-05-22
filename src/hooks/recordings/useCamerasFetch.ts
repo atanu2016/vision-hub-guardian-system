@@ -40,9 +40,9 @@ export const useCamerasFetch = () => {
           thumbnail: cam.thumbnail,
           group: cam.group,
           motiondetection: cam.motiondetection,
-          rtmpurl: cam.rtmpurl || undefined,
-          hlsurl: cam.hlsurl || undefined,
-          onvifpath: cam.onvifpath || undefined,
+          rtmpurl: cam.rtmpurl,
+          hlsurl: cam.hlsurl,
+          onvifpath: cam.onvifpath,
           // Handle optional properties with defaults
           quality: cam.quality || 'medium',
           schedule_type: cam.schedule_type || 'always',
