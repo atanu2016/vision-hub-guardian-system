@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { getCameras, saveCamera } from "@/data/mockData";
-import { Camera } from "@/types/camera";
+import { Camera, CameraStatus } from "@/types/camera";
 import { useNotifications } from "@/hooks/useNotifications";
 import SearchBar from "@/components/search/SearchBar";
 import UserMenu from "./topbar/UserMenu";
@@ -54,7 +55,7 @@ const TopBar = () => {
       username: newCamera.username,
       password: newCamera.password,
       location: newCamera.location,
-      status: newCamera.status,
+      status: newCamera.status as CameraStatus,
       lastseen: new Date().toISOString(),
       recording: newCamera.recording,
       motiondetection: newCamera.motionDetection,

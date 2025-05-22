@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
@@ -7,13 +6,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Settings, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
-import { StorageSettings as StorageSettingsType } from "@/types/camera";
+import { StorageSettings } from "@/types/camera";
 import StorageProviderSelector from "./StorageProviderSelector";
 import StorageProviderFields from "./StorageProviderFields";
 import RetentionPolicyForm from "./RetentionPolicyForm";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { StorageFormData, useStorageAdapter } from "@/hooks/storage/useStorageAdapter";
 
-// Define form schema for storage settings - make type non-optional
+// Define form schema for storage settings using the UI-friendly types
 const storageFormSchema = z.object({
   type: z.enum(["local", "nas", "s3", "dropbox", "google_drive", "onedrive", "azure_blob", "backblaze"]),
   path: z.string().optional(),
@@ -48,10 +48,10 @@ const storageFormSchema = z.object({
 export type StorageFormSchemaType = z.infer<typeof storageFormSchema>;
 
 interface StorageFormProps {
-  initialSettings: StorageSettingsType;
+  initialSettings: StorageSettings;
   isLoading: boolean;
   isSaving: boolean;
-  onSave: (settings: StorageSettingsType) => Promise<boolean>;
+  onSave: (settings: StorageSettings) => Promise<boolean>;
 }
 
 const StorageForm = ({ initialSettings, isLoading, isSaving, onSave }: StorageFormProps) => {
@@ -59,66 +59,21 @@ const StorageForm = ({ initialSettings, isLoading, isSaving, onSave }: StorageFo
     status: 'idle',
     message: ''
   });
+  
+  const { toFormData, toDbFormat } = useStorageAdapter();
 
-  // Initialize form with proper defaultValues ensuring type is not optional
+  // Convert DB format to form format for initial values
+  const initialFormData = toFormData(initialSettings);
+
+  // Initialize form with proper defaultValues
   const form = useForm<StorageFormSchemaType>({
     resolver: zodResolver(storageFormSchema),
-    defaultValues: {
-      type: initialSettings.type || "local",
-      path: initialSettings.path || "/recordings",
-      retentionDays: initialSettings.retentionDays || 30,
-      overwriteOldest: initialSettings.overwriteOldest ?? true,
-      nasAddress: initialSettings.nasAddress,
-      nasPath: initialSettings.nasPath,
-      nasUsername: initialSettings.nasUsername,
-      nasPassword: initialSettings.nasPassword,
-      s3Endpoint: initialSettings.s3Endpoint,
-      s3Bucket: initialSettings.s3Bucket,
-      s3AccessKey: initialSettings.s3AccessKey,
-      s3SecretKey: initialSettings.s3SecretKey,
-      s3Region: initialSettings.s3Region,
-      dropboxToken: initialSettings.dropboxToken,
-      dropboxFolder: initialSettings.dropboxFolder,
-      googleDriveToken: initialSettings.googleDriveToken,
-      googleDriveFolderId: initialSettings.googleDriveFolderId,
-      oneDriveToken: initialSettings.oneDriveToken,
-      oneDriveFolderId: initialSettings.oneDriveFolderId,
-      azureConnectionString: initialSettings.azureConnectionString,
-      azureContainer: initialSettings.azureContainer,
-      backblazeKeyId: initialSettings.backblazeKeyId,
-      backblazeApplicationKey: initialSettings.backblazeApplicationKey,
-      backblazeBucket: initialSettings.backblazeBucket,
-    },
+    defaultValues: initialFormData
   });
 
   // Update form values when initialSettings changes
   useEffect(() => {
-    form.reset({
-      type: initialSettings.type || "local",
-      path: initialSettings.path || "/recordings",
-      retentionDays: initialSettings.retentionDays || 30,
-      overwriteOldest: initialSettings.overwriteOldest ?? true,
-      nasAddress: initialSettings.nasAddress,
-      nasPath: initialSettings.nasPath,
-      nasUsername: initialSettings.nasUsername,
-      nasPassword: initialSettings.nasPassword,
-      s3Endpoint: initialSettings.s3Endpoint,
-      s3Bucket: initialSettings.s3Bucket,
-      s3AccessKey: initialSettings.s3AccessKey,
-      s3SecretKey: initialSettings.s3SecretKey,
-      s3Region: initialSettings.s3Region,
-      dropboxToken: initialSettings.dropboxToken,
-      dropboxFolder: initialSettings.dropboxFolder,
-      googleDriveToken: initialSettings.googleDriveToken,
-      googleDriveFolderId: initialSettings.googleDriveFolderId,
-      oneDriveToken: initialSettings.oneDriveToken,
-      oneDriveFolderId: initialSettings.oneDriveFolderId,
-      azureConnectionString: initialSettings.azureConnectionString,
-      azureContainer: initialSettings.azureContainer,
-      backblazeKeyId: initialSettings.backblazeKeyId,
-      backblazeApplicationKey: initialSettings.backblazeApplicationKey,
-      backblazeBucket: initialSettings.backblazeBucket,
-    });
+    form.reset(toFormData(initialSettings));
     
     // Reset validation status when form values change
     setValidationStatus({ status: 'idle', message: '' });
@@ -133,33 +88,7 @@ const StorageForm = ({ initialSettings, isLoading, isSaving, onSave }: StorageFo
     setValidationStatus({ status: 'validating', message: 'Validating storage configuration...' });
     
     // Convert form data to StorageSettings type
-    const settings: StorageSettingsType = {
-      type: values.type,
-      path: values.path,
-      retentionDays: values.retentionDays,
-      overwriteOldest: values.overwriteOldest,
-      nasAddress: values.nasAddress,
-      nasPath: values.nasPath,
-      nasUsername: values.nasUsername,
-      nasPassword: values.nasPassword,
-      s3Endpoint: values.s3Endpoint,
-      s3Bucket: values.s3Bucket,
-      s3AccessKey: values.s3AccessKey,
-      s3SecretKey: values.s3SecretKey,
-      s3Region: values.s3Region,
-      // Additional cloud storage fields
-      dropboxToken: values.dropboxToken,
-      dropboxFolder: values.dropboxFolder,
-      googleDriveToken: values.googleDriveToken,
-      googleDriveFolderId: values.googleDriveFolderId,
-      oneDriveToken: values.oneDriveToken,
-      oneDriveFolderId: values.oneDriveFolderId,
-      azureConnectionString: values.azureConnectionString,
-      azureContainer: values.azureContainer,
-      backblazeKeyId: values.backblazeKeyId,
-      backblazeApplicationKey: values.backblazeApplicationKey,
-      backblazeBucket: values.backblazeBucket,
-    };
+    const settings = toDbFormat(values);
 
     const success = await onSave(settings);
     

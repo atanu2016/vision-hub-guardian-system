@@ -6,6 +6,7 @@ import { StorageSettings as StorageSettingsType } from "@/types/camera";
 import { useStorageSettings } from "@/hooks/storage";
 import StorageUsageDisplay from "@/components/settings/storage/StorageUsageDisplay";
 import StorageForm from "@/components/settings/storage/StorageForm";
+import { useStorageAdapter } from "@/hooks/storage/useStorageAdapter";
 
 // Refactored StorageSettings component
 const StorageSettings = () => {
@@ -25,8 +26,8 @@ const StorageSettings = () => {
   const [settings, setSettings] = useState<StorageSettingsType>({
     type: "local",
     path: "/recordings",
-    retentionDays: 30,
-    overwriteOldest: true,
+    retentiondays: 30,
+    overwriteoldest: true,
   });
 
   // Load storage settings on mount

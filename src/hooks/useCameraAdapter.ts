@@ -1,5 +1,5 @@
 
-import { Camera } from "@/types/camera";
+import { Camera, CameraStatus } from "@/types/camera";
 import { CameraUIProps } from "@/utils/cameraPropertyMapper";
 
 // Helper hook to adapt between Camera and CameraUIProps types
@@ -34,7 +34,7 @@ export const useCameraAdapter = () => {
     return {
       id: cameraUI.id,
       name: cameraUI.name,
-      status: cameraUI.status,
+      status: cameraUI.status as CameraStatus,
       location: cameraUI.location,
       ipaddress: cameraUI.ipAddress,
       port: cameraUI.port,
@@ -58,7 +58,7 @@ export const useCameraAdapter = () => {
   const adaptCameraParams = (cameraUIParams: Omit<CameraUIProps, "id" | "lastSeen">): Omit<Camera, "id"> => {
     return {
       name: cameraUIParams.name,
-      status: cameraUIParams.status,
+      status: cameraUIParams.status as CameraStatus,
       location: cameraUIParams.location,
       ipaddress: cameraUIParams.ipAddress,
       port: cameraUIParams.port,

@@ -1,9 +1,9 @@
 
-import { StorageSettings as StorageSettingsType } from '@/types/camera';
+import { StorageSettings } from '@/types/camera';
 
 export const useStorageValidation = () => {
   // Validate storage configuration before saving
-  const validateStorage = async (settings: StorageSettingsType): Promise<boolean> => {
+  const validateStorage = async (settings: StorageSettings): Promise<boolean> => {
     try {
       // Validate storage access based on the type
       switch (settings.type) {
