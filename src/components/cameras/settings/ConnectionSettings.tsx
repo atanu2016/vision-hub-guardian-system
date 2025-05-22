@@ -4,10 +4,37 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SettingsSectionProps } from "./types";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle, Info, ExternalLink } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { suggestRtspUrls } from "@/utils/onvifTester";
 
-const ConnectionSettings = ({ cameraData, handleChange }: SettingsSectionProps) => {
+const ConnectionSettings = ({ cameraData, handleChange, disabled = false }: SettingsSectionProps) => {
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [previousConnectionType, setPreviousConnectionType] = useState(cameraData.connectionType);
+  const [suggestedUrls, setSuggestedUrls] = useState<string[]>([]);
+  
+  // When connection type changes, offer helpful migration suggestions
+  useEffect(() => {
+    if (previousConnectionType !== cameraData.connectionType) {
+      // If changing from ONVIF to RTSP, generate possible RTSP URLs
+      if (previousConnectionType === 'onvif' && cameraData.connectionType === 'rtsp') {
+        const urls = suggestRtspUrls(
+          cameraData.ipAddress,
+          cameraData.port,
+          cameraData.username,
+          cameraData.password,
+          cameraData.manufacturer
+        );
+        setSuggestedUrls(urls);
+      } else {
+        setSuggestedUrls([]);
+      }
+      
+      setPreviousConnectionType(cameraData.connectionType);
+    }
+  }, [cameraData.connectionType, previousConnectionType]);
   
   const validateField = (field: string, value: string) => {
     if (field === 'ipAddress') {
@@ -48,6 +75,18 @@ const ConnectionSettings = ({ cameraData, handleChange }: SettingsSectionProps) 
       }
     }
     
+    if (field === 'rtmpUrl' && cameraData.connectionType === 'rtsp') {
+      if (!value.trim()) {
+        setErrors({...errors, [field]: 'Stream URL is required for RTSP'});
+        return false;
+      }
+      
+      if (!value.startsWith('rtsp://')) {
+        setErrors({...errors, [field]: 'RTSP URL should start with rtsp://'});
+        return false;
+      }
+    }
+    
     if (field === 'hlsUrl' && cameraData.connectionType === 'hls') {
       if (!value.trim()) {
         setErrors({...errors, [field]: 'Stream URL is required for HLS'});
@@ -72,6 +111,11 @@ const ConnectionSettings = ({ cameraData, handleChange }: SettingsSectionProps) 
     handleChange(field, value);
   };
 
+  const useSuggestedUrl = (url: string) => {
+    handleInputChange('rtmpUrl', url);
+    setSuggestedUrls([]);
+  };
+
   return (
     <Card className="shadow-md hover:shadow-lg transition-shadow">
       <CardHeader className="bg-muted/50">
@@ -79,12 +123,38 @@ const ConnectionSettings = ({ cameraData, handleChange }: SettingsSectionProps) 
         <CardDescription>Configure how to connect to this camera</CardDescription>
       </CardHeader>
       <CardContent className="pt-6 space-y-6">
+        {suggestedUrls.length > 0 && (
+          <Alert className="bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <AlertDescription className="text-sm">
+              <p className="font-medium">Suggested RTSP URLs for your camera:</p>
+              <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
+                {suggestedUrls.map((url, i) => (
+                  <div key={i} className="flex justify-between items-center bg-amber-100/50 dark:bg-amber-900/50 p-2 rounded text-xs">
+                    <code className="font-mono">{url}</code>
+                    <Button 
+                      variant="secondary" 
+                      size="sm" 
+                      className="h-6 text-xs"
+                      onClick={() => useSuggestedUrl(url)}
+                      disabled={disabled}
+                    >
+                      Use
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+      
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-2">
             <Label htmlFor="connectionType" className="text-sm font-medium">Connection Type</Label>
             <Select
               value={cameraData.connectionType || 'ip'}
               onValueChange={(value) => handleChange('connectionType', value)}
+              disabled={disabled}
             >
               <SelectTrigger id="connectionType" className="w-full">
                 <SelectValue placeholder="Select connection type" />
@@ -111,6 +181,7 @@ const ConnectionSettings = ({ cameraData, handleChange }: SettingsSectionProps) 
                   onChange={(e) => handleInputChange('ipAddress', e.target.value)}
                   placeholder="192.168.1.100"
                   className={errors.ipAddress ? "border-destructive" : ""}
+                  disabled={disabled}
                 />
                 {errors.ipAddress && (
                   <p className="text-xs text-destructive mt-1">{errors.ipAddress}</p>
@@ -126,6 +197,7 @@ const ConnectionSettings = ({ cameraData, handleChange }: SettingsSectionProps) 
                   onChange={(e) => handleInputChange('port', parseInt(e.target.value) || 80)}
                   placeholder="80"
                   className={errors.port ? "border-destructive" : ""}
+                  disabled={disabled}
                 />
                 {errors.port && (
                   <p className="text-xs text-destructive mt-1">{errors.port}</p>
@@ -146,6 +218,7 @@ const ConnectionSettings = ({ cameraData, handleChange }: SettingsSectionProps) 
               onChange={(e) => handleInputChange('rtmpUrl', e.target.value)}
               placeholder="rtmp://server/stream"
               className={errors.rtmpUrl ? "border-destructive" : ""}
+              disabled={disabled}
             />
             {errors.rtmpUrl && (
               <p className="text-xs text-destructive mt-1">{errors.rtmpUrl}</p>
@@ -164,6 +237,7 @@ const ConnectionSettings = ({ cameraData, handleChange }: SettingsSectionProps) 
               onChange={(e) => handleInputChange('hlsUrl', e.target.value)}
               placeholder="https://server/stream.m3u8"
               className={errors.hlsUrl ? "border-destructive" : ""}
+              disabled={disabled}
             />
             {errors.hlsUrl && (
               <p className="text-xs text-destructive mt-1">{errors.hlsUrl}</p>
@@ -185,10 +259,15 @@ const ConnectionSettings = ({ cameraData, handleChange }: SettingsSectionProps) 
               onChange={(e) => handleInputChange('rtmpUrl', e.target.value)}
               placeholder="rtsp://server/stream"
               className={errors.rtmpUrl ? "border-destructive" : ""}
+              disabled={disabled}
             />
             {errors.rtmpUrl && (
               <p className="text-xs text-destructive mt-1">{errors.rtmpUrl}</p>
             )}
+            <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+              <Info className="h-3 w-3" /> 
+              Add authentication directly in URL: rtsp://username:password@ip:554/path
+            </div>
           </div>
         )}
         
@@ -201,6 +280,7 @@ const ConnectionSettings = ({ cameraData, handleChange }: SettingsSectionProps) 
                 value={cameraData.username || ''}
                 onChange={(e) => handleChange('username', e.target.value)}
                 placeholder="admin"
+                disabled={disabled}
               />
             </div>
             
@@ -212,8 +292,35 @@ const ConnectionSettings = ({ cameraData, handleChange }: SettingsSectionProps) 
                 value={cameraData.password || ''}
                 placeholder="••••••••"
                 onChange={(e) => handleChange('password', e.target.value)}
+                disabled={disabled}
               />
             </div>
+          </div>
+        )}
+        
+        {cameraData.connectionType === 'onvif' && (
+          <div className="space-y-2">
+            <Label htmlFor="onvifPath" className="text-sm font-medium">ONVIF Path</Label>
+            <Input
+              id="onvifPath"
+              value={cameraData.onvifPath || '/onvif/device_service'}
+              onChange={(e) => handleChange('onvifPath', e.target.value)}
+              placeholder="/onvif/device_service"
+              disabled={disabled}
+            />
+            <Alert className="mt-2 bg-blue-50 dark:bg-blue-900/20">
+              <AlertDescription className="text-sm flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p>
+                    <strong>Important:</strong> After changing settings, click "Save Changes" and refresh the camera view.
+                  </p>
+                  <p className="mt-1">
+                    If ONVIF connection fails, try using RTSP connection type with a direct URL.
+                  </p>
+                </div>
+              </AlertDescription>
+            </Alert>
           </div>
         )}
       </CardContent>

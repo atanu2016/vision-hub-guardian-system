@@ -1,6 +1,8 @@
 
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
+import { Save, RefreshCw, CheckCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface SettingsActionButtonsProps {
   onSave: () => void;
@@ -18,24 +20,49 @@ const SettingsActionButtons = ({
   isValid = true
 }: SettingsActionButtonsProps) => {
   const [showSaveAnimation, setShowSaveAnimation] = useState(false);
+  const [showRestartPrompt, setShowRestartPrompt] = useState(false);
+  const { toast } = useToast();
   
   // Animation for successful save
   useEffect(() => {
     if (!isLoading && showSaveAnimation) {
       const timer = setTimeout(() => {
         setShowSaveAnimation(false);
+        setShowRestartPrompt(true);
       }, 2000);
       return () => clearTimeout(timer);
     }
   }, [isLoading, showSaveAnimation]);
 
+  // Hide restart prompt after some time
+  useEffect(() => {
+    if (showRestartPrompt) {
+      const timer = setTimeout(() => {
+        setShowRestartPrompt(false);
+      }, 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [showRestartPrompt]);
+
   const handleSave = () => {
     onSave();
     setShowSaveAnimation(true);
+    
+    // Show toast with instructions
+    toast({
+      title: "Settings saved",
+      description: "Camera settings saved. Refresh the camera view to apply changes."
+    });
   };
 
   return (
     <div className="sticky bottom-0 pt-4 pb-6 bg-gradient-to-t from-background via-background to-transparent">
+      {showRestartPrompt && (
+        <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 rounded-md text-sm">
+          Return to the camera view and click "Retry Connection" to apply your changes.
+        </div>
+      )}
+      
       <div className="flex justify-end gap-3">
         <Button 
           variant="outline" 
@@ -43,6 +70,7 @@ const SettingsActionButtons = ({
           disabled={isLoading || !hasChanges}
           className="px-6"
         >
+          <RefreshCw className="mr-2 h-4 w-4" />
           Reset
         </Button>
         <Button 
@@ -57,13 +85,14 @@ const SettingsActionButtons = ({
             </>
           ) : showSaveAnimation ? (
             <span className="flex items-center">
-              <svg className="animate-fade-in w-4 h-4 mr-2 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+              <CheckCircle className="mr-2 h-4 w-4 text-primary-foreground" />
               Saved!
             </span>
           ) : (
-            'Save Changes'
+            <>
+              <Save className="mr-2 h-4 w-4" />
+              Save Changes
+            </>
           )}
         </Button>
       </div>

@@ -3,9 +3,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info, AlertTriangle } from "lucide-react";
+import { Info, AlertTriangle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { testONVIFConnection, suggestRtspUrls, ONVIFConnectionParams } from "@/utils/onvifTester";
 
 interface ONVIFCameraFormProps {
   ipAddress: string;
@@ -25,6 +26,56 @@ const ONVIFCameraForm = ({
   onChange,
 }: ONVIFCameraFormProps) => {
   const [showAdvancedHelp, setShowAdvancedHelp] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{success: boolean, message: string} | null>(null);
+  const [suggestedUrls, setSuggestedUrls] = useState<string[]>([]);
+  
+  const handleTestConnection = async () => {
+    if (!ipAddress || !port || !username || !password) {
+      setTestResult({
+        success: false,
+        message: "Please fill in all required fields before testing"
+      });
+      return;
+    }
+    
+    setIsTesting(true);
+    setTestResult(null);
+    
+    try {
+      // Build test params
+      const testParams: ONVIFConnectionParams = {
+        hostname: ipAddress,
+        port: parseInt(port),
+        username,
+        password,
+        servicePath: onvifPath || "/onvif/device_service"
+      };
+      
+      // Test connection
+      const result = await testONVIFConnection(testParams);
+      setTestResult({
+        success: result.success,
+        message: result.message
+      });
+      
+      // If failed, suggest RTSP URLs based on common patterns
+      if (!result.success) {
+        const urls = suggestRtspUrls(testParams.hostname, testParams.port, testParams.username, testParams.password);
+        setSuggestedUrls(urls);
+      } else if (result.streamUri) {
+        // If successful and we got a stream URI, suggest using it
+        setSuggestedUrls([result.streamUri]);
+      }
+    } catch (error) {
+      setTestResult({
+        success: false,
+        message: `Error testing connection: ${error.message || "Unknown error"}`
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  };
   
   return (
     <>
@@ -118,11 +169,60 @@ const ONVIFCameraForm = ({
           placeholder="/onvif/device_service"
         />
       </div>
+      
+      <div className="mt-4">
+        <Button 
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={handleTestConnection}
+          disabled={isTesting || !ipAddress || !port || !username || !password}
+          className="w-full"
+        >
+          {isTesting ? "Testing Connection..." : "Test ONVIF Connection"}
+        </Button>
+        
+        {testResult && (
+          <div className={cn("mt-2 p-2 text-sm rounded", 
+            testResult.success ? "bg-green-50 text-green-800 dark:bg-green-900/30 dark:text-green-400" : 
+            "bg-red-50 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+          )}>
+            {testResult.message}
+          </div>
+        )}
+        
+        {suggestedUrls.length > 0 && (
+          <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200 dark:border-amber-800">
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-400">Try these RTSP URLs instead:</p>
+            <div className="mt-2 space-y-1">
+              {suggestedUrls.map((url, i) => (
+                <div key={i} className="text-xs bg-amber-100 dark:bg-amber-900/50 p-2 rounded flex justify-between">
+                  <code className="font-mono">{url}</code>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-5 px-2 text-amber-700"
+                    onClick={() => {
+                      onChange("connectionType", "rtsp");
+                      onChange("rtmpUrl", url);
+                    }}
+                  >
+                    Use
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs mt-2 text-amber-700 dark:text-amber-500">
+              Note: Switching to RTSP may provide better compatibility.
+            </p>
+          </div>
+        )}
+      </div>
 
       <Button 
         type="button" 
         variant="ghost" 
-        className="text-xs text-muted-foreground px-0 mt-1" 
+        className="text-xs text-muted-foreground px-0 mt-4" 
         onClick={() => setShowAdvancedHelp(!showAdvancedHelp)}
       >
         {showAdvancedHelp ? "Hide" : "Show"} advanced troubleshooting tips
@@ -143,6 +243,9 @@ const ONVIFCameraForm = ({
             </li>
             <li>
               <strong>Firewall issues:</strong> Make sure ports 80, 554, and the ONVIF port are open on your network
+            </li>
+            <li>
+              <strong>After saving settings:</strong> Always click the "Save Changes" button in the camera settings and then try reconnecting.
             </li>
           </ul>
         </div>

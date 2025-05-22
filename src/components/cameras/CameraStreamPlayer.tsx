@@ -1,5 +1,5 @@
 
-import { useRef, useState, useCallback, memo } from "react";
+import { useRef, useState, useCallback, memo, useEffect } from "react";
 import { Camera } from "@/types/camera";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,8 @@ const CameraStreamPlayer = memo(({ camera, autoPlay = true, className = "" }: Ca
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const [retryCount, setRetryCount] = useState(0);
+  const [lastRetryTime, setLastRetryTime] = useState(0);
   
   const { hlsRef, retryConnection } = useStreamSetup({
     camera,
@@ -31,6 +33,26 @@ const CameraStreamPlayer = memo(({ camera, autoPlay = true, className = "" }: Ca
     onError: setError,
     onLoadingChange: setIsLoading
   });
+  
+  // Auto-retry logic for initial connection
+  useEffect(() => {
+    if (error && retryCount < 2 && Date.now() - lastRetryTime > 5000) {
+      const timer = setTimeout(() => {
+        console.log(`Auto-retrying connection to ${camera.name} (attempt ${retryCount + 1})`);
+        handleRetryConnection();
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [error, retryCount, lastRetryTime]);
+  
+  // Reset retry count when camera changes
+  useEffect(() => {
+    setRetryCount(0);
+    setLastRetryTime(0);
+    setError(null);
+    setIsLoading(true);
+  }, [camera.id]);
   
   // Memoized callback functions to prevent unnecessary rerenders
   const togglePlay = useCallback(() => {
@@ -58,9 +80,11 @@ const CameraStreamPlayer = memo(({ camera, autoPlay = true, className = "" }: Ca
   }, [isMuted]);
 
   const handleRetryConnection = useCallback(() => {
-    console.log("Retrying camera connection:", camera.name);
+    console.log(`Manually retrying camera connection: ${camera.name} (attempt ${retryCount + 1})`);
     setError(null);
     setIsLoading(true);
+    setRetryCount(prev => prev + 1);
+    setLastRetryTime(Date.now());
     
     // Use the enhanced retry function
     retryConnection();
@@ -69,7 +93,7 @@ const CameraStreamPlayer = memo(({ camera, autoPlay = true, className = "" }: Ca
       title: "Reconnecting",
       description: `Attempting to reconnect to ${camera.name}...`,
     });
-  }, [camera.name, retryConnection, toast]);
+  }, [camera.name, retryConnection, toast, retryCount]);
   
   return (
     <div className={cn("relative bg-vision-dark-900 rounded-lg overflow-hidden", className)}>

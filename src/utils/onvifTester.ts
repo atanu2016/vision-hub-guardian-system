@@ -75,37 +75,46 @@ const simulateONVIFTest = (params: ONVIFConnectionParams): Promise<ONVIFTestResu
 };
 
 /**
- * Suggest common RTSP URLs based on camera manufacturer
+ * Generate RTSP URLs based on camera information
  */
-export const suggestRtspUrls = (manufacturer?: string): string[] => {
-  const defaultUrls = [
-    "rtsp://username:password@camera-ip:554/stream1",
-    "rtsp://username:password@camera-ip:554/h264"
-  ];
+export const suggestRtspUrls = (
+  hostname: string, 
+  port?: number, 
+  username?: string, 
+  password?: string, 
+  manufacturer?: string
+): string[] => {
+  // Format authentication part
+  const auth = username && password ? `${username}:${password}@` : '';
+  const rtspPort = '554'; // Standard RTSP port
   
   const lowercaseManufacturer = (manufacturer || "").toLowerCase();
+  const urls = [];
   
-  if (lowercaseManufacturer.includes("hikvision")) {
-    return [
-      "rtsp://username:password@camera-ip:554/Streaming/Channels/101", // Main stream
-      "rtsp://username:password@camera-ip:554/Streaming/Channels/102"  // Sub stream
-    ];
-  } else if (lowercaseManufacturer.includes("dahua")) {
-    return [
-      "rtsp://username:password@camera-ip:554/cam/realmonitor?channel=1&subtype=0", // Main stream
-      "rtsp://username:password@camera-ip:554/cam/realmonitor?channel=1&subtype=1"  // Sub stream
-    ];
-  } else if (lowercaseManufacturer.includes("axis")) {
-    return [
-      "rtsp://username:password@camera-ip:554/axis-media/media.amp",
-      "rtsp://username:password@camera-ip:554/mpeg4/media.amp"
-    ];
-  } else if (lowercaseManufacturer.includes("sony")) {
-    return [
-      "rtsp://username:password@camera-ip:554/video1",
-      "rtsp://username:password@camera-ip:554/video2"
-    ];
+  // Add common patterns
+  if (lowercaseManufacturer.includes("hikvision") || hostname.includes("hikvision")) {
+    urls.push(`rtsp://${auth}${hostname}:${rtspPort}/Streaming/Channels/101`); // Main stream
+    urls.push(`rtsp://${auth}${hostname}:${rtspPort}/Streaming/Channels/102`); // Sub stream
+  } 
+  else if (lowercaseManufacturer.includes("dahua") || hostname.includes("dahua")) {
+    urls.push(`rtsp://${auth}${hostname}:${rtspPort}/cam/realmonitor?channel=1&subtype=0`); // Main stream
+    urls.push(`rtsp://${auth}${hostname}:${rtspPort}/cam/realmonitor?channel=1&subtype=1`); // Sub stream
+  } 
+  else if (lowercaseManufacturer.includes("axis") || hostname.includes("axis")) {
+    urls.push(`rtsp://${auth}${hostname}:${rtspPort}/axis-media/media.amp`);
+    urls.push(`rtsp://${auth}${hostname}:${rtspPort}/mpeg4/media.amp`);
+  } 
+  else if (lowercaseManufacturer.includes("sony") || hostname.includes("sony")) {
+    urls.push(`rtsp://${auth}${hostname}:${rtspPort}/video1`);
+  }
+  else {
+    // Generic options for unknown manufacturers
+    urls.push(`rtsp://${auth}${hostname}:${rtspPort}/stream1`);
+    urls.push(`rtsp://${auth}${hostname}:${rtspPort}/h264`);
+    urls.push(`rtsp://${auth}${hostname}:${rtspPort}/live`);
+    urls.push(`rtsp://${auth}${hostname}:${rtspPort}/11`);
+    urls.push(`rtsp://${auth}${hostname}:${rtspPort}/profile1/media.smp`);
   }
   
-  return defaultUrls;
+  return urls;
 };
