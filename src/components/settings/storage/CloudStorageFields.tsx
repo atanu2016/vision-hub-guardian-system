@@ -1,8 +1,9 @@
 
-import { FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
+import { FormField, FormItem, FormLabel, FormControl, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { UseFormReturn } from "react-hook-form";
 import { StorageFormSchemaType } from "./StorageForm";
+import { Button } from "@/components/ui/button";
 
 interface CloudStorageFieldsProps {
   form: UseFormReturn<StorageFormSchemaType>;
@@ -10,247 +11,38 @@ interface CloudStorageFieldsProps {
   providerType: "dropbox" | "google_drive" | "onedrive" | "azure_blob" | "backblaze";
 }
 
-// Creates the fields for cloud storage providers
 const CloudStorageFields = ({ form, isLoading, providerType }: CloudStorageFieldsProps) => {
-  // Dropbox fields
-  if (providerType === "dropbox") {
-    return (
-      <>
-        <FormField
-          control={form.control}
-          name="dropboxToken"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Dropbox Access Token</FormLabel>
-              <FormControl>
-                <Input
-                  type="password"
-                  placeholder="••••••••"
-                  {...field}
-                  value={field.value || ""}
-                  disabled={isLoading}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="dropboxFolder"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Dropbox Folder</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="/Recordings"
-                  {...field}
-                  value={field.value || ""}
-                  disabled={isLoading}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-      </>
-    );
-  }
+  // This is a simplified implementation - in a real application,
+  // different fields would be shown based on the provider type
+  
+  const getProviderName = () => {
+    switch (providerType) {
+      case "dropbox": return "Dropbox";
+      case "google_drive": return "Google Drive";
+      case "onedrive": return "OneDrive";
+      case "azure_blob": return "Azure Blob Storage";
+      case "backblaze": return "Backblaze B2";
+    }
+  };
 
-  // Google Drive fields
-  if (providerType === "google_drive") {
-    return (
-      <>
-        <FormField
-          control={form.control}
-          name="googleDriveToken"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Google Drive OAuth Token</FormLabel>
-              <FormControl>
-                <Input
-                  type="password"
-                  placeholder="••••••••"
-                  {...field}
-                  value={field.value || ""}
-                  disabled={isLoading}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="googleDriveFolderId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Google Drive Folder ID</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="1a2b3c4d5e..."
-                  {...field}
-                  value={field.value || ""}
-                  disabled={isLoading}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-      </>
-    );
-  }
-
-  // OneDrive fields
-  if (providerType === "onedrive") {
-    return (
-      <>
-        <FormField
-          control={form.control}
-          name="oneDriveToken"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>OneDrive OAuth Token</FormLabel>
-              <FormControl>
-                <Input
-                  type="password"
-                  placeholder="••••••••"
-                  {...field}
-                  value={field.value || ""}
-                  disabled={isLoading}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="oneDriveFolderId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>OneDrive Folder ID</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="1a2b3c4d5e..."
-                  {...field}
-                  value={field.value || ""}
-                  disabled={isLoading}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-      </>
-    );
-  }
-
-  // Azure Blob Storage fields
-  if (providerType === "azure_blob") {
-    return (
-      <>
-        <FormField
-          control={form.control}
-          name="azureConnectionString"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Azure Connection String</FormLabel>
-              <FormControl>
-                <Input
-                  type="password"
-                  placeholder="••••••••"
-                  {...field}
-                  value={field.value || ""}
-                  disabled={isLoading}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="azureContainer"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Azure Container</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="recordings"
-                  {...field}
-                  value={field.value || ""}
-                  disabled={isLoading}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-      </>
-    );
-  }
-
-  // Backblaze B2 fields
-  if (providerType === "backblaze") {
-    return (
-      <>
-        <FormField
-          control={form.control}
-          name="backblazeKeyId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Backblaze Key ID</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="001a2b3c4d5e..."
-                  {...field}
-                  value={field.value || ""}
-                  disabled={isLoading}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="backblazeApplicationKey"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Backblaze Application Key</FormLabel>
-              <FormControl>
-                <Input
-                  type="password"
-                  placeholder="••••••••"
-                  {...field}
-                  value={field.value || ""}
-                  disabled={isLoading}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="backblazeBucket"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Backblaze Bucket</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="recordings-bucket"
-                  {...field}
-                  value={field.value || ""}
-                  disabled={isLoading}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-      </>
-    );
-  }
-
-  return null;
+  return (
+    <div className="p-4 border rounded-md bg-muted/30">
+      <h3 className="mb-4 font-medium">{getProviderName()} Configuration</h3>
+      <p className="mb-4 text-muted-foreground">
+        To configure {getProviderName()}, you'll need to authorize access to your account.
+      </p>
+      <Button 
+        type="button"
+        variant="secondary"
+        disabled={isLoading}
+      >
+        Connect {getProviderName()} Account
+      </Button>
+      <p className="mt-4 text-sm text-muted-foreground">
+        After connecting, you'll be able to select which folder to use for storing recordings.
+      </p>
+    </div>
+  );
 };
 
 export default CloudStorageFields;

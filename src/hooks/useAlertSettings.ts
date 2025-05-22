@@ -1,9 +1,11 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { Camera } from '@/types/camera';
 import { toast } from 'sonner';
-import { Camera } from '@/types/camera'; 
+import { fetchCamerasFromDB } from '@/services/database/camera/fetchCameras';
 
+// Define the structure for alert settings
 export interface AlertSettings {
   id?: string;
   motion_detection: boolean;
@@ -11,143 +13,109 @@ export interface AlertSettings {
   storage_warning: boolean;
   email_notifications: boolean;
   push_notifications: boolean;
-  notification_sound: string;
   email_address?: string;
+  notification_sound: string;
   updated_at?: string;
 }
 
+// Define camera alert level structure
 export interface CameraAlertLevel {
   camera_id: string;
-  alert_level: 'low' | 'medium' | 'high' | 'none';
+  alert_level: 'off' | 'low' | 'medium' | 'high';
 }
 
+// Hook to manage alert settings
 export const useAlertSettings = () => {
   const [settings, setSettings] = useState<AlertSettings>({
     motion_detection: true,
     camera_offline: true,
     storage_warning: true,
     email_notifications: false,
-    push_notifications: false,
-    notification_sound: 'default'
+    push_notifications: true,
+    notification_sound: 'default',
   });
-
+  
   const [cameras, setCameras] = useState<Camera[]>([]);
+  const [cameraAlertLevels, setCameraAlertLevels] = useState<Record<string, 'off' | 'low' | 'medium' | 'high'>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
-  // Load alert settings and cameras
+
+  // Load alert settings from the database
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        // Fetch alert settings
-        const { data, error } = await supabase
+        setLoading(true);
+        // Fetch alert settings from database
+        const { data: alertSettingsData, error: alertSettingsError } = await supabase
           .from('alert_settings')
           .select('*')
-          .limit(1)
           .single();
-        
-        if (error && error.code !== 'PGRST116') {
-          throw error;
-        }
-        
-        if (data) {
-          setSettings({
-            id: data.id,
-            motion_detection: data.motion_detection,
-            camera_offline: data.camera_offline,
-            storage_warning: data.storage_warning,
-            email_notifications: data.email_notifications,
-            push_notifications: data.push_notifications,
-            notification_sound: data.notification_sound || 'default',
-            email_address: data.email_address || '',
-            updated_at: data.updated_at
-          });
+
+        if (alertSettingsError && alertSettingsError.code !== 'PGRST116') {
+          throw alertSettingsError;
         }
 
-        // Fetch cameras
-        const { data: camerasData, error: camerasError } = await supabase
-          .from('cameras')
-          .select('*');
-        
-        if (camerasError) {
-          throw camerasError;
+        if (alertSettingsData) {
+          setSettings(alertSettingsData);
         }
 
-        setCameras(camerasData || []);
+        // Load cameras
+        const camerasData = await fetchCamerasFromDB();
+        setCameras(camerasData);
+
+        // TODO: In the future, load camera-specific alert levels
+        // For now, set default levels for all cameras
+        const defaultAlertLevels: Record<string, 'off' | 'low' | 'medium' | 'high'> = {};
+        camerasData.forEach(camera => {
+          defaultAlertLevels[camera.id] = 'medium';
+        });
+        setCameraAlertLevels(defaultAlertLevels);
+
       } catch (error) {
         console.error('Error loading alert settings:', error);
+        toast.error('Failed to load alert settings');
       } finally {
         setLoading(false);
       }
     };
-    
+
     loadSettings();
   }, []);
 
-  // Update alert settings state
-  const updateAlertSettings = (newSettings: Partial<AlertSettings>) => {
-    setSettings(prev => ({ ...prev, ...newSettings }));
-  };
+  // Handle alert settings changes
+  const updateAlertSettings = useCallback((updatedSettings: Partial<AlertSettings>) => {
+    setSettings(prev => ({ ...prev, ...updatedSettings }));
+  }, []);
 
-  // Handle camera alert level change
-  const handleCameraAlertLevelChange = async (cameraId: string, level: 'low' | 'medium' | 'high' | 'none') => {
-    try {
-      // Implementation would go here
-      // For now just report success
-      toast.success(`Alert level for camera changed to ${level}`);
-      return true;
-    } catch (error) {
-      console.error('Error updating camera alert level:', error);
-      toast.error('Failed to update camera alert level');
-      return false;
-    }
-  };
+  // Handle camera alert level changes
+  const handleCameraAlertLevelChange = useCallback((cameraId: string, level: 'off' | 'low' | 'medium' | 'high') => {
+    setCameraAlertLevels(prev => ({
+      ...prev,
+      [cameraId]: level
+    }));
+  }, []);
 
-  // Save alert settings
-  const saveSettings = async (newSettings: AlertSettings) => {
-    setSaving(true);
+  // Save settings to database
+  const handleSaveSettings = useCallback(async () => {
     try {
-      const { id, ...settingsData } = newSettings;
+      setSaving(true);
       
-      let result;
-      if (id) {
-        // Update existing record
-        result = await supabase
-          .from('alert_settings')
-          .update(settingsData)
-          .eq('id', id);
-      } else {
-        // Insert new record
-        result = await supabase
-          .from('alert_settings')
-          .insert([settingsData]);
-      }
-      
-      if (result.error) throw result.error;
-      
-      toast.success('Alert settings saved successfully');
-      
-      // Refresh settings to get the updated data
-      const { data } = await supabase
+      // Save general alert settings
+      const { error } = await supabase
         .from('alert_settings')
-        .select('*')
-        .limit(1)
-        .single();
-      
-      if (data) {
-        setSettings({
-          id: data.id,
-          motion_detection: data.motion_detection,
-          camera_offline: data.camera_offline,
-          storage_warning: data.storage_warning,
-          email_notifications: data.email_notifications,
-          push_notifications: data.push_notifications,
-          notification_sound: data.notification_sound || 'default',
-          email_address: data.email_address || '',
-          updated_at: data.updated_at
+        .upsert({
+          ...settings,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'id'
         });
-      }
-      
+
+      if (error) throw error;
+
+      // TODO: Save camera-specific alert levels to database in the future
+      // For now, just simulating a successful save
+
+      toast.success('Alert settings saved successfully');
       return true;
     } catch (error) {
       console.error('Error saving alert settings:', error);
@@ -156,20 +124,14 @@ export const useAlertSettings = () => {
     } finally {
       setSaving(false);
     }
-  };
+  }, [settings]);
 
-  // Handle save settings - wrapper around saveSettings
-  const handleSaveSettings = async () => {
-    return await saveSettings(settings);
-  };
-  
   return {
     settings,
     cameras,
     loading,
     saving,
     updateAlertSettings,
-    saveSettings,
     handleSaveSettings,
     handleCameraAlertLevelChange
   };

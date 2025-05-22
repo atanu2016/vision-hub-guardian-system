@@ -7,7 +7,7 @@ export interface Camera {
   username?: string;
   password?: string;
   location: string;
-  status: 'online' | 'offline' | 'recording';
+  status: CameraStatus;
   lastseen: string;
   recording?: boolean;
   motiondetection?: boolean;
@@ -72,4 +72,3 @@ export interface CameraGroup {
 
 export type QualityType = 'low' | 'medium' | 'high' | 'ultra';
 export type ScheduleType = 'always' | 'workdays' | 'weekends' | 'custom';
-

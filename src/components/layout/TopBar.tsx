@@ -68,7 +68,7 @@ const TopBar = () => {
             time_start: cam.time_start || '',
             time_end: cam.time_end || '',
             days_of_week: cam.days_of_week || []
-          })) as Camera[];
+          }) as Camera);
           
           setCameras(formattedCameras);
         }
@@ -106,8 +106,8 @@ const TopBar = () => {
         ...savedCamera,
         status: (savedCamera.status as CameraStatus) || 'offline',
         rtmpurl: savedCamera.rtmpurl || '',
-        onvifpath: savedCamera.onvifpath || '',
         hlsurl: savedCamera.hlsurl || '',
+        onvifpath: savedCamera.onvifpath || '',
         quality: savedCamera.quality || '',
         schedule_type: savedCamera.schedule_type || '',
         time_start: savedCamera.time_start || '',
