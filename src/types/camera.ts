@@ -12,6 +12,7 @@ export interface Camera {
   recording?: boolean;
   motiondetection?: boolean;
   rtmpurl?: string;
+  hlsurl?: string; // Added this missing property
   onvifpath?: string;
   connectiontype?: string;
   group?: string;
@@ -49,3 +50,7 @@ export interface CameraGroup {
   name: string;
   cameras: string[];
 }
+
+// Add these missing type definitions for the components
+export type QualityType = 'low' | 'medium' | 'high' | 'ultra';
+export type ScheduleType = 'always' | 'workdays' | 'weekends' | 'custom';

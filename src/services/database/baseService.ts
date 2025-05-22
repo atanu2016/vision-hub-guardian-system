@@ -1,29 +1,71 @@
 
-// Base service with common database utility functions
+// Base service functionality for database operations
+
+import { supabase } from '@/integrations/supabase/client';
 
 /**
- * Log database errors with a standardized format
+ * Verifies database setup and connection
+ * @returns Promise resolving to a boolean indicating if the database is properly set up
  */
-export const logDatabaseError = (error: any, message: string) => {
-  console.error(`Database Error: ${message}`, error);
-  return new Error(`${message}: ${error?.message || 'Unknown error'}`);
+export const checkDatabaseSetup = async (): Promise<boolean> => {
+  try {
+    // Check if we can connect to the database by querying a simple table
+    const { data, error } = await supabase
+      .from('database_config')
+      .select('id')
+      .limit(1);
+    
+    if (error) {
+      console.error('Database setup check failed:', error);
+      return false;
+    }
+    
+    // Successful query indicates database is accessible
+    return true;
+  } catch (err) {
+    console.error('Error checking database setup:', err);
+    return false;
+  }
 };
 
 /**
- * Safely get nested properties from an object without throwing errors
+ * Checks if required tables exist in the database
+ * @returns Promise resolving to an object with table existence status
  */
-export const safeGet = <T>(obj: any, path: string, defaultValue: T): T => {
+export const checkTablesExist = async (): Promise<Record<string, boolean>> => {
+  const tables = [
+    'cameras',
+    'storage_settings',
+    'recording_settings',
+    'alert_settings',
+    'webhooks',
+    'advanced_settings',
+    'system_logs',
+    'system_stats'
+  ];
+  
+  const result: Record<string, boolean> = {};
+  
   try {
-    const keys = path.split('.');
-    let result = obj;
-    
-    for (const key of keys) {
-      if (result === undefined || result === null) return defaultValue;
-      result = result[key];
+    // Check each table existence
+    for (const table of tables) {
+      try {
+        const { count, error } = await supabase
+          .from(table)
+          .select('*', { count: 'exact', head: true });
+          
+        result[table] = !error;
+      } catch {
+        result[table] = false;
+      }
     }
     
-    return (result === undefined || result === null) ? defaultValue : result as T;
-  } catch (error) {
-    return defaultValue;
+    return result;
+  } catch (err) {
+    console.error('Error checking tables existence:', err);
+    return tables.reduce((acc, table) => {
+      acc[table] = false;
+      return acc;
+    }, {} as Record<string, boolean>);
   }
 };

@@ -2,9 +2,10 @@
 import { useState, useEffect } from 'react';
 import { Camera } from "@/types/camera";
 import { useToast } from "@/hooks/use-toast";
+import { CameraUIProps, toUICamera, toDatabaseCamera } from '@/utils/cameraPropertyMapper';
 
 export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera) => void) {
-  const [cameraData, setCameraData] = useState<Camera>({ ...camera });
+  const [cameraData, setCameraData] = useState<CameraUIProps>(toUICamera(camera));
   const [isLoading, setIsLoading] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [isValid, setIsValid] = useState(true);
@@ -12,7 +13,7 @@ export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera
 
   // Check for changes when cameraData updates
   useEffect(() => {
-    const hasChanged = JSON.stringify(cameraData) !== JSON.stringify(camera);
+    const hasChanged = JSON.stringify(cameraData) !== JSON.stringify(toUICamera(camera));
     setHasChanges(hasChanged);
   }, [cameraData, camera]);
 
@@ -65,7 +66,7 @@ export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera
     return parts.every(part => part >= 0 && part <= 255);
   };
 
-  const handleChange = (field: keyof Camera, value: string | boolean | number | string[]) => {
+  const handleChange = (field: keyof CameraUIProps, value: string | boolean | number | string[]) => {
     setCameraData({
       ...cameraData,
       [field]: value
@@ -84,7 +85,10 @@ export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera
 
     setIsLoading(true);
     try {
-      onSave(cameraData);
+      // Convert back to database format before saving
+      const dbCamera = toDatabaseCamera(cameraData);
+      onSave(dbCamera);
+      
       toast({
         title: "Settings saved",
         description: "Camera settings have been updated successfully."
@@ -102,7 +106,7 @@ export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera
   };
 
   const handleReset = () => {
-    setCameraData({ ...camera });
+    setCameraData(toUICamera(camera));
     setHasChanges(false);
   };
 
