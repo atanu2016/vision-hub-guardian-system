@@ -36,6 +36,11 @@ const StorageSettings = () => {
     form.reset(settings);
   }
 
+  // Wrapper function to ensure the correct return type
+  const onSubmit = async (values: StorageFormSchemaType) => {
+    await handleSaveSettings(values);
+  };
+
   return (
     <AppLayout>
       <div className="container mx-auto px-4 py-6">
@@ -52,7 +57,7 @@ const StorageSettings = () => {
 
             <StorageConfigCard
               form={form}
-              onSubmit={handleSaveSettings}
+              onSubmit={onSubmit}
               isLoading={isLoading || isSaving}
             />
           </div>

@@ -13,3 +13,10 @@ export interface StorageStats {
   total: number;
   percentage: number;
 }
+
+export interface StorageInfo {
+  totalSpace: number;
+  usedSpace: number;
+  freeSpace: number;
+  usagePercentage: number;
+}

@@ -48,6 +48,7 @@ const AlertsPage = () => {
                 saving={saving}
                 onSettingsChange={updateAlertSettings}
                 onSaveSettings={handleSaveSettings}
+                onCameraAlertLevelChange={handleCameraAlertLevelChange}
               />
             </TabsContent>
             
