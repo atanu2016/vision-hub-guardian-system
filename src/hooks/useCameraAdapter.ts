@@ -20,9 +20,8 @@ export const useCameraAdapter = () => {
       lastSeen: camera.lastseen,
       recording: camera.recording || false,
       group: camera.group,
-      connectionType: (camera.connectiontype as "ip" | "rtsp" | "rtmp" | "hls" | "onvif") || "ip",
+      connectionType: (camera.connectiontype as "ip" | "rtsp" | "rtmp" | "onvif") || "ip",
       rtmpUrl: camera.rtmpurl,
-      hlsUrl: camera.hlsurl,
       onvifPath: camera.onvifpath,
       motionDetection: camera.motiondetection,
       thumbnail: camera.thumbnail
@@ -47,7 +46,6 @@ export const useCameraAdapter = () => {
       group: cameraUI.group,
       connectiontype: cameraUI.connectionType,
       rtmpurl: cameraUI.rtmpUrl,
-      hlsurl: cameraUI.hlsUrl,
       onvifpath: cameraUI.onvifPath,
       motiondetection: cameraUI.motionDetection,
       thumbnail: cameraUI.thumbnail
@@ -71,7 +69,6 @@ export const useCameraAdapter = () => {
       group: cameraUIParams.group,
       connectiontype: cameraUIParams.connectionType,
       rtmpurl: cameraUIParams.rtmpUrl || '',
-      hlsurl: cameraUIParams.hlsUrl || '',
       onvifpath: cameraUIParams.onvifPath || '',
       motiondetection: cameraUIParams.motionDetection,
       thumbnail: cameraUIParams.thumbnail

@@ -1,6 +1,5 @@
 
-import { useEffect, useRef, useState } from "react";
-import Hls from "hls.js";
+import { useEffect, useRef } from "react";
 import { setupCameraStream } from "@/services/apiService";
 import { Camera } from "@/types/camera";
 import { useToast } from "@/hooks/use-toast";
@@ -22,7 +21,7 @@ export function useStreamSetup({
   onLoadingChange
 }: UseStreamSetupOptions) {
   const { toast } = useToast();
-  const hlsRef = useRef<Hls | null>(null);
+  const hlsRef = useRef<any | null>(null); // Keep ref for cleanup purposes
 
   useEffect(() => {
     let cleanup: () => void = () => {};
@@ -37,77 +36,10 @@ export function useStreamSetup({
         try {
           const videoElement = videoRef.current;
           const cameraUI = toUICamera(camera);
-          const streamUrl = cameraUI.connectionType === 'hls' 
-            ? cameraUI.hlsUrl 
-            : cameraUI.rtmpUrl || '';
+          const streamUrl = cameraUI.rtmpUrl || '';
           
-          // If the URL is an HLS stream and browser supports HLS.js
-          if (streamUrl && (streamUrl.includes('.m3u8') || cameraUI.connectionType === 'hls') && Hls.isSupported()) {
-            // Destroy any existing HLS instance
-            if (hlsRef.current) {
-              hlsRef.current.destroy();
-            }
-            
-            hlsRef.current = new Hls({
-              enableWorker: true,
-              lowLatencyMode: true,
-              backBufferLength: 90,
-              maxBufferLength: 30,
-              maxMaxBufferLength: 60,
-              maxBufferSize: 60 * 1000 * 1000, // 60MB max buffer size
-              maxBufferHole: 0.5
-            });
-            
-            console.log(`Loading HLS stream: ${streamUrl}`);
-            hlsRef.current.loadSource(streamUrl);
-            hlsRef.current.attachMedia(videoElement);
-            
-            hlsRef.current.on(Hls.Events.MANIFEST_PARSED, () => {
-              console.log("HLS manifest parsed successfully");
-              onLoadingChange(false);
-              if (isPlaying) {
-                videoElement.play().catch(e => {
-                  console.warn("Autoplay prevented:", e);
-                });
-              }
-            });
-            
-            hlsRef.current.on(Hls.Events.ERROR, (_, data) => {
-              console.error("HLS error:", data);
-              if (data.fatal) {
-                console.error("Fatal HLS error:", data);
-                onError("Stream unavailable");
-                
-                if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                  toast({
-                    title: "Network Error",
-                    description: "Unable to load the camera stream due to network issues."
-                  });
-                }
-                
-                // Try to recover on fatal errors
-                switch (data.type) {
-                  case Hls.ErrorTypes.NETWORK_ERROR:
-                    hlsRef.current?.startLoad();
-                    break;
-                  case Hls.ErrorTypes.MEDIA_ERROR:
-                    hlsRef.current?.recoverMediaError();
-                    break;
-                  default:
-                    // Cannot recover
-                    break;
-                }
-              }
-            });
-            
-            cleanup = () => {
-              if (hlsRef.current) {
-                hlsRef.current.destroy();
-                hlsRef.current = null;
-              }
-            };
-          } else if (streamUrl) {
-            // For direct video sources
+          // For direct video sources
+          if (streamUrl) {
             videoElement.src = streamUrl;
             videoElement.onloadeddata = () => {
               console.log("Direct video stream loaded");
@@ -160,5 +92,5 @@ export function useStreamSetup({
     };
   }, [camera, isPlaying, onError, onLoadingChange, toast]);
 
-  return { hlsRef };
+  return { hlsRef }; // Return the ref for consistency with previous API
 }

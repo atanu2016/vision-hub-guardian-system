@@ -1,5 +1,4 @@
 
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Camera, CameraStatus } from "@/types/camera";
@@ -43,7 +42,6 @@ export const useCamerasFetch = () => {
           group: cam.group,
           motiondetection: cam.motiondetection,
           rtmpurl: cam.rtmpurl || '',
-          hlsurl: cam.hlsurl || '',
           onvifpath: cam.onvifpath || ''
         }));
         

@@ -1,4 +1,3 @@
-
 export interface Camera {
   id: string;
   name: string;
@@ -12,7 +11,6 @@ export interface Camera {
   recording?: boolean;
   motiondetection?: boolean;
   rtmpurl?: string;
-  hlsurl?: string;
   onvifpath?: string;
   connectiontype?: string;
   group?: string;
@@ -26,7 +24,7 @@ export interface Camera {
   days_of_week?: string[];
 }
 
-export type CameraConnectionType = 'ip' | 'rtsp' | 'rtmp' | 'hls' | 'onvif';
+export type CameraConnectionType = 'ip' | 'rtsp' | 'rtmp' | 'onvif';
 
 export type CameraStatus = 'online' | 'offline' | 'recording';
 

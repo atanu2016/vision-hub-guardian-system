@@ -60,7 +60,6 @@ const TopBar = () => {
             group: cam.group,
             motiondetection: cam.motiondetection,
             rtmpurl: cam.rtmpurl || '',
-            hlsurl: cam.hlsurl || '',
             onvifpath: cam.onvifpath || ''
           })) as Camera[];
           
@@ -100,7 +99,6 @@ const TopBar = () => {
         ...savedCamera,
         status: (savedCamera.status as CameraStatus) || 'offline',
         rtmpurl: savedCamera.rtmpurl || '',
-        hlsurl: savedCamera.hlsurl || '',
         onvifpath: savedCamera.onvifpath || ''
       };
       

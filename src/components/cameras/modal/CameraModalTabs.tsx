@@ -3,7 +3,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import IPCameraForm from "./IPCameraForm";
 import ONVIFCameraForm from "./ONVIFCameraForm";
 import RTMPCameraForm from "./RTMPCameraForm";
-import HLSCameraForm from "./HLSCameraForm";
 import { CameraConnectionType } from "@/types/camera";
 
 interface CameraModalTabsProps {
@@ -16,7 +15,6 @@ interface CameraModalTabsProps {
     username: string;
     password: string;
     rtmpUrl: string;
-    hlsUrl: string;
     onvifPath: string;
   };
   onChange: (field: string, value: string) => void;
@@ -34,11 +32,10 @@ const CameraModalTabs = ({
         value={connectionTab} 
         onValueChange={tab => onTabChange(tab)}
       >
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="ip">IP Camera</TabsTrigger>
           <TabsTrigger value="onvif">ONVIF</TabsTrigger>
           <TabsTrigger value="rtmp">RTMP</TabsTrigger>
-          <TabsTrigger value="hls">HLS</TabsTrigger>
         </TabsList>
         
         <TabsContent value="ip" className="space-y-4 pt-2">
@@ -65,13 +62,6 @@ const CameraModalTabs = ({
         <TabsContent value="rtmp" className="space-y-4 pt-2">
           <RTMPCameraForm 
             rtmpUrl={formValues.rtmpUrl}
-            onChange={onChange}
-          />
-        </TabsContent>
-        
-        <TabsContent value="hls" className="space-y-4 pt-2">
-          <HLSCameraForm 
-            hlsUrl={formValues.hlsUrl}
             onChange={onChange}
           />
         </TabsContent>

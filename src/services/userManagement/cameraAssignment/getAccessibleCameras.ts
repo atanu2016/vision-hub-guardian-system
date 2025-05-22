@@ -1,5 +1,4 @@
 
-
 import { supabase } from '@/integrations/supabase/client';
 import { Camera, CameraStatus } from '@/types/camera';
 import { getUserAssignedCameras } from './getUserCameras';
@@ -42,7 +41,6 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
         group: cam.group,
         motiondetection: cam.motiondetection,
         rtmpurl: cam.rtmpurl || '',
-        hlsurl: cam.hlsurl || '',
         onvifpath: cam.onvifpath || ''
       })) as Camera[];
       
@@ -92,7 +90,6 @@ export async function getAccessibleCameras(userId: string, userRole: string): Pr
         group: cam.group,
         motiondetection: cam.motiondetection,
         rtmpurl: cam.rtmpurl || '',
-        hlsurl: cam.hlsurl || '',
         onvifpath: cam.onvifpath || ''
       })) as Camera[];
       
