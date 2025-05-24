@@ -47,16 +47,7 @@ const AddCameraModal = ({ isOpen, onClose, onAdd, existingGroups }: AddCameraMod
             connectionTab={formValues.connectionTab}
             onTabChange={handlers.handleTabChange}
             connectionType={formValues.connectionType}
-            formValues={{
-              ipAddress: formValues.ipAddress,
-              port: formValues.port,
-              username: formValues.username,
-              password: formValues.password,
-              rtmpUrl: formValues.rtmpUrl,
-              rtspUrl: formValues.rtspUrl,
-              hlsUrl: formValues.hlsUrl,
-              onvifPath: formValues.onvifPath
-            }}
+            formValues={formValues}
             onChange={handlers.handleFieldChange}
           />
           
