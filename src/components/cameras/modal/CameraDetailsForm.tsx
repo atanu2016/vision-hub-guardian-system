@@ -13,7 +13,19 @@ const CameraDetailsForm = ({
   location,
   onChange,
 }: CameraDetailsFormProps) => {
-  console.log("CameraDetailsForm - name:", name, "location:", location);
+  console.log("CameraDetailsForm - Received props - name:", name, "location:", location);
+  
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    console.log("CameraDetailsForm - Name input change:", newValue);
+    onChange("name", newValue);
+  };
+
+  const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    console.log("CameraDetailsForm - Location input change:", newValue);
+    onChange("location", newValue);
+  };
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -21,11 +33,8 @@ const CameraDetailsForm = ({
         <Label htmlFor="name">Camera Name*</Label>
         <Input
           id="name"
-          value={name || ""}
-          onChange={(e) => {
-            console.log("Name input change:", e.target.value);
-            onChange("name", e.target.value);
-          }}
+          value={name}
+          onChange={handleNameChange}
           placeholder="Front Door Camera"
           required
         />
@@ -34,11 +43,8 @@ const CameraDetailsForm = ({
         <Label htmlFor="location">Location*</Label>
         <Input
           id="location"
-          value={location || ""}
-          onChange={(e) => {
-            console.log("Location input change:", e.target.value);
-            onChange("location", e.target.value);
-          }}
+          value={location}
+          onChange={handleLocationChange}
           placeholder="Main Entrance"
           required
         />

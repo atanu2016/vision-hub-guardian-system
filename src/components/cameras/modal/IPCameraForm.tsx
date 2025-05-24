@@ -17,7 +17,31 @@ const IPCameraForm = ({
   password,
   onChange,
 }: IPCameraFormProps) => {
-  console.log("IPCameraForm values:", { ipAddress, port, username, password });
+  console.log("IPCameraForm - Received props:", { ipAddress, port, username, password });
+  
+  const handleIpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    console.log("IPCameraForm - IP Address change:", newValue);
+    onChange("ipAddress", newValue);
+  };
+
+  const handlePortChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    console.log("IPCameraForm - Port change:", newValue);
+    onChange("port", newValue);
+  };
+
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    console.log("IPCameraForm - Username change:", newValue);
+    onChange("username", newValue);
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    console.log("IPCameraForm - Password change:", newValue);
+    onChange("password", newValue);
+  };
   
   return (
     <>
@@ -26,11 +50,8 @@ const IPCameraForm = ({
           <Label htmlFor="ipAddress">IP Address*</Label>
           <Input
             id="ipAddress"
-            value={ipAddress || ""}
-            onChange={(e) => {
-              console.log("IP Address change:", e.target.value);
-              onChange("ipAddress", e.target.value);
-            }}
+            value={ipAddress}
+            onChange={handleIpChange}
             placeholder="192.168.1.100"
             required
           />
@@ -39,11 +60,8 @@ const IPCameraForm = ({
           <Label htmlFor="port">Port*</Label>
           <Input
             id="port"
-            value={port || ""}
-            onChange={(e) => {
-              console.log("Port change:", e.target.value);
-              onChange("port", e.target.value);
-            }}
+            value={port}
+            onChange={handlePortChange}
             placeholder="8080"
             type="number"
             required
@@ -55,11 +73,8 @@ const IPCameraForm = ({
           <Label htmlFor="username">Username</Label>
           <Input
             id="username"
-            value={username || ""}
-            onChange={(e) => {
-              console.log("Username change:", e.target.value);
-              onChange("username", e.target.value);
-            }}
+            value={username}
+            onChange={handleUsernameChange}
             placeholder="admin"
           />
         </div>
@@ -68,11 +83,8 @@ const IPCameraForm = ({
           <Input
             id="password"
             type="password"
-            value={password || ""}
-            onChange={(e) => {
-              console.log("Password change:", e.target.value);
-              onChange("password", e.target.value);
-            }}
+            value={password}
+            onChange={handlePasswordChange}
             placeholder="•••••••••"
           />
         </div>

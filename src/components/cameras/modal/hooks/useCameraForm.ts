@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { CameraConnectionType } from '@/types/camera';
 import { CameraFormValues } from '../types/cameraModalTypes';
 
@@ -27,54 +27,80 @@ export function useCameraForm() {
   
   const [formState, setFormState] = useState<CameraFormValues>(initialState);
   
+  console.log("useCameraForm - Current form state:", formState);
+  
   // Reset form state
   const resetForm = useCallback(() => {
+    console.log("Resetting form to initial state");
     setFormState(initialState);
   }, []);
   
   // Field change handler
   const handleFieldChange = useCallback((field: string, value: string) => {
-    console.log(`Changing field ${field} to:`, value);
-    setFormState(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    console.log(`useCameraForm - Changing field ${field} to:`, value);
+    setFormState(prev => {
+      const newState = {
+        ...prev,
+        [field]: value
+      };
+      console.log("useCameraForm - New state after change:", newState);
+      return newState;
+    });
   }, []);
   
   // Handle connection tab change
   const handleTabChange = useCallback((tab: string) => {
-    console.log(`Changing tab to: ${tab}`);
+    console.log(`useCameraForm - Changing tab to: ${tab}`);
     const connectionType = tab as CameraConnectionType;
     
-    setFormState(prev => ({
-      ...prev,
-      connectionTab: tab,
-      connectionType
-    }));
+    setFormState(prev => {
+      const newState = {
+        ...prev,
+        connectionTab: tab,
+        connectionType
+      };
+      console.log("useCameraForm - New state after tab change:", newState);
+      return newState;
+    });
   }, []);
 
   // Handle group change
   const handleGroupChange = useCallback((value: string) => {
-    setFormState(prev => ({
-      ...prev,
-      group: value
-    }));
+    console.log(`useCameraForm - Changing group to: ${value}`);
+    setFormState(prev => {
+      const newState = {
+        ...prev,
+        group: value
+      };
+      console.log("useCameraForm - New state after group change:", newState);
+      return newState;
+    });
   }, []);
   
   // Set new group name
   const setNewGroupName = useCallback((value: string) => {
-    setFormState(prev => ({
-      ...prev,
-      newGroupName: value
-    }));
+    console.log(`useCameraForm - Setting new group name to: ${value}`);
+    setFormState(prev => {
+      const newState = {
+        ...prev,
+        newGroupName: value
+      };
+      console.log("useCameraForm - New state after new group name change:", newState);
+      return newState;
+    });
   }, []);
   
   // Set verification state
   const setIsVerifying = useCallback((isVerifying: boolean) => {
-    setFormState(prev => ({
-      ...prev,
-      isVerifying
-    }));
+    console.log(`useCameraForm - Setting verification state to: ${isVerifying}`);
+    setFormState(prev => {
+      const newState = {
+        ...prev,
+        isVerifying
+      };
+      console.log("useCameraForm - New state after verification change:", newState);
+      return newState;
+    });
   }, []);
   
   return {
