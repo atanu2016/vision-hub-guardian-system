@@ -3,7 +3,6 @@ import { useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import AddCameraModal from "@/components/cameras/AddCameraModal";
 import CameraPageHeader from "@/components/cameras/page/CameraPageHeader";
-import SampleCameraToggle from "@/components/cameras/page/SampleCameraToggle";
 import CameraLoadingState from "@/components/cameras/page/CameraLoadingState";
 import NoCamerasFound from "@/components/cameras/page/NoCamerasFound";
 import CameraGroups from "@/components/cameras/page/CameraGroups";
@@ -17,8 +16,6 @@ const Cameras = () => {
   const {
     cameras,
     loading,
-    includeSampleCamera,
-    toggleSampleCamera,
     cameraGroups,
     existingGroups,
     addCamera,
@@ -36,12 +33,6 @@ const Cameras = () => {
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           openAddModal={() => setIsAddModalOpen(true)}
-        />
-        
-        {/* Sample camera toggle button */}
-        <SampleCameraToggle 
-          includeSampleCamera={includeSampleCamera}
-          toggleSampleCamera={toggleSampleCamera}
         />
         
         {/* Loading state */}
