@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { UseCameraModalProps, UseCameraModalReturn } from "./types/cameraModalTypes";
 import { validateCameraForm } from "./utils/cameraValidation";
@@ -10,11 +10,17 @@ import { useCameraForm } from "./hooks/useCameraForm";
 export function useCameraModal({ isOpen, onClose, onAdd, existingGroups }: UseCameraModalProps): UseCameraModalReturn {
   const { toast } = useToast();
   const { formState, formActions } = useCameraForm();
+  const hasResetRef = useRef(false);
   
-  // Reset state when modal opens
+  // Only reset when modal opens for the first time
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !hasResetRef.current) {
+      console.log("Modal opened - resetting form once");
       formActions.resetForm();
+      hasResetRef.current = true;
+    } else if (!isOpen) {
+      // Reset the flag when modal closes
+      hasResetRef.current = false;
     }
   }, [isOpen, formActions]);
 

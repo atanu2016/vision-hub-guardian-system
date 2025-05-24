@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { CameraConnectionType } from '@/types/camera';
 import { CameraFormValues } from '../types/cameraModalTypes';
 
@@ -26,17 +26,31 @@ export function useCameraForm() {
   };
   
   const [formState, setFormState] = useState<CameraFormValues>(initialState);
+  const isResettingRef = useRef(false);
   
   console.log("useCameraForm - Current form state:", formState);
   
   // Reset form state
   const resetForm = useCallback(() => {
+    if (isResettingRef.current) return; // Prevent multiple resets
+    
+    isResettingRef.current = true;
     console.log("Resetting form to initial state");
     setFormState(initialState);
+    
+    // Allow resets again after a brief delay
+    setTimeout(() => {
+      isResettingRef.current = false;
+    }, 100);
   }, []);
   
-  // Field change handler
+  // Field change handler with debouncing
   const handleFieldChange = useCallback((field: string, value: string) => {
+    if (isResettingRef.current) {
+      console.log("Ignoring field change during reset");
+      return;
+    }
+    
     console.log(`useCameraForm - Changing field ${field} to:`, value);
     setFormState(prev => {
       const newState = {
@@ -50,6 +64,8 @@ export function useCameraForm() {
   
   // Handle connection tab change
   const handleTabChange = useCallback((tab: string) => {
+    if (isResettingRef.current) return;
+    
     console.log(`useCameraForm - Changing tab to: ${tab}`);
     const connectionType = tab as CameraConnectionType;
     
@@ -66,6 +82,8 @@ export function useCameraForm() {
 
   // Handle group change
   const handleGroupChange = useCallback((value: string) => {
+    if (isResettingRef.current) return;
+    
     console.log(`useCameraForm - Changing group to: ${value}`);
     setFormState(prev => {
       const newState = {
@@ -79,6 +97,8 @@ export function useCameraForm() {
   
   // Set new group name
   const setNewGroupName = useCallback((value: string) => {
+    if (isResettingRef.current) return;
+    
     console.log(`useCameraForm - Setting new group name to: ${value}`);
     setFormState(prev => {
       const newState = {

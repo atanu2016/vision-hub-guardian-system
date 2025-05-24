@@ -1,6 +1,7 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useCallback } from "react";
 
 interface CameraDetailsFormProps {
   name: string;
@@ -15,17 +16,17 @@ const CameraDetailsForm = ({
 }: CameraDetailsFormProps) => {
   console.log("CameraDetailsForm - Received props - name:", name, "location:", location);
   
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     console.log("CameraDetailsForm - Name input change:", newValue);
     onChange("name", newValue);
-  };
+  }, [onChange]);
 
-  const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLocationChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     console.log("CameraDetailsForm - Location input change:", newValue);
     onChange("location", newValue);
-  };
+  }, [onChange]);
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -33,20 +34,22 @@ const CameraDetailsForm = ({
         <Label htmlFor="name">Camera Name*</Label>
         <Input
           id="name"
-          value={name}
+          value={name || ""}
           onChange={handleNameChange}
           placeholder="Front Door Camera"
           required
+          autoComplete="off"
         />
       </div>
       <div className="space-y-2">
         <Label htmlFor="location">Location*</Label>
         <Input
           id="location"
-          value={location}
+          value={location || ""}
           onChange={handleLocationChange}
           placeholder="Main Entrance"
           required
+          autoComplete="off"
         />
       </div>
     </div>
