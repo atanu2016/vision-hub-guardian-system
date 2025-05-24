@@ -39,3 +39,22 @@ export const calculateStoragePercentage = (used: number, total: number): number 
   if (total <= 0) return 0;
   return Math.min(100, Math.round((used / total) * 100));
 };
+
+// Get storage status color based on percentage
+export const getStorageStatusColor = (percentage: number): string => {
+  if (percentage >= 90) return 'destructive';
+  if (percentage >= 80) return 'warning';
+  if (percentage >= 60) return 'info';
+  return 'success';
+};
+
+// Get storage warning message
+export const getStorageWarningMessage = (percentage: number): string | null => {
+  if (percentage >= 90) {
+    return "⚠️ Storage critically full! Consider clearing old recordings immediately.";
+  }
+  if (percentage >= 80) {
+    return "⚠️ Storage usage high. Consider clearing old recordings soon.";
+  }
+  return null;
+};

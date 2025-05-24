@@ -81,6 +81,22 @@ const StorageCard = ({
     }
   };
 
+  // Get color based on usage percentage
+  const getUsageColor = () => {
+    if (storagePercentage >= 90) return 'bg-red-500';
+    if (storagePercentage >= 80) return 'bg-orange-500';
+    if (storagePercentage >= 60) return 'bg-yellow-500';
+    return 'bg-green-500';
+  };
+
+  // Get text color based on usage percentage
+  const getUsageTextColor = () => {
+    if (storagePercentage >= 90) return 'text-red-600';
+    if (storagePercentage >= 80) return 'text-orange-600';
+    if (storagePercentage >= 60) return 'text-yellow-600';
+    return 'text-green-600';
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -101,7 +117,9 @@ const StorageCard = ({
               {storageUsed} used of {storageTotal}
             </div>
             <div className="flex items-center gap-1">
-              <div className="text-sm font-medium">{storagePercentage}%</div>
+              <div className={`text-sm font-medium ${getUsageTextColor()}`}>
+                {storagePercentage}%
+              </div>
               {onRefresh && (
                 <Button 
                   variant="ghost" 
@@ -115,7 +133,13 @@ const StorageCard = ({
               )}
             </div>
           </div>
-          <Progress value={storagePercentage} className="h-2" />
+          <div className="relative">
+            <Progress value={storagePercentage} className="h-2" />
+            <div 
+              className={`absolute top-0 left-0 h-2 rounded-full transition-all duration-500 ${getUsageColor()}`}
+              style={{ width: `${Math.min(storagePercentage, 100)}%` }}
+            />
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-4 mt-4">
           <div className="flex flex-col space-y-1">

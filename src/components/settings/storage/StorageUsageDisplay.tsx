@@ -58,6 +58,22 @@ const StorageUsageDisplay = ({
     }
   };
 
+  // Get color based on usage percentage
+  const getUsageColor = () => {
+    if (storageUsage.usedPercentage >= 90) return 'bg-red-500';
+    if (storageUsage.usedPercentage >= 80) return 'bg-orange-500';
+    if (storageUsage.usedPercentage >= 60) return 'bg-yellow-500';
+    return 'bg-green-500';
+  };
+
+  // Get text color based on usage percentage
+  const getUsageTextColor = () => {
+    if (storageUsage.usedPercentage >= 90) return 'text-red-600';
+    if (storageUsage.usedPercentage >= 80) return 'text-orange-600';
+    if (storageUsage.usedPercentage >= 60) return 'text-yellow-600';
+    return 'text-green-600';
+  };
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -66,7 +82,7 @@ const StorageUsageDisplay = ({
             {storageUsage.usedSpaceFormatted} used of {storageUsage.totalSpaceFormatted}
           </div>
           <div className="flex items-center gap-2">
-            <div className="text-sm text-muted-foreground">
+            <div className={`text-sm font-medium ${getUsageTextColor()}`}>
               {storageUsage.usedPercentage}%
             </div>
             {onRefreshStorage && (
@@ -81,7 +97,21 @@ const StorageUsageDisplay = ({
             )}
           </div>
         </div>
-        <Progress value={storageUsage.usedPercentage} />
+        <div className="relative">
+          <Progress value={storageUsage.usedPercentage} className="h-3" />
+          <div 
+            className={`absolute top-0 left-0 h-3 rounded-full transition-all duration-500 ${getUsageColor()}`}
+            style={{ width: `${Math.min(storageUsage.usedPercentage, 100)}%` }}
+          />
+        </div>
+        {storageUsage.usedPercentage >= 80 && (
+          <div className={`text-xs ${getUsageTextColor()} font-medium`}>
+            {storageUsage.usedPercentage >= 90 
+              ? "⚠️ Storage critically full! Consider clearing old recordings."
+              : "⚠️ Storage usage high. Consider clearing old recordings soon."
+            }
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -99,8 +129,10 @@ const StorageUsageDisplay = ({
           <CardContent className="flex items-center space-x-4 p-4">
             <HardDrive className="h-6 w-6 text-gray-500" />
             <div className="space-y-1">
-              <p className="text-sm font-medium">Total Space</p>
-              <p className="text-base font-semibold">{storageUsage.totalSpaceFormatted}</p>
+              <p className="text-sm font-medium">Available Space</p>
+              <p className={`text-base font-semibold ${getUsageTextColor()}`}>
+                {formatStorageSize(storageUsage.totalSpace - storageUsage.usedSpace)}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -132,6 +164,17 @@ const StorageUsageDisplay = ({
       </Button>
     </div>
   );
+};
+
+// Helper function to format storage size
+const formatStorageSize = (sizeInGB: number): string => {
+  if (sizeInGB >= 1024) {
+    return `${(sizeInGB / 1024).toFixed(1)} TB`;
+  } else if (sizeInGB >= 1) {
+    return `${sizeInGB.toFixed(1)} GB`;
+  } else {
+    return `${(sizeInGB * 1024).toFixed(0)} MB`;
+  }
 };
 
 export default StorageUsageDisplay;
