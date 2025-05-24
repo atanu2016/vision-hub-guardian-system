@@ -2,7 +2,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Camera } from "@/types/camera";
 import { logDatabaseError } from "../baseService";
-import { toast } from "sonner";
 
 // Save (create or update) camera to database
 export const saveCameraToDB = async (camera: Camera): Promise<Camera> => {
@@ -13,6 +12,14 @@ export const saveCameraToDB = async (camera: Camera): Promise<Camera> => {
     if (camera.id && camera.id.startsWith('cam-')) {
       // Generated ID, replace with a UUID
       delete camera.id;
+    }
+
+    // For RTSP cameras, ensure we have a URL
+    let finalRtspUrl = camera.rtspUrl;
+    if (camera.connectionType === 'rtsp' && !finalRtspUrl && camera.ipAddress && camera.username && camera.password) {
+      const port = camera.port || 554;
+      finalRtspUrl = `rtsp://${camera.username}:${camera.password}@${camera.ipAddress}:${port}/stream1`;
+      console.log("Generated RTSP URL for database save");
     }
 
     // Transform camera object to match database schema
@@ -43,7 +50,7 @@ export const saveCameraToDB = async (camera: Camera): Promise<Camera> => {
     // Set the appropriate URL field based on connection type and data
     switch (camera.connectionType) {
       case 'rtsp':
-        dbCamera.rtspurl = camera.rtspUrl || null;
+        dbCamera.rtspurl = finalRtspUrl || camera.rtspUrl || null;
         break;
       case 'rtmp':
         dbCamera.rtmpurl = camera.rtmpUrl || null;
@@ -96,7 +103,7 @@ export const saveCameraToDB = async (camera: Camera): Promise<Camera> => {
     console.log("Camera saved successfully:", data);
     
     // Transform back from DB format to our Camera type
-    return {
+    const savedCamera = {
       id: data.id,
       name: data.name,
       status: data.status as "online" | "offline" | "error",
@@ -118,6 +125,9 @@ export const saveCameraToDB = async (camera: Camera): Promise<Camera> => {
       onvifPath: data.onvifpath || undefined,
       motionDetection: data.motiondetection || false
     };
+
+    console.log("Transformed saved camera:", savedCamera);
+    return savedCamera;
   } catch (error) {
     console.error("Error in saveCameraToDB:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
@@ -142,7 +152,6 @@ export const deleteCameraFromDB = async (cameraId: string): Promise<void> => {
   }
 };
 
-// Save camera recording status
 export const saveCameraRecordingStatus = async (cameraId: string, enabled: boolean): Promise<boolean> => {
   try {
     const { data: existing } = await supabase

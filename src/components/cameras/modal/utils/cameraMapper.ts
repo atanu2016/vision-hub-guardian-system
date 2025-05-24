@@ -11,23 +11,29 @@ export function mapFormValuesToCamera(formValues: CameraFormValues, group: strin
   console.log(`Mapping camera with connection type: ${connectionType}`);
   console.log(`Connection URLs - RTMP: ${rtmpUrl}, RTSP: ${rtspUrl}, HLS: ${hlsUrl}`);
   
-  // For RTSP cameras, extract IP and port from URL if not provided separately
+  // For RTSP cameras, create URL if not provided
+  let finalRtspUrl = rtspUrl;
   let finalIpAddress = ipAddress;
   let finalPort = parseInt(port || "80");
   
-  if (connectionType === 'rtsp' && rtspUrl) {
-    try {
-      const url = new URL(rtspUrl);
-      // Only override if IP wasn't manually set
-      if (!ipAddress || ipAddress === "192.168.1.100") {
-        finalIpAddress = url.hostname || ipAddress;
-      }
-      finalPort = url.port ? parseInt(url.port) : 554;
-    } catch (error) {
-      console.log("Could not parse RTSP URL, using provided IP and port");
-      // For RTSP, default port should be 554
-      if (connectionType === 'rtsp' && (!port || port === "80")) {
-        finalPort = 554;
+  if (connectionType === 'rtsp') {
+    if (!rtspUrl && ipAddress && username && password) {
+      // Generate standard RTSP URL if not provided
+      const rtspPort = port && port !== "80" ? parseInt(port) : 554;
+      finalRtspUrl = `rtsp://${username}:${password}@${ipAddress}:${rtspPort}/stream1`;
+      finalPort = rtspPort;
+      console.log(`Generated RTSP URL: ${finalRtspUrl}`);
+    } else if (rtspUrl) {
+      try {
+        const url = new URL(rtspUrl);
+        // Extract IP and port from URL if not manually set
+        if (!ipAddress || ipAddress === "192.168.1.100") {
+          finalIpAddress = url.hostname || ipAddress;
+        }
+        finalPort = url.port ? parseInt(url.port) : 554;
+      } catch (error) {
+        console.log("Could not parse RTSP URL, using provided IP and port");
+        finalPort = 554; // Default RTSP port
       }
     }
   }
@@ -60,9 +66,9 @@ export function mapFormValuesToCamera(formValues: CameraFormValues, group: strin
     model: model ? model.trim() : undefined,
     manufacturer: manufacturer ? manufacturer.trim() : undefined,
     
-    // Connection-specific URLs - only set the relevant one
+    // Connection-specific URLs - ensure RTSP URL is properly set
     rtmpUrl: connectionType === "rtmp" ? rtmpUrl?.trim() : undefined,
-    rtspUrl: connectionType === "rtsp" ? rtspUrl?.trim() : undefined,
+    rtspUrl: connectionType === "rtsp" ? (finalRtspUrl?.trim() || rtspUrl?.trim()) : undefined,
     hlsUrl: connectionType === "hls" ? hlsUrl?.trim() : undefined,
     onvifPath: connectionType === "onvif" ? (onvifPath?.trim() || "/onvif/device_service") : undefined,
     
