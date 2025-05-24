@@ -6,6 +6,7 @@ import ONVIFCameraForm from "./ONVIFCameraForm";
 import RTMPCameraForm from "./RTMPCameraForm";
 import RTSPCameraForm from "./RTSPCameraForm";
 import HLSCameraForm from "./HLSCameraForm";
+import CameraTestButton from "./CameraTestButton";
 
 interface CameraModalTabsProps {
   connectionTab: string;
@@ -20,6 +21,15 @@ interface CameraModalTabsProps {
     rtspUrl: string;
     hlsUrl: string;
     onvifPath: string;
+    name: string;
+    location: string;
+    model: string;
+    manufacturer: string;
+    group: string;
+    newGroupName: string;
+    connectionType: CameraConnectionType;
+    connectionTab: string;
+    isVerifying: boolean;
   };
   onChange: (field: string, value: string) => void;
 }
@@ -34,6 +44,13 @@ const CameraModalTabs = ({
   const handleTabChange = (tab: string) => {
     console.log("Tab changed to:", tab);
     onTabChange(tab);
+  };
+
+  const handleSuggestedUrl = (url: string) => {
+    console.log("Using suggested URL:", url);
+    if (connectionType === 'rtsp') {
+      onChange('rtspUrl', url);
+    }
   };
   
   return (
@@ -55,12 +72,21 @@ const CameraModalTabs = ({
             password={formValues.password}
             onChange={onChange}
           />
+          <CameraTestButton 
+            formValues={formValues}
+            disabled={formValues.isVerifying}
+          />
         </TabsContent>
         
         <TabsContent value="rtsp" className="space-y-4">
           <RTSPCameraForm 
             rtspUrl={formValues.rtspUrl}
             onChange={onChange}
+          />
+          <CameraTestButton 
+            formValues={formValues}
+            disabled={formValues.isVerifying}
+            onSuggestedUrl={handleSuggestedUrl}
           />
         </TabsContent>
         
@@ -69,12 +95,20 @@ const CameraModalTabs = ({
             rtmpUrl={formValues.rtmpUrl}
             onChange={onChange}
           />
+          <CameraTestButton 
+            formValues={formValues}
+            disabled={formValues.isVerifying}
+          />
         </TabsContent>
         
         <TabsContent value="hls" className="space-y-4">
           <HLSCameraForm 
             hlsUrl={formValues.hlsUrl}
             onChange={onChange}
+          />
+          <CameraTestButton 
+            formValues={formValues}
+            disabled={formValues.isVerifying}
           />
         </TabsContent>
         
@@ -86,6 +120,11 @@ const CameraModalTabs = ({
             password={formValues.password}
             onvifPath={formValues.onvifPath}
             onChange={onChange}
+          />
+          <CameraTestButton 
+            formValues={formValues}
+            disabled={formValues.isVerifying}
+            onSuggestedUrl={handleSuggestedUrl}
           />
         </TabsContent>
       </Tabs>

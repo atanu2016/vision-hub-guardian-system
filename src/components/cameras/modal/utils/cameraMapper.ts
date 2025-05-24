@@ -13,16 +13,30 @@ export function mapFormValuesToCamera(formValues: CameraFormValues, group: strin
   
   // For RTSP cameras, extract IP and port from URL if not provided separately
   let finalIpAddress = ipAddress;
-  let finalPort = parseInt(port || "554");
+  let finalPort = parseInt(port || "80");
   
   if (connectionType === 'rtsp' && rtspUrl) {
     try {
       const url = new URL(rtspUrl);
-      finalIpAddress = url.hostname || ipAddress;
+      // Only override if IP wasn't manually set
+      if (!ipAddress || ipAddress === "192.168.1.100") {
+        finalIpAddress = url.hostname || ipAddress;
+      }
       finalPort = url.port ? parseInt(url.port) : 554;
     } catch (error) {
       console.log("Could not parse RTSP URL, using provided IP and port");
+      // For RTSP, default port should be 554
+      if (connectionType === 'rtsp' && (!port || port === "80")) {
+        finalPort = 554;
+      }
     }
+  }
+  
+  // Set default ports based on connection type
+  if (connectionType === 'rtsp' && (!port || port === "80")) {
+    finalPort = 554;
+  } else if (connectionType === 'onvif' && (!port || port === "80")) {
+    finalPort = 80; // ONVIF typically uses HTTP port 80 or 8080
   }
   
   const newCamera: Omit<Camera, "id"> = {
@@ -46,7 +60,7 @@ export function mapFormValuesToCamera(formValues: CameraFormValues, group: strin
     model: model ? model.trim() : undefined,
     manufacturer: manufacturer ? manufacturer.trim() : undefined,
     
-    // Connection-specific URLs
+    // Connection-specific URLs - only set the relevant one
     rtmpUrl: connectionType === "rtmp" ? rtmpUrl?.trim() : undefined,
     rtspUrl: connectionType === "rtsp" ? rtspUrl?.trim() : undefined,
     hlsUrl: connectionType === "hls" ? hlsUrl?.trim() : undefined,

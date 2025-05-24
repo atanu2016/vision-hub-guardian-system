@@ -32,14 +32,15 @@ export const saveCameraToDB = async (camera: Camera): Promise<Camera> => {
       thumbnail: camera.thumbnail || null,
       group: camera.group || null,
       connectiontype: camera.connectionType || 'ip',
-      rtmpurl: null, // Initialize as null
-      rtspurl: null, // Initialize as null  
-      hlsurl: null,  // Initialize as null
+      // Initialize all URL fields as null first
+      rtmpurl: null,
+      rtspurl: null,
+      hlsurl: null,
       onvifpath: camera.onvifPath || null,
       motiondetection: camera.motionDetection || false
     };
 
-    // Set the appropriate URL field based on connection type
+    // Set the appropriate URL field based on connection type and data
     switch (camera.connectionType) {
       case 'rtsp':
         dbCamera.rtspurl = camera.rtspUrl || null;
@@ -76,7 +77,16 @@ export const saveCameraToDB = async (camera: Camera): Promise<Camera> => {
     
     if (error) {
       console.error("Database error saving camera:", error);
-      throw new Error(`Database error: ${error.message}`);
+      // Provide more helpful error messages
+      if (error.message.includes('hlsurl')) {
+        throw new Error(`Database error: The HLS URL field is not available. Please contact your administrator.`);
+      } else if (error.message.includes('rtspurl')) {
+        throw new Error(`Database error: The RTSP URL field is not available. Please contact your administrator.`);
+      } else if (error.message.includes('constraint')) {
+        throw new Error(`Database error: Invalid data format. Please check all fields.`);
+      } else {
+        throw new Error(`Database error: ${error.message}`);
+      }
     }
     
     if (!data) {

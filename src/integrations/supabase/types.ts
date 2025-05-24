@@ -120,6 +120,7 @@ export type Database = {
         Row: {
           connectiontype: string | null
           group: string | null
+          hlsurl: string | null
           id: string
           ipaddress: string
           lastseen: string
@@ -133,6 +134,7 @@ export type Database = {
           port: number | null
           recording: boolean | null
           rtmpurl: string | null
+          rtspurl: string | null
           status: string
           thumbnail: string | null
           username: string | null
@@ -140,6 +142,7 @@ export type Database = {
         Insert: {
           connectiontype?: string | null
           group?: string | null
+          hlsurl?: string | null
           id?: string
           ipaddress: string
           lastseen?: string
@@ -153,6 +156,7 @@ export type Database = {
           port?: number | null
           recording?: boolean | null
           rtmpurl?: string | null
+          rtspurl?: string | null
           status?: string
           thumbnail?: string | null
           username?: string | null
@@ -160,6 +164,7 @@ export type Database = {
         Update: {
           connectiontype?: string | null
           group?: string | null
+          hlsurl?: string | null
           id?: string
           ipaddress?: string
           lastseen?: string
@@ -173,6 +178,7 @@ export type Database = {
           port?: number | null
           recording?: boolean | null
           rtmpurl?: string | null
+          rtspurl?: string | null
           status?: string
           thumbnail?: string | null
           username?: string | null
