@@ -32,7 +32,7 @@ export function useCameraModal({ isOpen, onClose, onAdd, existingGroups }: UseCa
     const { isValid, errorMessage } = validateCameraForm(formState);
     if (!isValid) {
       toast({
-        title: "Error",
+        title: "Validation Error",
         description: errorMessage || "Please fix the form errors",
         variant: "destructive"
       });
@@ -49,6 +49,7 @@ export function useCameraModal({ isOpen, onClose, onAdd, existingGroups }: UseCa
     formActions.setIsVerifying(true);
     
     try {
+      console.log("Starting camera connection verification...");
       await simulateCameraConnection();
       
       // Debug log all connection details
@@ -65,18 +66,22 @@ export function useCameraModal({ isOpen, onClose, onAdd, existingGroups }: UseCa
       const newCamera = mapFormValuesToCamera(formState, finalGroup);
       console.log("Mapped camera object:", newCamera);
       
-      onAdd(newCamera);
+      console.log("Adding camera to system...");
+      const addedCamera = await onAdd(newCamera);
+      
       toast({
         title: "Success",
         description: `${formState.name} has been added successfully`,
       });
+      
       formActions.resetForm();
       onClose();
     } catch (error) {
-      console.error("Camera connection error:", error);
+      console.error("Error adding camera:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       toast({
-        title: "Connection Error",
-        description: "Could not connect to camera. Check credentials and try again.",
+        title: "Error",
+        description: `Could not add camera: ${errorMessage}`,
         variant: "destructive"
       });
     } finally {

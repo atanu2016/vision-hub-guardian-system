@@ -17,7 +17,11 @@ export function useCameraData() {
         await checkDatabaseSetup();
       } catch (error) {
         console.error('Error initializing system:', error);
-        toast.error("Could not initialize the system. Using fallback data.");
+        toast({
+          title: "System Warning",
+          description: "Could not initialize the system. Using fallback data.",
+          variant: "destructive"
+        });
       }
       
       fetchCameras();
@@ -29,11 +33,17 @@ export function useCameraData() {
   const fetchCameras = async () => {
     setLoading(true);
     try {
+      console.log("Fetching cameras from database...");
       const camerasData = await getCameras();
+      console.log("Fetched cameras:", camerasData);
       setCameras(camerasData);
     } catch (error) {
       console.error('Error fetching cameras:', error);
-      toast.error("Could not load cameras from the server. Using cached data.");
+      toast({
+        title: "Error",
+        description: "Could not load cameras from the server. Using cached data.",
+        variant: "destructive"
+      });
       setCameras([]);
     } finally {
       setLoading(false);
@@ -73,19 +83,32 @@ export function useCameraData() {
   // Add camera function
   const addCamera = async (newCamera: Omit<Camera, "id" | "lastSeen">) => {
     try {
+      console.log("Adding new camera:", newCamera);
+      
       const camera: Camera = {
         ...newCamera,
         id: `cam-${Date.now()}`, 
         lastSeen: new Date().toISOString()
       };
       
+      console.log("Saving camera to database...");
       const savedCamera = await saveCamera(camera);
+      console.log("Camera saved successfully:", savedCamera);
+      
       setCameras(prev => [...prev, savedCamera]);
-      toast.success(`${savedCamera.name} has been added successfully`);
+      toast({
+        title: "Success",
+        description: `${savedCamera.name} has been added successfully`
+      });
       return savedCamera;
     } catch (error) {
       console.error('Error adding camera:', error);
-      toast.error("Could not add camera. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      toast({
+        title: "Error",
+        description: `Could not add camera: ${errorMessage}`,
+        variant: "destructive"
+      });
       throw error;
     }
   };
@@ -95,10 +118,17 @@ export function useCameraData() {
     try {
       await deleteCamera(cameraId);
       setCameras(prev => prev.filter(camera => camera.id !== cameraId));
-      toast.success("Camera has been removed successfully");
+      toast({
+        title: "Success",
+        description: "Camera has been removed successfully"
+      });
     } catch (error) {
       console.error('Error deleting camera:', error);
-      toast.error("Could not delete camera. Please try again.");
+      toast({
+        title: "Error", 
+        description: "Could not delete camera. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 

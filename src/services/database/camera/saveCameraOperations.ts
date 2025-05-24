@@ -7,6 +7,8 @@ import { toast } from "sonner";
 // Save (create or update) camera to database
 export const saveCameraToDB = async (camera: Camera): Promise<Camera> => {
   try {
+    console.log("Saving camera to database:", camera);
+    
     // Handle both insert and update cases
     if (camera.id && camera.id.startsWith('cam-')) {
       // Generated ID, replace with a UUID
@@ -20,22 +22,37 @@ export const saveCameraToDB = async (camera: Camera): Promise<Camera> => {
       status: camera.status,
       location: camera.location, 
       ipaddress: camera.ipAddress,
-      port: camera.port,
-      username: camera.username,
-      password: camera.password,
-      model: camera.model,
-      manufacturer: camera.manufacturer,
+      port: camera.port || 80,
+      username: camera.username || null,
+      password: camera.password || null,
+      model: camera.model || null,
+      manufacturer: camera.manufacturer || null,
       lastseen: new Date().toISOString(),
-      recording: camera.recording,
-      thumbnail: camera.thumbnail,
-      group: camera.group,
-      connectiontype: camera.connectionType,
-      rtmpurl: camera.connectionType === "rtsp" ? camera.rtspUrl : camera.rtmpUrl, // Store RTSP URL in rtmpUrl field for backward compatibility
-      rtspurl: camera.rtspUrl, // Store RTSP URL in dedicated field
-      hlsurl: camera.hlsUrl,
-      onvifpath: camera.onvifPath,
-      motiondetection: camera.motionDetection
+      recording: camera.recording || false,
+      thumbnail: camera.thumbnail || null,
+      group: camera.group || null,
+      connectiontype: camera.connectionType || 'ip',
+      rtmpurl: null, // Initialize as null
+      rtspurl: null, // Initialize as null  
+      hlsurl: null,  // Initialize as null
+      onvifpath: camera.onvifPath || null,
+      motiondetection: camera.motionDetection || false
     };
+
+    // Set the appropriate URL field based on connection type
+    switch (camera.connectionType) {
+      case 'rtsp':
+        dbCamera.rtspurl = camera.rtspUrl || null;
+        break;
+      case 'rtmp':
+        dbCamera.rtmpurl = camera.rtmpUrl || null;
+        break;
+      case 'hls':
+        dbCamera.hlsurl = camera.hlsUrl || null;
+        break;
+    }
+
+    console.log("Database camera object:", dbCamera);
 
     let query;
     if (camera.id) {
@@ -58,9 +75,15 @@ export const saveCameraToDB = async (camera: Camera): Promise<Camera> => {
     const { data, error } = await query;
     
     if (error) {
-      console.error("Error saving camera:", error);
-      throw error;
+      console.error("Database error saving camera:", error);
+      throw new Error(`Database error: ${error.message}`);
     }
+    
+    if (!data) {
+      throw new Error("No data returned from database");
+    }
+    
+    console.log("Camera saved successfully:", data);
     
     // Transform back from DB format to our Camera type
     return {
@@ -80,13 +103,15 @@ export const saveCameraToDB = async (camera: Camera): Promise<Camera> => {
       group: data.group || undefined,
       connectionType: (data.connectiontype as "ip" | "rtsp" | "rtmp" | "onvif" | "hls") || "ip",
       rtmpUrl: data.rtmpurl || undefined,
-      rtspUrl: data.rtspurl || (data.connectiontype === "rtsp" ? data.rtmpurl : undefined), // Get RTSP URL from either field
+      rtspUrl: data.rtspurl || undefined,
       hlsUrl: data.hlsurl || undefined,
       onvifPath: data.onvifpath || undefined,
       motionDetection: data.motiondetection || false
     };
   } catch (error) {
-    throw logDatabaseError(error, "Failed to save camera");
+    console.error("Error in saveCameraToDB:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    throw logDatabaseError(error, `Failed to save camera: ${errorMessage}`);
   }
 };
 
