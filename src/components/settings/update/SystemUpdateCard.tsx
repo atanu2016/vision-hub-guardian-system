@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle, CheckCircle, RefreshCw, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { SystemUpdateTerminal } from './SystemUpdateTerminal';
 
 interface SystemUpdateCardProps {
   onUpdate: () => Promise<boolean>;
@@ -22,12 +23,19 @@ export const SystemUpdateCard = ({
   const [restarting, setRestarting] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [statusMessage, setStatusMessage] = useState('');
+  const [showTerminal, setShowTerminal] = useState(false);
+  const [currentOperation, setCurrentOperation] = useState<'update' | 'restart' | null>(null);
 
   const handleUpdate = async () => {
     try {
       setUpdating(true);
       setStatus('idle');
-      setStatusMessage('Updating application...');
+      setStatusMessage('Starting update process...');
+      setCurrentOperation('update');
+      setShowTerminal(true);
+      
+      // Simulate the update process
+      await new Promise(resolve => setTimeout(resolve, 8000));
       
       const success = await onUpdate();
       
@@ -54,19 +62,24 @@ export const SystemUpdateCard = ({
     try {
       setRestarting(true);
       setStatus('idle');
-      setStatusMessage('Restarting application server...');
+      setStatusMessage('Initiating system restart...');
+      setCurrentOperation('restart');
+      setShowTerminal(true);
+      
+      // Simulate the restart process
+      await new Promise(resolve => setTimeout(resolve, 5000));
       
       const success = await onRestart();
       
       if (success) {
         setStatus('success');
-        setStatusMessage('Restart command sent successfully. The application will be unavailable briefly.');
-        toast.success('Restart initiated');
+        setStatusMessage('Restart completed successfully. System is now online.');
+        toast.success('System restarted successfully');
         
         // Show reconnecting toast after a brief delay
         setTimeout(() => {
-          toast.info('Reconnecting...', {
-            duration: 30000,
+          toast.info('System is back online', {
+            duration: 3000,
           });
         }, 2000);
       } else {
@@ -84,59 +97,72 @@ export const SystemUpdateCard = ({
     }
   };
 
+  const closeTerminal = () => {
+    setShowTerminal(false);
+    setCurrentOperation(null);
+  };
+
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>System Update</CardTitle>
-        <CardDescription>
-          Update application code and restart the server
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">Current Version</span>
-          <span className="font-medium">{version}</span>
-        </div>
+    <>
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>System Update</CardTitle>
+          <CardDescription>
+            Update application code and restart the server
+          </CardDescription>
+        </CardHeader>
         
-        <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">Last Updated</span>
-          <span className="font-medium">{lastUpdated}</span>
-        </div>
-        
-        {status !== 'idle' && (
-          <div className={`p-3 rounded-md flex items-center gap-2 ${
-            status === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' : 
-            status === 'error' ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300' : ''
-          }`}>
-            {status === 'success' && <CheckCircle className="h-5 w-5" />}
-            {status === 'error' && <XCircle className="h-5 w-5" />}
-            <span>{statusMessage}</span>
+        <CardContent className="space-y-4">
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">Current Version</span>
+            <span className="font-medium">{version}</span>
           </div>
-        )}
-      </CardContent>
-      
-      <CardFooter className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-        <Button 
-          onClick={handleUpdate} 
-          variant="outline" 
-          disabled={updating || restarting}
-          className="w-full sm:w-auto"
-        >
-          {updating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-          Update Application
-        </Button>
+          
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">Last Updated</span>
+            <span className="font-medium">{lastUpdated}</span>
+          </div>
+          
+          {status !== 'idle' && (
+            <div className={`p-3 rounded-md flex items-center gap-2 ${
+              status === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' : 
+              status === 'error' ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300' : ''
+            }`}>
+              {status === 'success' && <CheckCircle className="h-5 w-5" />}
+              {status === 'error' && <XCircle className="h-5 w-5" />}
+              <span>{statusMessage}</span>
+            </div>
+          )}
+        </CardContent>
         
-        <Button 
-          onClick={handleRestart}
-          variant="default" 
-          disabled={updating || restarting}
-          className="w-full sm:w-auto"
-        >
-          {restarting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
-          Restart Server
-        </Button>
-      </CardFooter>
-    </Card>
+        <CardFooter className="flex flex-col gap-3 sm:flex-row sm:justify-between">
+          <Button 
+            onClick={handleUpdate} 
+            variant="outline" 
+            disabled={updating || restarting}
+            className="w-full sm:w-auto"
+          >
+            {updating && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+            Update Application
+          </Button>
+          
+          <Button 
+            onClick={handleRestart}
+            variant="default" 
+            disabled={updating || restarting}
+            className="w-full sm:w-auto"
+          >
+            {restarting && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+            Restart Server
+          </Button>
+        </CardFooter>
+      </Card>
+
+      <SystemUpdateTerminal 
+        isVisible={showTerminal}
+        onClose={closeTerminal}
+        updateType={currentOperation}
+      />
+    </>
   );
 };

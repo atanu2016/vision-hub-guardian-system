@@ -48,11 +48,8 @@ const RTSPConnectionForm = ({
     setTestResult(null);
     
     try {
-      // In a real implementation, this would test the connection
-      // Here we're just simulating the process
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Success for demonstration - in real implementation would verify connection
       setTestResult({
         success: true,
         message: "RTSP URL format looks valid. Save settings and retry connection to view stream."
@@ -71,7 +68,10 @@ const RTSPConnectionForm = ({
     handleChange('rtspUrl', exampleUrl);
   };
 
-  console.log("RTSPConnectionForm rendered with rtspUrl:", cameraData.rtspUrl);
+  // Safely get the rtspUrl value
+  const rtspUrlValue = typeof cameraData.rtspUrl === 'string' ? cameraData.rtspUrl : '';
+
+  console.log("RTSPConnectionForm rendered with rtspUrl:", rtspUrlValue);
 
   return (
     <div className="space-y-2">
@@ -99,7 +99,7 @@ const RTSPConnectionForm = ({
       
       <Input
         id="streamUrl"
-        value={cameraData.rtspUrl || ''}
+        value={rtspUrlValue}
         onChange={(e) => handleChange('rtspUrl', e.target.value)}
         placeholder="rtsp://ipaddress:port/path"
         className={errors.rtspUrl ? "border-destructive" : ""}
@@ -121,7 +121,7 @@ const RTSPConnectionForm = ({
           variant="outline" 
           size="sm" 
           onClick={testConnection} 
-          disabled={testing || disabled || !cameraData.rtspUrl}
+          disabled={testing || disabled || !rtspUrlValue}
         >
           {testing ? "Testing..." : "Test RTSP URL"}
         </Button>

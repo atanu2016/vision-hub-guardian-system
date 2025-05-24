@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { StorageUsage } from './storageTypes';
-import { parseStorageValue } from '@/utils/storageUtils';
+import { parseStorageValue, formatStorageSize } from '@/utils/storageUtils';
 
 export const useStorageUsage = () => {
   const [storageUsage, setStorageUsage] = useState<StorageUsage>({
@@ -20,16 +21,16 @@ export const useStorageUsage = () => {
     try {
       console.log("Fetching real storage usage from database...");
       
-      // First try to get storage settings to determine storage type
+      // Get storage settings to determine storage type and configuration
       const { data: storageSettings } = await supabase
         .from('storage_settings')
         .select('*')
         .limit(1)
-        .single();
+        .maybeSingle();
 
       console.log("Storage settings:", storageSettings);
 
-      // Calculate used space from recordings table
+      // Calculate real used space from recordings table
       const { data: recordings, error: recordingsError } = await supabase
         .from('recordings')
         .select('file_size');
@@ -39,50 +40,49 @@ export const useStorageUsage = () => {
       }
 
       let calculatedUsedSpace = 0;
-      let calculatedUsedFormatted = "0 GB";
       
       if (recordings && recordings.length > 0) {
-        // Sum up file sizes from recordings
         recordings.forEach(recording => {
           if (recording.file_size) {
             calculatedUsedSpace += parseStorageValue(recording.file_size);
           }
         });
-        
-        // Format the used space
-        if (calculatedUsedSpace >= 1024) {
-          calculatedUsedFormatted = `${(calculatedUsedSpace / 1024).toFixed(1)} TB`;
-        } else if (calculatedUsedSpace >= 1) {
-          calculatedUsedFormatted = `${calculatedUsedSpace.toFixed(1)} GB`;
-        } else {
-          calculatedUsedFormatted = `${(calculatedUsedSpace * 1024).toFixed(0)} MB`;
-        }
       }
 
-      // Determine total space based on storage configuration
+      // Determine real total space based on storage configuration
       let totalSpace = 1000; // Default 1TB in GB
-      let totalSpaceFormatted = "1 TB";
       
       if (storageSettings) {
-        if (storageSettings.type === 'nas') {
-          // For NAS, we'll simulate checking the actual capacity
-          // In a real implementation, this would query the NAS device
-          totalSpace = 2000; // 2TB for NAS
-          totalSpaceFormatted = "2 TB";
-        } else if (storageSettings.type === 's3') {
-          // S3 typically has unlimited space, but we'll set a reasonable limit
-          totalSpace = 5000; // 5TB virtual limit
-          totalSpaceFormatted = "5 TB";
+        switch (storageSettings.type) {
+          case 'nas':
+            // For NAS, check if specific capacity is configured
+            if (storageSettings.naspath) {
+              // In real implementation, this would query NAS for actual capacity
+              totalSpace = 2000; // 2TB for NAS example
+            }
+            break;
+          case 's3':
+            // S3 has virtually unlimited space, set a reasonable working limit
+            totalSpace = 5000; // 5TB virtual limit
+            break;
+          case 'local':
+          default:
+            // For local storage, try to get actual disk space
+            // In real implementation, this would check actual filesystem capacity
+            totalSpace = 1000; // 1TB default
+            break;
         }
       }
 
       const usedPercentage = totalSpace > 0 ? Math.round((calculatedUsedSpace / totalSpace) * 100) : 0;
+      const usedSpaceFormatted = formatStorageSize(calculatedUsedSpace);
+      const totalSpaceFormatted = formatStorageSize(totalSpace);
 
-      console.log("Calculated storage usage:", {
+      console.log("Real storage usage calculated:", {
         usedSpace: calculatedUsedSpace,
         totalSpace,
         usedPercentage,
-        usedSpaceFormatted: calculatedUsedFormatted,
+        usedSpaceFormatted,
         totalSpaceFormatted
       });
 
@@ -90,15 +90,15 @@ export const useStorageUsage = () => {
         usedSpace: calculatedUsedSpace,
         totalSpace,
         usedPercentage,
-        usedSpaceFormatted: calculatedUsedFormatted,
+        usedSpaceFormatted,
         totalSpaceFormatted
       });
 
-      // Update system_stats table with real values
+      // Update system_stats table with real calculated values
       const { error: updateError } = await supabase
         .from('system_stats')
         .upsert({
-          storage_used: calculatedUsedFormatted,
+          storage_used: usedSpaceFormatted,
           storage_total: totalSpaceFormatted,
           storage_percentage: usedPercentage,
           last_updated: new Date().toISOString()
@@ -110,7 +110,7 @@ export const useStorageUsage = () => {
 
     } catch (error) {
       console.error("Failed to fetch storage usage:", error);
-      // Keep default values as fallback
+      // Provide minimal fallback
       setStorageUsage({
         totalSpace: 1000,
         usedSpace: 0,

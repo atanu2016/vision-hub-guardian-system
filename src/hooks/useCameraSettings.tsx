@@ -10,6 +10,11 @@ export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera
   const [isValid, setIsValid] = useState(true);
   const { toast } = useToast();
 
+  // Reset camera data when camera prop changes
+  useEffect(() => {
+    setCameraData({ ...camera });
+  }, [camera]);
+
   // Check for changes when cameraData updates
   useEffect(() => {
     const hasChanged = JSON.stringify(cameraData) !== JSON.stringify(camera);
@@ -73,16 +78,15 @@ export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera
   const handleChange = (field: keyof Camera, value: string | boolean | number | string[]) => {
     console.log(`Changing ${String(field)} to:`, value);
     
-    // Special handling for connectionType changes
-    if (field === 'connectionType') {
-      const newConnectionType = value as string;
-      console.log(`Connection type changed to: ${newConnectionType}`);
+    // Ensure string values for URL fields
+    if (typeof value === 'string' && (field === 'rtspUrl' || field === 'rtmpUrl' || field === 'hlsUrl')) {
+      value = value.trim();
     }
     
-    setCameraData({
-      ...cameraData,
+    setCameraData(prev => ({
+      ...prev,
       [field]: value
-    });
+    }));
   };
 
   const handleSave = async () => {
@@ -97,11 +101,6 @@ export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera
 
     setIsLoading(true);
     try {
-      // Ensure rtspUrl is properly set for RTSP camera types
-      if (cameraData.connectionType === 'rtsp' && !cameraData.rtspUrl && cameraData.rtmpUrl) {
-        cameraData.rtspUrl = cameraData.rtmpUrl;
-      }
-      
       // Update camera status to ensure it's marked as processing the update
       const updatedCamera = {
         ...cameraData,
@@ -111,7 +110,8 @@ export function useCameraSettings(camera: Camera, onSave: (updatedCamera: Camera
       console.log("Saving camera with data:", {
         connectionType: updatedCamera.connectionType,
         rtspUrl: updatedCamera.rtspUrl,
-        rtmpUrl: updatedCamera.rtmpUrl
+        rtmpUrl: updatedCamera.rtmpUrl,
+        hlsUrl: updatedCamera.hlsUrl
       });
       
       onSave(updatedCamera);
