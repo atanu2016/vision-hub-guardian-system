@@ -11,13 +11,18 @@ const HLSCameraForm = ({
   hlsUrl,
   onChange,
 }: HLSCameraFormProps) => {
+  console.log("HLSCameraForm rendered with hlsUrl:", hlsUrl);
+  
   return (
     <div className="space-y-2">
       <Label htmlFor="hlsUrl">HLS URL*</Label>
       <Input
         id="hlsUrl"
-        value={hlsUrl}
-        onChange={(e) => onChange("hlsUrl", e.target.value)}
+        value={hlsUrl || ""}
+        onChange={(e) => {
+          console.log("HLS URL change:", e.target.value);
+          onChange("hlsUrl", e.target.value);
+        }}
         placeholder="https://server/stream.m3u8"
         required
       />

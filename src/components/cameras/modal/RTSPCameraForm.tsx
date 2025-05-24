@@ -19,8 +19,11 @@ const RTSPCameraForm = ({ rtspUrl, onChange }: RTSPCameraFormProps) => {
         </Label>
         <Input
           id="rtspUrl"
-          value={rtspUrl}
-          onChange={(e) => onChange('rtspUrl', e.target.value)}
+          value={rtspUrl || ""}
+          onChange={(e) => {
+            console.log("RTSP URL change:", e.target.value);
+            onChange('rtspUrl', e.target.value);
+          }}
           placeholder="rtsp://username:password@192.168.1.100:554/stream"
           className="w-full"
         />
