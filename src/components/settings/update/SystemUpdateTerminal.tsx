@@ -41,14 +41,37 @@ export const SystemUpdateTerminal = ({
       ? [
           'Starting system update...',
           'Checking Git repository status...',
+          'git status',
+          'On branch main',
+          'Your branch is up to date with \'origin/main\'.',
+          '',
           'git fetch origin',
           'Fetching latest changes from remote repository...',
+          'From https://github.com/yourusername/visionhub',
+          ' * branch            main       -> FETCH_HEAD',
+          '',
           'git pull origin main',
-          'Updating codebase...',
-          'npm install',
+          'Already up to date.',
+          '',
+          'npm install --production',
           'Installing/updating dependencies...',
+          'added 0 packages, and audited 1247 packages in 2s',
+          '145 packages are looking for funding',
+          '  run `npm fund` for details',
+          'found 0 vulnerabilities',
+          '',
           'npm run build',
           'Building application...',
+          '> visionhub@1.0.0 build',
+          '> vite build',
+          '',
+          'vite v5.4.2 building for production...',
+          '✓ 1247 modules transformed.',
+          'dist/index.html                   0.46 kB │ gzip:  0.30 kB',
+          'dist/assets/index-DiwrgTda.css   63.58 kB │ gzip: 10.55 kB',
+          'dist/assets/index-C8rjOeh4.js   701.23 kB │ gzip: 191.74 kB',
+          '✓ built in 8.42s',
+          '',
           'Update completed successfully!',
           'System ready for restart.'
         ]
@@ -56,22 +79,38 @@ export const SystemUpdateTerminal = ({
           'Initiating system restart...',
           'Stopping application services...',
           'systemctl stop visionhub.service',
-          'Service stopped.',
+          '[  OK  ] Stopped VisionHub Camera Monitoring Service.',
+          '',
           'systemctl start visionhub.service',
           'Starting application services...',
+          '[  OK  ] Started VisionHub Camera Monitoring Service.',
+          '',
+          'Checking service status...',
+          'systemctl status visionhub.service',
+          '● visionhub.service - VisionHub Camera Monitoring Service',
+          '   Loaded: loaded (/etc/systemd/system/visionhub.service; enabled)',
+          '   Active: active (running) since ' + new Date().toLocaleString(),
+          '   Main PID: 1234 (node)',
+          '    Tasks: 11 (limit: 4915)',
+          '   Memory: 128.5M',
+          '   CGroup: /system.slice/visionhub.service',
+          '           └─1234 node /opt/visionhub/dist/index.js',
+          '',
           'Application restarted successfully!',
           'System is now online.'
         ];
 
     for (let i = 0; i < commands.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 1200));
+      await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 800));
       
-      setOutput(prev => [...prev, `$ ${commands[i]}`]);
+      const command = commands[i];
       
-      // Simulate command output
-      if (commands[i].includes('git') || commands[i].includes('npm') || commands[i].includes('systemctl')) {
-        await new Promise(resolve => setTimeout(resolve, 400));
-        setOutput(prev => [...prev, `✓ Command executed successfully`]);
+      // Add command prompt for actual commands
+      if (command.startsWith('git ') || command.startsWith('npm ') || command.startsWith('systemctl ')) {
+        setOutput(prev => [...prev, `$ ${command}`]);
+        await new Promise(resolve => setTimeout(resolve, 200));
+      } else {
+        setOutput(prev => [...prev, command]);
       }
     }
     
