@@ -1,5 +1,4 @@
 
-import { useEffect, useState } from 'react';
 import { useSystemUpdate } from '@/hooks/useSystemUpdate';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { SystemUpdateCard } from '@/components/settings/update/SystemUpdateCard';
@@ -8,7 +7,16 @@ import { AlertTriangle, Shield } from 'lucide-react';
 import { useAdminAccess } from '@/hooks/useAdminAccess';
 
 const SystemUpdate = () => {
-  const { updateSystem, restartSystem, isLoading } = useSystemUpdate();
+  const { 
+    updateSystem, 
+    restartSystem, 
+    checkForUpdates,
+    setAutoUpdate,
+    isLoading,
+    checkingForUpdates,
+    autoUpdateEnabled
+  } = useSystemUpdate();
+  
   const { systemInformation } = useSystemSettings();
   const { hasAccess, loading: accessLoading } = useAdminAccess();
   
@@ -40,7 +48,7 @@ const SystemUpdate = () => {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">System Update</h1>
         <p className="text-muted-foreground">
-          Update your application code and restart the server
+          Update your application code and restart the server. Auto-update can monitor GitHub for changes.
         </p>
       </div>
       
@@ -56,8 +64,12 @@ const SystemUpdate = () => {
       <SystemUpdateCard 
         onUpdate={updateSystem}
         onRestart={restartSystem}
+        onCheckUpdates={checkForUpdates}
+        onSetAutoUpdate={setAutoUpdate}
         version={systemInformation?.systemInfo?.version || "1.0.0"}
         lastUpdated={systemInformation?.systemInfo?.lastUpdated || new Date().toLocaleString()}
+        autoUpdateEnabled={autoUpdateEnabled}
+        checkingForUpdates={checkingForUpdates}
       />
     </div>
   );

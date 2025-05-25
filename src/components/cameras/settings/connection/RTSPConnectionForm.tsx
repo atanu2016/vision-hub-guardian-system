@@ -58,7 +58,7 @@ const RTSPConnectionForm = ({
         return;
       }
       
-      // Validate RTSP URL format
+      // Validate RTSP URL format and port
       try {
         const url = new URL(rtspUrl);
         if (url.protocol !== 'rtsp:') {
@@ -69,21 +69,22 @@ const RTSPConnectionForm = ({
           return;
         }
         
-        // Check if using port 5543
+        // Check if using port 5543 (required for this system)
         const port = url.port || '554';
         if (port !== '5543') {
           setTestResult({
             success: false,
-            message: `Port ${port} detected. Consider using port 5543 for better compatibility.`
+            message: `Port ${port} detected. This system requires port 5543 for RTSP streams. Please update your URL.`
           });
           return;
         }
         
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Simulate connection test
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
         setTestResult({
           success: true,
-          message: `RTSP URL format is valid. Using port ${port}. Save settings and retry connection to test stream.`
+          message: `RTSP URL format is valid and using port 5543. Save settings and test the stream connection.`
         });
       } catch (urlError) {
         setTestResult({
@@ -105,6 +106,14 @@ const RTSPConnectionForm = ({
     handleChange('rtspUrl', exampleUrl);
   };
 
+  // Generate RTSP URL with port 5543 when camera details are available
+  const generateRtspUrl = () => {
+    if (cameraData.ipAddress && cameraData.username && cameraData.password) {
+      const generatedUrl = `rtsp://${cameraData.username}:${cameraData.password}@${cameraData.ipAddress}:5543/stream`;
+      handleChange('rtspUrl', generatedUrl);
+    }
+  };
+
   // Safely get the rtspUrl value
   const rtspUrlValue = typeof cameraData.rtspUrl === 'string' ? cameraData.rtspUrl : '';
 
@@ -123,13 +132,14 @@ const RTSPConnectionForm = ({
             </span>
           </TooltipTrigger>
           <TooltipContent side="top" className="max-w-md">
-            <p>RTSP URL format examples (using port 5543):</p>
+            <p>RTSP URL format (MUST use port 5543):</p>
             <ul className="pl-4 text-xs list-disc">
-              <li>rtsp://192.168.1.100:5543/stream1</li>
-              <li>rtsp://admin:password@192.168.1.100:5543/stream1</li>
+              <li>rtsp://192.168.1.100:5543/stream</li>
+              <li>rtsp://admin:password@192.168.1.100:5543/stream</li>
               <li>rtsp://admin:password@192.168.1.100:5543/live/channel0</li>
               <li>rtsp://admin:password@192.168.1.100:5543/cam/realmonitor?channel=1&subtype=0</li>
             </ul>
+            <p className="text-yellow-600 mt-1">⚠️ Port 5543 is required for this system</p>
           </TooltipContent>
         </Tooltip>
       </div>
@@ -167,29 +177,27 @@ const RTSPConnectionForm = ({
           {testing ? "Testing..." : "Test RTSP URL"}
         </Button>
         
-        {cameraData.ipAddress && cameraData.username && cameraData.password && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => useExample(`rtsp://${cameraData.username}:${cameraData.password}@${cameraData.ipAddress}:5543/stream`)}
-          >
-            Generate with Port 5543
-          </Button>
-        )}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={generateRtspUrl}
+          disabled={disabled || !cameraData.ipAddress || !cameraData.username || !cameraData.password}
+        >
+          Generate URL (Port 5543)
+        </Button>
       </div>
       
-      <div className="bg-muted p-3 rounded-md mt-2">
-        <div className="text-xs text-muted-foreground flex items-start gap-2">
+      <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-3 rounded-md mt-2">
+        <div className="text-xs text-yellow-800 dark:text-yellow-200 flex items-start gap-2">
           <Info className="h-3 w-3 mt-0.5 shrink-0" /> 
           <div>
-            <p className="font-medium mb-1">RTSP Stream Configuration (Port 5543):</p>
+            <p className="font-medium mb-1">⚠️ IMPORTANT: Port 5543 Required</p>
             <ul className="list-disc pl-4 space-y-1">
-              <li>Use port 5543 for optimal compatibility: <code className="text-xs bg-background px-1 py-0.5 rounded">rtsp://username:password@ip:5543/path</code></li>
-              <li>For local network cameras, use the local IP address (like 192.168.x.x)</li>
-              <li>Include authentication in URL for secure access</li>
-              <li>Path format varies by manufacturer (check camera documentation)</li>
-              <li>Stream may require enabling in camera web interface</li>
+              <li>This system requires RTSP streams to use port <strong>5543</strong></li>
+              <li>Standard port 554 will not work with this application</li>
+              <li>Configure your camera to stream on port 5543</li>
+              <li>Format: <code className="text-xs bg-yellow-100 dark:bg-yellow-900 px-1 py-0.5 rounded">rtsp://username:password@ip:5543/path</code></li>
               <li>Ensure the camera is accessible on your network</li>
             </ul>
             <p className="mt-2 font-medium">After updating settings, click "Save" and use the "Retry Connection" button in the stream view.</p>

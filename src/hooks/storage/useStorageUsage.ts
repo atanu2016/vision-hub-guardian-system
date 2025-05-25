@@ -19,9 +19,9 @@ export const useStorageUsage = () => {
 
   const fetchStorageUsage = async () => {
     try {
-      console.log("Fetching real storage usage from storage backend...");
+      console.log("Fetching real storage usage from system...");
       
-      // Get storage settings to determine actual storage configuration
+      // Get storage settings to determine storage type
       const { data: storageSettings } = await supabase
         .from('storage_settings')
         .select('*')
@@ -30,38 +30,16 @@ export const useStorageUsage = () => {
 
       console.log("Storage settings:", storageSettings);
 
-      // Calculate real used space from actual recordings
-      const { data: recordings, error: recordingsError } = await supabase
-        .from('recordings')
-        .select('file_size');
-
-      if (recordingsError) {
-        console.error("Error fetching recordings:", recordingsError);
-        throw recordingsError;
-      }
-
-      let calculatedUsedSpace = 0;
-      
-      if (recordings && recordings.length > 0) {
-        recordings.forEach(recording => {
-          if (recording.file_size) {
-            calculatedUsedSpace += parseStorageValue(recording.file_size);
-          }
-        });
-      }
-
-      console.log("Calculated used space from recordings:", calculatedUsedSpace, "GB");
-
-      // Get real total space and used space based on actual storage type
-      let totalSpace = 1000; // Default fallback
-      let actualUsedSpace = calculatedUsedSpace;
+      let totalSpace = 0;
+      let usedSpace = 0;
       
       if (storageSettings) {
         switch (storageSettings.type) {
           case 'nas':
-            // For NAS/SMB, get real capacity from system API
+            // For NAS/SMB, get real capacity from mounted share
             try {
-              const response = await fetch('/api/storage/nas-capacity', {
+              console.log("Getting NAS storage capacity...");
+              const response = await fetch('/api/storage/nas-usage', {
                 method: 'POST',
                 headers: { 
                   'Content-Type': 'application/json',
@@ -76,91 +54,126 @@ export const useStorageUsage = () => {
               });
               
               if (response.ok) {
-                const capacityData = await response.json();
-                console.log("Real NAS capacity data:", capacityData);
-                totalSpace = Math.floor(capacityData.total / (1024 * 1024 * 1024)); // Convert to GB
-                actualUsedSpace = Math.floor(capacityData.used / (1024 * 1024 * 1024)); // Use real used space
-                console.log(`NAS Real capacity: ${totalSpace}GB, Used: ${actualUsedSpace}GB`);
+                const nasData = await response.json();
+                console.log("Real NAS usage data:", nasData);
+                totalSpace = Math.floor(nasData.total / (1024 * 1024 * 1024)); // Convert to GB
+                usedSpace = Math.floor(nasData.used / (1024 * 1024 * 1024)); // Convert to GB
+                console.log(`NAS Real usage: ${usedSpace}GB used of ${totalSpace}GB total`);
               } else {
-                console.warn("Could not get real NAS capacity, using calculated values");
-                // Use df command as fallback for mounted SMB shares
-                try {
-                  const dfResponse = await fetch('/api/system/disk-usage', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ path: storageSettings.naspath || '/mnt/nas' })
-                  });
-                  
-                  if (dfResponse.ok) {
-                    const dfData = await dfResponse.json();
-                    totalSpace = Math.floor(dfData.total / (1024 * 1024 * 1024));
-                    actualUsedSpace = Math.floor(dfData.used / (1024 * 1024 * 1024));
-                    console.log(`DF command results: ${totalSpace}GB total, ${actualUsedSpace}GB used`);
-                  } else {
-                    totalSpace = 2000; // 2TB fallback for NAS
-                  }
-                } catch (dfError) {
-                  console.error("DF command failed:", dfError);
-                  totalSpace = 2000;
+                console.warn("NAS API not available, using system df command");
+                // Fallback to df command on mounted SMB share
+                const dfResponse = await fetch('/api/system/storage-usage', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ 
+                    path: storageSettings.naspath || '/mnt/recordings',
+                    type: 'nas'
+                  })
+                });
+                
+                if (dfResponse.ok) {
+                  const dfData = await dfResponse.json();
+                  totalSpace = Math.floor(dfData.total / (1024 * 1024 * 1024));
+                  usedSpace = Math.floor(dfData.used / (1024 * 1024 * 1024));
+                  console.log(`DF command results: ${usedSpace}GB used of ${totalSpace}GB total`);
+                } else {
+                  throw new Error("Cannot get NAS storage information");
                 }
               }
             } catch (error) {
               console.error("Error getting NAS capacity:", error);
-              totalSpace = 2000; // 2TB fallback for NAS
+              throw new Error(`NAS storage error: ${error.message}`);
             }
             break;
             
           case 's3':
-            // S3 doesn't have fixed capacity, use virtual limit
-            totalSpace = 5000; // 5TB virtual limit for S3
-            actualUsedSpace = calculatedUsedSpace; // S3 only counts actual file usage
+            // S3 usage calculation
+            try {
+              console.log("Getting S3 storage usage...");
+              const { data: recordings } = await supabase
+                .from('recordings')
+                .select('file_size');
+
+              let s3UsedBytes = 0;
+              if (recordings && recordings.length > 0) {
+                recordings.forEach(recording => {
+                  if (recording.file_size) {
+                    s3UsedBytes += parseStorageValue(recording.file_size) * 1024 * 1024 * 1024; // Convert GB to bytes
+                  }
+                });
+              }
+              
+              usedSpace = Math.floor(s3UsedBytes / (1024 * 1024 * 1024)); // Convert to GB
+              totalSpace = 5000; // 5TB virtual limit for S3
+              console.log(`S3 usage: ${usedSpace}GB used of ${totalSpace}GB limit`);
+            } catch (error) {
+              console.error("Error getting S3 usage:", error);
+              throw new Error(`S3 storage error: ${error.message}`);
+            }
             break;
             
           case 'local':
           default:
             // For local storage, get actual disk space
             try {
-              const response = await fetch('/api/storage/local-capacity', {
-                method: 'GET',
-                headers: { 'Accept': 'application/json' }
+              console.log("Getting local storage usage...");
+              const response = await fetch('/api/system/storage-usage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  path: storageSettings.path || '/recordings',
+                  type: 'local'
+                })
               });
               
               if (response.ok) {
-                const capacityData = await response.json();
-                console.log("Local storage capacity:", capacityData);
-                totalSpace = Math.floor(capacityData.total / (1024 * 1024 * 1024));
-                actualUsedSpace = Math.floor(capacityData.used / (1024 * 1024 * 1024));
-                console.log(`Local storage: ${totalSpace}GB total, ${actualUsedSpace}GB used`);
+                const localData = await response.json();
+                console.log("Local storage data:", localData);
+                totalSpace = Math.floor(localData.total / (1024 * 1024 * 1024));
+                usedSpace = Math.floor(localData.used / (1024 * 1024 * 1024));
+                console.log(`Local storage: ${usedSpace}GB used of ${totalSpace}GB total`);
               } else {
-                // Fallback: try system disk usage command
-                const dfResponse = await fetch('/api/system/disk-usage', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ path: storageSettings.path || '/recordings' })
-                });
-                
-                if (dfResponse.ok) {
-                  const dfData = await dfResponse.json();
-                  totalSpace = Math.floor(dfData.total / (1024 * 1024 * 1024));
-                  actualUsedSpace = Math.floor(dfData.used / (1024 * 1024 * 1024));
-                } else {
-                  totalSpace = 1000; // 1TB fallback
-                }
+                throw new Error("Cannot get local storage information");
               }
             } catch (error) {
               console.error("Error getting local capacity:", error);
-              totalSpace = 1000; // 1TB fallback
+              throw new Error(`Local storage error: ${error.message}`);
             }
             break;
         }
+      } else {
+        // No storage settings, try to get system default
+        console.log("No storage settings found, getting system default...");
+        try {
+          const response = await fetch('/api/system/storage-usage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              path: '/',
+              type: 'system'
+            })
+          });
+          
+          if (response.ok) {
+            const systemData = await response.json();
+            totalSpace = Math.floor(systemData.total / (1024 * 1024 * 1024));
+            usedSpace = Math.floor(systemData.used / (1024 * 1024 * 1024));
+            console.log(`System storage: ${usedSpace}GB used of ${totalSpace}GB total`);
+          } else {
+            throw new Error("Cannot get system storage information");
+          }
+        } catch (error) {
+          console.error("Error getting system storage:", error);
+          throw new Error(`System storage error: ${error.message}`);
+        }
       }
 
-      const usedPercentage = totalSpace > 0 ? Math.round((actualUsedSpace / totalSpace) * 100) : 0;
-      const usedSpaceFormatted = formatStorageSize(actualUsedSpace);
+      const usedPercentage = totalSpace > 0 ? Math.round((usedSpace / totalSpace) * 100) : 0;
+      const usedSpaceFormatted = formatStorageSize(usedSpace);
       const totalSpaceFormatted = formatStorageSize(totalSpace);
 
       console.log("Final real storage calculation:", {
-        usedSpace: actualUsedSpace,
+        usedSpace,
         totalSpace,
         usedPercentage,
         usedSpaceFormatted,
@@ -168,7 +181,7 @@ export const useStorageUsage = () => {
       });
 
       setStorageUsage({
-        usedSpace: actualUsedSpace,
+        usedSpace,
         totalSpace,
         usedPercentage,
         usedSpaceFormatted,
@@ -191,13 +204,13 @@ export const useStorageUsage = () => {
 
     } catch (error) {
       console.error("Failed to fetch real storage usage:", error);
-      // Fallback only if everything fails
+      // Show error message instead of fallback mock data
       setStorageUsage({
-        totalSpace: 1000,
+        totalSpace: 0,
         usedSpace: 0,
         usedPercentage: 0,
-        usedSpaceFormatted: "0 GB",
-        totalSpaceFormatted: "1 TB"
+        usedSpaceFormatted: "Error",
+        totalSpaceFormatted: "Error"
       });
     }
   };
