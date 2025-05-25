@@ -87,6 +87,39 @@ export type Database = {
         }
         Relationships: []
       }
+      application_logs: {
+        Row: {
+          context: Json | null
+          created_at: string
+          details: string | null
+          id: string
+          level: string
+          message: string
+          source: string
+          timestamp: string
+        }
+        Insert: {
+          context?: Json | null
+          created_at?: string
+          details?: string | null
+          id?: string
+          level: string
+          message: string
+          source: string
+          timestamp?: string
+        }
+        Update: {
+          context?: Json | null
+          created_at?: string
+          details?: string | null
+          id?: string
+          level?: string
+          message?: string
+          source?: string
+          timestamp?: string
+        }
+        Relationships: []
+      }
       camera_recording_status: {
         Row: {
           camera_id: string
