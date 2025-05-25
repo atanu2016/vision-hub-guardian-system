@@ -15,25 +15,44 @@ export const useSystemUpdate = () => {
     timestamp: number;
   } | null>(null);
 
-  // Function to handle system update
+  // Function to handle real system update
   const updateSystem = async (): Promise<boolean> => {
     setIsLoading(true);
     
     try {
-      console.log('Starting system update process...');
+      console.log('Starting real system update process...');
       
-      // For now, simulate successful update since backend endpoints don't exist
-      // In a real implementation, this would call the actual update script
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setLastUpdateStatus({
-        success: true,
-        message: 'System update completed successfully',
-        timestamp: Date.now(),
+      // Call the actual backend update API
+      const response = await fetch('/api/system/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'update',
+          timestamp: Date.now()
+        })
       });
       
-      console.log('System update completed successfully');
-      return true;
+      if (!response.ok) {
+        throw new Error(`Update failed: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setLastUpdateStatus({
+          success: true,
+          message: result.message || 'System update completed successfully',
+          timestamp: Date.now(),
+        });
+        
+        console.log('System update completed successfully');
+        toast.success('System updated successfully');
+        return true;
+      } else {
+        throw new Error(result.message || 'Update failed');
+      }
       
     } catch (error) {
       console.error('Error updating system:', error);
@@ -44,7 +63,7 @@ export const useSystemUpdate = () => {
         timestamp: Date.now(),
       });
       
-      toast.error('Error updating system. Please check the logs for details.');
+      toast.error(`Update failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return false;
     } finally {
       setIsLoading(false);
@@ -56,20 +75,47 @@ export const useSystemUpdate = () => {
     setIsLoading(true);
     
     try {
-      console.log('Starting system restart process...');
+      console.log('Starting real system restart process...');
       
-      // For now, simulate successful restart since backend endpoints don't exist
-      // In a real implementation, this would call the actual restart script
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setLastUpdateStatus({
-        success: true,
-        message: 'System restart completed successfully',
-        timestamp: Date.now(),
+      // Call the actual backend restart API
+      const response = await fetch('/api/system/restart', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'restart',
+          timestamp: Date.now()
+        })
       });
       
-      console.log('System restart completed successfully');
-      return true;
+      if (!response.ok) {
+        throw new Error(`Restart failed: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setLastUpdateStatus({
+          success: true,
+          message: result.message || 'System restart completed successfully',
+          timestamp: Date.now(),
+        });
+        
+        console.log('System restart completed successfully');
+        toast.success('System restarted successfully');
+        
+        // Show reconnecting message after restart
+        setTimeout(() => {
+          toast.info('System is back online', {
+            duration: 3000,
+          });
+        }, 3000);
+        
+        return true;
+      } else {
+        throw new Error(result.message || 'Restart failed');
+      }
       
     } catch (error) {
       console.error('Error restarting system:', error);
@@ -80,7 +126,7 @@ export const useSystemUpdate = () => {
         timestamp: Date.now(),
       });
       
-      toast.error('Error restarting system. Please check the logs for details.');
+      toast.error(`Restart failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return false;
     } finally {
       setIsLoading(false);

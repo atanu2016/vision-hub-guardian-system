@@ -23,7 +23,7 @@ export function useStreamSetup({
   const { toast } = useToast();
   const hlsRef = useRef<Hls | null>(null);
   const retryCountRef = useRef<number>(0);
-  const maxRetries = 5;
+  const maxRetries = 3;
   const cleanupFnRef = useRef<(() => void) | null>(null);
 
   // Reset retry counter when camera changes
@@ -37,7 +37,7 @@ export function useStreamSetup({
       return camera.rtspUrl;
     }
     
-    // Try to generate RTSP URL from camera details
+    // Generate RTSP URL from camera details
     if (camera.connectionType === 'rtsp' && camera.ipAddress && camera.username && camera.password) {
       const port = camera.port || 554;
       const generatedUrl = `rtsp://${camera.username}:${camera.password}@${camera.ipAddress}:${port}/stream1`;
@@ -50,12 +50,13 @@ export function useStreamSetup({
 
   // Main streaming setup effect
   useEffect(() => {
-    if (!camera) return;
+    if (!camera || !videoRef.current) return;
     
     let localCleanup: (() => void) = () => {};
     
     const initializeStream = async () => {
-      if (!videoRef.current) return;
+      const videoElement = videoRef.current;
+      if (!videoElement) return;
       
       // Clean up any previous stream
       if (cleanupFnRef.current) {
@@ -63,33 +64,46 @@ export function useStreamSetup({
         cleanupFnRef.current = null;
       }
       
-      const shouldTryConnection = camera.status !== 'offline';
+      if (camera.status !== 'online') {
+        onLoadingChange(false);
+        onError("Camera is offline");
+        return;
+      }
       
-      if (shouldTryConnection) {
-        onLoadingChange(true);
-        onError(null);
+      onLoadingChange(true);
+      onError(null);
+      
+      try {
+        console.log(`Setting up stream for ${camera.name}, type: ${camera.connectionType}`);
         
-        try {
-          const videoElement = videoRef.current;
+        // Handle RTSP streams with improved logic
+        if (camera.connectionType === 'rtsp') {
+          const rtspUrl = generateRtspUrl(camera);
           
-          // Handle ONVIF camera type specifically
-          if (camera.connectionType === 'onvif') {
-            console.log('Setting up ONVIF camera:', camera.name);
-            console.log('ONVIF details:', {
-              ip: camera.ipAddress,
-              port: camera.port,
-              username: camera.username ? 'set' : 'not set',
-              path: camera.onvifPath
-            });
+          if (!rtspUrl) {
+            onError("RTSP URL not configured. Please check camera settings.");
+            onLoadingChange(false);
+            return;
+          }
+          
+          console.log(`Attempting RTSP connection to: ${rtspUrl.replace(/(:.*?@)/g, ':****@')}`);
+          
+          // First try: Direct RTSP (limited browser support)
+          try {
+            videoElement.src = rtspUrl;
+            videoElement.load();
             
-            localCleanup = setupCameraStream(camera, videoElement, (err) => {
-              console.error(`ONVIF stream setup error: ${err}`);
-              onError(`Unable to play stream: ${err || 'Connection failed'}`);
-              onLoadingChange(false);
-            });
+            const loadTimeout = setTimeout(() => {
+              if (videoElement.readyState === 0) {
+                console.log("RTSP direct connection timeout, trying alternative methods...");
+                // Try WebRTC or HLS proxy if available
+                tryAlternativeRtspMethods(camera, videoElement);
+              }
+            }, 5000);
             
             const handleLoadedData = () => {
-              console.log('ONVIF camera stream loaded successfully');
+              clearTimeout(loadTimeout);
+              console.log("RTSP stream loaded successfully via direct connection");
               onLoadingChange(false);
               if (isPlaying) {
                 videoElement.play().catch(e => {
@@ -98,111 +112,37 @@ export function useStreamSetup({
               }
             };
             
-            videoElement.addEventListener('loadeddata', handleLoadedData);
-            
-            const originalCleanup = localCleanup;
-            localCleanup = () => {
-              videoElement.removeEventListener('loadeddata', handleLoadedData);
-              if (originalCleanup) originalCleanup();
+            const handleError = (e: any) => {
+              clearTimeout(loadTimeout);
+              console.error("RTSP direct connection failed:", e);
+              console.log("Trying alternative RTSP methods...");
+              tryAlternativeRtspMethods(camera, videoElement);
             };
             
-            cleanupFnRef.current = localCleanup;
-            return;
+            videoElement.addEventListener('loadeddata', handleLoadedData);
+            videoElement.addEventListener('error', handleError);
+            
+            localCleanup = () => {
+              clearTimeout(loadTimeout);
+              videoElement.removeEventListener('loadeddata', handleLoadedData);
+              videoElement.removeEventListener('error', handleError);
+              videoElement.src = '';
+              videoElement.load();
+            };
+          } catch (err) {
+            console.error("RTSP setup error:", err);
+            tryAlternativeRtspMethods(camera, videoElement);
           }
+        }
+        // Handle HLS streams
+        else if (camera.connectionType === 'hls' && camera.hlsUrl) {
+          console.log(`Loading HLS stream: ${camera.hlsUrl}`);
           
-          // Handle other camera types
-          let streamUrl = '';
-          
-          // Determine stream URL based on camera type
-          if (camera.connectionType === 'hls' && camera.hlsUrl) {
-            streamUrl = camera.hlsUrl;
-          } else if (camera.connectionType === 'rtmp' && camera.rtmpUrl) {
-            streamUrl = camera.rtmpUrl;
-          } else if (camera.connectionType === 'rtsp') {
-            streamUrl = generateRtspUrl(camera) || '';
-            console.log('Using RTSP URL:', streamUrl.replace(/(:.*?@)/g, ':****@'));
-          }
-          
-          if (!streamUrl) {
-            console.error('No valid stream URL found for camera:', camera.name);
-            onError("Missing stream URL - check camera configuration");
-            onLoadingChange(false);
-            return;
-          }
-          
-          console.log(`Attempting to connect to: ${camera.connectionType} stream for ${camera.name}`);
-          
-          // Special handling for RTSP streams
-          if (camera.connectionType === 'rtsp') {
-            // For RTSP, we need a media server proxy or direct browser support
-            try {
-              // First try with browser native support (limited)
-              videoElement.src = streamUrl;
-              
-              const handleError = (e: any) => {
-                console.error("RTSP video element error:", e);
-                console.error("Error details:", {
-                  code: videoElement.error?.code,
-                  message: videoElement.error?.message,
-                  networkState: videoElement.networkState,
-                  readyState: videoElement.readyState
-                });
-                
-                // Provide more specific error messages
-                if (videoElement.error?.code === 4) {
-                  onError("RTSP stream format not supported by browser. A media server proxy is required.");
-                } else if (videoElement.error?.code === 3) {
-                  onError("RTSP stream decoding error. Check camera settings.");
-                } else if (videoElement.error?.code === 2) {
-                  onError("RTSP network error. Check camera connection and credentials.");
-                } else {
-                  onError("RTSP stream unavailable. Check camera connection settings.");
-                }
-                onLoadingChange(false);
-              };
-              
-              const handleLoadedData = () => {
-                console.log("RTSP stream loaded successfully");
-                onLoadingChange(false);
-                if (isPlaying) {
-                  videoElement.play().catch(e => {
-                    console.warn("Autoplay prevented:", e);
-                  });
-                }
-              };
-              
-              videoElement.addEventListener('error', handleError);
-              videoElement.addEventListener('loadeddata', handleLoadedData);
-              
-              // Set a timeout to detect if the stream doesn't load
-              const loadTimeout = setTimeout(() => {
-                if (videoElement.readyState === 0) {
-                  console.warn("RTSP stream load timeout");
-                  onError("RTSP stream connection timeout. This may require a media server proxy.");
-                  onLoadingChange(false);
-                }
-              }, 10000); // 10 second timeout
-              
-              localCleanup = () => {
-                clearTimeout(loadTimeout);
-                videoElement.removeEventListener('error', handleError);
-                videoElement.removeEventListener('loadeddata', handleLoadedData);
-                videoElement.src = '';
-                videoElement.load();
-              };
-            } catch (err) {
-              console.error("RTSP setup error:", err);
-              onError("RTSP stream setup failed");
-              onLoadingChange(false);
-            }
-          }
-          // Handle HLS streams
-          else if (streamUrl && (streamUrl.includes('.m3u8') || camera.connectionType === 'hls') && Hls.isSupported()) {
+          if (Hls.isSupported()) {
             if (hlsRef.current) {
               hlsRef.current.destroy();
             }
             
-            console.log(`Loading HLS stream: ${streamUrl}`);
             hlsRef.current = new Hls({
               enableWorker: true,
               lowLatencyMode: true,
@@ -214,7 +154,7 @@ export function useStreamSetup({
               debug: false
             });
             
-            hlsRef.current.loadSource(streamUrl);
+            hlsRef.current.loadSource(camera.hlsUrl);
             hlsRef.current.attachMedia(videoElement);
             
             hlsRef.current.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -229,28 +169,9 @@ export function useStreamSetup({
             
             hlsRef.current.on(Hls.Events.ERROR, (_, data) => {
               console.error("HLS error:", data);
-              
               if (data.fatal) {
-                console.error("Fatal HLS error:", data);
-                
-                if (retryCountRef.current < maxRetries) {
-                  retryCountRef.current++;
-                  console.log(`Retrying stream (${retryCountRef.current}/${maxRetries})...`);
-                  
-                  switch (data.type) {
-                    case Hls.ErrorTypes.NETWORK_ERROR:
-                      hlsRef.current?.startLoad();
-                      break;
-                    case Hls.ErrorTypes.MEDIA_ERROR:
-                      hlsRef.current?.recoverMediaError();
-                      break;
-                    default:
-                      break;
-                  }
-                } else {
-                  onError("HLS stream unavailable after multiple attempts");
-                  onLoadingChange(false);
-                }
+                onError(`HLS stream error: ${data.details}`);
+                onLoadingChange(false);
               }
             });
             
@@ -260,48 +181,117 @@ export function useStreamSetup({
                 hlsRef.current = null;
               }
             };
-          } 
-          // Handle direct HTTP/HTTPS streams
-          else if (streamUrl && (streamUrl.startsWith('http://') || streamUrl.startsWith('https://'))) {
-            videoElement.src = streamUrl;
-            
-            videoElement.onloadeddata = () => {
-              console.log("Direct video stream loaded");
+          } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+            // Native HLS support (Safari)
+            videoElement.src = camera.hlsUrl;
+            videoElement.addEventListener('loadeddata', () => {
               onLoadingChange(false);
               if (isPlaying) {
-                videoElement.play().catch(e => {
-                  console.warn("Autoplay prevented:", e);
-                });
+                videoElement.play().catch(e => console.warn("Autoplay prevented:", e));
               }
-            };
-            
-            videoElement.onerror = (e) => {
-              console.error("Video element error:", e);
-              onError("Stream unavailable - check camera connection");
+            });
+            videoElement.addEventListener('error', () => {
+              onError("HLS stream failed to load");
               onLoadingChange(false);
-            };
+            });
             
             localCleanup = () => {
               videoElement.src = '';
               videoElement.load();
             };
           } else {
-            console.error(`Unsupported stream URL: ${streamUrl}`);
-            onError("Unsupported stream format or missing URL");
+            onError("HLS not supported in this browser");
             onLoadingChange(false);
           }
-          
-          cleanupFnRef.current = localCleanup;
-          
-        } catch (err) {
-          console.error("Stream setup error:", err);
-          onError("Failed to initialize stream");
+        }
+        // Handle RTMP streams
+        else if (camera.connectionType === 'rtmp' && camera.rtmpUrl) {
+          console.log("RTMP streams require a media server conversion to HLS/WebRTC");
+          onError("RTMP streams require media server conversion. Please configure HLS endpoint.");
           onLoadingChange(false);
         }
-      } else {
+        // Handle ONVIF cameras
+        else if (camera.connectionType === 'onvif') {
+          console.log('Setting up ONVIF camera:', camera.name);
+          
+          localCleanup = setupCameraStream(camera, videoElement, (err) => {
+            console.error(`ONVIF stream error: ${err}`);
+            onError(`ONVIF connection failed: ${err}`);
+            onLoadingChange(false);
+          });
+          
+          const handleLoadedData = () => {
+            console.log('ONVIF camera stream loaded successfully');
+            onLoadingChange(false);
+            if (isPlaying) {
+              videoElement.play().catch(e => {
+                console.warn("Autoplay prevented:", e);
+              });
+            }
+          };
+          
+          videoElement.addEventListener('loadeddata', handleLoadedData);
+          
+          const originalCleanup = localCleanup;
+          localCleanup = () => {
+            videoElement.removeEventListener('loadeddata', handleLoadedData);
+            if (originalCleanup) originalCleanup();
+          };
+        }
+        else {
+          onError("Invalid stream configuration. Please check camera settings.");
+          onLoadingChange(false);
+        }
+        
+        cleanupFnRef.current = localCleanup;
+        
+      } catch (err) {
+        console.error("Stream setup error:", err);
+        onError(`Stream initialization failed: ${err.message || 'Unknown error'}`);
         onLoadingChange(false);
-        onError(camera.status === 'offline' ? "Camera offline" : "Camera unavailable");
       }
+    };
+    
+    // Alternative methods for RTSP when direct connection fails
+    const tryAlternativeRtspMethods = (camera: Camera, videoElement: HTMLVideoElement) => {
+      console.log("Trying alternative RTSP connection methods...");
+      
+      // Method 1: Try to find if there's an HLS proxy endpoint
+      const possibleHlsUrl = `${window.location.origin}/api/stream/rtsp-to-hls/${encodeURIComponent(camera.id)}`;
+      
+      fetch(possibleHlsUrl, { method: 'HEAD' })
+        .then(response => {
+          if (response.ok) {
+            console.log("Found HLS proxy endpoint, using that instead");
+            if (Hls.isSupported()) {
+              if (hlsRef.current) {
+                hlsRef.current.destroy();
+              }
+              
+              hlsRef.current = new Hls();
+              hlsRef.current.loadSource(possibleHlsUrl);
+              hlsRef.current.attachMedia(videoElement);
+              
+              hlsRef.current.on(Hls.Events.MANIFEST_PARSED, () => {
+                onLoadingChange(false);
+                if (isPlaying) {
+                  videoElement.play().catch(e => console.warn("Autoplay prevented:", e));
+                }
+              });
+              
+              hlsRef.current.on(Hls.Events.ERROR, () => {
+                onError("RTSP stream requires media server proxy. Please configure streaming server.");
+                onLoadingChange(false);
+              });
+            }
+          } else {
+            throw new Error("No proxy available");
+          }
+        })
+        .catch(() => {
+          onError("RTSP stream requires media server proxy (FFmpeg/GStreamer) to convert to web-compatible format.");
+          onLoadingChange(false);
+        });
     };
     
     initializeStream();

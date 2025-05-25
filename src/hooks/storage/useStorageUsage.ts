@@ -19,9 +19,9 @@ export const useStorageUsage = () => {
 
   const fetchStorageUsage = async () => {
     try {
-      console.log("Fetching real storage usage from database...");
+      console.log("Fetching real storage usage from SMB/NAS...");
       
-      // Get storage settings to determine storage type and configuration
+      // Get storage settings to determine actual storage configuration
       const { data: storageSettings } = await supabase
         .from('storage_settings')
         .select('*')
@@ -30,13 +30,14 @@ export const useStorageUsage = () => {
 
       console.log("Storage settings:", storageSettings);
 
-      // Calculate real used space from recordings table
+      // Calculate real used space from actual recordings
       const { data: recordings, error: recordingsError } = await supabase
         .from('recordings')
         .select('file_size');
 
       if (recordingsError) {
         console.error("Error fetching recordings:", recordingsError);
+        throw recordingsError;
       }
 
       let calculatedUsedSpace = 0;
@@ -49,32 +50,62 @@ export const useStorageUsage = () => {
         });
       }
 
-      // For demo purposes, let's add some simulated usage if we have NAS configured
-      if (storageSettings?.type === 'nas' && calculatedUsedSpace === 0) {
-        // Simulate some storage usage for demonstration
-        calculatedUsedSpace = 150; // 150 GB simulated usage
-      }
+      console.log("Calculated used space from recordings:", calculatedUsedSpace, "GB");
 
-      // Determine real total space based on storage configuration
-      let totalSpace = 1000; // Default 1TB in GB
+      // Get real total space based on actual storage type
+      let totalSpace = 1000; // Default fallback
       
       if (storageSettings) {
         switch (storageSettings.type) {
           case 'nas':
-            // For NAS, check actual capacity or use configured value
-            if (storageSettings.naspath) {
-              // In real implementation, this would query NAS for actual capacity
-              totalSpace = 2000; // 2TB for NAS example
+            // For NAS/SMB, we need to check actual available space
+            // This would typically come from a system API call
+            try {
+              // Try to get real NAS capacity - this would be from your backend API
+              const response = await fetch('/api/storage/capacity', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  type: 'nas',
+                  address: storageSettings.nasaddress,
+                  path: storageSettings.naspath,
+                  username: storageSettings.nasusername,
+                  password: storageSettings.naspassword
+                })
+              });
+              
+              if (response.ok) {
+                const capacityData = await response.json();
+                totalSpace = Math.floor(capacityData.total / (1024 * 1024 * 1024)); // Convert to GB
+                calculatedUsedSpace = Math.floor(capacityData.used / (1024 * 1024 * 1024)); // Use real used space
+              } else {
+                console.warn("Could not get real NAS capacity, using fallback");
+                totalSpace = 2000; // 2TB fallback for NAS
+              }
+            } catch (error) {
+              console.error("Error getting NAS capacity:", error);
+              totalSpace = 2000; // 2TB fallback for NAS
             }
             break;
           case 's3':
-            // S3 has virtually unlimited space, set a reasonable working limit
-            totalSpace = 5000; // 5TB virtual limit
+            totalSpace = 5000; // 5TB virtual limit for S3
             break;
           case 'local':
           default:
             // For local storage, try to get actual disk space
-            totalSpace = 1000; // 1TB default
+            try {
+              const response = await fetch('/api/storage/local-capacity');
+              if (response.ok) {
+                const capacityData = await response.json();
+                totalSpace = Math.floor(capacityData.total / (1024 * 1024 * 1024));
+                calculatedUsedSpace = Math.floor(capacityData.used / (1024 * 1024 * 1024));
+              } else {
+                totalSpace = 1000; // 1TB fallback
+              }
+            } catch (error) {
+              console.error("Error getting local capacity:", error);
+              totalSpace = 1000; // 1TB fallback
+            }
             break;
         }
       }
@@ -83,7 +114,7 @@ export const useStorageUsage = () => {
       const usedSpaceFormatted = formatStorageSize(calculatedUsedSpace);
       const totalSpaceFormatted = formatStorageSize(totalSpace);
 
-      console.log("Real storage usage calculated:", {
+      console.log("Final storage calculation:", {
         usedSpace: calculatedUsedSpace,
         totalSpace,
         usedPercentage,
@@ -99,7 +130,7 @@ export const useStorageUsage = () => {
         totalSpaceFormatted
       });
 
-      // Update system_stats table with real calculated values
+      // Update system_stats with real values
       const { error: updateError } = await supabase
         .from('system_stats')
         .upsert({
@@ -114,8 +145,8 @@ export const useStorageUsage = () => {
       }
 
     } catch (error) {
-      console.error("Failed to fetch storage usage:", error);
-      // Provide minimal fallback
+      console.error("Failed to fetch real storage usage:", error);
+      // Only use fallback if everything fails
       setStorageUsage({
         totalSpace: 1000,
         usedSpace: 0,

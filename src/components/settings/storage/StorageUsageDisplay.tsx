@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { HardDrive, Trash2, Clock, RefreshCw, Cloud, Database } from "lucide-react";
+import { HardDrive, Trash2, Clock, RefreshCw, Cloud, Database, AlertTriangle } from "lucide-react";
 
 interface StorageUsageDisplayProps {
   storageUsage: {
@@ -60,19 +60,39 @@ const StorageUsageDisplay = ({
 
   // Get color based on usage percentage
   const getUsageColor = () => {
+    if (storageUsage.usedPercentage >= 95) return 'bg-red-600';
     if (storageUsage.usedPercentage >= 90) return 'bg-red-500';
     if (storageUsage.usedPercentage >= 80) return 'bg-orange-500';
     if (storageUsage.usedPercentage >= 60) return 'bg-yellow-500';
+    if (storageUsage.usedPercentage >= 40) return 'bg-blue-500';
     return 'bg-green-500';
   };
 
   // Get text color based on usage percentage
   const getUsageTextColor = () => {
+    if (storageUsage.usedPercentage >= 95) return 'text-red-700';
     if (storageUsage.usedPercentage >= 90) return 'text-red-600';
     if (storageUsage.usedPercentage >= 80) return 'text-orange-600';
     if (storageUsage.usedPercentage >= 60) return 'text-yellow-600';
+    if (storageUsage.usedPercentage >= 40) return 'text-blue-600';
     return 'text-green-600';
   };
+
+  // Get warning message
+  const getWarningMessage = () => {
+    if (storageUsage.usedPercentage >= 95) {
+      return "🚨 CRITICAL: Storage almost full! Clear recordings immediately!";
+    }
+    if (storageUsage.usedPercentage >= 90) {
+      return "⚠️ URGENT: Storage critically full! Clear old recordings now.";
+    }
+    if (storageUsage.usedPercentage >= 80) {
+      return "⚠️ WARNING: Storage usage high. Consider clearing old recordings soon.";
+    }
+    return null;
+  };
+
+  const availableSpace = storageUsage.totalSpace - storageUsage.usedSpace;
 
   return (
     <div className="space-y-4">
@@ -91,12 +111,15 @@ const StorageUsageDisplay = ({
                 size="sm" 
                 onClick={onRefreshStorage} 
                 className="h-6 w-6 p-0"
+                title="Refresh storage data"
               >
                 <RefreshCw className="h-3 w-3" />
               </Button>
             )}
           </div>
         </div>
+        
+        {/* Color-coded progress bar */}
         <div className="relative">
           <Progress value={storageUsage.usedPercentage} className="h-3" />
           <div 
@@ -104,12 +127,16 @@ const StorageUsageDisplay = ({
             style={{ width: `${Math.min(storageUsage.usedPercentage, 100)}%` }}
           />
         </div>
-        {storageUsage.usedPercentage >= 80 && (
-          <div className={`text-xs ${getUsageTextColor()} font-medium`}>
-            {storageUsage.usedPercentage >= 90 
-              ? "⚠️ Storage critically full! Consider clearing old recordings."
-              : "⚠️ Storage usage high. Consider clearing old recordings soon."
-            }
+        
+        {/* Warning message */}
+        {getWarningMessage() && (
+          <div className={`text-xs font-medium flex items-center gap-2 p-2 rounded ${
+            storageUsage.usedPercentage >= 95 ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300' :
+            storageUsage.usedPercentage >= 90 ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300' :
+            'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300'
+          }`}>
+            <AlertTriangle className="h-4 w-4" />
+            {getWarningMessage()}
           </div>
         )}
       </div>
@@ -127,11 +154,11 @@ const StorageUsageDisplay = ({
         
         <Card className="bg-muted">
           <CardContent className="flex items-center space-x-4 p-4">
-            <HardDrive className="h-6 w-6 text-gray-500" />
+            <HardDrive className={`h-6 w-6 ${availableSpace < (storageUsage.totalSpace * 0.1) ? 'text-red-500' : 'text-green-500'}`} />
             <div className="space-y-1">
               <p className="text-sm font-medium">Available Space</p>
-              <p className={`text-base font-semibold ${getUsageTextColor()}`}>
-                {formatStorageSize(storageUsage.totalSpace - storageUsage.usedSpace)}
+              <p className={`text-base font-semibold ${availableSpace < (storageUsage.totalSpace * 0.1) ? 'text-red-600' : 'text-green-600'}`}>
+                {formatStorageSize(availableSpace)}
               </p>
             </div>
           </CardContent>

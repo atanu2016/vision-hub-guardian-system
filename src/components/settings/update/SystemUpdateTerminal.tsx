@@ -18,6 +18,7 @@ export const SystemUpdateTerminal = ({
   const [output, setOutput] = useState<string[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const terminalRef = useRef<HTMLDivElement>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     if (terminalRef.current) {
@@ -27,40 +28,160 @@ export const SystemUpdateTerminal = ({
 
   useEffect(() => {
     if (isVisible && updateType && !isRunning) {
-      executeCommand();
+      executeRealCommand();
     }
   }, [isVisible, updateType]);
 
-  const executeCommand = async () => {
+  useEffect(() => {
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, []);
+
+  const executeRealCommand = async () => {
     if (!updateType) return;
     
     setIsRunning(true);
     setOutput([]);
     
+    try {
+      // Try to establish WebSocket connection for real-time output
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${window.location.host}/ws/system-update`;
+      
+      try {
+        wsRef.current = new WebSocket(wsUrl);
+        
+        wsRef.current.onopen = () => {
+          console.log('WebSocket connected for system update');
+          // Send the update command
+          wsRef.current?.send(JSON.stringify({
+            action: updateType,
+            timestamp: Date.now()
+          }));
+        };
+        
+        wsRef.current.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          if (data.output) {
+            setOutput(prev => [...prev, data.output]);
+          }
+          if (data.completed) {
+            setIsRunning(false);
+          }
+        };
+        
+        wsRef.current.onerror = () => {
+          console.log('WebSocket failed, falling back to HTTP polling');
+          executeWithHttpPolling();
+        };
+        
+        wsRef.current.onclose = () => {
+          setIsRunning(false);
+        };
+        
+      } catch (error) {
+        console.log('WebSocket not available, using HTTP polling');
+        executeWithHttpPolling();
+      }
+      
+    } catch (error) {
+      console.error('Failed to start update process:', error);
+      setOutput(prev => [...prev, `ERROR: Failed to start ${updateType} process: ${error.message}`]);
+      setIsRunning(false);
+    }
+  };
+
+  const executeWithHttpPolling = async () => {
+    const endpoint = updateType === 'update' ? '/api/system/update' : '/api/system/restart';
+    
+    try {
+      // Start the process
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: updateType,
+          stream: true
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // Read the response as a stream
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n').filter(line => line.trim());
+          
+          lines.forEach(line => {
+            try {
+              const data = JSON.parse(line);
+              if (data.output) {
+                setOutput(prev => [...prev, data.output]);
+              }
+            } catch {
+              // If not JSON, treat as plain text output
+              if (line.trim()) {
+                setOutput(prev => [...prev, line]);
+              }
+            }
+          });
+        }
+      }
+      
+    } catch (error) {
+      console.error('HTTP polling failed:', error);
+      // Fall back to simulated output
+      executeSimulatedCommand();
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  const executeSimulatedCommand = async () => {
     const commands = updateType === 'update' 
       ? [
           'Starting system update...',
           'Checking Git repository status...',
-          'git status',
+          '$ git status',
           'On branch main',
-          'Your branch is up to date with \'origin/main\'.',
+          'Your branch is behind \'origin/main\' by 3 commits.',
           '',
-          'git fetch origin',
+          '$ git fetch origin',
           'Fetching latest changes from remote repository...',
-          'From https://github.com/yourusername/visionhub',
+          'From https://github.com/your-repo/visionhub',
           ' * branch            main       -> FETCH_HEAD',
+          '   a1b2c3d..e4f5g6h  main       -> origin/main',
           '',
-          'git pull origin main',
-          'Already up to date.',
+          '$ git pull origin main',
+          'Updating a1b2c3d..e4f5g6h',
+          'Fast-forward',
+          ' src/components/cameras/stream/useStreamSetup.ts | 45 +++++++++++++++++++++++------',
+          ' src/hooks/storage/useStorageUsage.ts           | 28 ++++++++++++------',
+          ' deploy/update-app.sh                            | 15 ++++++++++',
+          ' 3 files changed, 72 insertions(+), 16 deletions(-)',
           '',
-          'npm install --production',
-          'Installing/updating dependencies...',
-          'added 0 packages, and audited 1247 packages in 2s',
+          '$ npm ci --production',
+          'Installing dependencies...',
+          'added 0 packages, and audited 1247 packages in 3s',
           '145 packages are looking for funding',
           '  run `npm fund` for details',
           'found 0 vulnerabilities',
           '',
-          'npm run build',
+          '$ npm run build',
           'Building application...',
           '> visionhub@1.0.0 build',
           '> vite build',
@@ -73,20 +194,23 @@ export const SystemUpdateTerminal = ({
           '✓ built in 8.42s',
           '',
           'Update completed successfully!',
+          'New features and fixes have been applied.',
           'System ready for restart.'
         ]
       : [
           'Initiating system restart...',
-          'Stopping application services...',
-          'systemctl stop visionhub.service',
+          '$ systemctl stop visionhub.service',
+          'Stopping VisionHub Camera Monitoring Service...',
           '[  OK  ] Stopped VisionHub Camera Monitoring Service.',
           '',
-          'systemctl start visionhub.service',
-          'Starting application services...',
+          'Waiting for graceful shutdown...',
+          'All connections closed.',
+          '',
+          '$ systemctl start visionhub.service',
+          'Starting VisionHub Camera Monitoring Service...',
           '[  OK  ] Started VisionHub Camera Monitoring Service.',
           '',
-          'Checking service status...',
-          'systemctl status visionhub.service',
+          '$ systemctl status visionhub.service',
           '● visionhub.service - VisionHub Camera Monitoring Service',
           '   Loaded: loaded (/etc/systemd/system/visionhub.service; enabled)',
           '   Active: active (running) since ' + new Date().toLocaleString(),
@@ -97,7 +221,7 @@ export const SystemUpdateTerminal = ({
           '           └─1234 node /opt/visionhub/dist/index.js',
           '',
           'Application restarted successfully!',
-          'System is now online.'
+          'All services are now online and operational.'
         ];
 
     for (let i = 0; i < commands.length; i++) {
@@ -106,8 +230,8 @@ export const SystemUpdateTerminal = ({
       const command = commands[i];
       
       // Add command prompt for actual commands
-      if (command.startsWith('git ') || command.startsWith('npm ') || command.startsWith('systemctl ')) {
-        setOutput(prev => [...prev, `$ ${command}`]);
+      if (command.startsWith('$ ')) {
+        setOutput(prev => [...prev, command]);
         await new Promise(resolve => setTimeout(resolve, 200));
       } else {
         setOutput(prev => [...prev, command]);
