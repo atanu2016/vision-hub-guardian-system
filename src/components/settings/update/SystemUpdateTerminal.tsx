@@ -47,18 +47,19 @@ export const SystemUpdateTerminal = ({
     setOutput([]);
     
     try {
-      // Try to establish WebSocket connection for real-time output
+      // Try to establish WebSocket connection for real-time command output
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${wsProtocol}//${window.location.host}/ws/system-update`;
+      const wsUrl = `${wsProtocol}//${window.location.host}/ws/system-terminal`;
       
       try {
         wsRef.current = new WebSocket(wsUrl);
         
         wsRef.current.onopen = () => {
-          console.log('WebSocket connected for system update');
-          // Send the update command
+          console.log('WebSocket connected for system terminal');
+          // Send the actual command to execute
           wsRef.current?.send(JSON.stringify({
             action: updateType,
+            command: updateType === 'update' ? 'bash /opt/visionhub/deploy/update-app.sh' : 'systemctl restart visionhub.service',
             timestamp: Date.now()
           }));
         };
@@ -68,14 +69,17 @@ export const SystemUpdateTerminal = ({
           if (data.output) {
             setOutput(prev => [...prev, data.output]);
           }
+          if (data.error) {
+            setOutput(prev => [...prev, `ERROR: ${data.error}`]);
+          }
           if (data.completed) {
             setIsRunning(false);
           }
         };
         
         wsRef.current.onerror = () => {
-          console.log('WebSocket failed, falling back to HTTP polling');
-          executeWithHttpPolling();
+          console.log('WebSocket failed, falling back to HTTP streaming');
+          executeWithHttpStreaming();
         };
         
         wsRef.current.onclose = () => {
@@ -83,30 +87,35 @@ export const SystemUpdateTerminal = ({
         };
         
       } catch (error) {
-        console.log('WebSocket not available, using HTTP polling');
-        executeWithHttpPolling();
+        console.log('WebSocket not available, using HTTP streaming');
+        executeWithHttpStreaming();
       }
       
     } catch (error) {
-      console.error('Failed to start update process:', error);
+      console.error('Failed to start command execution:', error);
       setOutput(prev => [...prev, `ERROR: Failed to start ${updateType} process: ${error.message}`]);
       setIsRunning(false);
     }
   };
 
-  const executeWithHttpPolling = async () => {
-    const endpoint = updateType === 'update' ? '/api/system/update' : '/api/system/restart';
+  const executeWithHttpStreaming = async () => {
+    const endpoint = updateType === 'update' ? '/api/system/update-stream' : '/api/system/restart-stream';
     
     try {
-      // Start the process
+      // Start the real command execution with streaming
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'text/event-stream'
         },
         body: JSON.stringify({
           action: updateType,
-          stream: true
+          command: updateType === 'update' 
+            ? 'bash /opt/visionhub/deploy/update-app.sh'
+            : 'systemctl restart visionhub.service',
+          stream: true,
+          real_execution: true
         })
       });
 
@@ -114,7 +123,7 @@ export const SystemUpdateTerminal = ({
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // Read the response as a stream
+      // Read the response as a stream for real command output
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
 
@@ -128,13 +137,16 @@ export const SystemUpdateTerminal = ({
           
           lines.forEach(line => {
             try {
-              const data = JSON.parse(line);
+              const data = JSON.parse(line.replace(/^data: /, ''));
               if (data.output) {
                 setOutput(prev => [...prev, data.output]);
               }
+              if (data.error) {
+                setOutput(prev => [...prev, `ERROR: ${data.error}`]);
+              }
             } catch {
-              // If not JSON, treat as plain text output
-              if (line.trim()) {
+              // If not JSON, treat as plain command output
+              if (line.trim() && !line.startsWith('data:')) {
                 setOutput(prev => [...prev, line]);
               }
             }
@@ -143,102 +155,69 @@ export const SystemUpdateTerminal = ({
       }
       
     } catch (error) {
-      console.error('HTTP polling failed:', error);
-      // Fall back to simulated output
-      executeSimulatedCommand();
+      console.error('HTTP streaming failed:', error);
+      // Execute the actual system command as fallback
+      executeSystemCommand();
     } finally {
       setIsRunning(false);
     }
   };
 
-  const executeSimulatedCommand = async () => {
-    const commands = updateType === 'update' 
-      ? [
-          'Starting system update...',
-          'Checking Git repository status...',
-          '$ git status',
-          'On branch main',
-          'Your branch is behind \'origin/main\' by 3 commits.',
-          '',
-          '$ git fetch origin',
-          'Fetching latest changes from remote repository...',
-          'From https://github.com/your-repo/visionhub',
-          ' * branch            main       -> FETCH_HEAD',
-          '   a1b2c3d..e4f5g6h  main       -> origin/main',
-          '',
-          '$ git pull origin main',
-          'Updating a1b2c3d..e4f5g6h',
-          'Fast-forward',
-          ' src/components/cameras/stream/useStreamSetup.ts | 45 +++++++++++++++++++++++------',
-          ' src/hooks/storage/useStorageUsage.ts           | 28 ++++++++++++------',
-          ' deploy/update-app.sh                            | 15 ++++++++++',
-          ' 3 files changed, 72 insertions(+), 16 deletions(-)',
-          '',
-          '$ npm ci --production',
-          'Installing dependencies...',
-          'added 0 packages, and audited 1247 packages in 3s',
-          '145 packages are looking for funding',
-          '  run `npm fund` for details',
-          'found 0 vulnerabilities',
-          '',
-          '$ npm run build',
-          'Building application...',
-          '> visionhub@1.0.0 build',
-          '> vite build',
-          '',
-          'vite v5.4.2 building for production...',
-          '✓ 1247 modules transformed.',
-          'dist/index.html                   0.46 kB │ gzip:  0.30 kB',
-          'dist/assets/index-DiwrgTda.css   63.58 kB │ gzip: 10.55 kB',
-          'dist/assets/index-C8rjOeh4.js   701.23 kB │ gzip: 191.74 kB',
-          '✓ built in 8.42s',
-          '',
-          'Update completed successfully!',
-          'New features and fixes have been applied.',
-          'System ready for restart.'
-        ]
-      : [
-          'Initiating system restart...',
-          '$ systemctl stop visionhub.service',
-          'Stopping VisionHub Camera Monitoring Service...',
-          '[  OK  ] Stopped VisionHub Camera Monitoring Service.',
-          '',
-          'Waiting for graceful shutdown...',
-          'All connections closed.',
-          '',
-          '$ systemctl start visionhub.service',
-          'Starting VisionHub Camera Monitoring Service...',
-          '[  OK  ] Started VisionHub Camera Monitoring Service.',
-          '',
-          '$ systemctl status visionhub.service',
-          '● visionhub.service - VisionHub Camera Monitoring Service',
-          '   Loaded: loaded (/etc/systemd/system/visionhub.service; enabled)',
-          '   Active: active (running) since ' + new Date().toLocaleString(),
-          '   Main PID: 1234 (node)',
-          '    Tasks: 11 (limit: 4915)',
-          '   Memory: 128.5M',
-          '   CGroup: /system.slice/visionhub.service',
-          '           └─1234 node /opt/visionhub/dist/index.js',
-          '',
-          'Application restarted successfully!',
-          'All services are now online and operational.'
-        ];
-
-    for (let i = 0; i < commands.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 800));
-      
-      const command = commands[i];
-      
-      // Add command prompt for actual commands
-      if (command.startsWith('$ ')) {
-        setOutput(prev => [...prev, command]);
-        await new Promise(resolve => setTimeout(resolve, 200));
-      } else {
-        setOutput(prev => [...prev, command]);
-      }
-    }
+  const executeSystemCommand = async () => {
+    setOutput(prev => [...prev, `Executing ${updateType} command directly...`]);
     
-    setIsRunning(false);
+    try {
+      const command = updateType === 'update' 
+        ? 'bash /opt/visionhub/deploy/update-app.sh'
+        : 'systemctl restart visionhub.service';
+        
+      setOutput(prev => [...prev, `$ ${command}`]);
+      
+      const response = await fetch('/api/system/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          command: command,
+          working_directory: updateType === 'update' ? '/opt/visionhub' : '/',
+          timeout: 300000 // 5 minutes timeout
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        
+        if (result.stdout) {
+          result.stdout.split('\n').forEach((line: string) => {
+            if (line.trim()) {
+              setOutput(prev => [...prev, line]);
+            }
+          });
+        }
+        
+        if (result.stderr) {
+          result.stderr.split('\n').forEach((line: string) => {
+            if (line.trim()) {
+              setOutput(prev => [...prev, `STDERR: ${line}`]);
+            }
+          });
+        }
+        
+        if (result.exit_code === 0) {
+          setOutput(prev => [...prev, `${updateType} completed successfully!`]);
+        } else {
+          setOutput(prev => [...prev, `${updateType} failed with exit code: ${result.exit_code}`]);
+        }
+      } else {
+        throw new Error(`Command execution failed: ${response.statusText}`);
+      }
+      
+    } catch (error) {
+      console.error('Direct command execution failed:', error);
+      setOutput(prev => [...prev, `ERROR: Command execution failed: ${error.message}`]);
+      setOutput(prev => [...prev, 'Please check if the backend API endpoints are properly configured.']);
+    }
   };
 
   if (!isVisible) return null;
