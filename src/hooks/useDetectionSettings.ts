@@ -1,13 +1,13 @@
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 
-export type DetectionSettings = {
+export interface DetectionSettings {
   sensitivityLevel: number;
   enabled: boolean;
   objectTypes: string[];
   smartDetection: boolean;
-};
+}
 
 export const useDetectionSettings = () => {
   const [detectionSettings, setDetectionSettings] = useState<DetectionSettings>({
@@ -19,50 +19,38 @@ export const useDetectionSettings = () => {
   
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  
-  // Use useEffect to load settings when the hook is initialized
-  useEffect(() => {
-    loadDetectionSettings();
-  }, []);
-  
+
   const loadDetectionSettings = useCallback(async () => {
-    console.log("[Detection Settings] Loading detection settings...");
     setIsLoading(true);
     try {
-      // Simulate API call with a delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // In a real application, fetch settings from API
-      // For now, using default settings defined in useState
-      console.log("[Detection Settings] Settings loaded successfully");
+      // Simulate loading from API
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('Detection settings loaded');
     } catch (error) {
-      console.error("[Detection Settings] Error loading settings:", error);
-      toast.error("Failed to load detection settings");
+      console.error('Error loading detection settings:', error);
+      toast.error('Failed to load detection settings');
     } finally {
       setIsLoading(false);
     }
-    return detectionSettings;
-  }, [detectionSettings]);
-  
-  const updateDetectionSettings = useCallback((newSettings: Partial<DetectionSettings>) => {
-    console.log("[Detection Settings] Updating settings:", newSettings);
+  }, []);
+
+  const updateDetectionSettings = useCallback(async (settings: Partial<DetectionSettings>) => {
     setIsSaving(true);
     try {
-      // Update local state
-      setDetectionSettings(current => ({
-        ...current,
-        ...newSettings
-      }));
+      const updatedSettings = { ...detectionSettings, ...settings };
+      setDetectionSettings(updatedSettings);
       
-      toast.success("Detection settings updated");
+      // Simulate saving to API
+      await new Promise(resolve => setTimeout(resolve, 500));
+      toast.success('Detection settings updated');
     } catch (error) {
-      console.error("[Detection Settings] Error updating settings:", error);
-      toast.error("Failed to update detection settings");
+      console.error('Error saving detection settings:', error);
+      toast.error('Failed to save detection settings');
     } finally {
       setIsSaving(false);
     }
-  }, []);
-  
+  }, [detectionSettings]);
+
   return {
     detectionSettings,
     isLoading,
@@ -71,5 +59,3 @@ export const useDetectionSettings = () => {
     updateDetectionSettings
   };
 };
-
-export default useDetectionSettings;
