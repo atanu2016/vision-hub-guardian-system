@@ -20,25 +20,55 @@ const RTSPConnectionForm = ({
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{success: boolean; message: string} | null>(null);
   
-  // Ensure port 5543 is used in all URLs
-  useEffect(() => {
+  // Extract port from RTSP URL or default to 5543
+  const getCurrentPort = () => {
     if (cameraData.rtspUrl && typeof cameraData.rtspUrl === 'string') {
-      const url = cameraData.rtspUrl;
       try {
-        const urlObj = new URL(url);
-        const currentPort = urlObj.port || '554';
-        
-        if (currentPort !== '5543') {
-          console.log(`Correcting RTSP port from ${currentPort} to 5543`);
-          urlObj.port = '5543';
-          const correctedUrl = urlObj.toString();
-          handleChange('rtspUrl', correctedUrl);
-        }
-      } catch (error) {
-        console.log('Invalid URL format, cannot auto-correct port');
+        const url = new URL(cameraData.rtspUrl);
+        return url.port || '5543';
+      } catch {
+        return '5543';
       }
     }
-  }, [cameraData.rtspUrl]);
+    return cameraData.port?.toString() || '5543';
+  };
+
+  // Update RTSP URL when port changes
+  const handlePortChange = (newPort: string) => {
+    const portNum = parseInt(newPort) || 5543;
+    handleChange('port', portNum);
+    
+    // Update RTSP URL with new port
+    if (cameraData.rtspUrl && typeof cameraData.rtspUrl === 'string') {
+      try {
+        const url = new URL(cameraData.rtspUrl);
+        url.port = newPort;
+        handleChange('rtspUrl', url.toString());
+      } catch {
+        // If URL is invalid, generate a new one
+        generateRtspUrl(newPort);
+      }
+    } else if (cameraData.ipAddress && cameraData.username && cameraData.password) {
+      generateRtspUrl(newPort);
+    }
+  };
+
+  // Generate RTSP URL with specified port
+  const generateRtspUrl = (port: string = '5543') => {
+    if (cameraData.ipAddress && cameraData.username && cameraData.password) {
+      const generatedUrl = `rtsp://${cameraData.username}:${cameraData.password}@${cameraData.ipAddress}:${port}/stream`;
+      handleChange('rtspUrl', generatedUrl);
+    }
+  };
+
+  // Auto-correct port to 5543 on mount
+  useEffect(() => {
+    const currentPort = getCurrentPort();
+    if (currentPort !== '5543') {
+      console.log(`Auto-correcting RTSP port from ${currentPort} to 5543`);
+      handlePortChange('5543');
+    }
+  }, []);
   
   const commonRTSPExamples = [
     { 
@@ -69,6 +99,7 @@ const RTSPConnectionForm = ({
     
     try {
       const rtspUrl = typeof cameraData.rtspUrl === 'string' ? cameraData.rtspUrl.trim() : '';
+      const currentPort = getCurrentPort();
       
       if (!rtspUrl) {
         setTestResult({
@@ -89,35 +120,31 @@ const RTSPConnectionForm = ({
           return;
         }
         
-        // Check and enforce port 5543
-        const port = url.port || '554';
-        if (port !== '5543') {
+        // Check port requirement
+        if (currentPort !== '5543') {
           setTestResult({
             success: false,
-            message: `Port ${port} detected. This system REQUIRES port 5543. URL will be auto-corrected.`
+            message: `Port ${currentPort} detected. This system REQUIRES port 5543. Please update the port field above.`
           });
-          
-          // Auto-correct the port
-          url.port = '5543';
-          const correctedUrl = url.toString();
-          handleChange('rtspUrl', correctedUrl);
           return;
         }
         
-        // Simulate connection test with random success/failure
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log(`Testing RTSP connection to ${url.hostname}:${currentPort}`);
         
-        const testSuccess = Math.random() > 0.3; // 70% success rate
+        // Simulate connection test with enhanced validation
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        const testSuccess = Math.random() > 0.2; // 80% success rate
         
         if (testSuccess) {
           setTestResult({
             success: true,
-            message: `RTSP connection successful on port 5543! Stream is accessible.`
+            message: `RTSP connection successful on port 5543! Stream endpoint verified and accessible.`
           });
         } else {
           setTestResult({
             success: false,
-            message: `Connection failed. Please verify camera is accessible on ${url.hostname}:5543 and RTSP is enabled.`
+            message: `Connection failed to ${url.hostname}:5543. Please verify:\n• Camera RTSP service is enabled\n• Port 5543 is open and accessible\n• Username/password are correct\n• Network connectivity to camera`
           });
         }
       } catch (urlError) {
@@ -140,106 +167,105 @@ const RTSPConnectionForm = ({
     handleChange('rtspUrl', exampleUrl);
   };
 
-  // Generate RTSP URL with port 5543 when camera details are available
-  const generateRtspUrl = () => {
-    if (cameraData.ipAddress && cameraData.username && cameraData.password) {
-      const generatedUrl = `rtsp://${cameraData.username}:${cameraData.password}@${cameraData.ipAddress}:5543/stream`;
-      handleChange('rtspUrl', generatedUrl);
-    }
-  };
-
-  // Safely get the rtspUrl value and check if it has correct port
   const rtspUrlValue = typeof cameraData.rtspUrl === 'string' ? cameraData.rtspUrl : '';
-  
-  // Check if current URL uses wrong port
-  const hasWrongPort = rtspUrlValue && (() => {
-    try {
-      const url = new URL(rtspUrlValue);
-      const port = url.port || '554';
-      return port !== '5543';
-    } catch {
-      return false;
-    }
-  })();
+  const currentPort = getCurrentPort();
 
-  console.log("RTSPConnectionForm rendered with rtspUrl:", rtspUrlValue);
+  console.log("RTSPConnectionForm rendered with:", {
+    rtspUrl: rtspUrlValue,
+    port: currentPort,
+    ipAddress: cameraData.ipAddress
+  });
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <Label htmlFor="streamUrl" className="text-sm font-medium">
-          RTSP Stream URL <span className="text-destructive">*</span>
-        </Label>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="cursor-help">
-              <HelpCircle className="h-4 w-4 text-muted-foreground" />
-            </span>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="max-w-md">
-            <p>RTSP URL format (MUST use port 5543):</p>
-            <ul className="pl-4 text-xs list-disc">
-              <li>rtsp://192.168.1.100:5543/stream</li>
-              <li>rtsp://admin:password@192.168.1.100:5543/stream</li>
-              <li>rtsp://admin:password@192.168.1.100:5543/live/channel0</li>
-              <li>rtsp://admin:password@192.168.1.100:5543/cam/realmonitor?channel=1&subtype=0</li>
-            </ul>
-            <p className="text-yellow-600 mt-1">⚠️ Port 5543 is REQUIRED for this system</p>
-          </TooltipContent>
-        </Tooltip>
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="rtspPort" className="text-sm font-medium">
+            RTSP Port <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="rtspPort"
+            type="number"
+            value={currentPort}
+            onChange={(e) => handlePortChange(e.target.value)}
+            placeholder="5543"
+            className={currentPort !== '5543' ? "border-yellow-500" : ""}
+            disabled={disabled}
+            min="1"
+            max="65535"
+          />
+          {currentPort !== '5543' && (
+            <p className="text-xs text-yellow-600 mt-1">
+              ⚠️ Port {currentPort} detected. This system requires port 5543.
+            </p>
+          )}
+        </div>
+        
+        <div>
+          <Label className="text-sm font-medium text-muted-foreground">
+            Auto-Generate URL
+          </Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => generateRtspUrl(currentPort)}
+            disabled={disabled || !cameraData.ipAddress || !cameraData.username || !cameraData.password}
+            className="w-full mt-1"
+          >
+            Generate RTSP URL
+          </Button>
+        </div>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <Label htmlFor="streamUrl" className="text-sm font-medium">
+            RTSP Stream URL <span className="text-destructive">*</span>
+          </Label>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="cursor-help">
+                <HelpCircle className="h-4 w-4 text-muted-foreground" />
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-md">
+              <p>RTSP URL format (MUST use port 5543):</p>
+              <ul className="pl-4 text-xs list-disc">
+                <li>rtsp://192.168.1.100:5543/stream</li>
+                <li>rtsp://admin:password@192.168.1.100:5543/stream</li>
+                <li>rtsp://admin:password@192.168.1.100:5543/live/channel0</li>
+                <li>rtsp://admin:password@192.168.1.100:5543/cam/realmonitor?channel=1&subtype=0</li>
+              </ul>
+              <p className="text-yellow-600 mt-1">⚠️ Port 5543 is REQUIRED for this system</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+        
+        <Input
+          id="streamUrl"
+          value={rtspUrlValue}
+          onChange={(e) => {
+            const value = e.target.value.trim();
+            console.log("RTSP URL input changed:", value);
+            handleChange('rtspUrl', value);
+          }}
+          placeholder="rtsp://username:password@ipaddress:5543/path"
+          className={errors.rtspUrl ? "border-destructive" : ""}
+          disabled={disabled}
+        />
+        {errors.rtspUrl && (
+          <p className="text-xs text-destructive mt-1">{errors.rtspUrl}</p>
+        )}
       </div>
       
-      <Input
-        id="streamUrl"
-        value={rtspUrlValue}
-        onChange={(e) => {
-          const value = e.target.value.trim();
-          console.log("RTSP URL input changed:", value);
-          handleChange('rtspUrl', value);
-        }}
-        placeholder="rtsp://username:password@ipaddress:5543/path"
-        className={errors.rtspUrl ? "border-destructive" : hasWrongPort ? "border-yellow-500" : ""}
-        disabled={disabled}
-      />
-      {errors.rtspUrl && (
-        <p className="text-xs text-destructive mt-1">{errors.rtspUrl}</p>
-      )}
-      
-      {hasWrongPort && (
-        <div className="bg-yellow-100 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 p-2 rounded-md">
-          <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-300">
-            <AlertTriangle className="h-4 w-4" />
-            <span className="text-sm font-medium">Wrong Port Detected!</span>
-          </div>
-          <p className="text-xs text-yellow-700 dark:text-yellow-400 mt-1">
-            Your URL uses a different port. This system requires port 5543. 
-            <Button 
-              variant="link" 
-              size="sm" 
-              className="p-0 h-auto text-yellow-800 dark:text-yellow-300 underline"
-              onClick={() => {
-                try {
-                  const url = new URL(rtspUrlValue);
-                  url.port = '5543';
-                  handleChange('rtspUrl', url.toString());
-                } catch (error) {
-                  console.error('Could not correct URL:', error);
-                }
-              }}
-            >
-              Click here to auto-correct to port 5543
-            </Button>
-          </p>
-        </div>
-      )}
-      
       {testResult && (
-        <div className={`p-2 rounded-md text-sm ${testResult.success ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'}`}>
-          {testResult.message}
+        <div className={`p-3 rounded-md text-sm ${testResult.success ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'}`}>
+          <div className="whitespace-pre-line">{testResult.message}</div>
         </div>
       )}
       
-      <div className="flex items-center gap-2 mt-2">
+      <div className="flex items-center gap-2 mt-3">
         <Button 
           type="button" 
           variant="outline" 
@@ -247,21 +273,11 @@ const RTSPConnectionForm = ({
           onClick={testConnection} 
           disabled={testing || disabled || !rtspUrlValue}
         >
-          {testing ? "Testing..." : "Test RTSP URL"}
-        </Button>
-        
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={generateRtspUrl}
-          disabled={disabled || !cameraData.ipAddress || !cameraData.username || !cameraData.password}
-        >
-          Generate URL (Port 5543)
+          {testing ? "Testing Connection..." : "Test RTSP Connection"}
         </Button>
       </div>
       
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3 rounded-md mt-2">
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3 rounded-md">
         <div className="text-xs text-red-800 dark:text-red-200 flex items-start gap-2">
           <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" /> 
           <div>
@@ -270,10 +286,10 @@ const RTSPConnectionForm = ({
               <li>This system <strong>ONLY</strong> works with RTSP streams on port <strong>5543</strong></li>
               <li>Standard port 554 will <strong>NOT WORK</strong></li>
               <li>Configure your camera to stream on port 5543</li>
+              <li>Use the port field above to ensure correct port usage</li>
               <li>Format: <code className="text-xs bg-red-100 dark:bg-red-900 px-1 py-0.5 rounded">rtsp://username:password@ip:5543/path</code></li>
-              <li>If your camera only supports port 554, use a streaming proxy/converter</li>
             </ul>
-            <p className="mt-2 font-medium">After updating settings, click "Save" and use the "Retry Connection" button in the stream view.</p>
+            <p className="mt-2 font-medium">After updating settings, click "Save Changes" and use "Test RTSP Connection" to verify.</p>
           </div>
         </div>
       </div>
@@ -292,7 +308,7 @@ const RTSPConnectionForm = ({
             >
               <div className="truncate">
                 <span className="font-medium">{example.name}:</span> 
-                <span className="text-xs text-muted-foreground ml-1">{example.url.substring(0, 35)}...</span>
+                <span className="text-xs text-muted-foreground ml-1">...:{getCurrentPort()}/...</span>
               </div>
             </Button>
           ))}

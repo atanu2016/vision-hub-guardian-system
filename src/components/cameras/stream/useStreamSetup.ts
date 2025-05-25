@@ -40,7 +40,7 @@ export function useStreamSetup({
       try {
         const url = new URL(rtspUrl);
         if (url.port !== '5543') {
-          console.log(`Correcting RTSP port from ${url.port || '554'} to 5543`);
+          console.log(`CRITICAL: Correcting RTSP port from ${url.port || '554'} to 5543`);
           url.port = '5543';
           rtspUrl = url.toString();
         }
@@ -48,14 +48,14 @@ export function useStreamSetup({
         return rtspUrl;
       } catch (error) {
         console.error('Invalid RTSP URL format:', error);
-        onError('Invalid RTSP URL format. Please check the URL syntax.');
+        onError('Invalid RTSP URL format. Please check the URL syntax in camera settings.');
         return null;
       }
     }
     
     // Generate RTSP URL from camera details with port 5543
     if (camera.connectionType === 'rtsp' && camera.ipAddress && camera.username && camera.password) {
-      const port = 5543; // Always use 5543
+      const port = camera.port && camera.port === 5543 ? camera.port : 5543; // Force 5543
       const generatedUrl = `rtsp://${camera.username}:${camera.password}@${camera.ipAddress}:${port}/stream`;
       console.log(`Generated RTSP URL for ${camera.name}: ${generatedUrl.replace(/(:.*?@)/g, ':****@')}`);
       return generatedUrl;
@@ -64,11 +64,11 @@ export function useStreamSetup({
     return null;
   }, [onError]);
 
-  // Validate RTSP URL format and ensure it uses port 5543
+  // Enhanced RTSP URL validation with strict port 5543 enforcement
   const validateRtspUrl = useCallback((url: string): boolean => {
     if (!url || url.trim() === '') {
       console.error("RTSP URL is empty or blank");
-      onError("RTSP URL is empty. Please configure the stream URL in camera settings.");
+      onError("RTSP URL is empty. Please configure the stream URL in camera settings with port 5543.");
       return false;
     }
     
@@ -86,15 +86,15 @@ export function useStreamSetup({
         return false;
       }
       
-      // Enforce port 5543
+      // CRITICAL: Enforce port 5543
       const port = urlObj.port || '554';
       if (port !== '5543') {
-        console.error(`RTSP URL using wrong port ${port}, must use 5543`);
-        onError(`RTSP URL must use port 5543. Current port: ${port}. Please update your camera settings.`);
+        console.error(`CRITICAL: RTSP URL using wrong port ${port}, must use 5543`);
+        onError(`❌ CRITICAL ERROR: RTSP must use port 5543, not ${port}!\n\nThis system ONLY works with port 5543. Please:\n1. Update camera settings to use port 5543\n2. Change RTSP URL to use port 5543\n3. Click "Save Changes" and retry connection\n\nCurrent URL uses port: ${port}\nRequired port: 5543`);
         return false;
       }
       
-      console.log(`RTSP URL validation passed: ${url.replace(/(:.*?@)/g, ':****@')}`);
+      console.log(`✅ RTSP URL validation passed: ${url.replace(/(:.*?@)/g, ':****@')}`);
       return true;
     } catch (error) {
       console.error("RTSP URL validation failed:", error);
@@ -141,13 +141,13 @@ export function useStreamSetup({
             return;
           }
           
-          // Validate RTSP URL before attempting connection
+          // CRITICAL: Validate RTSP URL before attempting connection
           if (!validateRtspUrl(rtspUrl)) {
             onLoadingChange(false);
             return; // Error already set by validateRtspUrl
           }
           
-          console.log(`Attempting RTSP connection to: ${rtspUrl.replace(/(:.*?@)/g, ':****@')}`);
+          console.log(`✅ Attempting RTSP connection to: ${rtspUrl.replace(/(:.*?@)/g, ':****@')}`);
           
           // Try RTSP connection with port 5543
           await tryRtspConnection(videoElement, rtspUrl);
@@ -188,12 +188,9 @@ export function useStreamSetup({
     
     // RTSP connection with enhanced error handling for port 5543
     const tryRtspConnection = async (videoElement: HTMLVideoElement, rtspUrl: string) => {
-      console.log("Connecting to RTSP stream on port 5543...");
+      console.log("🔗 Connecting to RTSP stream on port 5543...");
       
       try {
-        // Method 1: Try direct RTSP connection first
-        console.log("Attempting direct RTSP connection...");
-        
         // Clear any previous source
         videoElement.src = '';
         videoElement.load();
@@ -206,23 +203,36 @@ export function useStreamSetup({
         
         const loadTimeout = setTimeout(() => {
           if (!connectionSuccessful && videoElement.readyState === 0) {
-            console.error("RTSP connection failed - port 5543 required");
-            onError(`RTSP stream connection failed. Please verify:
-1. Camera is configured to stream on port 5543 (NOT 554)
-2. RTSP URL format: rtsp://username:password@${camera.ipAddress}:5543/path
-3. Camera RTSP service is enabled and accessible
-4. Network connectivity to ${camera.ipAddress}:5543
-5. Firewall allows port 5543 connections
+            console.error("❌ RTSP connection failed - port 5543 required");
+            onError(`❌ RTSP stream connection failed on port 5543!
 
-Current URL: ${rtspUrl.replace(/(:.*?@)/g, ':****@')}`);
+🔍 TROUBLESHOOTING CHECKLIST:
+
+🔧 CAMERA CONFIGURATION:
+• Ensure camera RTSP service is enabled
+• Configure camera to stream on port 5543 (NOT 554)
+• Verify username/password are correct
+• Check camera firmware supports RTSP
+
+🌐 NETWORK CONNECTIVITY:
+• Verify network path to ${camera.ipAddress}:5543
+• Check firewall allows port 5543 connections  
+• Test camera web interface accessibility
+• Ensure camera and system are on same network
+
+📝 URL FORMAT:
+Current: ${rtspUrl.replace(/(:.*?@)/g, ':****@')}
+Required: rtsp://username:password@ip:5543/path
+
+⚠️ CRITICAL: This system ONLY works with port 5543!`);
             onLoadingChange(false);
           }
-        }, 8000);
+        }, 10000);
         
         const handleLoadedData = () => {
           clearTimeout(loadTimeout);
           connectionSuccessful = true;
-          console.log("RTSP stream loaded successfully on port 5543");
+          console.log("✅ RTSP stream loaded successfully on port 5543");
           onLoadingChange(false);
           if (isPlaying) {
             videoElement.play().catch(e => {
@@ -233,14 +243,19 @@ Current URL: ${rtspUrl.replace(/(:.*?@)/g, ':****@')}`);
         
         const handleError = (e: any) => {
           clearTimeout(loadTimeout);
-          console.error("RTSP connection failed:", e);
-          onError(`RTSP connection failed on port 5543. Please ensure:
-1. Camera streams on port 5543 (not 554)
-2. RTSP service is enabled on camera
-3. Correct username/password credentials
-4. Network path to ${camera.ipAddress}:5543 is accessible
+          console.error("❌ RTSP connection failed:", e);
+          onError(`❌ RTSP connection failed on port 5543!
 
-URL: ${rtspUrl.replace(/(:.*?@)/g, ':****@')}`);
+Please verify:
+• Camera streams on port 5543 (not 554)
+• RTSP service is enabled on camera
+• Username/password are correct: ${camera.username}
+• Network connectivity to ${camera.ipAddress}:5543
+• Camera supports RTSP protocol
+
+URL: ${rtspUrl.replace(/(:.*?@)/g, ':****@')}
+
+💡 TIP: Check camera documentation for RTSP configuration and ensure port 5543 is configured.`);
           onLoadingChange(false);
         };
         
@@ -355,7 +370,7 @@ URL: ${rtspUrl.replace(/(:.*?@)/g, ':****@')}`);
       videoRef.current.load();
     }
     
-    console.log(`Manually retrying connection to ${camera.name} on port 5543`);
+    console.log(`🔄 Manually retrying connection to ${camera.name} on port 5543`);
     toast({
       title: "Reconnecting",
       description: `Attempting to reconnect to ${camera.name} on port 5543...`,
