@@ -22,24 +22,24 @@ const RTSPConnectionForm = ({
   
   const commonRTSPExamples = [
     { 
-      name: "Generic RTSP", 
-      url: `rtsp://${cameraData.username || 'username'}:${cameraData.password || 'password'}@${cameraData.ipAddress || '192.168.1.x'}:554/stream` 
+      name: "Generic RTSP (Port 5543)", 
+      url: `rtsp://${cameraData.username || 'username'}:${cameraData.password || 'password'}@${cameraData.ipAddress || '192.168.1.x'}:5543/stream` 
     },
     { 
-      name: "Hikvision", 
-      url: `rtsp://${cameraData.username || 'admin'}:${cameraData.password || 'password'}@${cameraData.ipAddress || '192.168.1.x'}:554/Streaming/Channels/101` 
+      name: "Hikvision (Port 5543)", 
+      url: `rtsp://${cameraData.username || 'admin'}:${cameraData.password || 'password'}@${cameraData.ipAddress || '192.168.1.x'}:5543/Streaming/Channels/101` 
     },
     { 
-      name: "Dahua", 
-      url: `rtsp://${cameraData.username || 'admin'}:${cameraData.password || 'password'}@${cameraData.ipAddress || '192.168.1.x'}:554/cam/realmonitor?channel=1&subtype=0` 
+      name: "Dahua (Port 5543)", 
+      url: `rtsp://${cameraData.username || 'admin'}:${cameraData.password || 'password'}@${cameraData.ipAddress || '192.168.1.x'}:5543/cam/realmonitor?channel=1&subtype=0` 
     },
     { 
-      name: "Amcrest/IP Camera", 
-      url: `rtsp://${cameraData.username || 'admin'}:${cameraData.password || 'password'}@${cameraData.ipAddress || '192.168.1.x'}:554/cam/realmonitor?channel=1&subtype=1` 
+      name: "Amcrest/IP Camera (Port 5543)", 
+      url: `rtsp://${cameraData.username || 'admin'}:${cameraData.password || 'password'}@${cameraData.ipAddress || '192.168.1.x'}:5543/cam/realmonitor?channel=1&subtype=1` 
     },
     { 
-      name: "Reolink", 
-      url: `rtsp://${cameraData.username || 'admin'}:${cameraData.password || 'password'}@${cameraData.ipAddress || '192.168.1.x'}:554/h264Preview_01_main` 
+      name: "Reolink (Port 5543)", 
+      url: `rtsp://${cameraData.username || 'admin'}:${cameraData.password || 'password'}@${cameraData.ipAddress || '192.168.1.x'}:5543/h264Preview_01_main` 
     },
   ];
   
@@ -48,16 +48,53 @@ const RTSPConnectionForm = ({
     setTestResult(null);
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const rtspUrl = typeof cameraData.rtspUrl === 'string' ? cameraData.rtspUrl.trim() : '';
       
-      setTestResult({
-        success: true,
-        message: "RTSP URL format looks valid. Save settings and retry connection to view stream."
-      });
+      if (!rtspUrl) {
+        setTestResult({
+          success: false,
+          message: "Please enter an RTSP URL before testing."
+        });
+        return;
+      }
+      
+      // Validate RTSP URL format
+      try {
+        const url = new URL(rtspUrl);
+        if (url.protocol !== 'rtsp:') {
+          setTestResult({
+            success: false,
+            message: "Invalid RTSP URL. Must start with rtsp://"
+          });
+          return;
+        }
+        
+        // Check if using port 5543
+        const port = url.port || '554';
+        if (port !== '5543') {
+          setTestResult({
+            success: false,
+            message: `Port ${port} detected. Consider using port 5543 for better compatibility.`
+          });
+          return;
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        setTestResult({
+          success: true,
+          message: `RTSP URL format is valid. Using port ${port}. Save settings and retry connection to test stream.`
+        });
+      } catch (urlError) {
+        setTestResult({
+          success: false,
+          message: "Invalid RTSP URL format. Please check the URL syntax."
+        });
+      }
     } catch (error) {
       setTestResult({
         success: false,
-        message: "Could not validate RTSP URL. Check format and try again."
+        message: "Connection test failed. Please verify the RTSP URL and network connectivity."
       });
     } finally {
       setTesting(false);
@@ -86,12 +123,12 @@ const RTSPConnectionForm = ({
             </span>
           </TooltipTrigger>
           <TooltipContent side="top" className="max-w-md">
-            <p>RTSP URL format examples:</p>
+            <p>RTSP URL format examples (using port 5543):</p>
             <ul className="pl-4 text-xs list-disc">
-              <li>rtsp://192.168.1.100:554/stream1</li>
-              <li>rtsp://admin:password@192.168.1.100:554/stream1</li>
-              <li>rtsp://admin:password@192.168.1.100/stream</li>
-              <li>rtsp://admin:password@192.168.1.100/cam/realmonitor?channel=1&subtype=0</li>
+              <li>rtsp://192.168.1.100:5543/stream1</li>
+              <li>rtsp://admin:password@192.168.1.100:5543/stream1</li>
+              <li>rtsp://admin:password@192.168.1.100:5543/live/channel0</li>
+              <li>rtsp://admin:password@192.168.1.100:5543/cam/realmonitor?channel=1&subtype=0</li>
             </ul>
           </TooltipContent>
         </Tooltip>
@@ -100,8 +137,12 @@ const RTSPConnectionForm = ({
       <Input
         id="streamUrl"
         value={rtspUrlValue}
-        onChange={(e) => handleChange('rtspUrl', e.target.value)}
-        placeholder="rtsp://ipaddress:port/path"
+        onChange={(e) => {
+          const value = e.target.value.trim();
+          console.log("RTSP URL input changed:", value);
+          handleChange('rtspUrl', value);
+        }}
+        placeholder="rtsp://username:password@ipaddress:5543/path"
         className={errors.rtspUrl ? "border-destructive" : ""}
         disabled={disabled}
       />
@@ -131,9 +172,9 @@ const RTSPConnectionForm = ({
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => useExample(`rtsp://${cameraData.username}:${cameraData.password}@${cameraData.ipAddress}:554/stream`)}
+            onClick={() => useExample(`rtsp://${cameraData.username}:${cameraData.password}@${cameraData.ipAddress}:5543/stream`)}
           >
-            Generate from Credentials
+            Generate with Port 5543
           </Button>
         )}
       </div>
@@ -142,21 +183,22 @@ const RTSPConnectionForm = ({
         <div className="text-xs text-muted-foreground flex items-start gap-2">
           <Info className="h-3 w-3 mt-0.5 shrink-0" /> 
           <div>
-            <p className="font-medium mb-1">Common RTSP Stream Tips:</p>
+            <p className="font-medium mb-1">RTSP Stream Configuration (Port 5543):</p>
             <ul className="list-disc pl-4 space-y-1">
-              <li>Add authentication in URL: <code className="text-xs bg-background px-1 py-0.5 rounded">rtsp://username:password@ip:554/path</code></li>
+              <li>Use port 5543 for optimal compatibility: <code className="text-xs bg-background px-1 py-0.5 rounded">rtsp://username:password@ip:5543/path</code></li>
               <li>For local network cameras, use the local IP address (like 192.168.x.x)</li>
-              <li>Default RTSP port is usually 554</li>
+              <li>Include authentication in URL for secure access</li>
               <li>Path format varies by manufacturer (check camera documentation)</li>
               <li>Stream may require enabling in camera web interface</li>
+              <li>Ensure the camera is accessible on your network</li>
             </ul>
-            <p className="mt-2">After updating settings, click "Save" and use the "Retry Connection" button in the stream view.</p>
+            <p className="mt-2 font-medium">After updating settings, click "Save" and use the "Retry Connection" button in the stream view.</p>
           </div>
         </div>
       </div>
       
       <div className="mt-4">
-        <p className="text-sm font-medium mb-2">Common Camera RTSP URLs</p>
+        <p className="text-sm font-medium mb-2">Common Camera RTSP URLs (Port 5543)</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {commonRTSPExamples.map((example, index) => (
             <Button 
@@ -165,6 +207,7 @@ const RTSPConnectionForm = ({
               size="sm" 
               className="justify-start text-left overflow-hidden"
               onClick={() => useExample(example.url)}
+              disabled={disabled}
             >
               <div className="truncate">
                 <span className="font-medium">{example.name}:</span> 

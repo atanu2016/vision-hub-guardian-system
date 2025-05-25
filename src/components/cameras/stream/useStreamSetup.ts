@@ -34,18 +34,47 @@ export function useStreamSetup({
   // Generate RTSP URL if missing
   const generateRtspUrl = useCallback((camera: Camera): string | null => {
     if (camera.rtspUrl) {
+      console.log(`Using provided RTSP URL: ${camera.rtspUrl.replace(/(:.*?@)/g, ':****@')}`);
       return camera.rtspUrl;
     }
     
-    // Generate RTSP URL from camera details
+    // Generate RTSP URL from camera details with correct port 5543
     if (camera.connectionType === 'rtsp' && camera.ipAddress && camera.username && camera.password) {
-      const port = camera.port || 554;
+      const port = camera.port || 5543; // Use 5543 as default instead of 554
       const generatedUrl = `rtsp://${camera.username}:${camera.password}@${camera.ipAddress}:${port}/live/channel0`;
       console.log(`Generated RTSP URL for ${camera.name}: ${generatedUrl.replace(/(:.*?@)/g, ':****@')}`);
       return generatedUrl;
     }
     
     return null;
+  }, []);
+
+  // Validate RTSP URL format
+  const validateRtspUrl = useCallback((url: string): boolean => {
+    if (!url || url.trim() === '') {
+      console.error("RTSP URL is empty or blank");
+      return false;
+    }
+    
+    try {
+      const urlObj = new URL(url);
+      if (urlObj.protocol !== 'rtsp:') {
+        console.error("Invalid RTSP protocol");
+        return false;
+      }
+      
+      // Check if URL has proper format
+      if (!urlObj.hostname) {
+        console.error("RTSP URL missing hostname");
+        return false;
+      }
+      
+      console.log(`RTSP URL validation passed: ${url.replace(/(:.*?@)/g, ':****@')}`);
+      return true;
+    } catch (error) {
+      console.error("RTSP URL validation failed:", error);
+      return false;
+    }
   }, []);
 
   // Main streaming setup effect
@@ -76,12 +105,19 @@ export function useStreamSetup({
       try {
         console.log(`Setting up stream for ${camera.name}, type: ${camera.connectionType}`);
         
-        // Handle RTSP streams - try multiple approaches
+        // Handle RTSP streams with improved logic
         if (camera.connectionType === 'rtsp') {
           const rtspUrl = generateRtspUrl(camera);
           
           if (!rtspUrl) {
             onError("RTSP URL not configured. Please check camera settings.");
+            onLoadingChange(false);
+            return;
+          }
+          
+          // Validate RTSP URL before attempting connection
+          if (!validateRtspUrl(rtspUrl)) {
+            onError("Invalid RTSP URL format. Please check the URL and try again.");
             onLoadingChange(false);
             return;
           }
@@ -279,6 +315,11 @@ export function useStreamSetup({
       
       // Method 1: Direct RTSP (limited browser support)
       try {
+        // Clear any previous source
+        videoElement.src = '';
+        videoElement.load();
+        
+        // Set the RTSP URL directly
         videoElement.src = rtspUrl;
         videoElement.load();
         
@@ -345,7 +386,7 @@ export function useStreamSetup({
         })
         .catch(() => {
           console.error("All RTSP connection methods failed");
-          onError("RTSP stream requires media server proxy. Please ensure your RTSP URL is correct and accessible from the server.");
+          onError(`RTSP stream connection failed. Please verify the RTSP URL is correct and accessible. Using port ${camera.port || 5543}.`);
           onLoadingChange(false);
         });
     };
@@ -357,7 +398,7 @@ export function useStreamSetup({
       if (cleanupFnRef.current) cleanupFnRef.current();
       cleanupFnRef.current = null;
     };
-  }, [camera, isPlaying, onError, onLoadingChange, generateRtspUrl]);
+  }, [camera, isPlaying, onError, onLoadingChange, generateRtspUrl, validateRtspUrl]);
 
   const retryConnection = useCallback(() => {
     retryCountRef.current = 0;
@@ -377,9 +418,9 @@ export function useStreamSetup({
     console.log(`Manually retrying connection to ${camera.name}`);
     toast({
       title: "Reconnecting",
-      description: `Attempting to reconnect to ${camera.name}...`,
+      description: `Attempting to reconnect to ${camera.name} on port ${camera.port || 5543}...`,
     });
-  }, [onLoadingChange, onError, camera.name, toast]);
+  }, [onLoadingChange, onError, camera.name, camera.port, toast]);
 
   return { hlsRef, retryConnection };
 }
