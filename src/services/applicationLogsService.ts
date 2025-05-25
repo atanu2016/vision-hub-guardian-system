@@ -27,6 +27,19 @@ class ApplicationLogsService {
     return validLevels.includes(level as any) ? level as 'debug' | 'info' | 'warning' | 'error' : 'info';
   }
 
+  private parseContext(context: any): Record<string, any> | undefined {
+    if (!context) return undefined;
+    if (typeof context === 'object') return context;
+    if (typeof context === 'string') {
+      try {
+        return JSON.parse(context);
+      } catch {
+        return { raw: context };
+      }
+    }
+    return { value: context };
+  }
+
   async addLog(log: Omit<ApplicationLog, 'id' | 'created_at'>) {
     try {
       const { error } = await supabase
@@ -79,7 +92,7 @@ class ApplicationLogsService {
         message: log.message,
         source: log.source,
         details: log.details,
-        context: log.context,
+        context: this.parseContext(log.context),
         created_at: log.created_at
       }));
     } catch (error) {
